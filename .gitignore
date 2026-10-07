@@ -1,0 +1,29 @@
+# secrets & local deployment config (never commit)
+.secrets/
+config/local.json
+*.env
+# data (raw or pseudonymized real chat, synthetic generations, caches)
+data/
+# shadow mode: SQLite store, logs, reports (contain pseudonymized real data)
+shadow/state/
+shadow/logs/
+shadow/reports/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+# logs
+logs/
+*.log
+# weights (phase-1 weights were trained on real chat -> never publish)
+models/*.pt
+models/*.onnx
+models/*.npz
+models/*.joblib
+models/bge/*.onnx
+models/bge/.cache/
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

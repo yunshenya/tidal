@@ -1,0 +1,200 @@
+{"msg_id": "ex0", "conv": "demo-group", "conv_type": "group", "ts": 1791370570.4461625, "role": "other", "speaker": "甲", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex1", "conv": "demo-group", "conv_type": "group", "ts": 1791370573.4461625, "role": "other", "speaker": "乙", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex2", "conv": "demo-group", "conv_type": "group", "ts": 1791370576.4461625, "role": "other", "speaker": "乙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex3", "conv": "demo-group", "conv_type": "group", "ts": 1791370666.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex4", "conv": "demo-group", "conv_type": "group", "ts": 1791370669.4461625, "role": "other", "speaker": "丁", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex5", "conv": "demo-group", "conv_type": "group", "ts": 1791370677.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex6", "conv": "demo-group", "conv_type": "group", "ts": 1791370682.4461625, "role": "other", "speaker": "甲", "text": "哈哈哈哈", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex7", "conv": "demo-group", "conv_type": "group", "ts": 1791370697.4461625, "role": "other", "speaker": "甲", "text": "[图片]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex8", "conv": "demo-group", "conv_type": "group", "ts": 1791370705.4461625, "role": "other", "speaker": "甲", "text": "收到", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex9", "conv": "demo-group", "conv_type": "group", "ts": 1791370707.4461625, "role": "other", "speaker": "丁", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex10", "conv": "demo-group", "conv_type": "group", "ts": 1791371107.4461625, "role": "other", "speaker": "丙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex11", "conv": "demo-group", "conv_type": "group", "ts": 1791371115.4461625, "role": "other", "speaker": "甲", "text": "[表情包]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex12", "conv": "demo-group", "conv_type": "group", "ts": 1791371130.4461625, "role": "other", "speaker": "丁", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex13", "conv": "demo-group", "conv_type": "group", "ts": 1791371133.4461625, "role": "other", "speaker": "乙", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex14", "conv": "demo-group", "conv_type": "group", "ts": 1791371138.4461625, "role": "other", "speaker": "甲", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex15", "conv": "demo-group", "conv_type": "group", "ts": 1791371168.4461625, "role": "other", "speaker": "丁", "text": "明天早八", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex16", "conv": "demo-group", "conv_type": "group", "ts": 1791371568.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex17", "conv": "demo-group", "conv_type": "group", "ts": 1791371571.4461625, "role": "other", "speaker": "甲", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex18", "conv": "demo-group", "conv_type": "group", "ts": 1791371586.4461625, "role": "other", "speaker": "丙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex19", "conv": "demo-group", "conv_type": "group", "ts": 1791371616.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex20", "conv": "demo-group", "conv_type": "group", "ts": 1791372016.4461625, "role": "other", "speaker": "丁", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex21", "conv": "demo-group", "conv_type": "group", "ts": 1791372024.4461625, "role": "other", "speaker": "乙", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex22", "conv": "demo-group", "conv_type": "group", "ts": 1791372114.4461625, "role": "other", "speaker": "甲", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex23", "conv": "demo-group", "conv_type": "group", "ts": 1791372514.4461625, "role": "other", "speaker": "乙", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex24", "conv": "demo-group", "conv_type": "group", "ts": 1791372529.4461625, "role": "other", "speaker": "丁", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex25", "conv": "demo-group", "conv_type": "group", "ts": 1791372534.4461625, "role": "other", "speaker": "乙", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex26", "conv": "demo-group", "conv_type": "group", "ts": 1791372536.4461625, "role": "other", "speaker": "丙", "text": "[图片]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex27", "conv": "demo-group", "conv_type": "group", "ts": 1791372538.4461625, "role": "other", "speaker": "丙", "text": "收到", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex28", "conv": "demo-group", "conv_type": "group", "ts": 1791372568.4461625, "role": "other", "speaker": "甲", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex29", "conv": "demo-group", "conv_type": "group", "ts": 1791372658.4461625, "role": "other", "speaker": "甲", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex30", "conv": "demo-group", "conv_type": "group", "ts": 1791372748.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex31", "conv": "demo-group", "conv_type": "group", "ts": 1791372751.4461625, "role": "other", "speaker": "乙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex32", "conv": "demo-group", "conv_type": "group", "ts": 1791372781.4461625, "role": "other", "speaker": "甲", "text": "然后那个", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex33", "conv": "demo-group", "conv_type": "group", "ts": 1791372786.4461625, "role": "other", "speaker": "甲", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex34", "conv": "demo-group", "conv_type": "group", "ts": 1791372794.4461625, "role": "other", "speaker": "丙", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex35", "conv": "demo-group", "conv_type": "group", "ts": 1791372824.4461625, "role": "other", "speaker": "丁", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex36", "conv": "demo-group", "conv_type": "group", "ts": 1791373224.4461625, "role": "other", "speaker": "乙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex37", "conv": "demo-group", "conv_type": "group", "ts": 1791373254.4461625, "role": "other", "speaker": "乙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex38", "conv": "demo-group", "conv_type": "group", "ts": 1791373262.4461625, "role": "other", "speaker": "丙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex39", "conv": "demo-group", "conv_type": "group", "ts": 1791373264.4461625, "role": "other", "speaker": "甲", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex40", "conv": "demo-group", "conv_type": "group", "ts": 1791373294.4461625, "role": "other", "speaker": "乙", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex41", "conv": "demo-group", "conv_type": "group", "ts": 1791373324.4461625, "role": "other", "speaker": "乙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex42", "conv": "demo-group", "conv_type": "group", "ts": 1791373332.4461625, "role": "other", "speaker": "丙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex43", "conv": "demo-group", "conv_type": "group", "ts": 1791373334.4461625, "role": "other", "speaker": "丙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex44", "conv": "demo-group", "conv_type": "group", "ts": 1791373364.4461625, "role": "other", "speaker": "丙", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex45", "conv": "demo-group", "conv_type": "group", "ts": 1791373372.4461625, "role": "other", "speaker": "乙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex46", "conv": "demo-group", "conv_type": "group", "ts": 1791373380.4461625, "role": "other", "speaker": "丁", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex47", "conv": "demo-group", "conv_type": "group", "ts": 1791373383.4461625, "role": "other", "speaker": "丁", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex48", "conv": "demo-group", "conv_type": "group", "ts": 1791373783.4461625, "role": "other", "speaker": "丙", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex49", "conv": "demo-group", "conv_type": "group", "ts": 1791373873.4461625, "role": "other", "speaker": "乙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex50", "conv": "demo-group", "conv_type": "group", "ts": 1791373878.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex51", "conv": "demo-group", "conv_type": "group", "ts": 1791374278.4461625, "role": "other", "speaker": "丁", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex52", "conv": "demo-group", "conv_type": "group", "ts": 1791374283.4461625, "role": "other", "speaker": "甲", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex53", "conv": "demo-group", "conv_type": "group", "ts": 1791374286.4461625, "role": "other", "speaker": "丁", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex54", "conv": "demo-group", "conv_type": "group", "ts": 1791374294.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex55", "conv": "demo-group", "conv_type": "group", "ts": 1791374302.4461625, "role": "other", "speaker": "丙", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex56", "conv": "demo-group", "conv_type": "group", "ts": 1791374392.4461625, "role": "other", "speaker": "丙", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex57", "conv": "demo-group", "conv_type": "group", "ts": 1791374482.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex58", "conv": "demo-group", "conv_type": "group", "ts": 1791374487.4461625, "role": "other", "speaker": "丁", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex59", "conv": "demo-group", "conv_type": "group", "ts": 1791374489.4461625, "role": "other", "speaker": "乙", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex60", "conv": "demo-group", "conv_type": "group", "ts": 1791374889.4461625, "role": "other", "speaker": "甲", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex61", "conv": "demo-group", "conv_type": "group", "ts": 1791375289.4461625, "role": "other", "speaker": "甲", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex62", "conv": "demo-group", "conv_type": "group", "ts": 1791375297.4461625, "role": "other", "speaker": "丁", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex63", "conv": "demo-group", "conv_type": "group", "ts": 1791375299.4461625, "role": "other", "speaker": "丁", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex64", "conv": "demo-group", "conv_type": "group", "ts": 1791375307.4461625, "role": "other", "speaker": "丁", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex65", "conv": "demo-group", "conv_type": "group", "ts": 1791375322.4461625, "role": "other", "speaker": "丁", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex66", "conv": "demo-group", "conv_type": "group", "ts": 1791375412.4461625, "role": "other", "speaker": "丙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex67", "conv": "demo-group", "conv_type": "group", "ts": 1791375420.4461625, "role": "other", "speaker": "丙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex68", "conv": "demo-group", "conv_type": "group", "ts": 1791375425.4461625, "role": "other", "speaker": "乙", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex69", "conv": "demo-group", "conv_type": "group", "ts": 1791375430.4461625, "role": "other", "speaker": "甲", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex70", "conv": "demo-group", "conv_type": "group", "ts": 1791375830.4461625, "role": "other", "speaker": "乙", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex71", "conv": "demo-group", "conv_type": "group", "ts": 1791375920.4461625, "role": "other", "speaker": "丙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex72", "conv": "demo-group", "conv_type": "group", "ts": 1791375923.4461625, "role": "other", "speaker": "丙", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex73", "conv": "demo-group", "conv_type": "group", "ts": 1791376323.4461625, "role": "other", "speaker": "丁", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex74", "conv": "demo-group", "conv_type": "group", "ts": 1791376338.4461625, "role": "other", "speaker": "甲", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex75", "conv": "demo-group", "conv_type": "group", "ts": 1791376341.4461625, "role": "other", "speaker": "甲", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex76", "conv": "demo-group", "conv_type": "group", "ts": 1791376356.4461625, "role": "other", "speaker": "丙", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex77", "conv": "demo-group", "conv_type": "group", "ts": 1791376361.4461625, "role": "other", "speaker": "丁", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex78", "conv": "demo-group", "conv_type": "group", "ts": 1791376364.4461625, "role": "other", "speaker": "丁", "text": "[图片]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex79", "conv": "demo-group", "conv_type": "group", "ts": 1791376379.4461625, "role": "other", "speaker": "丙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex80", "conv": "demo-group", "conv_type": "group", "ts": 1791376387.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex81", "conv": "demo-group", "conv_type": "group", "ts": 1791376390.4461625, "role": "other", "speaker": "丁", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex82", "conv": "demo-group", "conv_type": "group", "ts": 1791376395.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex83", "conv": "demo-group", "conv_type": "group", "ts": 1791376403.4461625, "role": "other", "speaker": "丙", "text": "[图片]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex84", "conv": "demo-group", "conv_type": "group", "ts": 1791376408.4461625, "role": "other", "speaker": "丙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex85", "conv": "demo-group", "conv_type": "group", "ts": 1791376416.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex86", "conv": "demo-group", "conv_type": "group", "ts": 1791376446.4461625, "role": "other", "speaker": "甲", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex87", "conv": "demo-group", "conv_type": "group", "ts": 1791376448.4461625, "role": "other", "speaker": "乙", "text": "收到", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex88", "conv": "demo-group", "conv_type": "group", "ts": 1791376848.4461625, "role": "other", "speaker": "甲", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex89", "conv": "demo-group", "conv_type": "group", "ts": 1791377248.4461625, "role": "other", "speaker": "丙", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex90", "conv": "demo-group", "conv_type": "group", "ts": 1791377256.4461625, "role": "other", "speaker": "丁", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex91", "conv": "demo-group", "conv_type": "group", "ts": 1791377258.4461625, "role": "other", "speaker": "甲", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex92", "conv": "demo-group", "conv_type": "group", "ts": 1791377348.4461625, "role": "other", "speaker": "丁", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex93", "conv": "demo-group", "conv_type": "group", "ts": 1791377363.4461625, "role": "other", "speaker": "甲", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex94", "conv": "demo-group", "conv_type": "group", "ts": 1791377368.4461625, "role": "other", "speaker": "甲", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex95", "conv": "demo-group", "conv_type": "group", "ts": 1791377398.4461625, "role": "other", "speaker": "丙", "text": "收到", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex96", "conv": "demo-group", "conv_type": "group", "ts": 1791377400.4461625, "role": "other", "speaker": "乙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex97", "conv": "demo-group", "conv_type": "group", "ts": 1791377405.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex98", "conv": "demo-group", "conv_type": "group", "ts": 1791377495.4461625, "role": "other", "speaker": "乙", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex99", "conv": "demo-group", "conv_type": "group", "ts": 1791377497.4461625, "role": "other", "speaker": "乙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex100", "conv": "demo-group", "conv_type": "group", "ts": 1791377499.4461625, "role": "other", "speaker": "丙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex101", "conv": "demo-group", "conv_type": "group", "ts": 1791377502.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex102", "conv": "demo-group", "conv_type": "group", "ts": 1791377592.4461625, "role": "other", "speaker": "乙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex103", "conv": "demo-group", "conv_type": "group", "ts": 1791377597.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex104", "conv": "demo-group", "conv_type": "group", "ts": 1791377687.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex105", "conv": "demo-group", "conv_type": "group", "ts": 1791377689.4461625, "role": "other", "speaker": "甲", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex106", "conv": "demo-group", "conv_type": "group", "ts": 1791377691.4461625, "role": "other", "speaker": "甲", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex107", "conv": "demo-group", "conv_type": "group", "ts": 1791378091.4461625, "role": "other", "speaker": "乙", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex108", "conv": "demo-group", "conv_type": "group", "ts": 1791378106.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex109", "conv": "demo-group", "conv_type": "group", "ts": 1791378109.4461625, "role": "other", "speaker": "甲", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex110", "conv": "demo-group", "conv_type": "group", "ts": 1791378112.4461625, "role": "other", "speaker": "丙", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex111", "conv": "demo-group", "conv_type": "group", "ts": 1791378127.4461625, "role": "other", "speaker": "乙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex112", "conv": "demo-group", "conv_type": "group", "ts": 1791378527.4461625, "role": "other", "speaker": "丁", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex113", "conv": "demo-group", "conv_type": "group", "ts": 1791378529.4461625, "role": "other", "speaker": "甲", "text": "[语音]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex114", "conv": "demo-group", "conv_type": "group", "ts": 1791378534.4461625, "role": "other", "speaker": "乙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex115", "conv": "demo-group", "conv_type": "group", "ts": 1791378934.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex116", "conv": "demo-group", "conv_type": "group", "ts": 1791378949.4461625, "role": "other", "speaker": "乙", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex117", "conv": "demo-group", "conv_type": "group", "ts": 1791378964.4461625, "role": "other", "speaker": "丁", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex118", "conv": "demo-group", "conv_type": "group", "ts": 1791379364.4461625, "role": "other", "speaker": "乙", "text": "收到", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex119", "conv": "demo-group", "conv_type": "group", "ts": 1791379367.4461625, "role": "other", "speaker": "丙", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex120", "conv": "demo-group", "conv_type": "group", "ts": 1791379370.4461625, "role": "other", "speaker": "丙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex121", "conv": "demo-group", "conv_type": "group", "ts": 1791379378.4461625, "role": "other", "speaker": "甲", "text": "[语音]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex122", "conv": "demo-group", "conv_type": "group", "ts": 1791379381.4461625, "role": "other", "speaker": "丙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex123", "conv": "demo-group", "conv_type": "group", "ts": 1791379386.4461625, "role": "other", "speaker": "丙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex124", "conv": "demo-group", "conv_type": "group", "ts": 1791379416.4461625, "role": "other", "speaker": "丁", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex125", "conv": "demo-group", "conv_type": "group", "ts": 1791379421.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex126", "conv": "demo-group", "conv_type": "group", "ts": 1791379821.4461625, "role": "other", "speaker": "丙", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex127", "conv": "demo-group", "conv_type": "group", "ts": 1791379911.4461625, "role": "other", "speaker": "甲", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex128", "conv": "demo-group", "conv_type": "group", "ts": 1791379913.4461625, "role": "other", "speaker": "丁", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex129", "conv": "demo-group", "conv_type": "group", "ts": 1791379921.4461625, "role": "other", "speaker": "丙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex130", "conv": "demo-group", "conv_type": "group", "ts": 1791379924.4461625, "role": "other", "speaker": "丙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex131", "conv": "demo-group", "conv_type": "group", "ts": 1791379939.4461625, "role": "other", "speaker": "甲", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex132", "conv": "demo-group", "conv_type": "group", "ts": 1791379954.4461625, "role": "other", "speaker": "乙", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex133", "conv": "demo-group", "conv_type": "group", "ts": 1791380044.4461625, "role": "other", "speaker": "丙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex134", "conv": "demo-group", "conv_type": "group", "ts": 1791380046.4461625, "role": "other", "speaker": "乙", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex135", "conv": "demo-group", "conv_type": "group", "ts": 1791380048.4461625, "role": "other", "speaker": "丁", "text": "[视频]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex136", "conv": "demo-group", "conv_type": "group", "ts": 1791380053.4461625, "role": "other", "speaker": "丁", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex137", "conv": "demo-group", "conv_type": "group", "ts": 1791380058.4461625, "role": "other", "speaker": "丙", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex138", "conv": "demo-group", "conv_type": "group", "ts": 1791380073.4461625, "role": "other", "speaker": "丁", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex139", "conv": "demo-group", "conv_type": "group", "ts": 1791380088.4461625, "role": "other", "speaker": "甲", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex140", "conv": "demo-group", "conv_type": "group", "ts": 1791380093.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex141", "conv": "demo-group", "conv_type": "group", "ts": 1791380493.4461625, "role": "other", "speaker": "丙", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex142", "conv": "demo-group", "conv_type": "group", "ts": 1791380583.4461625, "role": "other", "speaker": "乙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex143", "conv": "demo-group", "conv_type": "group", "ts": 1791380588.4461625, "role": "other", "speaker": "丙", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex144", "conv": "demo-group", "conv_type": "group", "ts": 1791380618.4461625, "role": "other", "speaker": "甲", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex145", "conv": "demo-group", "conv_type": "group", "ts": 1791380708.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex146", "conv": "demo-group", "conv_type": "group", "ts": 1791380723.4461625, "role": "other", "speaker": "丁", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex147", "conv": "demo-group", "conv_type": "group", "ts": 1791380753.4461625, "role": "other", "speaker": "乙", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex148", "conv": "demo-group", "conv_type": "group", "ts": 1791380768.4461625, "role": "other", "speaker": "丁", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex149", "conv": "demo-group", "conv_type": "group", "ts": 1791380858.4461625, "role": "other", "speaker": "乙", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex150", "conv": "demo-group", "conv_type": "group", "ts": 1791380948.4461625, "role": "other", "speaker": "丁", "text": "小潮在吗", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex151", "conv": "demo-group", "conv_type": "group", "ts": 1791380951.4461625, "role": "other", "speaker": "丁", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex152", "conv": "demo-group", "conv_type": "group", "ts": 1791380959.4461625, "role": "other", "speaker": "乙", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex153", "conv": "demo-group", "conv_type": "group", "ts": 1791380962.4461625, "role": "other", "speaker": "甲", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex154", "conv": "demo-group", "conv_type": "group", "ts": 1791380964.4461625, "role": "other", "speaker": "甲", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex155", "conv": "demo-group", "conv_type": "group", "ts": 1791380969.4461625, "role": "other", "speaker": "丁", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex156", "conv": "demo-group", "conv_type": "group", "ts": 1791380972.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex157", "conv": "demo-group", "conv_type": "group", "ts": 1791380980.4461625, "role": "other", "speaker": "甲", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex158", "conv": "demo-group", "conv_type": "group", "ts": 1791380995.4461625, "role": "other", "speaker": "丙", "text": "这个版本好难", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex159", "conv": "demo-group", "conv_type": "group", "ts": 1791381395.4461625, "role": "other", "speaker": "乙", "text": "收到", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex160", "conv": "demo-group", "conv_type": "group", "ts": 1791381485.4461625, "role": "other", "speaker": "甲", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex161", "conv": "demo-group", "conv_type": "group", "ts": 1791381493.4461625, "role": "other", "speaker": "甲", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex162", "conv": "demo-group", "conv_type": "group", "ts": 1791381501.4461625, "role": "other", "speaker": "乙", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex163", "conv": "demo-group", "conv_type": "group", "ts": 1791381503.4461625, "role": "other", "speaker": "丙", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex164", "conv": "demo-group", "conv_type": "group", "ts": 1791381511.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex165", "conv": "demo-group", "conv_type": "group", "ts": 1791381526.4461625, "role": "other", "speaker": "甲", "text": "好的", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex166", "conv": "demo-group", "conv_type": "group", "ts": 1791381926.4461625, "role": "other", "speaker": "乙", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex167", "conv": "demo-group", "conv_type": "group", "ts": 1791382326.4461625, "role": "other", "speaker": "甲", "text": "有人吃了吗", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex168", "conv": "demo-group", "conv_type": "group", "ts": 1791382726.4461625, "role": "other", "speaker": "丁", "text": "[表情包]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex169", "conv": "demo-group", "conv_type": "group", "ts": 1791382728.4461625, "role": "other", "speaker": "丁", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex170", "conv": "demo-group", "conv_type": "group", "ts": 1791382736.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex171", "conv": "demo-group", "conv_type": "group", "ts": 1791382741.4461625, "role": "other", "speaker": "乙", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex172", "conv": "demo-group", "conv_type": "group", "ts": 1791383141.4461625, "role": "other", "speaker": "甲", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex173", "conv": "demo-group", "conv_type": "group", "ts": 1791383146.4461625, "role": "other", "speaker": "丁", "text": "[图片]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex174", "conv": "demo-group", "conv_type": "group", "ts": 1791383161.4461625, "role": "other", "speaker": "丙", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex175", "conv": "demo-group", "conv_type": "group", "ts": 1791383561.4461625, "role": "other", "speaker": "甲", "text": "今晚谁上号", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex176", "conv": "demo-group", "conv_type": "group", "ts": 1791383564.4461625, "role": "other", "speaker": "乙", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex177", "conv": "demo-group", "conv_type": "group", "ts": 1791383594.4461625, "role": "other", "speaker": "丁", "text": "有人吃了吗", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex178", "conv": "demo-group", "conv_type": "group", "ts": 1791383596.4461625, "role": "other", "speaker": "丙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex179", "conv": "demo-group", "conv_type": "group", "ts": 1791383996.4461625, "role": "other", "speaker": "丁", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex180", "conv": "demo-group", "conv_type": "group", "ts": 1791384086.4461625, "role": "other", "speaker": "甲", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex181", "conv": "demo-group", "conv_type": "group", "ts": 1791384088.4461625, "role": "other", "speaker": "丙", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex182", "conv": "demo-group", "conv_type": "group", "ts": 1791384091.4461625, "role": "other", "speaker": "丙", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex183", "conv": "demo-group", "conv_type": "group", "ts": 1791384121.4461625, "role": "other", "speaker": "丙", "text": "我刚到家", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex184", "conv": "demo-group", "conv_type": "group", "ts": 1791384136.4461625, "role": "other", "speaker": "甲", "text": "等下", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex185", "conv": "demo-group", "conv_type": "group", "ts": 1791384139.4461625, "role": "other", "speaker": "丁", "text": "小潮你觉得呢？", "addressed": true, "bot_action": "speak"}
+{"msg_id": "ex186", "conv": "demo-group", "conv_type": "group", "ts": 1791384229.4461625, "role": "other", "speaker": "丁", "text": "哈哈哈哈", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex187", "conv": "demo-group", "conv_type": "group", "ts": 1791384231.4461625, "role": "other", "speaker": "乙", "text": "有人吃了吗", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex188", "conv": "demo-group", "conv_type": "group", "ts": 1791384239.4461625, "role": "other", "speaker": "丁", "text": "我跟你说", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex189", "conv": "demo-group", "conv_type": "group", "ts": 1791384242.4461625, "role": "other", "speaker": "乙", "text": "笑死", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex190", "conv": "demo-group", "conv_type": "group", "ts": 1791384332.4461625, "role": "self", "speaker": null, "text": "嗯嗯，我在～"}
+{"msg_id": "ex191", "conv": "demo-group", "conv_type": "group", "ts": 1791384334.4461625, "role": "other", "speaker": "丙", "text": "收到", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex192", "conv": "demo-group", "conv_type": "group", "ts": 1791384424.4461625, "role": "other", "speaker": "丙", "text": "等下", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex193", "conv": "demo-group", "conv_type": "group", "ts": 1791384427.4461625, "role": "other", "speaker": "丁", "text": "[视频]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex194", "conv": "demo-group", "conv_type": "group", "ts": 1791384432.4461625, "role": "other", "speaker": "丁", "text": "[视频]", "addressed": false, "bot_action": "speak"}
+{"msg_id": "ex195", "conv": "demo-group", "conv_type": "group", "ts": 1791384440.4461625, "role": "other", "speaker": "丙", "text": "然后那个", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex196", "conv": "demo-group", "conv_type": "group", "ts": 1791384455.4461625, "role": "other", "speaker": "丙", "text": "明天早八", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex197", "conv": "demo-group", "conv_type": "group", "ts": 1791384463.4461625, "role": "other", "speaker": "乙", "text": "[图片]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex198", "conv": "demo-group", "conv_type": "group", "ts": 1791384468.4461625, "role": "other", "speaker": "丙", "text": "[语音]", "addressed": false, "bot_action": "silent"}
+{"msg_id": "ex199", "conv": "demo-group", "conv_type": "group", "ts": 1791384558.4461625, "role": "other", "speaker": "乙", "text": "[表情包]", "addressed": false, "bot_action": "silent"}

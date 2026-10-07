@@ -1,0 +1,6 @@
+{
+ "bot_names": ["小潮"],
+ "synth_bot_names": ["小潮", "小潮", "小潮", "潮潮", "阿潮"],
+ "holdout_groups": [],
+ "shadow_source": "jsonl"
+}
