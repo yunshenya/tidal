@@ -180,14 +180,32 @@ class Mamba3Body(nn.Module):
         self.nf = RMSNorm(d)
     def forward(self, h, valid=None):
         for mx, ml, a, b in zip(self.mix, self.mlp, self.n1, self.n2):
-            h = h + mx(a(h), valid); h = h + ml(b(h))
+            h2 = h + mx(a(h), valid); h2 = h2 + ml(b(h2))
+            if valid is None: h = h2
+            else:
+                m = valid.unsqueeze(-1).to(h.dtype); h = h2 * m + h * (1 - m)   # pad steps keep their hidden state
         return self.nf(h)
-    def step(self, x, state=None):
+    def step(self, x, state=None, valid=None):
+        """One token. `valid` [B] false: that row's recurrent state is left unchanged (pad)."""
         if state is None: state = [m.init_state(x.shape[0]) for m in self.mix]
+        v = None
+        if valid is not None:
+            v = torch.as_tensor(valid, dtype=torch.bool, device=x.device).view(-1)
+            if not bool(v.any()):
+                return x.new_zeros(x.shape[0], self.out_dim), state
         new = []
         for mx, ml, a, b, st in zip(self.mix, self.mlp, self.n1, self.n2, state):
             y, st2 = mx.step(a(x), st); x = x + y; x = x + ml(b(x)); new.append(st2)
-        return self.nf(x), new
+        y = self.nf(x)
+        if v is not None and not bool(v.all()):
+            # rows are independent; drop the update on pad rows so they do not enter later steps
+            mk = v.to(dtype=y.dtype).view(-1, 1)
+            y = y * mk
+            for st, st2 in zip(state, new):
+                for k in st2:
+                    m = v.to(dtype=st2[k].dtype).view(-1, *([1] * (st2[k].ndim - 1)))
+                    st2[k] = st2[k] * m + st[k] * (1 - m)
+        return y, new
 
 class _Attn(nn.Module):
     def __init__(self, d, nhead):
@@ -218,16 +236,63 @@ class CausalTransformer(nn.Module):
             w = torch.softmax(q @ k.transpose(-1, -2) / math.sqrt(at.dh) + bias, -1)
             h = h + at.o((w @ v).transpose(1, 2).reshape(B, T, -1)); h = h + ff(b(h))
         return self.nf(h)
-    def step(self, x, state=None):
-        """KV cache of the last `window` events (post-RoPE keys, absolute positions)."""
+    def step(self, x, state=None, valid=None):
+        """KV cache of the last `window` real events (post-RoPE keys, absolute positions).
+        A step with `valid` all false does not write the cache and does not advance the position,
+        so later queries cannot attend to a pad token."""
         if state is None: state = dict(t=0, kv=[None] * len(self.attn))
-        t = state["t"]; pos = torch.tensor([t]); h = x.unsqueeze(1); new = []
+        if "rows" in state:
+            v = torch.ones(x.shape[0], dtype=torch.bool, device=x.device) if valid is None else torch.as_tensor(valid, dtype=torch.bool, device=x.device).view(-1)
+            return self._step_rows(x, state["rows"], v)
+        if valid is not None:
+            v = torch.as_tensor(valid, dtype=torch.bool, device=x.device).view(-1)
+            if not bool(v.any()):
+                return x.new_zeros(x.shape[0], self.out_dim), state
+            if not bool(v.all()):
+                return self._step_mixed(x, state, v)
+        t = state["t"]; pos = torch.tensor([t], device=x.device); h = x.unsqueeze(1); new = []
         for at, ff, a, b, kv in zip(self.attn, self.ff, self.n1, self.n2, state["kv"]):
             q, k, v = at.split(a(h)); q, k = at.rope(q, pos), at.rope(k, pos)
             if kv is not None: k = torch.cat([kv[0], k], 2)[:, :, -self.window:]; v = torch.cat([kv[1], v], 2)[:, :, -self.window:]
             w = torch.softmax(q @ k.transpose(-1, -2) / math.sqrt(at.dh), -1)
             h = h + at.o((w @ v).transpose(1, 2).reshape(x.shape[0], 1, -1)); h = h + ff(b(h)); new.append((k, v))
         return self.nf(h)[:, 0], dict(t=t + 1, kv=new)
+    def _step_mixed(self, x, state, v):
+        rows = [_tx_slice(state, b) for b in range(x.shape[0])]
+        return self._step_rows(x, rows, v)
+    def _step_rows(self, x, rows, v):
+        ys, pieces = [], []
+        for b, st_b in enumerate(rows):
+            if bool(v[b]):
+                yb, st_b = self.step(x[b:b + 1], st_b)
+            else:
+                yb = x.new_zeros(1, self.out_dim)
+            ys.append(yb); pieces.append(st_b)
+        return torch.cat(ys, 0), _tx_merge(pieces)
+
+def _tx_slice(state, b):
+    if "rows" in state: return state["rows"][b]
+    kv = []
+    for item in state["kv"]:
+        kv.append(None if item is None else (item[0][b:b + 1], item[1][b:b + 1]))
+    t = state["t"]
+    if torch.is_tensor(t): t = int(t.view(-1)[b])
+    return dict(t=int(t), kv=kv)
+
+def _tx_merge(pieces):
+    """Stack per-row caches when they have the same length; otherwise keep them split so pad rows add no keys."""
+    def length(p):
+        item = p["kv"][0]
+        return 0 if item is None else item[0].shape[2]
+    lens = [length(p) for p in pieces]
+    if len(set(lens)) == 1 and len(set(int(p["t"]) for p in pieces)) == 1:
+        if lens[0] == 0:
+            return dict(t=int(pieces[0]["t"]), kv=[None] * len(pieces[0]["kv"]))
+        kv = []
+        for i in range(len(pieces[0]["kv"])):
+            kv.append((torch.cat([p["kv"][i][0] for p in pieces], 0), torch.cat([p["kv"][i][1] for p in pieces], 0)))
+        return dict(t=int(pieces[0]["t"]), kv=kv)
+    return dict(rows=pieces)
 
 def make_body(kind, d=128):
     if kind == "tx_kv": return CausalTransformer(d, layers=2, nhead=4, ff=512)

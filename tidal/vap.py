@@ -26,14 +26,25 @@ class VAPModel(TurnModel):
         self.vap = nn.Sequential(nn.Linear(out, 64), nn.GELU(), nn.Linear(64, VT.NV))
     def forward(self, feats, valid, text=None):
         h = self.drop(self.inorm(self.fproj(feats))) * valid.unsqueeze(-1).to(feats.dtype)
-        if self.kind == "gru": h, _ = self.body(h)
-        else: h = self.body(h, valid)
+        h = self._encode(h, valid)
         o = {k: m(h) for k, m in self.heads.items()}; o["vap"] = self.vap(h); o["h"] = h; return o
-    def step(self, x, state=None):
-        """Streaming: one event [B, F] -> (outputs at this event, new state). O(1) per event (KV cache: O(window))."""
+    def step(self, x, state=None, valid=None):
+        """Streaming: one event [B, F] -> (outputs at this event, new state). O(1) per event (KV cache: O(window)).
+        `valid` [B] false skips the recurrent update for that row (a pad step must not change hidden state / KV)."""
         h = self.inorm(self.fproj(x))
-        if self.kind == "gru": h, state = self.body(h.unsqueeze(1), state); h = h[:, 0]
-        else: h, state = self.body.step(h, state)
+        if self.kind == "gru":
+            if valid is None or bool(torch.as_tensor(valid).bool().all()):
+                h, state = self.body(h.unsqueeze(1), state); h = h[:, 0]
+            else:
+                v = torch.as_tensor(valid, dtype=h.dtype, device=h.device).view(-1)
+                if state is None:
+                    state = h.new_zeros(self.body.num_layers, x.shape[0], self.body.hidden_size)
+                _, state2 = self.body(h.unsqueeze(1), state)
+                m = v.view(1, -1, 1)
+                state = state2 * m + state * (1 - m)     # invalid rows keep the previous state
+                h = state[-1]                            # GRU output is the top-layer hidden state
+        else:
+            h, state = self.body.step(h, state, valid=valid)
         o = {k: m(h) for k, m in self.heads.items()}; o["vap"] = self.vap(h); o["h"] = h; return o, state
 
 def load(dataset=None, extra=None):
