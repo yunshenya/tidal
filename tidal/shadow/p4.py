@@ -6,7 +6,8 @@ emotion off (not an input to the event model; duplex only passes it through Cont
 
 reports/phase4.md: if the ablation `m3_ablate_m2` is also a candidate, it had the lowest
 mean real-val loss. Among the four named backbones the winner is Mamba-3 SISO, which is
-the config this loader builds.
+the config this loader builds. Phase 5 re-ran that pair from scratch (P5bb_*); the ablation
+ranked first again, and this loader still refuses to switch.
 """
 import os
 import numpy as np

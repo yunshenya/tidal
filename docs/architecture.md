@@ -3,10 +3,10 @@
 > 目标：做一个**原生多模态**（视频、图像、音乐、语音、文本）、**会判断什么时候该说话、什么时候该沉默**的极小模型。它只用 CPU，常驻参数 ≤ 2M。
 > 本文给出具体设计，并把每一项现代建模技术对应到 tidal 的某个组件上，逐项标注状态：✅ 已实现 · 🚧 进行中 · 📋 计划中。
 > 状态以本仓库代码为准，不夸大。**目前真正跑通的是"时间节奏 + 文本"两路输入、内容无关的消息类型元数据、语音的流式音频前端，以及第四阶段的主干对比和情绪特征。图像、视频、音乐的前端还是计划。**
-> 阶段：第一阶段是 GRU 与 6 个头（[../reports/phase1.md](../reports/phase1.md)）。第二阶段（[../reports/phase2.md](../reports/phase2.md)）补上了自监督投影、校准与弃权、冷启动与在线自适应、场景通用输入、全双工 tick 控制骨架，但都没有带来显著的效果提升。第三阶段（[../reports/phase3.md](../reports/phase3.md)）加了公开数据加载与预训练、真实直播留一场景、音频前端（`tidal/audio_fe.py`）和动态 int8（`tidal/quant3.py`）。第四阶段（[../reports/phase4.md](../reports/phase4.md)）见下一节。第五阶段（打断、话题转移、泛化的回复对象）**还没有对应的头**。
+> 阶段：第一阶段是 GRU 与 6 个头（[../reports/phase1.md](../reports/phase1.md)）。第二阶段（[../reports/phase2.md](../reports/phase2.md)）补上了自监督投影、校准与弃权、冷启动与在线自适应、场景通用输入、全双工 tick 控制骨架，但都没有带来显著的效果提升。第三阶段（[../reports/phase3.md](../reports/phase3.md)）加了公开数据加载与预训练、真实直播留一场景、音频前端（`tidal/audio_fe.py`）和动态 int8（`tidal/quant3.py`）。第四阶段（[../reports/phase4.md](../reports/phase4.md)）见下一节。第五阶段（[../reports/phase5.md](../reports/phase5.md)）训了打断、话题转移，并把 `y_addr` 试成消息价值；只有打断头按规则采用，而且都还没进影子 tick。
 > 调研和差距分析见 [related-work.md](related-work.md)。
 
-## 第四阶段（已完成的判定）与第五阶段（进行中，尚未成为头）
+## 第四阶段（已完成的判定）与第五阶段（已判定，未进影子 tick）
 
 按 [../reports/phase4.md](../reports/phase4.md) 的预注册规则，对照代码：
 
@@ -14,7 +14,8 @@
 - **文本情绪：采用，但是事件特征，不是头。** `tidal/emo_features.py` 的 11 列（8 类概率 + 效价 + 唤醒度 + 有无标记）拼在 `features_g` 后面。`Event.emotion` / `EventFeaturizer`（`tidal/duplex.py`）在 `n_extra > 0` 时写入同样的 10 个数加一个有无标记。`model.py` 的 `HEAD_DIMS` 里没有情绪头。
 - **语音情绪：头存在，不进入决策。** `tidal/emotion_speech.py` 的 `SpeechEmoHead` 在。预注册判定是不采用。全双工只把它放进 `ControlOut.affect`（`tidal/duplex.py`），事件编码器不读语音情绪。SenseVoice 只做离线教师（`emotion_speech.teacher`，可选依赖 `requirements-teacher.txt`）；软后验在 `tidal/sv_soft.py`，用的是 onnxruntime，不是 sherpa。
 - **连续体记忆：只做影子回放。** `tidal/continuum.py` 写明 "No live decisions"。
-- **第五阶段进行中，代码里还没有这些头。** `HEAD_DIMS` 仍是 `y_eot`、`y_self`、`y_addr`、`y_act`、`y_recheck`、`y_hreply`。没有打断头、话题转移头，也没有把"回复哪一条"训练成头。`duplex.ACTIONS` 里的 `yield` 是 tick 动作（`stop_tts`），不是训练出来的打断头。`EventEncoder.address` 用 `p_speak × 时间衰减` 在缓冲区里选一条事件，不是泛化的回复对象头。
+- **第五阶段的判定（影子 tick 不改）。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个，影子 tick 不加载这几个新头。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
+- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。真实 val 上消融更低，而且差距大于 0.005，所以排名第一的是消融。**影子配置不因此改主干**，`WINNER` 仍是 `mamba3_siso`，文本情绪开，语音情绪关。
 
 参数量沿用第四阶段报告，不在这里另算：`mamba3_siso` 不加情绪约 469,890（报告里四个新主干大约 0.47–0.50M）。文本情绪的 11 列只加宽输入投影，不另报一个新的总数。
 
@@ -40,7 +41,7 @@
                      ▼
    多任务头（已实现）：EOT · 续话 · 被叫 · 说/等/不说 · 重检延迟 · 人类接话
              ＋ VAP 投影头（vap.py）
-             ＋ 进行中、尚未成为头：打断 · 话题转移 · 泛化的回复对象
+             ＋ 第五阶段侧头：打断（规则采用，未进 tick）· 话题转移（不采用）· `y_addr` 消息价值（不采用）
              ＋ 计划：模态理解（这是什么媒体、声学事件）
                      │
                      ▼
@@ -94,7 +95,7 @@
 | 跨模态时间融合 | 事件 token 求和 + 模态掩码 | 🚧 | 时间、文本、文本情绪已接入事件模型；图像 / 视频 / 音乐未接 |
 | 流式 / 因果推理 | `features.py`、`model.py`、`vap.py` `step`、`shadow/infer.py` | ✅ | 影子模式逐条消息预测。第四阶段模型默认不加载 |
 | 多任务头 | `model.py` `HEAD_DIMS` | ✅ | 六个：EOT、续话、被叫、说/等/不说、重检、人类接话 |
-| 打断 / 话题转移 / 泛化回复对象 | — | 🚧 | 第五阶段。代码里还没有这些头。`yield` 是 tick 动作；`address()` 是启发式，不是头 |
+| 打断 / 话题转移 / 泛化回复对象 | `phase5_labels.py`、`phase5_train.py`（侧头，不在 `HEAD_DIMS`） | ✅ 打断采用 / ❌ 话题与新 `y_addr` 不采用 | 影子 tick 仍是第四阶段的六个头。`yield` 仍是 tick 动作 |
 | 自监督：VAP 式的未来事件投影 | `vap_targets.py`、`vap.py` | ✅ | 4 个相对通道 × 5 个时间桶。桶的右端超过已观测时间则为 NaN，不记成负例 |
 | 弱标签的未来窗 | `labels.py`、`public_data/fastlabels.py` | ✅ | 续话 / 人类接话 / "沉默"只有整段窗口被观测到才标 0 或 2；否则 NaN。正例不受影响 |
 | 自监督：掩码事件建模 | `vap.py` | 📋 | |
@@ -123,5 +124,5 @@
 3. ✅ 音频前端（第三阶段）。✅ 文本情绪已作为事件特征采用；语音情绪头已训练但**不采用**为决策输入。📋 其余离线教师（转写、声学 EOT）仍是计划。
 4. 📋 图像 / 视频前端。
 5. ✅ 主干里的 RoPE（`tx_kv`）和 SSM（Mamba-3）已经实现并对比过。📋 掩码事件预训练、主干 QAT、按群挂 adapter 仍是计划。
-6. 🚧 第五阶段：打断、话题转移、把回复对象从 `address()` 的启发式变成可训练的泛化头。这三项都还没进 `HEAD_DIMS`。
+6. ✅/❌ 第五阶段训练已按预注册判定：打断头采用，话题转移和新的 `y_addr` 目标不采用。三项都还没进影子 tick 的 `HEAD_DIMS`。
 7. 每一步都要先过影子模式门控，才考虑上线。
