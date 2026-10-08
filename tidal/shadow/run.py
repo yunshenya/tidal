@@ -90,6 +90,7 @@ def predict_p4(c, now, run_id, stats):
     """Phase-4 winner (m3_ablate_m2 + text emotion) and the phase-5 interrupt head, as its own shadow system
     (regime 'P4', system tidal.shadow.p4.SYSTEM). Off unless TIDAL_SHADOW_P4=1 or frozen_p4.json. Independent of the
     phase-1 models; a failure here is recorded in stats and never fails the tick. Writes p_interrupt per event."""
+    if not S.p4_enabled(): return          # checked before importing p4 (which imports torch, ~1.2 s)
     from tidal.shadow import p4
     spec = p4.shadow_spec()
     if spec is None: return

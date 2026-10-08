@@ -105,7 +105,7 @@ def shadow_spec():
     if those files exist; otherwise random init (logged in the version string)."""
     from tidal.shadow import store as S
     f = S.STATE / "frozen_p4.json"
-    if os.environ.get("TIDAL_SHADOW_P4") != "1" and not f.exists():
+    if not S.p4_enabled():
         return None
     spec = json.loads(f.read_text()) if f.exists() else {}
     if os.environ.get("TIDAL_SHADOW_P4_CKPT"):

@@ -76,6 +76,7 @@ def multi_metrics(y, P, blocks, n_boot, K):
     return r
 
 def paired(y, pa, pb, blocks, n_boot, binary):
+    """mean = bootstrap mean with CI; n_boot == 0 -> point estimate on all rows, ci None (rendered without CI)."""
     y = y.astype(int)
     if binary:
         def fn(i):
@@ -86,6 +87,9 @@ def paired(y, pa, pb, blocks, n_boot, binary):
         K = pa.shape[1]
         fn = lambda i: (_mf1(y[i], pa[i].argmax(1), K) - _mf1(y[i], pb[i].argmax(1), K),)
         names = ["d_macro_f1"]
+    if not n_boot:
+        pt = fn(np.arange(len(y)))
+        return {nm: dict(mean=float(pt[j]), ci=None) for j, nm in enumerate(names)}
     bs = M.boot(fn, blocks, n_boot, 1)
     return {nm: dict(mean=float(np.nanmean(bs[:, j])), ci=M.ci(bs[:, j])) for j, nm in enumerate(names)}
 

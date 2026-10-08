@@ -33,6 +33,10 @@ def connect():
     c.executescript(SCHEMA)
     if new: os.chmod(DB, 0o600)
     return c
+def p4_enabled():
+    """Phase-4 winner + interrupt head system on? (TIDAL_SHADOW_P4=1 or STATE/frozen_p4.json). Cheap: no torch import,
+    so a cron tick with P4 off never loads torch (tidal/shadow/p4.py does)."""
+    return os.environ.get("TIDAL_SHADOW_P4") == "1" or (STATE / "frozen_p4.json").exists()
 def get_meta(c, key, default=None):
     r = c.execute("select value from meta where key=?", (key,)).fetchone()
     return json.loads(r[0]) if r else default
