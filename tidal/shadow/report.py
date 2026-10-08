@@ -89,13 +89,20 @@ def paired(y, pa, pb, blocks, n_boot, binary):
     bs = M.boot(fn, blocks, n_boot, 1)
     return {nm: dict(mean=float(np.nanmean(bs[:, j])), ci=M.ci(bs[:, j])) for j, nm in enumerate(names)}
 
+def aurc(y, P, binary):
+    """area under the risk-coverage curve (decision at 0.5 / argmax, confidence = max prob); lower is better."""
+    dec = (P >= .5).astype(int) if binary else P.argmax(1); conf = np.maximum(P, 1 - P) if binary else P.max(1)
+    o = np.argsort(-conf, kind="stable"); c_ = (dec == y.astype(int))[o]; risk = 1 - np.cumsum(c_) / np.arange(1, len(c_) + 1)
+    return float(risk.mean())
+
 def build(c, since, until, max_lag, n_boot):
     frozen = json.loads((S.STATE / "frozen.json").read_text())
+    p2f = S.STATE / "frozen_p2.json"; frozen2 = json.loads(p2f.read_text()) if p2f.exists() else None
     d = load(c, since, until, max_lag); R = dict(generated_at=time.time(), since=since, until=until, max_lag_s=max_lag, regimes={})
     for regime, g in d.groupby("regime"):
         probs = {s: dict(zip(gg.msg_id, gg.probs.map(json.loads))) for s, gg in g.groupby("system")}
         lab = g.drop_duplicates("msg_id").set_index("msg_id")
-        model = next(s for s in probs if s.startswith("model:")); RR = {}
+        models = sorted(s for s in probs if s.startswith("model:")); model = models[0]; RR = {}
         for h in BIN + list(MULTI):
             y = lab[h].dropna(); ids = [m for m in y.index if all(m in probs[s] and h in probs[s][m] for s in probs)]
             if len(ids) < 5: RR[h] = dict(n=len(ids), note="too few labeled events"); continue
@@ -103,15 +110,23 @@ def build(c, since, until, max_lag, n_boot):
             for s in probs:
                 v = np.array([probs[s][m][h] for m in ids], float)
                 if h in BIN:
-                    thr = frozen["thresholds"][regime][h].get(s, 0.5)
+                    thr = frozen2["thresholds"].get(h, 0.5) if (frozen2 and s == "model:" + frozen2["tag"]) else frozen["thresholds"][regime][h].get(s, 0.5)
                     hr["systems"][s] = bin_metrics(yv, v, thr, blocks, n_boot)
                 else:
                     hr["systems"][s] = multi_metrics(yv, v, blocks, n_boot, MULTI[h])
-            pm = np.array([probs[model][m][h] for m in ids], float)
-            hr["paired_vs_model"] = {s: paired(yv, pm, np.array([probs[s][m][h] for m in ids], float), blocks, n_boot, h in BIN)
-                                     for s in probs if s != model}
+            arr = {s: np.array([probs[s][m][h] for m in ids], float) for s in probs}
+            hr["paired"] = {md: {s: paired(yv, arr[md], arr[s], blocks, n_boot, h in BIN) for s in probs if s != md} for md in models}
+            hr["aurc"] = {s: aurc(yv, arr[s], h in BIN) for s in probs}
+            if h == "y_act":   # selective abstention ('wait and recheck') logged by the phase-2 model
+                for md in models:
+                    ab = [probs[md][m].get("abstain") for m in ids]
+                    if all(a is not None for a in ab):
+                        ab = np.array(ab, bool); corr = arr[md].argmax(1) == yv.astype(int)
+                        hr.setdefault("abstention", {})[md] = dict(coverage=float((~ab).mean()), acc_all=float(corr.mean()),
+                            acc_answered=float(corr[~ab].mean()) if (~ab).any() else None, acc_abstained=float(corr[ab].mean()) if ab.any() else None,
+                            median_recheck_s=float(np.median([probs[md][m]["recheck_after_s"] for m, a in zip(ids, ab) if a])) if ab.any() else None)
             RR[h] = hr
-        R["regimes"][regime] = dict(model=model, n_events=int(lab.shape[0]), heads=RR)
+        R["regimes"][regime] = dict(model=model, models=models, n_events=int(lab.shape[0]), heads=RR)
     tot = lambda q: c.execute(q).fetchone()
     R["coverage"] = dict(events=tot("select count(*) from events")[0], predicted=tot("select count(distinct msg_id) from predictions")[0],
                          labeled=tot("select count(*) from labels")[0],
@@ -135,7 +150,7 @@ def markdown(R):
          f"覆盖：事件 {R['coverage']['events']}，已预测 {R['coverage']['predicted']}，已打标 {R['coverage']['labeled']}；成功运行 {R['coverage']['runs_ok']} 次，失败 {R['coverage']['runs_err']} 次。", "",
          "阈值（准确率 / F1 用）冻结自第一阶段 val，不在影子数据上调。CI：准确率用 Wilson，其余用按 会话×小时 分块的 bootstrap。", ""]
     for regime, rr in R["regimes"].items():
-        L += [f"## {regime} 口径（模型 {rr['model']}，{rr['n_events']} 个已打标事件）", ""]
+        L += [f"## {regime} 口径（模型 {', '.join(rr.get('models', [rr['model']]))}，{rr['n_events']} 个已打标事件）", ""]
         for h, hr in rr["heads"].items():
             if "systems" not in hr: L += [f"### {h} {DESC[h]}：样本不足（n={hr['n']}）", ""]; continue
             L += [f"### {h} {DESC[h]}（val 选出的最强基线：{hr['strongest_baseline']}）", ""]
@@ -144,17 +159,22 @@ def markdown(R):
                 for s, m in hr["systems"].items():
                     L.append(f"| {s} | {m['n']} | {m['pos']} | {m['accuracy']:.3f}{fmt_ci(m['accuracy_ci'])} | {m['f1']:.3f}{fmt_ci(m.get('f1_ci'))} | "
                              f"{f3(m['roc_auc'])}{fmt_ci(m.get('roc_auc_ci'))} | {f3(m['pr_auc'])}{fmt_ci(m.get('pr_auc_ci'))} | {m['brier']:.3f} | {m['ece']:.3f} |")
-                L += ["", "模型 − 基线（配对 bootstrap，均值 [95% CI]；CI 不含 0 才算显著）：", ""]
-                for s, dd in hr["paired_vs_model"].items():
-                    L.append(f"- vs {s}: ΔROC-AUC {dd['d_roc_auc']['mean']:+.3f}{fmt_ci(dd['d_roc_auc']['ci'])}；ΔPR-AUC {dd['d_pr_auc']['mean']:+.3f}{fmt_ci(dd['d_pr_auc']['ci'])}；Brier 改善 {dd['d_brier_gain']['mean']:+.4f}{fmt_ci(dd['d_brier_gain']['ci'])}")
-                mr = hr["systems"][rr["model"]]["reliability"]
-                L += ["", "模型校准分箱（下界, n, 平均预测, 实际正例率）：" + "; ".join(f"{a}:{b}/{c_:.2f}/{d_:.2f}" for a, b, c_, d_ in mr)]
+                for md, pp in hr["paired"].items():
+                    L += ["", f"{md} − 其他系统（配对 bootstrap，均值 [95% CI]；CI 不含 0 才算显著）：", ""]
+                    for s, dd in pp.items():
+                        L.append(f"- vs {s}: ΔROC-AUC {dd['d_roc_auc']['mean']:+.3f}{fmt_ci(dd['d_roc_auc']['ci'])}；ΔPR-AUC {dd['d_pr_auc']['mean']:+.3f}{fmt_ci(dd['d_pr_auc']['ci'])}；Brier 改善 {dd['d_brier_gain']['mean']:+.4f}{fmt_ci(dd['d_brier_gain']['ci'])}")
+                    mr = hr["systems"][md]["reliability"]
+                    L += ["", f"{md} 校准分箱（下界, n, 平均预测, 实际正例率）：" + "; ".join(f"{a}:{b}/{c_:.2f}/{d_:.2f}" for a, b, c_, d_ in mr)]
             else:
                 L += ["| 系统 | n | 类别分布 | 准确率 [CI] | macro-F1 [CI] | 类0 ROC-AUC | ECE(top) | NLL |", "|---|---|---|---|---|---|---|---|"]
                 for s, m in hr["systems"].items():
                     L.append(f"| {s} | {m['n']} | {m['dist']} | {m['accuracy']:.3f}{fmt_ci(m['accuracy_ci'])} | {m['f1_macro']:.3f}{fmt_ci(m.get('f1_macro_ci'))} | {f3(m.get('c0_roc_auc'))} | {m['ece']:.3f} | {m['nll']:.3f} |")
-                L += ["", "模型 − 基线 macro-F1：" + "；".join(f"vs {s} {dd['d_macro_f1']['mean']:+.3f}{fmt_ci(dd['d_macro_f1']['ci'])}" for s, dd in hr["paired_vs_model"].items())]
-            L.append("")
+                for md, pp in hr["paired"].items():
+                    L += ["", f"{md} − 其他系统 macro-F1：" + "；".join(f"vs {s} {dd['d_macro_f1']['mean']:+.3f}{fmt_ci(dd['d_macro_f1']['ci'])}" for s, dd in pp.items())]
+                for md, ab in hr.get("abstention", {}).items():
+                    L += ["", f"{md} 选择性弃权（置信度低于 val 阈值时“等一下再看”）：覆盖率 {ab['coverage']:.2f}，全部准确率 {ab['acc_all']:.3f}，"
+                          f"作答部分准确率 {f3(ab['acc_answered'])}，弃权部分准确率 {f3(ab['acc_abstained'])}，弃权时建议复查间隔中位数 {f3(ab['median_recheck_s'])} s"]
+            L += ["", "风险-覆盖曲线下面积 AURC（越低越好）：" + "；".join(f"{s} {v:.3f}" for s, v in hr.get("aurc", {}).items()), ""]
     mc = R["multimodal_capture"]
     L += ["## 非文本 / 多模态信号采集情况", "", f"预测窗口内事件 {mc['events']}，其中有文本 {mc['with_text']}；占位符识别出的媒体类型：{mc['media_kinds_from_placeholders'] or '无'}；"
           f"带 msg_chars 的入站 {mc['inbound_with_msg_chars']}，其中 msg_chars=0（多半是图片/语音/表情等非文本）{mc['inbound_msg_chars_zero']}。", ""]

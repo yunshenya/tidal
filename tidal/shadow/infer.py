@@ -1,6 +1,6 @@
 """Model + baseline inference for shadow mode (CPU, single thread, no network).
 Uses the exported phase-1 ONNX models and the phase-1 baselines refit to identical predictions (see setup.py)."""
-import json, os, numpy as np, pandas as pd
+import sys, json, os, numpy as np, pandas as pd
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 import onnxruntime as ort, joblib
 from tidal import features
@@ -11,6 +11,14 @@ from tidal.shadow import store as S
 CTX = 64
 MODELS = {"T": os.environ.get("TIDAL_SHADOW_MODEL_T", "T_rs_gru_s1"), "TS": os.environ.get("TIDAL_SHADOW_MODEL_TS", "TS_rs_gru_s1")}
 FROZEN = S.STATE / "frozen.json"      # written by setup.py: norm stats, thresholds, strongest baselines, versions
+P2_FROZEN = S.STATE / "frozen_p2.json"  # written by setup2.py: phase-2 VAP model (separate system, logged alongside phase 1)
+RC_MID = np.array([1, 3.5, 7.5, 15, 40, 180, 300.0])
+
+def p2_cfg():
+    """phase-2 config if the phase-2 model is set up (frozen_p2.json + its ONNX), else None. Phase 1 never depends on it."""
+    if not P2_FROZEN.exists(): return None
+    cfg = json.loads(P2_FROZEN.read_text())
+    return cfg if (ROOT / "models" / f"{cfg['tag']}.onnx").exists() else None
 
 def ready():
     """None if models/baselines/frozen config are present, else a reason string."""
@@ -29,6 +37,10 @@ class Predictor:
         self.sess = {r: ort.InferenceSession(str(ROOT / "models" / f"{MODELS[r]}.onnx"), so, providers=["CPUExecutionProvider"]) for r in MODELS}
         self.base = {r: joblib.load(S.STATE / f"baselines_{r}.joblib") for r in MODELS}
         self.enc = None; self._ecache = {}
+        self.p2 = p2_cfg()
+        if self.p2:
+            try: self.p2_sess = ort.InferenceSession(str(ROOT / "models" / f"{self.p2['tag']}.onnx"), so, providers=["CPUExecutionProvider"])
+            except Exception as e: print(f"[shadow] phase-2 model not loaded: {type(e).__name__}: {e}", file=sys.stderr); self.p2 = None
 
     def _embed(self, texts):
         """bge int8 embeddings, encoded one text at a time (dynamic int8 quantization makes batched outputs depend on
@@ -53,12 +65,16 @@ class Predictor:
             self.n_encoded += len(todo)
         return np.stack([self._ecache[key(t)] for t in texts]) if texts else np.zeros((0, 512), np.float32)
 
-    def predict(self, d: pd.DataFrame, targets_T, targets_TS):
+    def predict(self, d: pd.DataFrame, targets_T, targets_TS, targets_P2=()):
         """d: context+target events (unified frame) for the affected conversations, any order.
         targets_*: msg_ids to predict. Returns list of (msg_id, regime, system, probs_dict)."""
         d = d.sort_values(["conv", "ts"], kind="stable").reset_index(drop=True)
         X = features.compute(d)
         out = []
+        if self.p2 and len(targets_P2):
+            try: out = self._predict_p2(d, X, targets_P2)
+            except Exception as e:  # the phase-2 system must never break phase-1 logging; unpredicted targets are retried next run
+                print(f"[shadow] phase-2 system skipped this run: {type(e).__name__}: {e}", file=sys.stderr); out = []
         for regime, targets in (("T", targets_T), ("TS", targets_TS)):
             if not len(targets): continue
             keep = np.ones(len(d), bool) if regime == "T" else d.text.map(has_text).to_numpy()
@@ -94,6 +110,34 @@ class Predictor:
                 out.append((mid, regime, "model:" + MODELS[regime], {h: _j(res[i][b]) for i, h in enumerate(HEADS)}))
                 for n in names:
                     out.append((mid, regime, n, {h: _j(BP[f"{h}|{n}"][b]) for h in HEADS if f"{h}|{n}" in BP}))
+        return out
+
+    def _predict_p2(self, d, X, targets):
+        """phase-2 VAP model on scenario-general inputs. Participant count / modality are not supplied by the shadow source,
+        so they are left unknown (zeros + known-flag 0); training dropped these optional blocks with p=0.5 so the model
+        has seen this case (effect on held-out data: reports/phase2_extra.json, participants_unknown)."""
+        from tidal import features_g as FG
+        G = FG.compute(d.drop(columns=["n_participants", "modality"], errors="ignore"), X)
+        Z = FG.normalize(G, np.array(self.p2["mu"], np.float32), np.array(self.p2["sd"], np.float32))
+        pos = {m: i for i, m in enumerate(d.msg_id)}; rows = [pos[m] for m in targets if m in pos]
+        if not rows: return []
+        conv = d.conv.to_numpy(); B = len(rows); F = np.zeros((B, CTX, Z.shape[1]), np.float32); V = np.zeros((B, CTX), bool)
+        for b, r in enumerate(rows):
+            lo = r
+            while lo > 0 and r - lo + 1 < CTX and conv[lo - 1] == conv[r]: lo -= 1
+            F[b, CTX - (r - lo + 1):] = Z[lo:r + 1]; V[b, CTX - (r - lo + 1):] = True
+        res = []
+        for a in range(0, B, 256):
+            res.append(self.p2_sess.run(None, {"feats": F[a:a + 256], "valid": V[a:a + 256]}))
+        res = [np.concatenate([x[i] for x in res]) for i in range(len(res[0]))]
+        tau = self.p2["abstain_tau"]["y_act"]; out = []
+        for b, r in enumerate(rows):
+            pr = {h: _j(res[i][b]) for i, h in enumerate(HEADS)}
+            pact = np.asarray(res[HEADS.index("y_act")][b]); prc = np.asarray(res[HEADS.index("y_recheck")][b])
+            pr["abstain"] = int(pact.max() < tau)                                   # low confidence -> wait and recheck
+            pr["recheck_after_s"] = round(float(np.clip(prc @ RC_MID, 2, 300)), 1)
+            pr["p_vap"] = _j(res[-1][b])
+            out.append((d.msg_id.iat[r], "T", "model:" + self.p2["tag"], pr))
         return out
 
 def _j(v):

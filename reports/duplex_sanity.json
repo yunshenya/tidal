@@ -1,0 +1,129 @@
+{
+ "synthetic": true,
+ "sessions": 60,
+ "tolerance_ms": 300,
+ "per_action": {
+  "start": {
+   "tp": 874,
+   "n_true": 875,
+   "n_pred": 876,
+   "precision": 0.997716894977169,
+   "recall": 0.9988571428571429,
+   "f1": 0.9982866933181039
+  },
+  "yield": {
+   "tp": 257,
+   "n_true": 287,
+   "n_pred": 350,
+   "precision": 0.7342857142857143,
+   "recall": 0.8954703832752613,
+   "f1": 0.8069073783359498
+  },
+  "continue": {
+   "tp": 57,
+   "n_true": 61,
+   "n_pred": 65,
+   "precision": 0.8769230769230769,
+   "recall": 0.9344262295081968,
+   "f1": 0.9047619047619049
+  },
+  "backchannel": {
+   "tp": 163,
+   "n_true": 165,
+   "n_pred": 258,
+   "precision": 0.6317829457364341,
+   "recall": 0.9878787878787879,
+   "f1": 0.7706855791962174
+  },
+  "initiate": {
+   "tp": 136,
+   "n_true": 166,
+   "n_pred": 167,
+   "precision": 0.8143712574850299,
+   "recall": 0.8192771084337349,
+   "f1": 0.8168168168168168
+  }
+ },
+ "yield_latency_ticks_vs_reference": {
+  "mean": -0.07392996108949416
+ },
+ "yield_rule_baselines_noisy_vad": {
+  "vad_1tick": {
+   "tp": 286,
+   "n_pred": 2073,
+   "n_true": 287,
+   "fy": 0,
+   "precision": 0.13796430294259526,
+   "recall": 0.9965156794425087,
+   "f1": 0.24237288135593218
+  },
+  "vad_2tick": {
+   "tp": 276,
+   "n_pred": 607,
+   "n_true": 287,
+   "fy": 0,
+   "precision": 0.4546952224052718,
+   "recall": 0.9616724738675958,
+   "f1": 0.6174496644295303
+  },
+  "vad_3tick": {
+   "tp": 244,
+   "n_pred": 263,
+   "n_true": 287,
+   "fy": 0,
+   "precision": 0.9277566539923955,
+   "recall": 0.8501742160278746,
+   "f1": 0.8872727272727273
+  }
+ },
+ "rule_controller_per_action": {
+  "start": {
+   "tp": 854,
+   "n_true": 875,
+   "n_pred": 1018,
+   "precision": 0.8388998035363457,
+   "recall": 0.976,
+   "f1": 0.9022715266772319
+  },
+  "yield": {
+   "tp": 244,
+   "n_true": 287,
+   "n_pred": 266,
+   "precision": 0.9172932330827067,
+   "recall": 0.8501742160278746,
+   "f1": 0.8824593128390597
+  },
+  "continue": {
+   "tp": 55,
+   "n_true": 61,
+   "n_pred": 170,
+   "precision": 0.3235294117647059,
+   "recall": 0.9016393442622951,
+   "f1": 0.4761904761904762
+  },
+  "backchannel": {
+   "tp": 0,
+   "n_true": 165,
+   "n_pred": 0,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "initiate": {
+   "tp": 158,
+   "n_true": 166,
+   "n_pred": 159,
+   "precision": 0.9937106918238994,
+   "recall": 0.9518072289156626,
+   "f1": 0.9723076923076922
+  }
+ },
+ "rule_params_tuned_on_val": {
+  "yr": 3,
+  "q": 0.5,
+  "dead": 8.0
+ },
+ "params": 74951,
+ "train_s": 249.4,
+ "encoder": "P2a_s1"
+}

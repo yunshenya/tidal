@@ -66,16 +66,21 @@ def predict(c, now, run_id, stats):
                                   "where e.ts > ? and e.ts <= ? and p.msg_id is null", (lo, now))]
     tTS = [r[0] for r in c.execute("select e.msg_id from events e left join predictions p on p.msg_id=e.msg_id and p.regime='TS' "
                                    "where e.ts > ? and e.ts <= ? and e.text is not null and e.text != '' and p.msg_id is null", (lo, now))]
-    stats.update(targets_T=len(tT), targets_TS=len(tTS))
-    if not tT and not tTS: return
-    ids = list(set(tT) | set(tTS))
+    from tidal.shadow.infer import p2_cfg
+    p2 = p2_cfg(); tP2 = []
+    if p2:   # phase-2 model = separate system; its own targets (it may backfill events phase 1 already predicted)
+        tP2 = [r[0] for r in c.execute("select e.msg_id from events e left join predictions p on p.msg_id=e.msg_id and p.system=? "
+                                       "where e.ts > ? and e.ts <= ? and p.msg_id is null", ("model:" + p2["tag"], lo, now))]
+    stats.update(targets_T=len(tT), targets_TS=len(tTS), targets_P2=len(tP2))
+    if not tT and not tTS and not tP2: return
+    ids = list(set(tT) | set(tTS) | set(tP2))
     info = pd.read_sql_query(f"select msg_id, conv, ts from events where msg_id in ({','.join('?' * len(ids))})", c, params=ids)
     d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S)
     from tidal.shadow.infer import Predictor, ready
     why = ready()
     if why: stats["predict_skipped"] = why; return
-    P = Predictor(c); preds = P.predict(d, tT, tTS); stats['texts_embedded'] = P.n_encoded
-    ets = dict(zip(info.msg_id, info.ts)); ver = json.dumps(P.cfg["models"])
+    P = Predictor(c); preds = P.predict(d, tT, tTS, tP2); stats['texts_embedded'] = P.n_encoded
+    ets = dict(zip(info.msg_id, info.ts)); ver = json.dumps(dict(P.cfg["models"], P2=P.p2["tag"]) if P.p2 else P.cfg["models"])
     c.executemany("insert or ignore into predictions values(?,?,?,?,?,?,?,?,?)",
                   [(m, r, s, json.dumps(p), ets[m], now, now - ets[m], run_id, ver) for m, r, s, p in preds])
     stats["predictions_written"] = len(preds)

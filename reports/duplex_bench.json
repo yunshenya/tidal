@@ -1,0 +1,60 @@
+{
+ "encoder": "P2a_s1",
+ "threads": 1,
+ "cpu_count": 8,
+ "cpu": "Intel(R) Xeon(R) Processor",
+ "params_total": 573993,
+ "tick_s": 0.1,
+ "n_ticks": 2000,
+ "note": "single thread, PyTorch eager, synthetic inputs; 'events_per_tick' = chat/danmaku events arriving per 100 ms tick",
+ "results": {
+  "0_events_per_tick": {
+   "p50_ms": 0.13487599790096283,
+   "p95_ms": 0.19925294327549636,
+   "p99_ms": 0.2958317880984396,
+   "max_ms": 0.3836530086118728,
+   "rtf_at_10hz_p50": 0.0013487599790096283,
+   "rtf_at_10hz_p95": 0.0019925294327549636,
+   "rtf_at_5hz_p95": 0.0009962647163774818,
+   "max_sustained_hz_flat_out": 6795.4610397621045,
+   "max_hz_by_p99": 3380.2993465571885,
+   "events_per_s": 0.0
+  },
+  "1_events_per_tick": {
+   "p50_ms": 0.6399999983841553,
+   "p95_ms": 0.8226858975831418,
+   "p99_ms": 1.0123040742473677,
+   "max_ms": 1.2447960034478456,
+   "rtf_at_10hz_p50": 0.006399999983841553,
+   "rtf_at_10hz_p95": 0.008226858975831417,
+   "rtf_at_5hz_p95": 0.004113429487915709,
+   "max_sustained_hz_flat_out": 1499.1923974060091,
+   "max_hz_by_p99": 987.8454759193619,
+   "events_per_s": 10.0
+  },
+  "5_events_per_tick": {
+   "p50_ms": 3.355417007696815,
+   "p95_ms": 4.5183537498814985,
+   "p99_ms": 5.335240525600966,
+   "max_ms": 5.894923990126699,
+   "rtf_at_10hz_p50": 0.03355417007696815,
+   "rtf_at_10hz_p95": 0.045183537498814985,
+   "rtf_at_5hz_p95": 0.022591768749407493,
+   "max_sustained_hz_flat_out": 301.4971272807216,
+   "max_hz_by_p99": 187.43297424015557,
+   "events_per_s": 50.0
+  },
+  "20_events_per_tick": {
+   "p50_ms": 24.472934514051303,
+   "p95_ms": 38.68057865038281,
+   "p99_ms": 41.86187197454274,
+   "max_ms": 50.2138480078429,
+   "rtf_at_10hz_p50": 0.24472934514051303,
+   "rtf_at_10hz_p95": 0.38680578650382813,
+   "rtf_at_5hz_p95": 0.19340289325191407,
+   "max_sustained_hz_flat_out": 40.82526571577577,
+   "max_hz_by_p99": 23.888086051386455,
+   "events_per_s": 200.0
+  }
+ }
+}
