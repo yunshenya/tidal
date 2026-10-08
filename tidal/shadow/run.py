@@ -53,9 +53,9 @@ def upsert_events(c, ev, now):
                   [vals[k] for k in cols])
     return n_new, n_upd
 
-def load_frame(c, convs, lo):
-    q = f"select * from events where conv in ({','.join('?' * len(convs))}) and ts >= ? order by conv, ts"
-    d = pd.read_sql_query(q, c, params=list(convs) + [lo])
+def load_frame(c, convs, lo, until):
+    q = f"select * from events where conv in ({','.join('?' * len(convs))}) and ts >= ? and ts <= ? order by conv, ts"
+    d = pd.read_sql_query(q, c, params=list(convs) + [lo, until])
     d["speaker_known"] = d.speaker_known.fillna(0).astype(bool)
     d["text"] = d.text.astype(object).where(d.text.notna(), None)
     d["speaker"] = d.speaker.astype(object).where(d.speaker.notna(), None)
@@ -76,7 +76,7 @@ def predict(c, now, run_id, stats):
     if not tT and not tTS and not tP2: return
     ids = list(set(tT) | set(tTS) | set(tP2))
     info = pd.read_sql_query(f"select msg_id, conv, ts from events where msg_id in ({','.join('?' * len(ids))})", c, params=ids)
-    d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S)
+    d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S, now)
     from tidal.shadow.infer import Predictor, ready
     why = ready()
     if why: stats["predict_skipped"] = why; return
@@ -100,7 +100,7 @@ def predict_p4(c, now, run_id, stats):
     stats["targets_P4"] = len(tP4)
     if not tP4: return
     info = pd.read_sql_query(f"select msg_id, conv, ts from events where msg_id in ({','.join('?' * len(tP4))})", c, params=tP4)
-    d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S)
+    d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S, now)
     model, mu, sd, ver = p4.load_shadow(spec)
     preds = p4.score_frame(model, d, tP4, mu, sd, emo=lambda texts: p4.text_emotion_from_cache(c, texts))
     ets = dict(zip(info.msg_id, info.ts)); v = json.dumps(ver)
@@ -116,7 +116,7 @@ def label(c, now, stats):
                              "where e.ts > ? and e.ts <= ? and l.msg_id is null", c, params=(pa, now - SETTLE_S))
     stats["labels_due"] = len(todo)
     if not len(todo): return
-    d = load_frame(c, sorted(todo.conv.unique()), todo.ts.min() - 3600)
+    d = load_frame(c, sorted(todo.conv.unique()), todo.ts.min() - 3600, now)
     f = real_frame(d=d.assign(attention=None, delivered=None, salience=None, replay_t=None))
     f["conv_type"] = d.conv_type.values
     L = compute_labels(f, horizon=now - 60)
@@ -169,10 +169,12 @@ def main(argv=None):
                                predictions=c.execute("select count(*) from predictions").fetchone()[0],
                                labeled=c.execute("select count(*) from labels").fetchone()[0])
     except Exception as e:
+        c.rollback()   # source cursor and uncommitted events must be retried together
         status = "error"; stats["error"] = f"{type(e).__name__}: {str(e)[:300]}"
     stats["maxrss_mb"] = _maxrss_mb()
     c.execute("update runs set finished_at=?, status=?, stats=? where run_id=?", (time.time(), status, json.dumps(stats), run_id)); c.commit()
     print(time.strftime("%F %T"), run_id, status, json.dumps(stats, ensure_ascii=False), flush=True)
+    c.close(); lockf.close()
     return 0 if status == "ok" else 1
 
 if __name__ == "__main__":

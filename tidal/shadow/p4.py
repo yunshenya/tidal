@@ -105,6 +105,8 @@ def build(cfg=None):
 def load(path=None, cfg=None):
     """Build the winner. If `path` exists, load its state dict (kind must be m3_ablate_m2; speech-* keys ignored)."""
     cfg = dict(WINNER if cfg is None else {**WINNER, **{k: v for k, v in cfg.items() if k != "ckpt"}})
+    if path and not os.path.isfile(path):
+        raise FileNotFoundError(f"phase-4 checkpoint not found: {path}")
     m = build(cfg)
     if path and os.path.exists(path):
         ck = torch.load(path, weights_only=False)
@@ -127,8 +129,7 @@ def step_events(model, events, mu=None, sd=None):
 
 # ------------------------------------------------------------------ shadow log (cron tick)
 def shadow_spec():
-    """None unless enabled (TIDAL_SHADOW_P4=1 or shadow/state/frozen_p4.json). Missing paths fall back to the defaults
-    if those files exist; otherwise random init (logged in the version string)."""
+    """None unless enabled. Production scoring requires trained body and interrupt checkpoints."""
     from tidal.shadow import store as S
     f = S.STATE / "frozen_p4.json"
     if not S.p4_enabled():
@@ -136,21 +137,31 @@ def shadow_spec():
     spec = json.loads(f.read_text()) if f.exists() else {}
     if os.environ.get("TIDAL_SHADOW_P4_CKPT"):
         spec["ckpt"] = os.environ["TIDAL_SHADOW_P4_CKPT"]
-    spec.setdefault("ckpt", DEFAULT_CKPT if os.path.exists(DEFAULT_CKPT) else None)
-    spec.setdefault("interrupt_heads", [p for p in DEFAULT_HEADS if os.path.exists(p)])
-    spec.setdefault("barge_heads", [p for p in DEFAULT_BARGE if os.path.exists(p)])
+    spec.setdefault("ckpt", DEFAULT_CKPT)
+    spec.setdefault("interrupt_heads", list(DEFAULT_HEADS))
+    spec.setdefault("barge_heads", list(DEFAULT_BARGE))
     return spec
 
 def load_shadow(spec):
     """(model with side heads, mu, sd, version dict) for the cron shadow log."""
+    if not spec.get("ckpt") or not os.path.isfile(spec["ckpt"]):
+        raise FileNotFoundError(f"phase-4 shadow requires a trained checkpoint: {spec.get('ckpt')}")
+    if spec.get("interrupt", True):
+        paths = spec.get("interrupt_heads") or []
+        if not paths or any(not os.path.isfile(p) for p in paths):
+            raise FileNotFoundError("phase-4 shadow requires trained interrupt heads")
+    if spec.get("barge", True):
+        paths = spec.get("barge_heads") or []
+        if not paths or any(not os.path.isfile(p) for p in paths):
+            raise FileNotFoundError("phase-4 shadow requires trained barge heads")
     m = load(spec.get("ckpt"), spec)
     mu, sd = np.zeros(FG.NB, np.float32), np.ones(FG.NB, np.float32)
     if spec.get("ckpt") and os.path.exists(spec["ckpt"]):
         ck = torch.load(spec["ckpt"], map_location="cpu", weights_only=False)
         mu, sd = np.asarray(ck["mu"], np.float32), np.asarray(ck["sd"], np.float32)
-    ver = dict(P4=os.path.basename(spec.get("ckpt") or "random-init"),
-               interrupt=[os.path.basename(p) for p in spec.get("interrupt_heads") or []] or "random-init",
-               barge=[os.path.basename(p) for p in spec.get("barge_heads") or []] or "random-init")
+    ver = dict(P4=os.path.basename(spec["ckpt"]),
+               interrupt=[os.path.basename(p) for p in spec.get("interrupt_heads") or []] if spec.get("interrupt", True) else "disabled",
+               barge=[os.path.basename(p) for p in spec.get("barge_heads") or []] if spec.get("barge", True) else "disabled")
     return m, mu, sd, ver
 
 def text_emotion_from_cache(c, texts):

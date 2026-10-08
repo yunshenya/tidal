@@ -95,7 +95,7 @@ protobuf==7.36.2
     #   onnx
     #   onnxruntime
 pyarrow==25.0.1
-    # via -r requirements-audio.txt
+    # via -r requirements.txt
 pycparser==3.0
     # via cffi
 pygments==2.21.0

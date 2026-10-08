@@ -20,7 +20,8 @@ class Source:
             for line in f:
                 if not line.endswith(b"\n"): break           # partial line: pick up next run
                 off += len(line); e = json.loads(line)
-                if e["ts"] > now: continue
+                # Ingest future-dated events too; scoring/labeling filter by the current clock.
+                # Advancing the cursor without storing them would lose them permanently.
                 bot = e.get("role") == "self"
                 rows.append(dict(msg_id=pseudo("m", e["msg_id"]), conv=pseudo("c", e["conv"]), conv_type=e.get("conv_type", "group"),
                                  ts=float(e["ts"]), role="self" if bot else "other",

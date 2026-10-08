@@ -3,4 +3,3 @@
 -r requirements.txt
 soundfile>=0.12
 scipy>=1.13
-pyarrow>=15

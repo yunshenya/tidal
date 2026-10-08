@@ -6,6 +6,7 @@ from tidal.model import HEAD_DIMS
 from tidal.dataset import HEADS
 from tidal import vap as VP
 from tidal.seqdata import CTX
+from tidal.export import require_parity
 OUT = [h.replace("y_", "p_") for h in HEADS] + ["p_vap"]
 class Wrapped(torch.nn.Module):
     def __init__(self, m, temps):
@@ -30,6 +31,7 @@ def main(tag):
     so = ort.SessionOptions(); so.intra_op_num_threads = 1
     oo = ort.InferenceSession(path, so, providers=["CPUExecutionProvider"]).run(None, {"feats": Fb, "valid": Vb})
     diffs = {n: float(np.abs(a - b).max()) for n, a, b in zip(OUT, tt, oo)}
+    require_parity(diffs)
     agree = {n: float((a.argmax(-1) == b.argmax(-1)).mean()) if a.ndim > 1 and n != "p_vap" else float(((a > .5) == (b > .5)).mean()) for n, a, b in zip(OUT, tt, oo)}
     # left-padding invariance: the same window with and without padding must give the same output (streaming-safe)
     short = [w for w in W_ if len(w) < CTX][:200]
@@ -38,6 +40,7 @@ def main(tag):
         with torch.no_grad(): a = W(torch.from_numpy(Fs), torch.from_numpy(Vs))[-1].numpy()
         ps = CTX - Fs.shape[1]; b = ort.InferenceSession(path, so, providers=["CPUExecutionProvider"]).run(None, {"feats": np.pad(Fs, ((0, 0), (ps, 0), (0, 0))), "valid": np.pad(Vs, ((0, 0), (ps, 0)))})[-1]
         pad_diff = float(np.abs(a - b).max())
+        require_parity({"padding": pad_diff})
     else: pad_diff = None
     res = dict(tag=tag, bytes=os.path.getsize(path), params=int(ck["params"]), max_abs_diff=diffs, decision_agreement=agree, n=len(rows), padding_invariance_max_diff=pad_diff)
     json.dump(res, open(f"reports/onnx_parity_{tag}.json", "w"), indent=1); print(json.dumps(res, indent=1))

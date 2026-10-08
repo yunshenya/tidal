@@ -13,7 +13,7 @@ h' = h + sum_levels B_l (A_l h) + b_l ; heads(h') -> logits. B_l, b_l start at 0
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
-import json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
+import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
 from tidal import vap_targets as VT
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 
@@ -43,7 +43,7 @@ class Continuum:
     def __init__(self, model, cfg):
         self.m = model; self.cfg = cfg; d = model.vap[0].in_features; self.d = d
         mk = lambda name, seed: Level(d, cfg["rank"], seed=seed, surprise=cfg["surprise"], **cfg[name])
-        self.glob = mk("glob", 3); self.slow_by_group = {}; self.mk = mk; self.ema = None
+        self.glob = mk("glob", 3); self.slow_by_group = {}; self.med_by_group = {}; self.mk = mk; self.ema = None
         for p in model.parameters(): p.requires_grad_(False)
     def active(self, group):
         lv = []
@@ -51,9 +51,11 @@ class Continuum:
         if "slow" in self.cfg["levels"]:
             if group not in self.slow_by_group: self.slow_by_group[group] = self.mk("slow", 2)
             lv.append(self.slow_by_group[group])
-        if "med" in self.cfg["levels"]: lv.append(self.med)
+        if "med" in self.cfg["levels"]: lv.append(self.med_by_group[group] if group in self.med_by_group else self.med)
         return lv
-    def new_session(self): self.med = self.mk("med", 1)
+    def new_session(self, group=None):
+        self.med = self.mk("med", 1)
+        if group is not None: self.med_by_group[group] = self.med
     def heads(self, h, lv):
         hp = h + sum(l.delta(h) for l in lv) if lv else h
         o = {k: m(hp) for k, m in self.m.heads.items()}; o["vap"] = self.m.vap(hp); return o
@@ -71,34 +73,51 @@ class Continuum:
         return s
 
 def replay(cont, H, V, ts, conv, rows_eval, log_every=None):
-    """stream the events in order (grouped by conv, sorted by ts). Returns adapted vap logits + head outputs for every
-    event (prediction made BEFORE any target of that event or later events is used)."""
-    n = len(H); out_vap = torch.zeros(n, VT.NV); out_heads = {k: [] for k in cont.m.heads}
-    Ht = torch.from_numpy(H); Vt = torch.from_numpy(V); cost = []
-    starts = np.r_[0, np.flatnonzero(conv[1:] != conv[:-1]) + 1, n]
-    used = np.zeros((n, VT.NV), bool); used[np.isnan(V)] = True
+    """Replay in global timestamp order; return outputs/costs in the original row order.
+
+    Each group has its own session adapter. Matured bins update the originating session,
+    group and shared deployment adapter before the next prediction, even if that group
+    has gone quiet. No group's future targets can influence another group's past.
+    """
+    n = len(H); out_vap = torch.zeros(n, VT.NV)
+    Ht = torch.from_numpy(H); Vt = torch.from_numpy(V); cost = np.zeros(n)
     head_out = {k: torch.zeros(n, m[-1].out_features) for k, m in cont.m.heads.items()}
-    for a, b in zip(starts[:-1], starts[1:]):
-        group = conv[a]; cont.new_session(); pend = []; last_ts = None
-        for i in range(a, b):
-            t0 = time.perf_counter()
-            if last_ts is not None and ts[i] - last_ts > cont.cfg["session_gap"]: cont.new_session()
-            last_ts = ts[i]; lv = cont.active(group)
-            # 1) learn from every (event, bin) whose bin end has passed (strictly before predicting event i)
-            if pend:
-                P = np.array(pend); mat = (ts[i] >= ts[P][:, None] + BIN_END[None]) & ~used[P]
-                rr = np.flatnonzero(mat.any(1))
-                if len(rr):
-                    idx = P[rr]; vv = Vt[idx].clone(); vv[~torch.from_numpy(mat[rr])] = float("nan")
-                    if lv and (~torch.isnan(vv)).any(): cont.update(Ht[idx], vv, lv)
-                    used[idx] |= mat[rr]
-                    pend = [p for p in pend if not used[p].all()]
-            # 2) predict for event i with the current adapters
-            with torch.no_grad():
-                o = cont.heads(Ht[i:i + 1], lv); out_vap[i] = o["vap"][0]
-                for k in head_out: head_out[k][i] = o[k][0]
-            pend.append(i); cost.append(time.perf_counter() - t0)
-    return out_vap.numpy(), {k: v.numpy() for k, v in head_out.items()}, np.array(cost)
+    order = np.argsort(ts, kind="stable")
+    pending = []; row_state = {}; sessions = {}; last_ts = {}
+    nb = len(VT.BINS)
+    for i in order:
+        t0 = time.perf_counter(); now = ts[i]
+        # Apply updates at their actual maturity times, rather than batching by the
+        # next arriving event. Another group's traffic must not change local cadence.
+        while pending and pending[0][0] <= now:
+            due = pending[0][0]; matured = {}
+            while pending and pending[0][0] == due:
+                _, r, k = heapq.heappop(pending)
+                session, lv, remaining = row_state[r]
+                batch = matured.setdefault(session, (lv, {}))[1]
+                cols = np.arange(k, VT.NV, nb)
+                batch.setdefault(r, []).extend(cols[np.isfinite(V[r, cols])].tolist())
+                remaining -= 1
+                if remaining: row_state[r] = (session, lv, remaining)
+                else: del row_state[r]
+            for lv, batch in matured.values():
+                idx = list(batch); vv = torch.full((len(idx), VT.NV), float("nan"))
+                for j, r in enumerate(idx): vv[j, batch[r]] = Vt[r, batch[r]]
+                cont.update(Ht[idx], vv, lv)
+        group = conv[i]
+        if group not in last_ts or now - last_ts[group] > cont.cfg["session_gap"]:
+            cont.new_session(group); sessions[group] = sessions.get(group, -1) + 1
+        last_ts[group] = now; lv = cont.active(group)
+        with torch.no_grad():
+            o = cont.heads(Ht[i:i + 1], lv); out_vap[i] = o["vap"][0]
+            for k in head_out: head_out[k][i] = o[k][0]
+        bins = [k for k in range(nb) if np.isfinite(V[i, k::nb]).any()]
+        if bins and lv:
+            row_state[i] = ((group, sessions[group]), lv, len(bins))
+            for k in bins: heapq.heappush(pending, (now + VT.BINS[k][1], i, k))
+        cost[i] = time.perf_counter() - t0
+    return out_vap.numpy(), {k: v.numpy() for k, v in head_out.items()}, cost
+
 
 def encode_rows(model, D, rows, conv_mask):
     """frozen base: encoder output h at each row (causal <=64-event window, same as evaluation in phase 3)."""

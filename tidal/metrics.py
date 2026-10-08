@@ -65,7 +65,9 @@ def paired_delta(y, pa, pb, thr_a, thr_b, blocks, kind="binary", n_boot=1000, se
             return (f1_score(yy, pa[idx].argmax(1), average="macro", labels=list(range(K)), zero_division=0) -
                     f1_score(yy, pb[idx].argmax(1), average="macro", labels=list(range(K)), zero_division=0), np.nan)
     bs = boot(fn, blocks, n_boot, seed)
-    return dict(d_primary_ci=ci(bs[:, 0]), d_primary_mean=float(np.nanmean(bs[:, 0])), p_le0=float(np.nanmean(bs[:, 0] <= 0)),
+    primary = bs[:, 0][np.isfinite(bs[:, 0])]
+    return dict(d_primary_ci=ci(primary), d_primary_mean=float(primary.mean()) if len(primary) else np.nan,
+                p_le0=float((primary <= 0).mean()) if len(primary) else np.nan, n_boot_valid=int(len(primary)),
                 d_f1_ci=ci(bs[:, 1]) if kind == "binary" else None)
 
 

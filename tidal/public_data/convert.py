@@ -169,7 +169,7 @@ def aishell4(seed=6):
         rows = [l.split() for l in open(p) if l.startswith("SPEAKER")]
         if len(rows) < 30: continue
         g = pd.DataFrame(dict(st=[float(r[3]) for r in rows], du=[float(r[4]) for r in rows], speaker=[r[7] for r in rows]))
-        g["ts"] = g.st + g.du; g = g.sort_values("ts").reset_index(drop=True)
+        g["ts"] = g.st + g.du; g = g.sort_values(["ts", "st"], kind="stable").reset_index(drop=True)
         g["conv"] = f"a4:{i}"; g["msg_id"] = [f"a4:{i}:{k}" for k in range(len(g))]; g["reply_to"] = None; g["modality"] = "voice"; g["text"] = None
         g = perspective(g, rng, have_replies=False); g["n_participants"] = g.speaker.nunique(); fr.append(g)
     return finish(fr, "pub_aishell4", "meeting_voice", "group", seed)

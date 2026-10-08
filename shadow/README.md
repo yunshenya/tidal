@@ -86,7 +86,7 @@ pkill -f "tidal.shadow.run"                    # 如果某次 tick 正在跑，�
 
 ## 第四阶段胜者 + 打断头（P4 口径，只记录）
 
-`shadow/state/frozen_p4.json`（或 `TIDAL_SHADOW_P4=1`）打开后，每次 tick 另写一个系统 `model:p4_m3_ablate_m2`，口径 `P4`：`m3_ablate_m2` + 文本情绪的六个头概率，加上第五阶段打断头的 `p_interrupt`（3 个种子头的平均）。文本情绪只用 TS 路径已经缓存的 bge 嵌入，没有缓存的事件按"未知"处理。聊天流没有打断真值，报告里只给 `p_interrupt` 的分布。对方还占着话轮时另记前向概率 `p_barge`（预注册采用，同样只记录、不改动作）；自己占着话轮的事件不记这一项。它不改变任何动作，出错只记进 `runs.stats.p4_error`，不影响第一阶段。删掉 `frozen_p4.json` 即可停用。
+`shadow/state/frozen_p4.json`（或 `TIDAL_SHADOW_P4=1`）打开后，每次 tick 另写一个系统 `model:p4_m3_ablate_m2`，口径 `P4`：`m3_ablate_m2` + 文本情绪的六个头概率，加上第五阶段打断头的 `p_interrupt`（3 个种子头的平均）。文本情绪只用 TS 路径已经缓存的 bge 嵌入，没有缓存的事件按"未知"处理。聊天流没有打断真值，报告里只给 `p_interrupt` 的分布。对方还占着话轮时另记前向概率 `p_barge`（预注册采用，同样只记录、不改动作）；自己占着话轮的事件不记这一项。它不改变任何动作，出错只记进 `runs.stats.p4_error`，不影响第一阶段。删掉 `frozen_p4.json` 即可停用。权重不随仓库发布；不给路径时使用默认权重路径。主干或启用的打断头、前向插话头权重缺失时，记录 `p4_error` 并跳过本次 P4 预测，补齐权重后重试，不写入随机初始化预测。
 
 ```json
 {"ckpt": "models/P4emo_m3_ablate_m2_s0.pt", "interrupt_heads": ["models/P5hd_m2_s0.pt", "models/P5hd_m2_s1.pt", "models/P5hd_m2_s2.pt"]}

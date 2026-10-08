@@ -12,6 +12,8 @@ def run_gru(gru, x, valid):
     layout) and right-padded batches go through pack_padded_sequence. Any other mask falls back to
     a per-step update that copies the state through invalid steps. An all-valid batch is the plain GRU.
     """
+    if valid is not None and torch.onnx.is_in_onnx_export():
+        return _gru_step_mask(gru, x, valid)
     if valid is None or bool(valid.bool().all()):
         return gru(x)
     valid = valid.bool()
@@ -59,7 +61,7 @@ def _gru_step_mask(gru, x, valid):
         y, h2 = gru(x[:, t:t + 1], h)
         m = valid[:, t].to(dtype=x.dtype).view(1, B, 1)
         h = h2 * m + h * (1 - m)
-        ys.append(y[:, 0])
+        ys.append(y[:, 0] * valid[:, t:t + 1].to(x.dtype))
     return torch.stack(ys, 1), h
 
 class TurnModel(nn.Module):

@@ -46,8 +46,7 @@ def candor_labels():
 def aishell_labels():
     out = {}
     paths = sorted(glob.glob(str(DATA / "aishell4_seg" / "**" / "*.rttm"), recursive=True))
-    i_kept = 0
-    for p in paths:
+    for i, p in enumerate(paths):
         rows = [l.split() for l in open(p) if l.startswith("SPEAKER")]
         if len(rows) < 30:
             continue
@@ -58,8 +57,7 @@ def aishell_labels():
         yi, _k = speech_interrupt(segs_e)
         # meetings are not dyads: message-value is defined for dyads only
         for k in range(len(segs_e)):
-            out[f"a4:{i_kept}:{k}"] = (float(yi[k]), float("nan"))
-        i_kept += 1
+            out[f"a4:{i}:{k}"] = (float(yi[k]), float("nan"))
     return out
 
 

@@ -27,7 +27,7 @@ def build():
     ai = _ai_stream()
     if ai is not None: frames.append(ai)
     d = pd.concat(frames, ignore_index=True)
-    d["weight"] = pd.to_numeric(d.get("weight"), errors="coerce").fillna(1.0)
+    d["weight"] = pd.to_numeric(d.get("weight", pd.Series(1.0, index=d.index)), errors="coerce").fillna(1.0)
     X = features.compute(d); G = features_g.compute(d, X); V = vap_targets.compute(d); Y = d[HEADS].to_numpy(np.float32)
     assert len(d) == len(G)
     meta = d[["source", "conv", "conv_type", "ts", "role", "split", "scenario", "speaker_known", "msg_id", "responds_to", "initiate"]].copy()

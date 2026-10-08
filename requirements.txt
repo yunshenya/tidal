@@ -4,6 +4,7 @@
 # Pinned versions: requirements.lock (uv pip compile).
 numpy>=2.0
 pandas>=2.2
+pyarrow>=15        # core datasets and evaluation use Parquet
 scikit-learn>=1.5
 joblib>=1.4
 onnx>=1.16

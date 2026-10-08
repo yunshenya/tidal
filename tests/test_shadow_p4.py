@@ -89,6 +89,12 @@ def test_cron_tick_logs_p_interrupt(tmp_path, monkeypatch):
     from tidal.shadow import run, store as S
     monkeypatch.setattr(S, "STATE", tmp_path / "state"); monkeypatch.setattr(S, "DB", tmp_path / "state" / "shadow.db")
     monkeypatch.setenv("TIDAL_SHADOW_P4", "1")
+    body = tmp_path / "body.pt"; head = tmp_path / "interrupt.pt"; barge = tmp_path / "barge.pt"
+    torch.save(dict(state=build({"interrupt": False}).state_dict(), kind="m3_ablate_m2",
+                    mu=np.zeros(FG.NB), sd=np.ones(FG.NB)), body)
+    torch.save(dict(state={"y_interrupt": BinHead().state_dict()}, feats=p4.HEAD_FEATS), head)
+    torch.save(dict(state=BinHead(d=132).state_dict(), feats=p4.BARGE_FEATS), barge)
+    monkeypatch.setattr(p4, "shadow_spec", lambda: dict(ckpt=str(body), interrupt_heads=[str(head)], barge_heads=[str(barge)]))
     t0 = time.time() - 4 * 3600
     ev = [dict(msg_id=f"q{i}", conv="g9", conv_type="group", ts=t0 + i * 20, role="self" if i % 5 == 4 else "other",
                speaker=None if i % 5 == 4 else f"p{i % 3}", text=f"消息{i}") for i in range(12)]
@@ -134,3 +140,29 @@ def test_barge_head_from_other_features_is_refused(tmp_path):
     b = BinHead(d=132); b.load_state_dict(st)
     h = torch.randn(128); tim = torch.zeros(4)
     assert torch.allclose(m.barge_head.prob(h, tim), torch.sigmoid(b(torch.cat([h[None], tim[None]], -1))).reshape(-1), atol=1e-5)
+
+def test_shadow_refuses_missing_body_and_interrupt_checkpoints(tmp_path):
+    with pytest.raises(FileNotFoundError, match="trained checkpoint"):
+        p4.load_shadow(dict(ckpt=str(tmp_path / "missing.pt")))
+    body = tmp_path / "body.pt"
+    torch.save(dict(state=build({"interrupt": False}).state_dict(), kind="m3_ablate_m2",
+                    mu=np.zeros(FG.NB), sd=np.ones(FG.NB)), body)
+    for paths in ([], [str(tmp_path / "missing_head.pt")]):
+        with pytest.raises(FileNotFoundError, match="interrupt heads"):
+            p4.load_shadow(dict(ckpt=str(body), interrupt_heads=paths))
+    for paths in ([], [str(tmp_path / "missing_barge.pt")]):
+        with pytest.raises(FileNotFoundError, match="barge heads"):
+            p4.load_shadow(dict(ckpt=str(body), interrupt=False, barge_heads=paths))
+
+def test_missing_shadow_weights_do_not_poison_predictions(tmp_path, monkeypatch):
+    from tidal.shadow import run, store as S
+    monkeypatch.setattr(S, "STATE", tmp_path / "state"); monkeypatch.setattr(S, "DB", tmp_path / "state" / "shadow.db")
+    monkeypatch.setenv("TIDAL_SHADOW_P4", "1")
+    monkeypatch.setattr(p4, "shadow_spec", lambda: dict(ckpt=str(tmp_path / "missing.pt")))
+    stream = tmp_path / "ev.jsonl"
+    stream.write_text(json.dumps(dict(msg_id="m", conv="c", ts=time.time()-14400, speaker="a", text="x"))+"\n")
+    monkeypatch.setenv("TIDAL_SHADOW_JSONL", str(stream))
+    assert run.main(["--source", "jsonl"]) == 0
+    with sqlite3.connect(S.DB) as c:
+        assert c.execute("select count(*) from predictions where regime='P4'").fetchone()[0] == 0
+        assert "p4_error" in json.loads(c.execute("select stats from runs").fetchone()[0])

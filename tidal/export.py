@@ -4,6 +4,10 @@ import sys, json, numpy as np, torch, onnxruntime as ort
 from tidal.model import TurnModel, HEAD_DIMS
 from tidal.dataset import HEADS
 from tidal.seqdata import load, conv_index, eval_windows, batchify
+def require_parity(diffs, atol=1e-4):
+    bad = {k: v for k, v in diffs.items() if not np.isfinite(v) or v > atol}
+    if bad: raise ValueError(f"ONNX parity failed (tolerance {atol}): {bad}")
+
 class Wrapped(torch.nn.Module):
     def __init__(self, m, temps, use_text):
         super().__init__(); self.m = m; self.use_text = use_text
@@ -42,7 +46,8 @@ def main(tag, regime_eval_json=None):
     if ck["use_text"]: feed["text"] = Eb
     oo = s.run(None, feed)
     diffs = {h: float(np.abs(a.numpy() - b).max()) for h, a, b in zip(HEADS, tt, oo)}
-    agree = {h: float((a.numpy().argmax(-1) == b.argmax(-1)).mean()) if a.dim() > 1 else float(((a.numpy() > .5) == (b > .5)).mean()) for h, a, b in zip(HEADS, tt, oo)}
+    require_parity(diffs)
+    agree = {h: float((a.numpy().argmax(-1) == b.argmax(-1)).mean()) if HEAD_DIMS[h] > 1 else float(((a.numpy() > .5) == (b > .5)).mean()) for h, a, b in zip(HEADS, tt, oo)}
     res = dict(tag=tag, onnx=path, bytes=__import__("os").path.getsize(path), max_abs_diff=diffs, decision_agreement=agree, n=len(rows))
     json.dump(res, open(f"reports/onnx_parity_{tag}.json", "w"), indent=1); print(json.dumps(res, indent=1))
 if __name__ == "__main__":
