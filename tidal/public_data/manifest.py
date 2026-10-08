@@ -61,6 +61,13 @@ DATASETS = {
     "zh_med_s": dict(repo="zzhdbw/Simplified_Chinese_Multi-Emotion_Dialogue_Dataset", license="apache-2.0", research_only=False,
                      files=["Simplified_Chinese_Multi-Emotion_Dialogue_Dataset.csv"], scenario="emotion_text", lang="zh-Hans",
                      use="simplified-Chinese conversion of zh_med (same items; used instead of zh_med)"),
+    "crosswoz": dict(repo="ConvLab/crosswoz", license="apache-2.0", research_only=False,
+                     files=["data.zip", "shuffled_dial_ids.json"], scenario="topic", lang="zh",
+                     use="dialogue-state domain change -> topic-shift head (phase 5)"),
+    "superdialseg": dict(repo="Coldog2333/super_dialseg", license="apache-2.0", research_only=False,
+                         files=["train.json", "validation.json", "test.json"], scenario="topic", lang="en",
+                         use="author SuperDialseg release; segmentation_label -> topic-shift head (phase 5)"),
     "crema_d": dict(repo="myleslinder/crema-d", license="odbl", research_only=False, files=["data/crema_d.tar.gz"],
                     scenario="emotion_speech", lang="en", use="7,442 acted clips, 91 speakers, 6 emotions x intensity -> speech emotion head"),
 }
+    # phase 5: topic shift (text only; not redistributed)

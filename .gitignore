@@ -29,3 +29,9 @@ __pycache__/
 .pytest_cache/
 # third-party teacher weights (FunASR model license; never redistributed)
 models/sensevoice/
+
+# phase 5: real-data eval stays local
+reports/phase5_baselines.json
+reports/phase5_private.md
+reports/eval_phase5.json
+reports/phase5_progress.md
