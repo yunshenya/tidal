@@ -1,0 +1,382 @@
+{
+  "signature": "6288d6e6cf9617449d43d6083abce7903cb40065d6d2261183071605ffe726f1",
+  "tasks": {
+    "reply_to": {
+      "task": "reply_to",
+      "status": "trained_evaluated",
+      "signature": "6288d6e6cf9617449d43d6083abce7903cb40065d6d2261183071605ffe726f1",
+      "champion": "mlp",
+      "train_n": 59217,
+      "val_n": 2321,
+      "test_n": 4605,
+      "split_blocks": {
+        "train": 153,
+        "val": 10,
+        "test": 10
+      },
+      "counts": {
+        "train": {
+          "annotated_queries": 59217,
+          "skipped_unannotated": 136929,
+          "skipped_nonmessage": 24470,
+          "with_visible_target": 49117,
+          "with_outside_target": 1559,
+          "roots": 8623
+        },
+        "val": {
+          "annotated_queries": 2321,
+          "skipped_unannotated": 9294,
+          "skipped_nonmessage": 895,
+          "with_visible_target": 1968,
+          "with_outside_target": 60,
+          "roots": 294
+        },
+        "test": {
+          "annotated_queries": 4605,
+          "skipped_unannotated": 9253,
+          "skipped_nonmessage": 1152,
+          "with_visible_target": 3959,
+          "with_outside_target": 108,
+          "roots": 539
+        }
+      },
+      "neural": {
+        "n": 4605,
+        "accuracy": 0.6618892508143323,
+        "nll": 1.1522778557087994,
+        "null_precision": 0.6282485875706215,
+        "null_recall": 0.8593508500772797,
+        "visible_target_rate": 0.8597176981541802,
+        "null_target_rate": 0.14049945711183495
+      },
+      "selected": {
+        "n": 4605,
+        "accuracy": 0.6618892508143323,
+        "nll": 1.1522778557087994,
+        "null_precision": 0.6282485875706215,
+        "null_recall": 0.8593508500772797,
+        "visible_target_rate": 0.8597176981541802,
+        "null_target_rate": 0.14049945711183495
+      },
+      "baselines": {
+        "null": {
+          "n": 4605,
+          "accuracy": 0.14049945711183495,
+          "nll": 7.891914135542321,
+          "null_precision": 0.14049945711183495,
+          "null_recall": 1.0,
+          "visible_target_rate": 0.8597176981541802,
+          "null_target_rate": 0.14049945711183495
+        },
+        "latest": {
+          "n": 4605,
+          "accuracy": 0.304885993485342,
+          "nll": 6.396114577436722,
+          "null_precision": 0.0,
+          "null_recall": 0.0,
+          "visible_target_rate": 0.8597176981541802,
+          "null_target_rate": 0.14049945711183495
+        },
+        "mention": {
+          "n": 4605,
+          "accuracy": 0.46406080347448425,
+          "nll": 4.9314869989132335,
+          "null_precision": 0.0,
+          "null_recall": 0.0,
+          "visible_target_rate": 0.8597176981541802,
+          "null_target_rate": 0.14049945711183495
+        },
+        "linear": {
+          "n": 4605,
+          "accuracy": 0.6128121606948969,
+          "nll": 1.3766984125211672,
+          "null_precision": 0.5678642714570858,
+          "null_recall": 0.8794435857805255,
+          "visible_target_rate": 0.8597176981541802,
+          "null_target_rate": 0.14049945711183495
+        }
+      },
+      "deltas": {
+        "null": {
+          "blocks": 10,
+          "accuracy_improvement_ci": [
+            0.4881442272877981,
+            0.5471955939659289
+          ],
+          "nll_improvement_ci": [
+            6.586709330868204,
+            6.8888997672399155
+          ]
+        },
+        "latest": {
+          "blocks": 10,
+          "accuracy_improvement_ci": [
+            0.2612087122620149,
+            0.44432933655722
+          ],
+          "nll_improvement_ci": [
+            4.545470936767014,
+            5.931489073466985
+          ]
+        },
+        "mention": {
+          "blocks": 10,
+          "accuracy_improvement_ci": [
+            0.13751047524868049,
+            0.25231465357726435
+          ],
+          "nll_improvement_ci": [
+            3.3913224442601377,
+            4.202654754414279
+          ]
+        },
+        "linear": {
+          "blocks": 10,
+          "accuracy_improvement_ci": [
+            0.036590329960162066,
+            0.06167232789647134
+          ],
+          "nll_improvement_ci": [
+            0.1892183507188947,
+            0.2628919663588253
+          ]
+        }
+      },
+      "neural_passed_gate": true,
+      "shadow_only": true,
+      "automatic_action_enabled": false,
+      "selection_manifest_sha256": "eb12fe8712462c08f105191d93e74fc959e532b21eccc850d42ecf5026bdcfe2",
+      "export": {
+        "schema_version": 1,
+        "task": "reply_to",
+        "classes": [],
+        "feature_names": [
+          "null",
+          "cosine",
+          "token_overlap",
+          "mentions_candidate",
+          "candidate_mentions_query",
+          "same_speaker",
+          "log_gap",
+          "distance",
+          "candidate_length",
+          "query_length",
+          "candidate_question",
+          "query_question"
+        ],
+        "feature_contract": "task_heads_v1",
+        "max_context": 32,
+        "hash_dim": 256,
+        "model_file": "reply_to.onnx",
+        "model_sha256": "e362c5d4c2f43248439b4f74e22cb07a62dc32830c48854a37b6a9c868c2ce9b",
+        "signature": "6288d6e6cf9617449d43d6083abce7903cb40065d6d2261183071605ffe726f1",
+        "selection_manifest_sha256": "eb12fe8712462c08f105191d93e74fc959e532b21eccc850d42ecf5026bdcfe2",
+        "neural_passed_gate": true,
+        "shadow_only": true,
+        "automatic_action_enabled": false,
+        "onnx_parity_max_error": 8.940696716308594e-08,
+        "draft_conditioned": true,
+        "weak_behavior_proxy": false,
+        "research_only": false,
+        "parameters": 1347
+      }
+    },
+    "overlap_outcome": {
+      "task": "overlap_outcome",
+      "status": "trained_evaluated",
+      "signature": "6288d6e6cf9617449d43d6083abce7903cb40065d6d2261183071605ffe726f1",
+      "champion": "linear",
+      "train_n": 226,
+      "val_n": 21,
+      "test_n": 166,
+      "split_blocks": {
+        "train": 21,
+        "val": 1,
+        "test": 5
+      },
+      "counts": {
+        "train": {
+          "candidates": 269,
+          "ambiguous": 43,
+          "insufficient_context": 0
+        },
+        "val": {
+          "candidates": 28,
+          "ambiguous": 7,
+          "insufficient_context": 0
+        },
+        "test": {
+          "candidates": 233,
+          "ambiguous": 67,
+          "insufficient_context": 0
+        }
+      },
+      "neural": {
+        "n": 166,
+        "accuracy": 0.5060240963855421,
+        "nll": 0.6932615685421876,
+        "macro_f1": 0.49155834453907066,
+        "balanced_accuracy": 0.4923167848699763,
+        "roc_auc": 0.4674940898345154,
+        "brier": 0.2500586196645476
+      },
+      "selected": {
+        "n": 166,
+        "accuracy": 0.5301204819277109,
+        "nll": 0.6961445720581222,
+        "macro_f1": 0.5284090909090908,
+        "balanced_accuracy": 0.5477245862884161,
+        "roc_auc": 0.5695921985815603,
+        "brier": 0.2513745717105231
+      },
+      "baselines": {
+        "prior": {
+          "n": 166,
+          "accuracy": 0.5662650602409639,
+          "nll": 0.6858017538330294,
+          "macro_f1": 0.36153846153846153,
+          "balanced_accuracy": 0.5,
+          "roc_auc": 0.5,
+          "brier": 0.24631944647569842
+        },
+        "linear": {
+          "n": 166,
+          "accuracy": 0.5301204819277109,
+          "nll": 0.6961445720581222,
+          "macro_f1": 0.5284090909090908,
+          "balanced_accuracy": 0.5477245862884161,
+          "roc_auc": 0.5695921985815603,
+          "brier": 0.2513745717105231
+        }
+      },
+      "deltas": {
+        "prior": {
+          "blocks": 5,
+          "accuracy_improvement_ci": [
+            -0.18543046357615894,
+            0.08839779005524862
+          ],
+          "nll_improvement_ci": [
+            -0.06716927479152146,
+            0.03402084163714818
+          ]
+        },
+        "linear": {
+          "blocks": 5,
+          "accuracy_improvement_ci": [
+            0.0,
+            0.0
+          ],
+          "nll_improvement_ci": [
+            0.0,
+            0.0
+          ]
+        }
+      },
+      "neural_passed_gate": false,
+      "shadow_only": true,
+      "automatic_action_enabled": false,
+      "selection_manifest_sha256": "502327cfe3331a443f8d81e9e1dffe361f237575f5f442d65db2f6e5f4a74014",
+      "export": {
+        "schema_version": 1,
+        "task": "overlap_outcome",
+        "classes": [
+          "backchannel",
+          "floor_claim"
+        ],
+        "feature_names": [
+          "incoming_recent_mean",
+          "incoming_previous_mean",
+          "incoming_recent_std",
+          "incoming_previous_std",
+          "incoming_rise",
+          "incoming_spectral_std",
+          "self_recent_mean",
+          "self_previous_mean",
+          "self_recent_std",
+          "self_previous_std",
+          "self_rise",
+          "self_spectral_std",
+          "log_self_run",
+          "incoming_elapsed"
+        ],
+        "feature_contract": "task_heads_v1",
+        "max_context": 32,
+        "hash_dim": 256,
+        "model_file": "overlap_outcome.onnx",
+        "model_sha256": "02dbf371ff5144f21e443c837ca34f10506f9ea435cfd1ed1426393491d8a440",
+        "signature": "6288d6e6cf9617449d43d6083abce7903cb40065d6d2261183071605ffe726f1",
+        "selection_manifest_sha256": "502327cfe3331a443f8d81e9e1dffe361f237575f5f442d65db2f6e5f4a74014",
+        "neural_passed_gate": false,
+        "shadow_only": true,
+        "automatic_action_enabled": false,
+        "onnx_parity_max_error": 0.0,
+        "draft_conditioned": false,
+        "weak_behavior_proxy": true,
+        "research_only": true,
+        "parameters": 90
+      }
+    },
+    "action_policy": {
+      "task": "action_policy",
+      "status": "human_annotations_missing"
+    },
+    "eot_semantic": {
+      "task": "eot_semantic",
+      "status": "human_annotations_missing"
+    },
+    "recheck_policy": {
+      "task": "recheck_policy",
+      "status": "human_annotations_missing"
+    },
+    "overlap_intent": {
+      "task": "overlap_intent",
+      "status": "human_annotations_missing"
+    }
+  },
+  "annotations": {
+    "status": "data_missing"
+  },
+  "shadow_only": true,
+  "automatic_action_enabled": false,
+  "artifacts": {
+    "overlap_outcome_mlp_0.pt": "707e3920e7c8a315b92c785da8bdd6e0cf4a22aa5b8db56bcbe960552510fcdd",
+    "reply_to_linear_2.pt": "67e94841b214a08e7528fa06534771c7d3e406aa72ef484f8d88f1aabb419559",
+    "overlap_outcome_linear_2.pt": "19673551338e6c6602d066fe66fa2d6831ab93b3040ad9a975d0cb1dafb9f4ce",
+    "overlap_outcome_predictions.npz": "23dfecf0ac0af389fe7291bc71bebfef01837e856561f5a7f8220b1964f8c186",
+    "overlap_outcome_mlp_1.pt": "6ee3f4723c1ca517444f9aba86340cb5c4ba9c0b3036f162ab805bae2edcedea",
+    "overlap_outcome_selection.json": "502327cfe3331a443f8d81e9e1dffe361f237575f5f442d65db2f6e5f4a74014",
+    "reply_to_mlp_1.pt": "a90f6d87e80fcf11eb33a9dfb6943127b35491210a40fc18cc4af33a385a1c68",
+    "reply_to_predictions.npz": "be27aa83bfe1d66950325d03f3f2f8cf2cf8824e03959b39f4de612d20377df7",
+    "reply_to_selection.json": "eb12fe8712462c08f105191d93e74fc959e532b21eccc850d42ecf5026bdcfe2",
+    "reply_to_mlp_0.pt": "7a783553aa3c1cf89a220b424be5cae108ac9b2e388a11b8b8a465a5e2b894ad",
+    "overlap_outcome.onnx": "02dbf371ff5144f21e443c837ca34f10506f9ea435cfd1ed1426393491d8a440",
+    "overlap_outcome_bundle.json": "8787b8eeade2ac3d9355f01edfa26fa26f6fd5823ef45af25ab15358e9dedbcb",
+    "reply_to_mlp_2.pt": "f12f0f87001ea6048a83b0ab45693f0667794d658718dd28ee8a5e7e817d6014",
+    "reply_to_bundle.json": "769fe5f088be081fdfd9975ef89ecb398eb3d71a1364dae22be0bec172dcee27",
+    "reply_to_linear_1.pt": "dcaaf2f719f9d83594c9b95db60182775424a5b2de7953c426eb59ceb6672323",
+    "reply_to.onnx": "e362c5d4c2f43248439b4f74e22cb07a62dc32830c48854a37b6a9c868c2ce9b",
+    "overlap_outcome_linear_1.pt": "8d13838634544a97d6069dbef066d8f6241bfa11c7cb72bbcf33b5e516dce6c1",
+    "overlap_outcome_mlp_2.pt": "0d318114000584aec9aa4d2a41d28f87c3caf8410e402fb514938fbcc79fa4ff",
+    "overlap_outcome_linear_0.pt": "543108c3e8736106b27ded559cb5e154605c3eee066c928b8c9f269dd2d65161",
+    "reply_to_linear_0.pt": "815fa4def58ce6625a99047b3e885a43ea70df84e426808af5e158658139c00f"
+  },
+  "runtime_checks": {
+    "max_chunk_probability_error": 0.0,
+    "future_text_invariance": true,
+    "future_pcm_invariance": true,
+    "bounded_audio_buffer": true,
+    "runtime": {
+      "reply_full_p95_ms": 0.1573590241605416,
+      "peak_rss_mb": 56.625,
+      "torch_loaded": false,
+      "pandas_loaded": false,
+      "sklearn_loaded": false
+    },
+    "benchmark_scope": "32 synthetic candidates with a new message and draft each iteration; feature construction and ONNX only; no VAD/ASR/content generation"
+  },
+  "checks": {
+    "pytest_exit_code": 0,
+    "summary": "124 passed, 14 warnings in 7.33s"
+  }
+}

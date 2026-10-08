@@ -48,4 +48,5 @@ def compute_labels_fast(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out["y_eot"] = y_eot; out["y_self"] = y_self; out["y_act"] = y_act; out["y_recheck"] = y_rc; out["y_hreply"] = y_hr
     out["y_addr"] = np.where((out.role == "other") & (out.conv_type == "group"), out.addr_src, np.nan)
-    return out
+    from tidal.labels import task_label_contract
+    return task_label_contract(out)

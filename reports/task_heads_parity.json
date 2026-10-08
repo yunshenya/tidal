@@ -1,0 +1,7 @@
+{
+  "model_states_identical": true,
+  "normalization_identical": true,
+  "predictions_identical": true,
+  "models_checked": 12,
+  "reason": "Final provenance/availability validation, metadata and reporting changes; no task hyperparameter tuning after test."
+}

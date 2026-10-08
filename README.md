@@ -159,6 +159,16 @@ uv pip sync --python .venv/bin/python requirements-optimization-macos.lock
 
 独立的 [turn_shadow.py](tidal/turn_shadow.py) 仅依赖 [NumPy及ONNX Runtime](requirements-turn-runtime.txt)，无需PyTorch、sklearn或pandas。它返回接话行为的影子概率，要求调用方提供已观察的语音片段边界；尚未验证真实VAD/ASR。权重在本地 `models/turn_v2/`，不再分发。
 
+### 策略与目标任务头（无人值守落地）
+
+新增独立的人工策略监督、草稿条件回复指针、在线重叠结果辅助头。主模型仍为六头；`y_act_behavior` / `y_next_gap` 明确原行为与时间标签含义。人工 `action_policy`、语义结束、策略重检与重叠意图需要真实标注，缺失时明确报告，不创建随机权重冒充训练结果。所有新输出均接入可选 `ControlOut.task_shadow`，只记录。
+
+```bash
+.venv/bin/python -m tidal.head_optimize
+```
+
+使用与人工数据格式见 [任务头说明](docs/task_heads.md)，固定评估协议见 [训练前协议](reports/task_heads_protocol.md)，实际结果见 [任务头报告](reports/task_heads.md)。IRC回复链接训练是已有草稿的目标匹配代理；语音弱标签预测自然话轮结果，均尚不能证明中文机器人策略效果。
+
 ## 隐私与数据
 
 - 仓库里**没有任何真实聊天数据**：没有原始数据，也没有脱敏后的数据。在真实聊天上训练的权重也不公开，因为小模型同样可能记住训练数据。

@@ -80,4 +80,26 @@ def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
     out["y_eot"] = y_eot; out["y_self"] = y_self; out["y_act"] = y_act; out["y_recheck"] = y_rc; out["y_hreply"] = y_hr
     # addressed-to-bot: only inbound messages in GROUP chats (private chats are trivially addressed)
     out["y_addr"] = np.where((out.role == "other") & (out.conv_type == "group"), out.addr_src, np.nan)
+    return task_label_contract(out)
+
+
+def task_label_contract(out):
+    """Keep old behavior targets explicit; human appropriateness is a separate channel.
+
+    Existing six-head checkpoints keep their original semantics. Never infer policy
+    negatives from silence or copy historical behavior into the policy target.
+    """
+    out["y_act_behavior"] = out["y_act"]
+    out["y_next_gap"] = out["y_recheck"]
+    policy = np.full(len(out), np.nan)
+    if "policy_act_src" in out:
+        if "policy_label_source" not in out:
+            raise ValueError("Policy labels require explicit human provenance")
+        mapping = {"speak": 0, "wait": 1, "silent": 2}
+        for i, (label, source) in enumerate(zip(out.policy_act_src, out.policy_label_source)):
+            if pd.isna(label): continue
+            if source not in ("human", "user_feedback") or label not in mapping:
+                raise ValueError("Invalid human policy label or provenance")
+            policy[i] = mapping[label]
+    out["y_act_policy"] = policy
     return out

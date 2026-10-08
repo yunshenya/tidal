@@ -10,7 +10,7 @@ DATASETS = {
     "tg_ru": dict(repo="ru-dataset/tg-ru-group-chats", license="apache-2.0", research_only=False,
                   files=["group_data_clean.json"], scenario="group", lang="ru",
                   use="multi-party event stream; reply_to -> which-message / addressed; sender.is_bot -> 'self' role"),
-    "irc_dis": dict(repo="jkkummerfeld/irc_disentangle", license="cc-by-4.0", research_only=False,
+    "irc_dis": dict(repo="jkkummerfeld/irc_disentangle", revision="f6cfa2cefb604d2fbabcec58be01ee34939fdd54", license="cc-by-4.0", research_only=False,
                     files=["ubuntu/train-00000-of-00001.parquet", "ubuntu/validation-00000-of-00001.parquet",
                            "ubuntu/test-00000-of-00001.parquet"], scenario="group", lang="en",
                     use="gold reply-to links (who responds to which message) in a busy multi-party channel"),

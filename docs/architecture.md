@@ -129,3 +129,8 @@
 5. ✅ 主干里的 RoPE（`tx_kv`）和 SSM（Mamba-3）已经实现并对比过。📋 掩码事件预训练、主干 QAT、按群挂 adapter 仍是计划。
 6. ✅/❌ 第五阶段训练已按预注册判定：打断头采用，话题转移和新的 `y_addr` 目标不采用。打断头在 `m3_ablate_m2` 上重训后只作影子字段 `p_interrupt`；三项都不在 `HEAD_DIMS`，也不是 tick 输入。
 7. 每一步都要先过影子模式门控，才考虑上线。
+
+
+## 策略、回复指针与在线重叠（2026-10-09）
+
+在六主头之外增加可选 `ControllerTaskShadow`，见 [task_heads.md](task_heads.md)。原 `y_act` 明确保留行为监督，人工策略标签独立，旧检查点兼容。`reply_to` 是已生成草稿条件下的32候选+null指针；`overlap_outcome` 是自己讲话、对方开口200ms后的因果声学弱行为预测；人工 `overlap_intent` 与 `action_policy` 等通过本地JSONL训练入口，不靠时序代替意图真值。缺少人工标签的任务不提供模型。`ControlOut.task_shadow` 与所有实际动作分开；完整协议和实测结果见 [报告](../reports/task_heads.md)。

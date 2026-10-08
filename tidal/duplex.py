@@ -32,6 +32,7 @@ class Event:                 # a discrete event on any channel (chat message, da
     id: str; ts: float; role: str            # role: 'self' | 'current' | 'other'  (relative, scenario-general)
     speaker: Optional[str] = None; modality: Optional[str] = None
     emotion: Optional[list] = None           # phase 4: text affect [8 class probs (tidal.emotion.EMO), valence, arousal] (EmoHead.features)
+    text: Optional[str] = None              # arrived text; optional task-head shadow only
 @dataclass
 class AudioFrame:            # produced by AudioFrontEnd (tidal.audio_fe) from raw PCM, or by any external VAD
     vad_other: float = 0.0; vad_self: float = 0.0; music: float = 0.0; energy: float = 0.0
@@ -50,6 +51,11 @@ class TickInput:
     vision: Optional[VisionFrame] = None; self_state: SelfState = field(default_factory=SelfState)
     n_participants: Optional[float] = None
     pcm: Optional[tuple] = None   # (other_pcm, self_pcm): 16 kHz float32 audio of this tick; used if the controller has an audio front end
+    draft_text: Optional[str] = None
+    draft_available_at: Optional[float] = None
+    incoming_prefix: Optional[str] = None
+    prefix_available_at: Optional[float] = None
+    incoming_onset: Optional[float] = None
 @dataclass
 class ControlOut:            # what the content side receives every tick (non-blocking)
     t: float; action: str; probs: dict; address_event: Optional[str] = None
@@ -62,6 +68,8 @@ class ControlOut:            # what the content side receives every tick (non-bl
                                                  # encoder state). Logged only: not a tick feature, never changes the action
     p_barge: Optional[float] = None              # forward shadow field: P(self barges while the other still holds the floor).
                                                  # Logged only: not a tick feature, never changes the action
+    task_shadow: Optional[dict] = None          # logged only, no control actions
+    task_shadow_error: Optional[str] = None
 
 # ------------------------------------------------------------------ incremental event featurizer (== features_g.compute)
 class EventFeaturizer:
@@ -199,11 +207,12 @@ AUDIO_THR = dict(take_turn=0.6, backchannel=0.5)
 
 class DuplexController:
     """Always-on control loop. step() must return well inside one tick; it never blocks on content generation."""
-    def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None):
-        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe
+    def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None, task_shadow=None):
+        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe; self.task_shadow = task_shadow
     def reset(self):
         self.enc.reset(); self.tf.reset(); self.state = None
         if self.afe is not None: self.afe.reset()
+        if self.task_shadow is not None: self.task_shadow.reset()
     @torch.no_grad()
     def step(self, ti: TickInput) -> ControlOut:
         if self.afe is not None and ti.pcm is not None:
@@ -220,7 +229,13 @@ class DuplexController:
         if a is not None and a.shift is not None and not ti.self_state.speaking:
             hint = ("take_turn" if a.shift >= AUDIO_THR["take_turn"] and a.vad_other < 0.5 else
                     "backchannel" if a.bc is not None and a.bc >= AUDIO_THR["backchannel"] and a.vad_other >= 0.5 else None)
-        return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
+        result = ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
                           audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint,
                           affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal),
                           p_interrupt=(self.enc.last or {}).get("p_interrupt"), p_barge=self.enc.barge_at(ti.t))
+        if self.task_shadow is not None:
+            try:
+                result.task_shadow = self.task_shadow.observe(ti)
+            except Exception as error:
+                result.task_shadow_error = type(error).__name__
+        return result
