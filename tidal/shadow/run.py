@@ -2,12 +2,13 @@
 Idempotent (upserts keyed on pseudonymous msg ids; a prediction is written once, at first sight) and guarded by a
 file lock so overlapping cron ticks are no-ops. Makes no calls to any LLM / external API.
 usage: python -m tidal.shadow.run [--source NAME|module.path] [--no-pull]   (default: config `shadow_source`, else jsonl)"""
-import argparse, fcntl, json, os, sys, time, uuid
+import argparse, json, os, sys, time, uuid
 import numpy as np, pandas as pd
 from tidal.privacy import pseudo
 from tidal.modalities import meta as media
 from tidal.shadow import store as S
 from tidal.config import get
+from tidal.shadow.lock import try_lock
 
 SETTLE_S = float(os.environ.get("TIDAL_SHADOW_SETTLE_S", 3600))     # label an event once this much time has passed
 CONTEXT_S = 7 * 24 * 3600.0                                          # history loaded as model context
@@ -103,13 +104,24 @@ def label(c, now, stats):
     c.executemany("insert or ignore into labels values(?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     stats["labels_written"] = len(rows)
 
+
+def _maxrss_mb():
+    """Peak RSS in MiB, or None where the Unix rlimit API does not exist (Windows)."""
+    try:
+        import resource
+    except ImportError:
+        return None
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    if sys.platform == "darwin":   # bytes on macOS, KiB on Linux
+        rss /= 1024
+    return round(rss / 1024, 1)
+
 def main(argv=None):
     ap = argparse.ArgumentParser(); ap.add_argument("--source", default=os.environ.get("TIDAL_SHADOW_SOURCE") or get("shadow_source", "jsonl"))
     ap.add_argument("--no-pull", action="store_true"); a = ap.parse_args(argv)
     S.STATE.mkdir(parents=True, exist_ok=True)
-    lockf = open(S.STATE / "run.lock", "w")
-    try: fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
+    lockf = try_lock(S.STATE / "run.lock")
+    if lockf is None:
         print(time.strftime("%F %T"), "another run holds the lock; skipping"); return 0
     now = time.time(); run_id = time.strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
     c = S.connect(); stats = {}; status = "ok"
@@ -131,8 +143,7 @@ def main(argv=None):
                                labeled=c.execute("select count(*) from labels").fetchone()[0])
     except Exception as e:
         status = "error"; stats["error"] = f"{type(e).__name__}: {str(e)[:300]}"
-    import resource
-    stats["maxrss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1)
+    stats["maxrss_mb"] = _maxrss_mb()
     c.execute("update runs set finished_at=?, status=?, stats=? where run_id=?", (time.time(), status, json.dumps(stats), run_id)); c.commit()
     print(time.strftime("%F %T"), run_id, status, json.dumps(stats, ensure_ascii=False), flush=True)
     return 0 if status == "ok" else 1
