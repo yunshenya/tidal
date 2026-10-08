@@ -131,7 +131,8 @@ def ece(p, y, bins=15):
     return float(e)
 
 def evaluate(m, df, E, boot=1000):
-    from scipy.stats import spearmanr
+    from tidal.optional import require
+    spearmanr = require("scipy.stats", "audio", pip_name="scipy").spearmanr
     from sklearn.metrics import f1_score
     m.eval(); Y = np.stack(df.y.to_numpy())
     with torch.no_grad(): lo, va = m(torch.from_numpy(E))

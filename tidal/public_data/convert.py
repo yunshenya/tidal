@@ -119,7 +119,8 @@ def irc_dis(seed=2):
 
 # ---------------------------------------------------------------- (b) livestream chat
 def twitch(n_docs=160, max_msgs=6000, min_msgs=300, seed=3):
-    import pyarrow.parquet as pq
+    from tidal.optional import require
+    pq = require("pyarrow.parquet", "audio", pip_name="pyarrow")
     rng = np.random.default_rng(seed); fr = []; got = 0
     for p in sorted(glob.glob(str(DATA / "twitchchat" / "data" / "*.parquet"))):
         t = pq.read_table(p, columns=["streamer_id", "document_id", "users", "timestamps", "metadata"]).to_pandas()

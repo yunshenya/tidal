@@ -1,0 +1,4 @@
+# Optional SenseVoice teacher (sherpa-onnx). Weights are not distributed with this repo.
+#   pip install -r requirements-teacher.txt
+-r requirements.txt
+sherpa-onnx>=1.10

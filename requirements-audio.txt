@@ -1,0 +1,6 @@
+# Optional audio extra: flac/wav I/O, resampling, parquet clips, Spearman on emotion eval.
+#   pip install -r requirements-audio.txt
+-r requirements.txt
+soundfile>=0.12
+scipy>=1.13
+pyarrow>=15

@@ -39,7 +39,8 @@ def md_items(n=3000, seed=0):
     rng.shuffle(segs); return segs[:n]
 
 def teacher():
-    import sherpa_onnx
+    from tidal.optional import require
+    sherpa_onnx = require("sherpa_onnx", "teacher", pip_name="sherpa-onnx")
     rec = sherpa_onnx.OfflineRecognizer.from_sense_voice(model="models/sensevoice/model.int8.onnx", tokens="models/sensevoice/tokens.txt", num_threads=1, use_itn=False)
     items = crema_items() + md_items(); out_p = f"{OUT}/emo_teacher.parquet"; done = {}
     if os.path.exists(out_p): done = {r["id"]: r for r in pd.read_parquet(out_p).to_dict("records")}
@@ -102,7 +103,8 @@ def _targets(T):
 
 def train_eval(seed=0, use_teacher=True, epochs=40, log=print):
     from sklearn.metrics import f1_score, cohen_kappa_score
-    from scipy.stats import spearmanr
+    from tidal.optional import require
+    spearmanr = require("scipy.stats", "audio", pip_name="scipy").spearmanr
     from tidal.emotion import ece
     torch.manual_seed(seed); rng = np.random.default_rng(seed)
     T = pd.read_parquet(f"{OUT}/emo_speech_items.parquet"); z = np.load(f"{OUT}/emo_speech_feats.npz")

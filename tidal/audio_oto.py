@@ -12,7 +12,6 @@ gated; local subset only) + extra evaluations.
                 duration (no fitting). Nothing is fitted or tuned on Krisp.
 -> reports/audio_oto_phase3.json"""
 import os, io, sys, glob, json, tarfile, time, hashlib, numpy as np, torch
-from scipy.signal import resample_poly
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
 from tidal.audio_fe import AudioEncoder, logmel, stack_frames, p_shift, STEP, NMEL, STACK, SR
@@ -61,7 +60,8 @@ def prep(max_sessions=60):
                 if out.exists(): continue
                 if n >= max_sessions: return
                 meta = json.load(t.extractfile(mem[sid + ".json"])) if sid + ".json" in mem else {}
-                import soundfile as sf
+                from tidal.optional import require
+                sf = require("soundfile", "audio"); resample_poly = require("scipy.signal", "audio", pip_name="scipy").resample_poly
                 x, sr = sf.read(io.BytesIO(t.extractfile(mem[name]).read()), dtype="float32", always_2d=True)
                 if x.shape[1] != 2: continue
                 for a in meta.get("redacted_segments", []): x[int(a["start_sec"] * sr):int(a["end_sec"] * sr)] = 0.0
@@ -126,7 +126,9 @@ def _fit_lr(rows, kind):
     return lr.fit(np.array([r["f"] for r in a]), np.array([r["y"] for r in a])), float(np.mean([r["y"] for r in a]))
 
 def krisp_eval(models):
-    import pyarrow.parquet as pq, soundfile as sf
+    from tidal.optional import require
+    pq = require("pyarrow.parquet", "audio", pip_name="pyarrow"); sf = require("soundfile", "audio")
+    resample_poly = require("scipy.signal", "audio", pip_name="scipy").resample_poly
     t = pq.read_table(DATA / "krisp_tt" / "data" / "test.parquet").to_pandas(); res = []
     r = np.random.default_rng(0)
     for row in t.itertuples():

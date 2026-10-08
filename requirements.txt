@@ -1,9 +1,10 @@
-# CPU-only. Install torch from the CPU wheel index: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# CPU-only core. Install torch from the CPU wheel index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# Audio I/O and the SenseVoice teacher are optional: requirements-audio.txt, requirements-teacher.txt.
+# Pinned versions: requirements.lock (uv pip compile).
 numpy>=2.0
 pandas>=2.2
-pyarrow>=15
 scikit-learn>=1.5
-scipy>=1.13
 joblib>=1.4
 onnx>=1.16
 onnxruntime>=1.18
