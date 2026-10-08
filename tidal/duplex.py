@@ -60,6 +60,8 @@ class ControlOut:            # what the content side receives every tick (non-bl
     affect: Optional[dict] = None                # phase 4 pass-through: text affect of the last non-self event + speech valence/arousal
     p_interrupt: Optional[float] = None          # phase 5 SHADOW field: P(y_interrupt) of the last event (side head on the
                                                  # encoder state). Logged only: not a tick feature, never changes the action
+    p_barge: Optional[float] = None              # forward shadow field: P(self barges while the other still holds the floor).
+                                                 # Logged only: not a tick feature, never changes the action
 
 # ------------------------------------------------------------------ incremental event featurizer (== features_g.compute)
 class EventFeaturizer:
@@ -94,10 +96,10 @@ class EventEncoder:
     head from tidal/shadow/p4.py) map the encoder state to a probability and are added to each event's record."""
     def __init__(self, model, mu, sd, K=16):
         self.m = model.eval(); self.f = EventFeaturizer(mu, sd, n_extra=model.fproj.in_features - len(FG.FEAT_G)); self.K = K
-        self.side = dict(getattr(model, "side_heads", None) or {}); self.reset()
+        self.side = dict(getattr(model, "side_heads", None) or {}); self.barge = getattr(model, "barge_head", None); self.reset()
     def reset(self):
         self.f.reset(); self.state = None; self.last_affect = None; self.h = torch.zeros(1, self.m.vap[0].in_features); self.buf = collections.deque(maxlen=self.K)
-        self.last = None
+        self.last = None; self.floor_role = None; self.floor_start = None; self.last_event_ts = None; self.last_self_ts = None; self.point_event = 1.0
     @torch.no_grad()
     def push(self, e: Event, n_participants=None):
         x = torch.from_numpy(self.f(e, n_participants))[None]
@@ -108,7 +110,22 @@ class EventEncoder:
         self.last = dict(id=e.id, ts=e.ts, role=e.role, p_speak=ps, p_addr=pa, p_eot=pe,
                          vap_self_0_2=float(vp[VT.idx("self", 0)]), vap_self_2_5=float(vp[VT.idx("self", 1)]))
         for k, net in self.side.items(): self.last[k] = float(net(self.h).reshape(-1)[0])
+        self.last_event_ts = float(e.ts)
+        self.point_event = 0.0 if getattr(e, "modality", None) == "voice" else 1.0
+        if e.role == "self":
+            self.last_self_ts = float(e.ts); self.floor_role = "self"; self.floor_start = float(e.ts)
+        else:
+            self.floor_role = "other"; self.floor_start = float(e.ts)
         self.buf.append(self.last)
+    def barge_at(self, now):
+        """P(self starts within the horizon) while another speaker holds the floor. None otherwise. Not an action."""
+        if self.barge is None or self.floor_role != "other" or self.floor_start is None or self.h is None:
+            return None
+        since_self = 60.0 if self.last_self_ts is None else min(60.0, float(now) - self.last_self_ts)
+        tim = torch.tensor([math.log1p(max(0.0, float(now) - self.floor_start)),
+                            math.log1p(max(0.0, float(now) - self.last_event_ts)),
+                            math.log1p(max(0.0, since_self)), self.point_event], dtype=self.h.dtype)
+        return float(self.barge.prob(self.h, tim).reshape(-1)[0])
     def address(self, now, tau=20.0, window=30.0):
         """which buffered (non-self) event to respond to: argmax p_speak * recency decay."""
         c = [b for b in self.buf if b["role"] != "self" and now - b["ts"] <= window]
@@ -206,4 +223,4 @@ class DuplexController:
         return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
                           audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint,
                           affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal),
-                          p_interrupt=(self.enc.last or {}).get("p_interrupt"))
+                          p_interrupt=(self.enc.last or {}).get("p_interrupt"), p_barge=self.enc.barge_at(ti.t))

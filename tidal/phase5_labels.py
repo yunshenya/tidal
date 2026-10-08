@@ -246,3 +246,76 @@ def domain_change_labels(states):
             y[i] = 1.0 if cur != prev else 0.0
         prev = cur
     return y
+
+
+# Forward barge-in (reports/phase5_barge_prereg.md). Constants are locked there.
+BARGE_H_SPEECH = 1.0
+BARGE_H_TEXT = 8.0
+BARGE_STEP = 0.5
+BARGE_MIN_HOLD = 0.5
+BARGE_SELF_CAP = 60.0
+
+
+def forward_barge_speech(segments, self_speaker, rec_end=None, horizon=BARGE_H_SPEECH, step=BARGE_STEP, min_hold=BARGE_MIN_HOLD):
+    """Decision points while `self_speaker` does not hold the floor.
+
+    Returns a list of (t, y, floor_start). y is 1, 0, or NaN. Every t is strictly before the
+    self onset a positive predicts, and before floor_end. `rec_end` defaults to the last segment end.
+    """
+    segs = [(float(s), float(e), sp) for s, e, sp in segments if e >= s and math.isfinite(s) and math.isfinite(e)]
+    if rec_end is None:
+        rec_end = max((e for _s, e, _sp in segs), default=0.0)
+    out = []
+    for s, e, sp in segs:
+        if sp == self_speaker or e - s < min_hold:
+            continue
+        t = s + min_hold
+        while t < e - 1e-9:
+            if any(ss <= t < se and ssp == self_speaker for ss, se, ssp in segs):
+                t += step
+                continue
+            covering = [(ss, se) for ss, se, ssp in segs if ssp != self_speaker and ss <= t < se]
+            holder = max(covering, key=lambda z: z[0])
+            if holder != (s, e):
+                t += step
+                continue
+            onsets = [ss for ss, _se, ssp in segs if ssp == self_speaker and ss > t]
+            u = min(onsets) if onsets else None
+            know = min(e, t + horizon)
+            if u is not None and u <= t + horizon and u < e:
+                y = 1.0
+            elif rec_end + 1e-9 >= know:
+                y = 0.0
+            else:
+                y = float("nan")
+            out.append((t, y, s))
+            t += step
+    return out
+
+
+def forward_barge_text(ts, roles, horizon=BARGE_H_TEXT):
+    """One decision per non-self point event. Returns (index, y) for each such event."""
+    ts = np.asarray(ts, float)
+    roles = np.asarray(roles, object)
+    n = len(ts)
+    out = []
+    for i in range(n):
+        if roles[i] == "self":
+            continue
+        t = ts[i]
+        if i + 1 < n and ts[i + 1] - t <= horizon:
+            y = 1.0 if roles[i + 1] == "self" else 0.0
+        elif i + 1 < n and ts[i + 1] - t > horizon:
+            y = 0.0
+        else:
+            y = float("nan")
+        out.append((i, y))
+    return out
+
+
+def barge_self_speaker(segments):
+    """Speaker of the earliest segment. Ties break on (start, end, speaker), matching phase 5."""
+    if not segments:
+        return None
+    # (start, end) only: the same tie break as phase5_data._frame_from_segs, so `self` matches those rows
+    return min(segments, key=lambda z: (float(z[0]), float(z[1])))[2]

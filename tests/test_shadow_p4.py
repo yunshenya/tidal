@@ -6,7 +6,7 @@ from tidal import features_g as FG
 from tidal.duplex import Event, TickModel, DuplexController, EventEncoder, TickInput, AudioFrame, SelfState
 from tidal.model import BinHead
 from tidal.shadow import p4
-from tidal.shadow.p4 import WINNER, build, n_feat, step_events
+from tidal.shadow.p4 import WINNER, build, n_feat, step_events, load_barge
 from tidal.shadow.infer import load_phase4_winner
 
 EMO = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.1]   # 8 probs + valence + arousal
@@ -96,11 +96,41 @@ def test_cron_tick_logs_p_interrupt(tmp_path, monkeypatch):
     monkeypatch.setenv("TIDAL_SHADOW_JSONL", str(p))
     assert run.main(["--source", "jsonl"]) == 0
     c = sqlite3.connect(S.DB)
-    rows = c.execute("select msg_id, probs from predictions where regime=? and system=?", (p4.REGIME, p4.SYSTEM)).fetchall()
+    rows = c.execute("select e.role, p.probs from predictions p join events e on e.msg_id=p.msg_id where p.regime=? and p.system=?", (p4.REGIME, p4.SYSTEM)).fetchall()
     assert len(rows) == 12
-    for _, pr in rows:
+    for role, pr in rows:
         pr = json.loads(pr); assert 0.0 < pr["p_interrupt"] < 1.0 and len(pr["y_act"]) == 3
+        if role == "self": assert "p_barge" not in pr
+        else: assert 0.0 < pr["p_barge"] < 1.0
     st = json.loads(c.execute("select stats from runs").fetchone()[0])
     assert st["predictions_P4"] == 12 and "p4_error" not in st
     assert run.main(["--source", "jsonl"]) == 0                              # idempotent: nothing re-predicted
     assert c.execute("select count(*) from predictions where system=?", (p4.SYSTEM,)).fetchone()[0] == 12
+
+def test_p_barge_is_logged_only_while_other_holds_and_actions_stay():
+    torch.manual_seed(4)
+    m = build(); tm = TickModel(enc_dim=m.vap[0].in_features)
+    other = Event(id="o", ts=1_700_000_020.0, role="other", speaker="p1", modality="text")
+    def run(with_barge):
+        m.barge_head = load_barge() if with_barge else None
+        ctl = DuplexController(tm, EventEncoder(m, np.zeros(FG.NB), np.ones(FG.NB)))
+        a = ctl.step(TickInput(other.ts, [other], AudioFrame(0.2, 0, 0, 0.1), None, SelfState(), 2.0))
+        b = ctl.step(TickInput(other.ts + 0.5, [], None, None, SelfState(), 2.0))   # still their floor, half a second later
+        return a, b
+    on = run(True); off = run(False)
+    for a, b in zip(on, off):
+        assert a.action == b.action and a.probs == b.probs and a.address_event == b.address_event
+        assert b.p_barge is None and 0.0 < a.p_barge < 1.0
+    assert on[0].p_barge != on[1].p_barge   # the clock moved; the decision is at a time, not on a finished segment
+
+def test_barge_head_from_other_features_is_refused(tmp_path):
+    torch.manual_seed(5)
+    st = BinHead(d=132).state_dict()
+    torch.save(dict(state=st, feats="p5_h_m2"), tmp_path / "old.pt")
+    torch.save(dict(state=st, feats=p4.BARGE_FEATS), tmp_path / "ok.pt")
+    with pytest.raises(ValueError, match="p5_barge_m2"):
+        build({"barge_heads": [str(tmp_path / "old.pt")]})
+    m = build({"barge_heads": [str(tmp_path / "ok.pt")]})
+    b = BinHead(d=132); b.load_state_dict(st)
+    h = torch.randn(128); tim = torch.zeros(4)
+    assert torch.allclose(m.barge_head.prob(h, tim), torch.sigmoid(b(torch.cat([h[None], tim[None]], -1))).reshape(-1), atol=1e-5)

@@ -99,10 +99,10 @@ def aurc(y, P, binary):
     o = np.argsort(-conf, kind="stable"); c_ = (dec == y.astype(int))[o]; risk = 1 - np.cumsum(c_) / np.arange(1, len(c_) + 1)
     return float(risk.mean())
 
-def p4_interrupt_summary(c, since, until, max_lag):
-    """Shadow-only p_interrupt log of the P4 system (no labels: chat has no interrupt gold). Counts by role."""
+def p4_prob_summary(c, since, until, max_lag, key):
+    """Shadow-only probability log of the P4 system (no labels). Counts by role."""
     q = "select p.probs, e.role, p.lag_s from predictions p join events e on e.msg_id = p.msg_id where p.regime='P4' and p.event_ts >= ? and p.event_ts < ?"
-    rows = [(json.loads(pr).get("p_interrupt"), role, lag) for pr, role, lag in c.execute(q, (since, until))]
+    rows = [(json.loads(pr).get(key), role, lag) for pr, role, lag in c.execute(q, (since, until))]
     rows = [(pi, role) for pi, role, lag in rows if pi is not None and (max_lag is None or lag <= max_lag)]
     if not rows: return None
     out = {}
@@ -110,6 +110,9 @@ def p4_interrupt_summary(c, since, until, max_lag):
         v = np.array([pi for pi, r in rows if r == role], float)
         out[role] = dict(n=int(len(v)), mean=float(v.mean()), p95=float(np.percentile(v, 95)), frac_ge_05=float((v >= 0.5).mean()))
     return out
+
+def p4_interrupt_summary(c, since, until, max_lag):
+    return p4_prob_summary(c, since, until, max_lag, "p_interrupt")
 
 def build(c, since, until, max_lag, n_boot):
     frozen = json.loads((S.STATE / "frozen.json").read_text())
@@ -146,6 +149,7 @@ def build(c, since, until, max_lag, n_boot):
             RR[h] = hr
         R["regimes"][regime] = dict(model=model, models=models, n_events=int(lab.shape[0]), heads=RR)
     R["p4_interrupt"] = p4_interrupt_summary(c, since, until, max_lag)
+    R["p4_barge"] = p4_prob_summary(c, since, until, max_lag, "p_barge")
     tot = lambda q: c.execute(q).fetchone()
     R["coverage"] = dict(events=tot("select count(*) from events")[0], predicted=tot("select count(distinct msg_id) from predictions")[0],
                          labeled=tot("select count(*) from labels")[0],
@@ -199,6 +203,13 @@ def markdown(R):
               "第四阶段胜者 m3_ablate_m2 + 文本情绪上的 `p_interrupt`。聊天流没有打断真值，这里只给分布；它不是 tick 输入，也不改动作。", "",
               "| 角色 | n | 平均 | p95 | ≥0.5 的比例 |", "|---|---|---|---|---|"]
         for role, s in R["p4_interrupt"].items():
+            L.append(f"| {role} | {s['n']} | {s['mean']:.3f} | {s['p95']:.3f} | {s['frac_ge_05']:.3f} |")
+        L.append("")
+    if R.get("p4_barge"):
+        L += ["## P4 前向插话（只记录，不打分）", "",
+              "`p_barge`：对方还占着话轮时，自己会不会在时限内开口。决策时刻早于结果；它不是 tick 输入，也不改动作。", "",
+              "| 角色 | n | 平均 | p95 | ≥0.5 的比例 |", "|---|---|---|---|---|"]
+        for role, s in R["p4_barge"].items():
             L.append(f"| {role} | {s['n']} | {s['mean']:.3f} | {s['p95']:.3f} | {s['frac_ge_05']:.3f} |")
         L.append("")
     mc = R["multimodal_capture"]

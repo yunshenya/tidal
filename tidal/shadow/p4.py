@@ -27,8 +27,10 @@ TEXT_EMO_DIM = 11   # 8 probs + valence + arousal + has_emotion
 WINNER = dict(kind="m3_ablate_m2", text_emotion=True, speech_emotion=False, emo_dim=TEXT_EMO_DIM, version="phase4",
               interrupt=True)
 HEAD_FEATS = "p5_h_m2"                         # cache the shadow interrupt heads must have been trained on
+BARGE_FEATS = "p5_barge_m2"                      # frozen h plus the four timing columns
 DEFAULT_CKPT = "models/P4emo_m3_ablate_m2_s0.pt"
 DEFAULT_HEADS = tuple(f"models/P5hd_m2_s{s}.pt" for s in range(3))
+DEFAULT_BARGE = tuple(f"models/P5barge_s{s}.pt" for s in range(3))
 SYSTEM = "model:p4_m3_ablate_m2"               # shadow-log system name (regime "P4")
 REGIME = "P4"
 
@@ -56,9 +58,33 @@ def load_interrupt(paths=None):
         b = BinHead(); b.load_state_dict(ck["state"]["y_interrupt"]); nets.append(b)
     return InterruptHead(nets or [BinHead()]).eval()
 
+class BargeHead(nn.Module):
+    """Mean P(y_barge) over seed heads. h [..., 128] and timing [..., 4] -> probability [...]."""
+    def __init__(self, nets):
+        super().__init__(); self.nets = nn.ModuleList(nets)
+    def prob(self, h, timing):
+        if h.dim() == 1: h = h[None]
+        if timing.dim() == 1: timing = timing[None]
+        x = torch.cat([h, timing.to(dtype=h.dtype, device=h.device)], -1)
+        return torch.stack([torch.sigmoid(n(x)) for n in self.nets]).mean(0)
+
+def load_barge(paths=None):
+    """Forward barge head. No paths -> one random-init head (tests). Any other feats tag raises."""
+    from tidal.model import BinHead
+    nets = []
+    for pth in paths or ():
+        ck = torch.load(pth, map_location="cpu", weights_only=False)
+        f = ck.get("feats")
+        if f != BARGE_FEATS:
+            raise ValueError(f"{pth}: barge head was trained on '{f}' features; shadow expects '{BARGE_FEATS}'")
+        b = BinHead(d=132); b.load_state_dict(ck["state"]); nets.append(b)
+    return BargeHead(nets or [BinHead(d=132)]).eval()
+
 def _attach(m, cfg):
-    # plain dict attribute (not a registered submodule): the body's state_dict / checkpoint format stays unchanged
+    # plain attributes (not registered submodules): the body's state_dict / checkpoint format stays unchanged
     m.side_heads = {"p_interrupt": load_interrupt(cfg.get("interrupt_heads"))} if cfg.get("interrupt", True) else {}
+    # object.__setattr__: an nn.Module attribute would otherwise register and change the body state_dict
+    object.__setattr__(m, "barge_head", load_barge(cfg.get("barge_heads")) if cfg.get("barge", True) else None)
     return m
 
 def build(cfg=None):
@@ -112,6 +138,7 @@ def shadow_spec():
         spec["ckpt"] = os.environ["TIDAL_SHADOW_P4_CKPT"]
     spec.setdefault("ckpt", DEFAULT_CKPT if os.path.exists(DEFAULT_CKPT) else None)
     spec.setdefault("interrupt_heads", [p for p in DEFAULT_HEADS if os.path.exists(p)])
+    spec.setdefault("barge_heads", [p for p in DEFAULT_BARGE if os.path.exists(p)])
     return spec
 
 def load_shadow(spec):
@@ -122,7 +149,8 @@ def load_shadow(spec):
         ck = torch.load(spec["ckpt"], map_location="cpu", weights_only=False)
         mu, sd = np.asarray(ck["mu"], np.float32), np.asarray(ck["sd"], np.float32)
     ver = dict(P4=os.path.basename(spec.get("ckpt") or "random-init"),
-               interrupt=[os.path.basename(p) for p in spec.get("interrupt_heads") or []] or "random-init")
+               interrupt=[os.path.basename(p) for p in spec.get("interrupt_heads") or []] or "random-init",
+               barge=[os.path.basename(p) for p in spec.get("barge_heads") or []] or "random-init")
     return m, mu, sd, ver
 
 def text_emotion_from_cache(c, texts):
@@ -168,6 +196,7 @@ def score_windows(model, F, V):
     out["p_vap"] = torch.sigmoid(o["vap"][:, -1]).numpy()
     for k, net in getattr(model, "side_heads", {}).items():
         out[k] = net(h).reshape(-1).numpy()
+    out["_h"] = h.numpy()
     return out
 
 def score_frame(model, d, targets, mu, sd, emo=None, bs=256):
@@ -190,8 +219,23 @@ def score_frame(model, d, targets, mu, sd, emo=None, bs=256):
             lo = r
             while lo > 0 and r - lo + 1 < CTX and conv[lo - 1] == conv[r]: lo -= 1
             F[b, CTX - (r - lo + 1):] = Z[lo:r + 1]; V[b, CTX - (r - lo + 1):] = True
-        o = score_windows(model, F, V)
+        o = score_windows(model, F, V); hrow = o.pop("_h")
         for b, r in enumerate(rr):
             p = {k: (round(float(v[b]), 6) if np.ndim(v[b]) == 0 else [round(float(x), 6) for x in v[b]]) for k, v in o.items()}
+            pb = barge_prob_at_row(model, d, r, hrow[b])
+            if pb is not None: p["p_barge"] = round(pb, 6)
             res[d.msg_id.iat[r]] = p
     return res
+
+def barge_prob_at_row(model, d, r, h):
+    """At-event p_barge. None when the row is self, or no head is attached. Clocks are zero at the message itself."""
+    import math
+    head = getattr(model, "barge_head", None)
+    if head is None or d.role.iat[r] == "self":
+        return None
+    t = float(d.ts.iat[r]); conv = d.conv.iat[r]
+    self_ts = d.ts[(d.conv == conv) & (d.role == "self") & (d.ts < t)]
+    since_self = 60.0 if len(self_ts) == 0 else min(60.0, t - float(self_ts.iloc[-1]))
+    point = 0.0 if ("modality" in d.columns and d.modality.iat[r] == "voice") else 1.0
+    tim = torch.tensor([0.0, 0.0, math.log1p(since_self), point])
+    return float(head.prob(torch.from_numpy(np.asarray(h, np.float32)), tim).reshape(-1)[0].detach())

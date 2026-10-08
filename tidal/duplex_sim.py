@@ -276,7 +276,7 @@ def bench_shadow(n=2000, reps=3):
     import os
     from tidal.model import BinHead
     from tidal.shadow import p4
-    m = p4.build(dict(interrupt=False)); with_head = p4.InterruptHead([BinHead() for _ in range(3)]).eval()
+    m = p4.build(dict(interrupt=False, barge=False)); with_head = p4.InterruptHead([BinHead() for _ in range(3)]).eval()
     tm = TickModel(enc_dim=m.vap[0].in_features).eval(); r = np.random.default_rng(0); res = {"off": {}, "on": {}}
     emo = [0.0] * 8 + [0.1, -0.2]
     for load in (0, 1, 5, 20):
@@ -305,6 +305,42 @@ def bench_shadow(n=2000, reps=3):
                note="random weights, single thread, PyTorch eager, synthetic inputs; median of interleaved reps", without_head=res["off"], with_head=res["on"])
     json.dump(rep, open("reports/duplex_bench_shadow.json", "w"), indent=1); print(json.dumps(rep, indent=1))
 
+
+def bench_barge(n=600, reps=2):
+    """Tick latency of the shadow config with the interrupt head, before vs after the forward barge head (3 x BinHead 132).
+    Random weights, single thread, eager. Load 20 uses fewer ticks (the per-tick cost dominates)."""
+    import os
+    from tidal.model import BinHead
+    from tidal.shadow import p4
+    m = p4.build(dict(barge=False))
+    m.side_heads = {"p_interrupt": p4.InterruptHead([BinHead() for _ in range(3)]).eval()}
+    barge = p4.BargeHead([BinHead(d=132) for _ in range(3)]).eval()
+    tm = TickModel(enc_dim=m.vap[0].in_features).eval(); r = np.random.default_rng(1); res = {"before": {}, "after": {}}
+    emo = [0.0] * 8 + [0.1, -0.2]
+    for load, nn in ((0, n), (1, n), (5, n), (20, 200)):
+        tis = []
+        for k in range(nn):
+            tt = 1.7e9 + k * TICK_S
+            evs = [Event(f"e{k}_{j}", tt - r.uniform(0, TICK_S), "other", f"v{r.integers(50)}", "text", emo if j % 2 else None) for j in range(load)]
+            tis.append(TickInput(tt, evs, AudioFrame(r.random(), 0, 0, r.random()), VisionFrame(r.random(), 0), SelfState(), 300.0))
+        runs = {"before": [], "after": []}
+        for _ in range(reps):
+            for mode in ("before", "after"):
+                object.__setattr__(m, "barge_head", barge if mode == "after" else None)
+                ctl = DuplexController(tm, EventEncoder(m, np.zeros(FG_NB), np.ones(FG_NB))); lat = []
+                for ti in tis:
+                    s = time.perf_counter(); out = ctl.step(ti); lat.append((time.perf_counter() - s) * 1000)
+                assert (out.p_barge is not None) == (mode == "after" and load > 0)
+                lat = np.array(lat[20:]); runs[mode].append([float(np.percentile(lat, q)) for q in (50, 95)])
+        for mode in runs:
+            a = np.median(np.array(runs[mode]), 0)
+            res[mode][f"{load}_events_per_tick"] = dict(p50_ms=float(a[0]), p95_ms=float(a[1]), n_ticks=nn)
+    object.__setattr__(m, "barge_head", None)
+    rep = dict(config="shadow m3_ablate_m2 + text emotion + 3-seed interrupt head; before = no barge head, after = 3 x BinHead(132)",
+               threads=torch.get_num_threads(), cpu=_cpu_name(), tick_s=TICK_S, reps=reps,
+               note="random weights, single thread, eager, synthetic inputs; median of interleaved reps", **res)
+    json.dump(rep, open("reports/duplex_bench_barge.json", "w"), indent=1); print(json.dumps(rep, indent=1))
+
 def _cpu_name():
     try: return next(l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name"))
     except Exception: return None
@@ -316,5 +352,6 @@ if __name__ == "__main__":
     elif cmd == "bench": bench(sys.argv[2])
     elif cmd == "bench_audio": bench_audio(sys.argv[2], sys.argv[3])
     elif cmd == "bench_shadow": bench_shadow()
+    elif cmd == "bench_barge": bench_barge()
     elif cmd == "show":
         ticks, y, meta = session(int(sys.argv[2])); print(len(y), {a: int((y == i).sum()) for a, i in A.items()}, meta["voice"], meta["rate"])

@@ -1,0 +1,52 @@
+{
+ "config": "shadow m3_ablate_m2 + text emotion + 3-seed interrupt head; before = no barge head, after = 3 x BinHead(132)",
+ "threads": 1,
+ "cpu": "Intel(R) Xeon(R) Processor",
+ "tick_s": 0.1,
+ "reps": 2,
+ "note": "random weights, single thread, eager, synthetic inputs; median of interleaved reps",
+ "before": {
+  "0_events_per_tick": {
+   "p50_ms": 0.1599595052539371,
+   "p95_ms": 0.3001119817781728,
+   "n_ticks": 600
+  },
+  "1_events_per_tick": {
+   "p50_ms": 1.485651002440136,
+   "p95_ms": 2.15091347345151,
+   "n_ticks": 600
+  },
+  "5_events_per_tick": {
+   "p50_ms": 7.033666253846604,
+   "p95_ms": 9.79909723464516,
+   "n_ticks": 600
+  },
+  "20_events_per_tick": {
+   "p50_ms": 30.074075250013266,
+   "p95_ms": 34.164457100996515,
+   "n_ticks": 200
+  }
+ },
+ "after": {
+  "0_events_per_tick": {
+   "p50_ms": 0.15473799430765212,
+   "p95_ms": 0.30232553981477384,
+   "n_ticks": 600
+  },
+  "1_events_per_tick": {
+   "p50_ms": 1.949823745235335,
+   "p95_ms": 2.4393143714405596,
+   "n_ticks": 600
+  },
+  "5_events_per_tick": {
+   "p50_ms": 7.121916009054985,
+   "p95_ms": 9.420194698031992,
+   "n_ticks": 600
+  },
+  "20_events_per_tick": {
+   "p50_ms": 26.238070502586197,
+   "p95_ms": 32.91279233380919,
+   "n_ticks": 200
+  }
+ }
+}
