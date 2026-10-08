@@ -1,0 +1,54 @@
+{
+ "encoder": "P3ft_s2",
+ "audio_fe": "audio_fe_oto.pt",
+ "threads": 1,
+ "cpu_count": 8,
+ "cpu": "Intel(R) Xeon(R) Processor",
+ "params_event_and_tick": 573993,
+ "params_audio_fe": 72779,
+ "tick_s": 0.1,
+ "n_ticks": 1200,
+ "note": "single thread, PyTorch eager; per tick: 100 ms x 2 channels of 16 kHz PCM -> log-mel -> audio encoder (5 steps) + event encoder + tick GRU",
+ "results": {
+  "0_events_per_tick": {
+   "p50_ms": 0.924012012546882,
+   "p95_ms": 1.3425749173620714,
+   "p99_ms": 1.4664979188819416,
+   "max_ms": 1.6368769865948707,
+   "rtf_at_10hz_p95": 0.013425749173620714,
+   "max_sustained_hz_flat_out": 1018.5055489869072,
+   "audio_fe_only_p50_ms": 0.6851835059933364,
+   "audio_fe_only_p95_ms": 0.8621199653134682
+  },
+  "1_events_per_tick": {
+   "p50_ms": 1.4152834919514135,
+   "p95_ms": 1.889771755668334,
+   "p99_ms": 2.238289841625374,
+   "max_ms": 2.658708981471136,
+   "rtf_at_10hz_p95": 0.01889771755668334,
+   "max_sustained_hz_flat_out": 683.0296824325997,
+   "audio_fe_only_p50_ms": 0.6729549932060763,
+   "audio_fe_only_p95_ms": 0.7555007090559229
+  },
+  "5_events_per_tick": {
+   "p50_ms": 3.6933935043634847,
+   "p95_ms": 4.905042055179364,
+   "p99_ms": 5.852984685043338,
+   "max_ms": 6.424730003345758,
+   "rtf_at_10hz_p95": 0.04905042055179364,
+   "max_sustained_hz_flat_out": 265.95690310693715,
+   "audio_fe_only_p50_ms": 0.6955565040698275,
+   "audio_fe_only_p95_ms": 1.0185217150137762
+  },
+  "20_events_per_tick": {
+   "p50_ms": 18.867034988943487,
+   "p95_ms": 25.640364491846412,
+   "p99_ms": 27.514050293248143,
+   "max_ms": 41.5119229874108,
+   "rtf_at_10hz_p95": 0.2564036449184641,
+   "max_sustained_hz_flat_out": 53.899160218246564,
+   "audio_fe_only_p50_ms": 0.6508845108328387,
+   "audio_fe_only_p95_ms": 0.7287454820470884
+  }
+ }
+}

@@ -11,7 +11,9 @@ waits for it. The two sides talk only through the small message types below.
 
 Implemented: incremental event featurizer (identical to tidal.features_g), streaming event encoder (phase-2 VAP GRU,
 O(1)/event), tick feature builder, tick GRU controller, addressing pointer, message types. Audio/vision front ends are
-interfaces only (tidal/modalities/*.py are planned); in tests they are fed by a script simulator (tidal/duplex_sim.py)."""
+Phase 3: a real streaming audio front end (tidal.audio_fe, AudioFrontEnd below) turns raw 2-channel PCM into AudioFrame
+(VAD per channel, energy, P(shift), P(backchannel)); vision is still an interface only. The tick policy itself is still
+trained on the script simulator (tidal/duplex_sim.py); audio shift/bc scores are passed through plus a simple threshold hint."""
 from __future__ import annotations
 import math, collections, numpy as np, torch, torch.nn as nn
 from dataclasses import dataclass, field
@@ -30,8 +32,9 @@ class Event:                 # a discrete event on any channel (chat message, da
     id: str; ts: float; role: str            # role: 'self' | 'current' | 'other'  (relative, scenario-general)
     speaker: Optional[str] = None; modality: Optional[str] = None
 @dataclass
-class AudioFrame:            # stub interface: produced by a future VAD/music front end (tidal/modalities/audio.py)
+class AudioFrame:            # produced by AudioFrontEnd (tidal.audio_fe) from raw PCM, or by any external VAD
     vad_other: float = 0.0; vad_self: float = 0.0; music: float = 0.0; energy: float = 0.0
+    shift: Optional[float] = None; bc: Optional[float] = None   # P(self should take the floor), P(backchannel slot) from audio
 @dataclass
 class VisionFrame:           # stub interface: produced by a future screen/video salience front end
     salience: float = 0.0; scene_change: float = 0.0
@@ -44,11 +47,14 @@ class TickInput:
     t: float; events: List[Event] = field(default_factory=list); audio: Optional[AudioFrame] = None
     vision: Optional[VisionFrame] = None; self_state: SelfState = field(default_factory=SelfState)
     n_participants: Optional[float] = None
+    pcm: Optional[tuple] = None   # (other_pcm, self_pcm): 16 kHz float32 audio of this tick; used if the controller has an audio front end
 @dataclass
 class ControlOut:            # what the content side receives every tick (non-blocking)
     t: float; action: str; probs: dict; address_event: Optional[str] = None
     request_content_for: Optional[str] = None   # ask the generator to prepare a reply to this event (async)
     stop_tts: bool = False                       # yield: stop speaking now, keep the remainder for 'continue'
+    audio_shift: Optional[float] = None; audio_bc: Optional[float] = None   # raw audio front-end scores (pass-through)
+    hint: Optional[str] = None                   # audio-only hint: 'take_turn' / 'backchannel' (simple thresholds, see AUDIO_THR)
 
 # ------------------------------------------------------------------ incremental event featurizer (== features_g.compute)
 class EventFeaturizer:
@@ -148,13 +154,31 @@ class TickModel(nn.Module):
     def forward(self, x, e, state=None):
         h, state = self.gru(self.inp(torch.cat([x, self.ep(e)], -1)), state); return self.head(h), state
 
+class AudioFrontEnd:
+    """raw 2-channel PCM (other, self) per tick -> AudioFrame, via the streaming audio encoder (tidal.audio_fe)."""
+    def __init__(self, path):
+        from tidal.audio_fe import AudioEncoder, AudioStream
+        z = torch.load(path, weights_only=False); m = AudioEncoder(); m.load_state_dict(z["state"])
+        self.s = AudioStream(m, z["mu"], z["sd"])
+    def reset(self): self.s.reset()
+    def __call__(self, other_pcm, self_pcm) -> Optional[AudioFrame]:
+        o = self.s.push(other_pcm, self_pcm)
+        return None if o is None else AudioFrame(o["vad_other"], o["vad_self"], 0.0, o["energy"], o["shift"], o["bc"])
+
+AUDIO_THR = dict(take_turn=0.6, backchannel=0.5)
+
 class DuplexController:
     """Always-on control loop. step() must return well inside one tick; it never blocks on content generation."""
-    def __init__(self, tick_model: TickModel, encoder: EventEncoder):
-        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None
-    def reset(self): self.enc.reset(); self.tf.reset(); self.state = None
+    def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None):
+        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe
+    def reset(self):
+        self.enc.reset(); self.tf.reset(); self.state = None
+        if self.afe is not None: self.afe.reset()
     @torch.no_grad()
     def step(self, ti: TickInput) -> ControlOut:
+        if self.afe is not None and ti.pcm is not None:
+            af = self.afe(*ti.pcm)
+            if af is not None: ti.audio = af
         for e in ti.events: self.enc.push(e, ti.n_participants)
         x = torch.from_numpy(self.tf(ti, self.enc.last))[None, None]
         lg, self.state = self.tm(x, self.enc.h[None], self.state)
@@ -162,4 +186,9 @@ class DuplexController:
         addr, _ = self.enc.address(ti.t)
         req = addr if (not ti.self_state.speaking and not ti.self_state.pending_request and not ti.self_state.content_ready
                        and self.enc.last is not None and self.enc.last["role"] != "self" and self.enc.last["p_eot"] > 0.5) else None
-        return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield")
+        a = ti.audio; hint = None
+        if a is not None and a.shift is not None and not ti.self_state.speaking:
+            hint = ("take_turn" if a.shift >= AUDIO_THR["take_turn"] and a.vad_other < 0.5 else
+                    "backchannel" if a.bc is not None and a.bc >= AUDIO_THR["backchannel"] and a.vad_other >= 0.5 else None)
+        return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
+                          audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint)

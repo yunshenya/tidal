@@ -67,3 +67,14 @@ def paired_delta(y, pa, pb, thr_a, thr_b, blocks, kind="binary", n_boot=1000, se
     bs = boot(fn, blocks, n_boot, seed)
     return dict(d_primary_ci=ci(bs[:, 0]), d_primary_mean=float(np.nanmean(bs[:, 0])), p_le0=float(np.nanmean(bs[:, 0] <= 0)),
                 d_f1_ci=ci(bs[:, 1]) if kind == "binary" else None)
+
+
+def strat_auc(y, p, strata, kind="roc"):
+    """n-weighted mean of per-stratum AUCs (e.g. per CV fold, whose models have different calibration); strata
+    without both classes are skipped."""
+    from sklearn.metrics import roc_auc_score, average_precision_score
+    f = roc_auc_score if kind == "roc" else average_precision_score; a, w = [], []
+    for s in np.unique(strata):
+        m = strata == s
+        if 0 < y[m].sum() < m.sum(): a.append(f(y[m], p[m])); w.append(m.sum())
+    return float(np.average(a, weights=w)) if a else np.nan

@@ -42,7 +42,7 @@ def bl_predict(bl, h, X):
     pr = np.tile(prior, (len(X), 1))
     return (P[:, 1], pr[:, 1]) if HEAD_DIMS[h] == 1 else (P, pr)
 
-def evaluate_set(D, rows, blocks, model_tags, bl, vbl, conv_mask, boot=300):
+def evaluate_set(D, rows, blocks, model_tags, bl, vbl, conv_mask, boot=300, vap_boot=0):
     Y = D["Y"][rows]; X = D["X"][rows]; V = D["V"][rows]; res = {"n": int(len(rows)), "heads": {}, "vap": {}}
     preds = {}
     for t in model_tags:
@@ -69,7 +69,21 @@ def evaluate_set(D, rows, blocks, model_tags, bl, vbl, conv_mask, boot=300):
             p = (1 / (1 + np.exp(-preds[n]["vap"][m, j]))) if n != "lr_G" else vbl[j].predict_proba(X[m])[:, 1]
             a.append(roc_auc_score(V[m, j], p))
         res["vap"][n] = dict(mean_auc=float(np.mean(a)) if a else None, n_outputs=len(a))
+    if vap_boot:                                   # block-bootstrap CI of (model - LR) mean projection AUC
+        outs = [j for j in range(VT.NV) if j in vbl and (~np.isnan(V[:, j])).sum() >= 30 and 0 < np.nansum(V[:, j]) < (~np.isnan(V[:, j])).sum()]
+        P = {n: {j: ((1 / (1 + np.exp(-preds[n]["vap"][:, j]))) if n != "lr_G" else _vproba(vbl[j], X)) for j in outs} for n in model_tags + ["lr_G"]}
+        def mauc(idx, n):
+            a = []
+            for j in outs:
+                v = V[idx, j]; m = ~np.isnan(v)
+                if m.sum() >= 30 and 0 < v[m].sum() < m.sum(): a.append(roc_auc_score(v[m], P[n][j][idx][m]))
+            return np.mean(a) if a else np.nan
+        for t in model_tags:
+            d = M.boot(lambda idx: mauc(idx, t) - mauc(idx, "lr_G"), blocks, vap_boot, 0)
+            res["vap"][t]["minus_lr_G"] = dict(mean=float(np.nanmean(d)), ci=M.ci(np.asarray(d).ravel()))
     return res, preds
+
+def _vproba(clf, X): return clf.predict_proba(X)[:, 1]
 
 def respond_to_hit1(D, rows_conv_mask, preds_by_tag, rows):
     """which-event-to-respond-to on synthetic livestream: candidates = non-self events in the 30 s before a host reply."""

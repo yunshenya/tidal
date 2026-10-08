@@ -5,11 +5,15 @@ private chats. It predicts when an utterance is finished, whether the speaker wi
 addressed, and whether the bot should speak, wait or stay silent. The design goal is a *natively multimodal* model:
 video, images, music, speech and text, with one shared tiny causal encoder and per-modality front ends. **Status today:**
 only timing and text inputs are implemented, plus content-free message-type metadata (image, voice, video, sticker…).
-The image, video and audio front ends are designed and scaffolded but not yet implemented. Phase 2 added a VAP-style
+The image and video front ends are designed and scaffolded but not yet implemented; phase 3 added a real streaming
+audio front end (~73k parameters, ~0.7 ms per 100 ms on one CPU thread). Phase 2 added a VAP-style
 self-supervised future-event projection objective, temperature calibration + selective abstention, identity-free roles
 with cold-start / online-adaptation evaluation, a scenario-general event stream (no scenario enum), a 100 ms tick-based
 full-duplex control loop (control separate from content; runs at well over 10 Hz on one CPU thread), ONNX export with
-parity checks, and side-by-side shadow scoring. Neither phase showed a stable, significant win over strong baselines on
+parity checks, and side-by-side shadow scoring. Phase 3 added loaders for license-checked public datasets (multi-party
+chat, Twitch / live chat, Bilibili danmaku, spoken turn-taking, full-duplex speech; data is never redistributed),
+public-data pretraining, leave-one-scenario-out on real livestream chat, the audio front end and int8 quantization.
+No phase showed a stable, significant win over strong baselines on
 real held-out data; results are reported with block-bootstrap CIs, including the negative ones. A shadow-mode harness
 (log-only, never acts) collects fresh evaluation data. MIT licensed. No real chat data and no weights trained on real
 chat are published.
@@ -31,21 +35,27 @@ tidal 想填的就是这个空档。详细的对比和文献见 [docs/related-wo
 | 时间节奏 + 角色特征，因果 GRU / Transformer 主干（约 0.5M 参数），6 个任务头 | ✅ 已实现 |
 | 文本：冻结的 bge-small-zh（int8 ONNX）句向量 | ✅ 已实现 |
 | 消息类型元数据：图片、语音、视频、文件、贴纸、表情、分享（只从占位符解析，不读内容） | ✅ 已实现采集，尚未作为模型输入 |
-| 图像、视频帧、音频（语音 + 音乐）前端 | 📋 计划中（接口已定义，见 `tidal/modalities/`） |
+| 音频前端：流式 log-mel → 因果卷积 + GRU（约 7.3 万参数），双方语音活动、换人 / 保持、附和；已接入 tick 循环 | ✅ 第三阶段 |
+| 图像、视频帧、音乐前端 | 📋 计划中（接口已定义，见 `tidal/modalities/`） |
+| 公开数据加载 / 转换（多人群聊、直播聊天、B 站弹幕、口语轮次、全双工语音）；公开数据预训练 | ✅ 第三阶段（数据不再分发） |
+| 情绪 / 情感判断 | 📋 下一阶段（目前**不**判断情绪） |
 | 校准（温度缩放）、ONNX 导出和一致性测试、泄漏审计、带 CI 的基线对比 | ✅ |
 | VAP 式未来事件投影（只用时间和相对角色的自监督目标），预训练 → 多任务微调 | ✅ 第二阶段 |
 | 选择性弃权（风险-覆盖曲线、"等一下再看"策略）、ECE 报告 | ✅ 第二阶段 |
 | 身份无关的相对角色；冷启动评测（加入后前 20 / 50 / 100 条）和按会话在线重新校准 | ✅ 第二阶段 |
 | 场景通用的统一事件流（没有场景枚举，参与人数是连续特征）、留一场景评测 | ✅ 第二阶段（直播和 1:1 流是脚本合成的） |
-| 全双工 tick 控制循环（100 ms，多路输入，她自己的输出也是输入，控制与内容生成分离） | 🚧 控制骨架 + 合成 sanity 测试 + CPU 基准；音频 / 视觉前端仍是接口 |
+| 全双工 tick 控制循环（100 ms，多路输入，她自己的输出也是输入，控制与内容生成分离） | 🚧 控制骨架 + 合成 sanity 测试 + CPU 基准；真实音频流已接入，tick 策略仍只在模拟器上训练；视觉仍是接口 |
 | 影子模式（只记录不执行，延迟打标签，定时任务，报告；新旧模型在同一批标签上并行打分） | ✅ |
-| 蒸馏、主干量化、剪枝、LoRA、保形预测 | 📋 计划中 |
+| int8 动态量化（ONNX Runtime） | ✅ 第三阶段（这个尺寸上收益很小） |
+| 蒸馏、剪枝、LoRA、保形预测 | 📋 计划中 |
 
 完整的设计、参数预算和"技术 → 组件 → 状态"对照表见 **[docs/architecture.md](docs/architecture.md)**。
 
 **第一阶段的结论**（[reports/phase1.md](reports/phase1.md)，已脱敏）：模型在任何一个头上都没有稳定、显著地超过最强基线。多数头的 Δ 为正，但 95% CI 跨过 0。真实数据太少，覆盖也不完整。所以下一步是先跑影子模式、补数据，**在 CI 显著优于基线之前，不接管任何真实决策**。
 
 **第二阶段的结论**（[reports/phase2.md](reports/phase2.md)，已脱敏）：能力补齐了，但效果没有实质提升。VAP 投影能学，却没有超过同特征上的逻辑回归；零样本读出在"自我续话"上显著超过 val 选出的基线，但不超过 test 上最好的 GBDT；温度缩放只让 EOT 的 ECE 显著下降；冷启动对 EOT / 接话几乎没有代价；跨场景（合成直播、1:1）基本不迁移；全双工控制器在单线程 CPU 上远超 10 Hz，但在合成测试里"让出"和"冷场主动开口"两项不如调过参的规则。结论不变：继续影子模式，不接管真实决策。
+
+**第三阶段的结论**（[reports/phase3.md](reports/phase3.md)，已脱敏；数据集清单见 [reports/phase3_datasets.md](reports/phase3_datasets.md)）：公开数据补上了真实直播和口语数据，但文字侧在真实留出数据上仍然没有一致、显著的提升。音频前端是这一阶段最实在的进展：英文全双工语音预训练后，中文附和预测显著变好；但在 Krisp 测试集上没超过"静默时长"这个零参数基线。结论不变：继续影子模式，不接管真实决策。
 
 ## 任务头
 
@@ -77,11 +87,18 @@ tidal/                 核心代码
   duplex.py            第二阶段：100 ms tick 全双工控制循环（控制与内容分离）
   duplex_sim.py        第二阶段：合成全双工 sanity 测试 + CPU 实时基准
   export2.py           第二阶段：ONNX 导出 + 一致性检查
+  public_data/         第三阶段：公开数据集清单（许可证）、下载器、转换器、快速打标签
+  dataset3.py / eval3.py / loso3.py / quant3.py / turnorder_eval.py   第三阶段：数据集、评测、留一场景、int8 量化、轮次顺序评测
+  audio_fe.py / audio_train.py / audio_oto.py   第三阶段：流式音频前端、训练和评测（MagicData、otoSpeech、Krisp）
+  corpus_fmt.py        "!语料" 对话片段格式的通用解析器（示例见 examples/corpus_example.txt，纯虚构）
   shadow/              影子模式：数据源插件、SQLite 存储、推理、打标签、报告
 scripts/               流水线、cron 包装、示例数据生成
 docs/                  架构与路线图、相关工作
 reports/phase1.md      第一阶段报告（脱敏版）
 reports/phase2.md      第二阶段报告（脱敏版）
+reports/phase3.md      第三阶段报告（脱敏版，只含公开数据上的数字）
+reports/phase3_datasets.md   第三阶段公开数据集清单、许可证、跳过原因
+reports/audio_*.json   音频前端评测（只用公开数据）
 reports/duplex_*.json  全双工合成 sanity 测试和 CPU 基准（纯合成输入）
 shadow/README.md       影子模式说明
 examples/              纯合成的演示事件流（脚本生成，没有用 LLM）
@@ -110,6 +127,7 @@ TIDAL_SHADOW_JSONL=examples/synthetic_stream.jsonl python -m tidal.shadow.run --
 - 也不包含 LLM 生成的合成对话，只包含生成脚本。原因是生成时的提示词里带有部署方机器人的名字。
 - 所有 ID 都用带盐 HMAC 处理，文本先去掉手机号、QQ 号这类长数字串、URL、邮箱、身份证号和 CQ 码。盐、密钥和部署配置都放在 `.secrets/` 和 `config/local.json` 里，两者都已加入 `.gitignore`。
 - 影子模式不调用任何外部 API，只读取上游数据，从不写入。
+- 公开数据集只下载到本地 `data/public/`（已 gitignore），仓库里只有加载和转换代码。gated 数据集需要你自己在 HF 上同意条款，token 只放环境变量 `HF_TOKEN`。许可证不明确、"other" 或非商用的数据按 research-only 处理；Krisp 测试集只能用于评测。
 
 ## 许可
 

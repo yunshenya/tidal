@@ -12,7 +12,11 @@ from tidal.seqdata import CTX, train_windows, eval_windows
 from tidal import features_g as FG, vap_targets as VT
 torch.set_num_threads(int(os.environ.get("TIDAL_THREADS", 1)))
 
-SRC = {"real": ("real", ["train"]), "llm": ("synth", ["synth"]), "live": ("syn_live", ["syn_train"]), "1on1": ("syn_1on1", ["syn_train"])}
+SRC = {"real": ("real", ["train"]), "llm": ("synth", ["synth"]), "live": ("syn_live", ["syn_train"]), "1on1": ("syn_1on1", ["syn_train"]),
+       # phase 3 (dataset p3 only): public streams + optional private AI-streamer turn-order set
+       "tg": ("pub_tg", ["pub_train"]), "irc": ("pub_irc", ["pub_train"]), "twitch": ("pub_twitch", ["pub_train"]),
+       "candor": ("pub_candor", ["pub_train"]), "aishell4": ("pub_aishell4", ["pub_train"]), "danmaku": ("pub_danmaku", ["pub_train"]), "ai": ("ai_stream", ["ai_train"])}
+SYNTH_SOURCES = {"synth", "syn_live", "syn_1on1"}
 NO_SYNTH_HEADS = {"y_addr", "y_act"}
 
 class VAPModel(TurnModel):
@@ -30,11 +34,13 @@ class VAPModel(TurnModel):
         h, state = self.body(h, state); h = h[:, 0]
         o = {k: m(h) for k, m in self.heads.items()}; o["vap"] = self.vap(h); return o, state
 
-def load():
-    z = np.load("data/proc/p2.npz"); meta = pd.read_parquet("data/proc/p2_meta.parquet")
+def load(dataset=None):
+    dataset = dataset or os.environ.get("TIDAL_DATASET", "p2")
+    z = np.load(f"data/proc/{dataset}.npz"); meta = pd.read_parquet(f"data/proc/{dataset}_meta.parquet")
     tr = ((meta.source == "real") & (meta.split == "train")).to_numpy()
     mu = z["G"][tr, :FG.NB].mean(0); sd = z["G"][tr, :FG.NB].std(0) + 1e-6
-    return dict(X=FG.normalize(z["G"], mu, sd), Y=z["Y"], V=z["V"], meta=meta, mu=mu, sd=sd)
+    W = z["W"] if "W" in z.files else np.ones(len(meta), np.float32)
+    return dict(X=FG.normalize(z["G"], mu, sd), Y=z["Y"], V=z["V"], meta=meta, mu=mu, sd=sd, W=W)
 
 def conv_rows(meta, mask):
     idx = np.flatnonzero(mask); conv = meta.conv.to_numpy()[idx]
@@ -84,10 +90,11 @@ def evaluate_loss(model, D, wins, rows, Ymask=None):
     parts = {h: tot[h] / cnt[h] for h in tot}
     return float(sum(parts.values())), parts, (sum(vl) / max(1, sum(vn)))
 
-def run(tag, data, pretrain=True, seed=0, val="real", synth_w=0.5, aux=0.5, epochs=60, patience=8, bs=32, log=print):
+def run(tag, data, pretrain=True, seed=0, val="real", synth_w=0.5, aux=0.5, epochs=60, patience=8, bs=32, log=print,
+        dataset=None, init=None, pub_w=0.5, pre_epochs=None):
     torch.manual_seed(seed); np.random.seed(seed); rng = np.random.default_rng(seed)
-    D = load(); meta = D["meta"]; src = meta.source.to_numpy(); split = meta.split.to_numpy()
-    train_mask = np.zeros(len(meta), bool); is_syn = src != "real"
+    D = load(dataset); meta = D["meta"]; src = meta.source.to_numpy(); split = meta.split.to_numpy()
+    train_mask = np.zeros(len(meta), bool); is_syn = np.isin(src, list(SYNTH_SOURCES))
     for k in data:
         s, sp = SRC[k]; train_mask |= (src == s) & np.isin(split, sp)
     if "real" in data:   # whole real conversations are windowed (context), but loss only on train rows; holdout groups excluded
@@ -96,19 +103,27 @@ def run(tag, data, pretrain=True, seed=0, val="real", synth_w=0.5, aux=0.5, epoc
     convs = conv_rows(meta, ctx | train_mask)
     W = train_windows(convs)
     Ytr = D["Y"].copy(); Ytr[~train_mask] = np.nan; Vtr = D["V"].copy(); Vtr[~train_mask] = np.nan
-    wsyn = np.where(is_syn, synth_w, 1.0).astype(np.float32)
+    is_pub = np.char.startswith(src.astype(str), "pub_")
+    wsyn = np.where(is_syn, synth_w, np.where(is_pub, pub_w, 1.0)).astype(np.float32) * D["W"]   # W: per-row reliability
+    syn_row = is_syn
     if val == "real":
         vrows = np.flatnonzero((src == "real") & (split == "val") & ~np.all(np.isnan(D["Y"]), 1))
         vconv = conv_rows(meta, src == "real")
+    elif val == "pub":
+        vm = np.isin(src, [SRC[k][0] for k in data]) & (split == "pub_val")
+        vrows = np.flatnonzero(vm & ~np.all(np.isnan(D["Y"]), 1)); vrows = vrows[np.random.default_rng(0).permutation(len(vrows))[:30000]]
+        vrows.sort(); vconv = conv_rows(meta, vm)
     else:
         vm = np.isin(src, [SRC[k][0] for k in data]) & (split == "syn_val")
         vrows = np.flatnonzero(vm & ~np.all(np.isnan(D["Y"]), 1)); vconv = conv_rows(meta, vm)
     VW = eval_windows(vconv, vrows)
     model = VAPModel(D["X"].shape[1]); t_start = time.time()
+    if init:                                          # phase 3: start from a model pretrained on public data
+        model.load_state_dict(torch.load(f"models/{init}.pt", weights_only=False)["state"]); pretrain = False
     log(f"[{tag}] params={n_params(model)} data={data} pretrain={pretrain} windows={len(W)} val_rows={len(vrows)}")
     def fit(stage, lr):
         opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-2); best = (1e9, None, -1); hist = []
-        for ep in range(epochs):
+        for ep in range(pre_epochs if (stage == "pre" and pre_epochs) else epochs):
             model.train(); perm = rng.permutation(len(W)); t0 = time.time(); tl = []
             for b in range(0, len(W), bs):
                 ch = [W[k] for k in perm[b:b + bs]]
@@ -119,7 +134,9 @@ def run(tag, data, pretrain=True, seed=0, val="real", synth_w=0.5, aux=0.5, epoc
                 else:
                     ws = np.zeros(F.shape[:2], np.float32)
                     for i, c in enumerate(ch): ws[i, F.shape[1] - len(c[0]):] = wsyn[c[0]]
-                    wt = {h: torch.from_numpy(np.where(ws < 1.0, 0.0, 1.0) if h in NO_SYNTH_HEADS else ws) for h in HEADS}
+                    sy = np.zeros(F.shape[:2], bool)
+                    for i, c in enumerate(ch): sy[i, F.shape[1] - len(c[0]):] = syn_row[c[0]]
+                    wt = {h: torch.from_numpy(np.where(sy, 0.0, ws).astype(np.float32) if h in NO_SYNTH_HEADS else ws) for h in HEADS}
                     lh, _ = head_loss(o, torch.from_numpy(Y), wt); loss = lh + aux * lv
                 if not torch.is_tensor(loss) or not loss.requires_grad: continue
                 opt.zero_grad(); loss.backward(); nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); tl.append(float(loss))
@@ -133,10 +150,10 @@ def run(tag, data, pretrain=True, seed=0, val="real", synth_w=0.5, aux=0.5, epoc
     hist = []; pre_state = None
     if pretrain:
         b, h = fit("pre", 1e-3); hist += h; pre_state = b[1]; pre_seconds = round(time.time() - t_start, 1)
-    b, h = fit("ft", 5e-4 if pretrain else 1e-3); hist += h
+    b, h = fit("ft", 5e-4 if (pretrain or init) else 1e-3); hist += h
     os.makedirs("models", exist_ok=True)
     torch.save(dict(state=b[1], pre_state=pre_state, pre_seconds=pre_seconds if pretrain else 0, arch="vap", kind="gru", n_feat=D["X"].shape[1], feats=FG.FEAT_G, mu=D["mu"], sd=D["sd"], data=data,
-                    pretrain=pretrain, seed=seed, best_val=b[0], best_ep=b[2], hist=hist, params=n_params(model),
+                    pretrain=pretrain, init=init, dataset=dataset or os.environ.get("TIDAL_DATASET", "p2"), pub_w=pub_w, seed=seed, best_val=b[0], best_ep=b[2], hist=hist, params=n_params(model),
                     train_seconds=round(time.time() - t_start, 1), threads=torch.get_num_threads()), f"models/{tag}.pt")
     log(f"[{tag}] best_val={b[0]:.4f} ep={b[2]} train_seconds={time.time() - t_start:.0f}")
 
@@ -159,5 +176,8 @@ def predict(tag, D, rows, conv_mask=None, stage="ft"):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("tag"); ap.add_argument("--data", default="real,llm")
     ap.add_argument("--no-pretrain", action="store_true"); ap.add_argument("--seed", type=int, default=0); ap.add_argument("--val", default="real")
+    ap.add_argument("--dataset"); ap.add_argument("--init"); ap.add_argument("--pub-w", type=float, default=0.5)
+    ap.add_argument("--epochs", type=int, default=60); ap.add_argument("--pre-epochs", type=int); ap.add_argument("--patience", type=int, default=8)
     a = ap.parse_args()
-    run(a.tag, a.data.split(","), not a.no_pretrain, a.seed, a.val)
+    run(a.tag, a.data.split(","), not a.no_pretrain, a.seed, a.val, epochs=a.epochs, patience=a.patience, dataset=a.dataset,
+        init=a.init, pub_w=a.pub_w, pre_epochs=a.pre_epochs)

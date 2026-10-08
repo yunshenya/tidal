@@ -231,6 +231,42 @@ def bench(enc_tag, n=2000):
                tick_s=TICK_S, n_ticks=n, note="single thread, PyTorch eager, synthetic inputs; 'events_per_tick' = chat/danmaku events arriving per 100 ms tick", results=out)
     json.dump(rep, open("reports/duplex_bench.json", "w"), indent=1); print(json.dumps(rep, indent=1))
 
+def bench_audio(enc_tag, audio_path, n=1500):
+    """same as bench() but the audio stream is raw 16 kHz PCM for 2 channels pushed through AudioFrontEnd every tick
+    (log-mel + causal conv + GRU), i.e. the full per-tick cost incl. the audio encoder."""
+    import os
+    from tidal.duplex import AudioFrontEnd
+    m, eck = VP.load_model(enc_tag); enc = EventEncoder(m, eck["mu"], eck["sd"])
+    try:
+        ck = torch.load("models/duplex_tick.pt", weights_only=False); tm = TickModel(); tm.load_state_dict(ck["state"])
+    except FileNotFoundError: tm = TickModel()
+    afe = AudioFrontEnd(audio_path); ctl = DuplexController(tm, enc, afe); r = np.random.default_rng(0); out = {}
+    nsamp = int(TICK_S * 16000)
+    for load in (0, 1, 5, 20):
+        ctl.reset(); lat = []; alat = []; tis = []
+        for k in range(n):
+            t = 1.7e9 + k * TICK_S
+            evs = [Event(f"e{k}_{j}", t - r.uniform(0, TICK_S), "other", f"v{r.integers(50)}", "text") for j in range(load)]
+            amp = 0.1 if (k // 20) % 2 else 0.005
+            pcm = ((r.standard_normal(nsamp) * amp).astype(np.float32), (r.standard_normal(nsamp) * 0.003).astype(np.float32))
+            tis.append(TickInput(t, evs, None, VisionFrame(r.random(), 0), SelfState(), 300.0, pcm))
+        w0 = time.perf_counter()
+        for ti in tis:
+            s = time.perf_counter(); ctl.step(ti); lat.append((time.perf_counter() - s) * 1000)
+        wall = time.perf_counter() - w0
+        afe.reset()
+        for ti in tis[:300]:
+            s = time.perf_counter(); afe(*ti.pcm); alat.append((time.perf_counter() - s) * 1000)
+        lat = np.array(lat[50:]); p50, p95, p99 = (float(np.percentile(lat, q)) for q in (50, 95, 99))
+        out[f"{load}_events_per_tick"] = dict(p50_ms=p50, p95_ms=p95, p99_ms=p99, max_ms=float(lat.max()), rtf_at_10hz_p95=p95 / 100,
+                                             max_sustained_hz_flat_out=float(n / wall), audio_fe_only_p50_ms=float(np.percentile(alat[20:], 50)),
+                                             audio_fe_only_p95_ms=float(np.percentile(alat[20:], 95)))
+    params = sum(p.numel() for p in m.parameters()) + sum(p.numel() for p in tm.parameters()); pa = sum(p.numel() for p in afe.s.m.parameters())
+    rep = dict(encoder=enc_tag, audio_fe=os.path.basename(audio_path), threads=torch.get_num_threads(), cpu_count=len(os.sched_getaffinity(0)), cpu=_cpu_name(),
+               params_event_and_tick=params, params_audio_fe=pa, tick_s=TICK_S, n_ticks=n,
+               note="single thread, PyTorch eager; per tick: 100 ms x 2 channels of 16 kHz PCM -> log-mel -> audio encoder (5 steps) + event encoder + tick GRU", results=out)
+    json.dump(rep, open("reports/duplex_bench_audio.json", "w"), indent=1); print(json.dumps(rep, indent=1))
+
 def _cpu_name():
     try: return next(l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name"))
     except Exception: return None
@@ -240,5 +276,6 @@ if __name__ == "__main__":
     if cmd == "train": train(sys.argv[2])
     elif cmd == "eval": evaluate()
     elif cmd == "bench": bench(sys.argv[2])
+    elif cmd == "bench_audio": bench_audio(sys.argv[2], sys.argv[3])
     elif cmd == "show":
         ticks, y, meta = session(int(sys.argv[2])); print(len(y), {a: int((y == i).sum()) for a, i in A.items()}, meta["voice"], meta["rate"])

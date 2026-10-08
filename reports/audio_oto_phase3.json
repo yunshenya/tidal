@@ -1,0 +1,318 @@
+{
+ "oto_heldout_shift": {
+  "n": 3653,
+  "pos_rate": 0.29947987955105393,
+  "convs": 13,
+  "oto_model": {
+   "pr_auc": 0.6004038845798841,
+   "roc_auc": 0.774040147938273
+  },
+  "lr_prosody": {
+   "pr_auc": 0.4339001353472367,
+   "roc_auc": 0.6558809892746895
+  },
+  "chance": {
+   "pr_auc": 0.29947987955105393,
+   "roc_auc": 0.5
+  },
+  "oto_model_minus_lr_prosody_roc_auc": {
+   "mean": 0.11584230782319932,
+   "ci": [
+    0.0879863902959292,
+    0.14394793530427363
+   ]
+  },
+  "oto_model_minus_chance_roc_auc": {
+   "mean": 0.27201362480984276,
+   "ci": [
+    0.24836876130071356,
+    0.29856435901904416
+   ]
+  },
+  "lr_prosody_minus_chance_roc_auc": {
+   "mean": 0.15617131698664344,
+   "ci": [
+    0.11728468839765124,
+    0.19173546517549833
+   ]
+  }
+ },
+ "oto_heldout_bc": {
+  "n": 86730,
+  "pos_rate": 0.0266805027095584,
+  "convs": 13,
+  "oto_model": {
+   "pr_auc": 0.06651686529895742,
+   "roc_auc": 0.6977168529660576
+  },
+  "lr_prosody": {
+   "pr_auc": 0.03676792441862262,
+   "roc_auc": 0.6198820874257822
+  },
+  "chance": {
+   "pr_auc": 0.0266805027095584,
+   "roc_auc": 0.5
+  },
+  "oto_model_minus_lr_prosody_roc_auc": {
+   "mean": 0.07678230575545489,
+   "ci": [
+    0.0542251972033849,
+    0.1036856315090104
+   ]
+  },
+  "oto_model_minus_chance_roc_auc": {
+   "mean": 0.19692585268262736,
+   "ci": [
+    0.16480254930960414,
+    0.22874888113455702
+   ]
+  },
+  "lr_prosody_minus_chance_roc_auc": {
+   "mean": 0.12014354692717248,
+   "ci": [
+    0.08629957433670998,
+    0.1506738927736219
+   ]
+  }
+ },
+ "magicdata_shift": {
+  "n": 1284,
+  "pos_rate": 0.4158878504672897,
+  "convs": 27,
+  "oto_ft": {
+   "pr_auc": 0.6075440928312116,
+   "roc_auc": 0.7104096799967722
+  },
+  "md_only": {
+   "pr_auc": 0.5872473394183375,
+   "roc_auc": 0.6773035894929069
+  },
+  "oto_zeroshot": {
+   "pr_auc": 0.5126663783737612,
+   "roc_auc": 0.6114678609525926
+  },
+  "lr_prosody": {
+   "pr_auc": 0.5683170600417141,
+   "roc_auc": 0.6522231840298269
+  },
+  "chance": {
+   "pr_auc": 0.4158878504672897,
+   "roc_auc": 0.5
+  },
+  "oto_ft_minus_md_only_roc_auc": {
+   "mean": 0.03220180596649111,
+   "ci": [
+    -0.006054081117038673,
+    0.06870239595943099
+   ]
+  },
+  "oto_ft_minus_lr_prosody_roc_auc": {
+   "mean": 0.05584277615946029,
+   "ci": [
+    -0.002442263243103767,
+    0.11541213946960473
+   ]
+  },
+  "md_only_minus_lr_prosody_roc_auc": {
+   "mean": 0.023640970192969183,
+   "ci": [
+    -0.03156513010680515,
+    0.0766815067314615
+   ]
+  },
+  "oto_zeroshot_minus_md_only_roc_auc": {
+   "mean": -0.06728725164179235,
+   "ci": [
+    -0.09987357431903085,
+    -0.03310100944051373
+   ]
+  },
+  "oto_zeroshot_minus_lr_prosody_roc_auc": {
+   "mean": -0.043646281448823175,
+   "ci": [
+    -0.08846831758991626,
+    0.0017204219889787394
+   ]
+  },
+  "oto_ft_minus_chance_roc_auc": {
+   "mean": 0.21004602134937786,
+   "ci": [
+    0.17197040814099668,
+    0.247672678945342
+   ]
+  },
+  "md_only_minus_chance_roc_auc": {
+   "mean": 0.17784421538288678,
+   "ci": [
+    0.1483664844349572,
+    0.20834091522231027
+   ]
+  },
+  "oto_zeroshot_minus_chance_roc_auc": {
+   "mean": 0.11055696374109442,
+   "ci": [
+    0.07909783488827234,
+    0.14396687868699254
+   ]
+  },
+  "lr_prosody_minus_chance_roc_auc": {
+   "mean": 0.1542032451899176,
+   "ci": [
+    0.10530167200119427,
+    0.20327994867363375
+   ]
+  }
+ },
+ "magicdata_bc": {
+  "n": 164211,
+  "pos_rate": 0.004323705476490612,
+  "convs": 27,
+  "oto_ft": {
+   "pr_auc": 0.01594000976899432,
+   "roc_auc": 0.7201645571965263
+  },
+  "md_only": {
+   "pr_auc": 0.0065051124813422095,
+   "roc_auc": 0.6114688402941991
+  },
+  "oto_zeroshot": {
+   "pr_auc": 0.003861405591943189,
+   "roc_auc": 0.4684269757520799
+  },
+  "lr_prosody": {
+   "pr_auc": 0.006293314330898706,
+   "roc_auc": 0.6892463449009342
+  },
+  "chance": {
+   "pr_auc": 0.004323705476490612,
+   "roc_auc": 0.5
+  },
+  "oto_ft_minus_md_only_roc_auc": {
+   "mean": 0.11467696947702362,
+   "ci": [
+    0.08623423767368266,
+    0.14793740191703675
+   ]
+  },
+  "oto_ft_minus_lr_prosody_roc_auc": {
+   "mean": 0.027516577843096197,
+   "ci": [
+    -0.00872309191408253,
+    0.06295533068264644
+   ]
+  },
+  "md_only_minus_lr_prosody_roc_auc": {
+   "mean": -0.08716039163392741,
+   "ci": [
+    -0.1399350781726303,
+    -0.03647447012932866
+   ]
+  },
+  "oto_zeroshot_minus_md_only_roc_auc": {
+   "mean": -0.14032666570299346,
+   "ci": [
+    -0.22515254907201096,
+    -0.025938032153578174
+   ]
+  },
+  "oto_zeroshot_minus_lr_prosody_roc_auc": {
+   "mean": -0.22748705733692087,
+   "ci": [
+    -0.33077350890245255,
+    -0.12185692716768394
+   ]
+  },
+  "oto_ft_minus_chance_roc_auc": {
+   "mean": 0.21166614544869486,
+   "ci": [
+    0.10244720189087812,
+    0.29191272544659347
+   ]
+  },
+  "md_only_minus_chance_roc_auc": {
+   "mean": 0.09698917597167127,
+   "ci": [
+    -0.01624614618612551,
+    0.1806827583176745
+   ]
+  },
+  "oto_zeroshot_minus_chance_roc_auc": {
+   "mean": -0.04333748973132221,
+   "ci": [
+    -0.09750540164513694,
+    0.0052985766983741555
+   ]
+  },
+  "lr_prosody_minus_chance_roc_auc": {
+   "mean": 0.1841495676055987,
+   "ci": [
+    0.08235873495880677,
+    0.26237514520149924
+   ]
+  }
+ },
+ "krisp_shift_vs_hold": {
+  "n": 2730,
+  "pos_rate": 0.33589743589743587,
+  "convs": 30,
+  "oto_model": {
+   "pr_auc": 0.6634751352953886,
+   "roc_auc": 0.7407148541281584
+  },
+  "md_model": {
+   "pr_auc": 0.7438062717620557,
+   "roc_auc": 0.8260085135766706
+  },
+  "last_silence": {
+   "pr_auc": 0.7445008826602263,
+   "roc_auc": 0.8393857882095926
+  },
+  "chance": {
+   "pr_auc": 0.33589743589743587,
+   "roc_auc": 0.5
+  },
+  "oto_model_minus_md_model_roc_auc": {
+   "mean": -0.08380105704341745,
+   "ci": [
+    -0.14365469236228492,
+    -0.0356153451830327
+   ]
+  },
+  "oto_model_minus_last_silence_roc_auc": {
+   "mean": -0.09630386333431895,
+   "ci": [
+    -0.1652252041249482,
+    -0.029164019855357035
+   ]
+  },
+  "md_model_minus_last_silence_roc_auc": {
+   "mean": -0.012502806290901499,
+   "ci": [
+    -0.048142191194637904,
+    0.02469979986381811
+   ]
+  },
+  "oto_model_minus_chance_roc_auc": {
+   "mean": 0.24390213749672496,
+   "ci": [
+    0.13727151674539512,
+    0.34145002918466777
+   ]
+  },
+  "md_model_minus_chance_roc_auc": {
+   "mean": 0.32770319454014235,
+   "ci": [
+    0.26553364057344475,
+    0.38674819791011433
+   ]
+  },
+  "last_silence_minus_chance_roc_auc": {
+   "mean": 0.34020600083104385,
+   "ci": [
+    0.2845175713099266,
+    0.3903132816490919
+   ]
+  }
+ },
+ "note": "oto labels come from an energy VAD (no transcripts) and the backchannel label there is an acoustic proxy; MagicData labels are human segments; Krisp is evaluation-only (license forbids training) and nothing was fitted on it; Krisp blocks = speaker_id. md_model on Krisp = the MagicData fold model trained without speaker pair A1012"
+}
