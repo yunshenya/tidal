@@ -10,12 +10,12 @@
 
 按 [../reports/phase4.md](../reports/phase4.md) 的预注册规则，对照代码：
 
-- **主干。** 四个被点名的主干是 GRU、`tx_kv`（RoPE + KV 缓存）、`mamba3`（Mamba-3 MIMO）、`mamba3_siso`（Mamba-3 SISO），外加消融 `m3_ablate_m2`（`tidal/backbones.py` 的 `make_body`）。字面规则把消融也算进候选，真实验证集上胜出的是 `m3_ablate_m2`。**只在这四个被点名的主干里选，胜出的是 Mamba-3 SISO。** 影子模式加载的就是这一份：`tidal/shadow/p4.py` 的 `WINNER` 是 `kind=mamba3_siso`，文本情绪开、语音情绪关。不把消融改写成"没赢"。
+- **主干。** 四个被点名的主干是 GRU、`tx_kv`（RoPE + KV 缓存）、`mamba3`（Mamba-3 MIMO）、`mamba3_siso`（Mamba-3 SISO），外加消融 `m3_ablate_m2`（`tidal/backbones.py` 的 `make_body`）。字面规则把消融也算进候选，第四阶段真实验证集上胜出的是 `m3_ablate_m2`；只在那四个被点名的主干里选，第四阶段胜出的是 Mamba-3 SISO，而 `mamba3_siso` 仍留在代码里作为主干选项。**影子模式现在加载的官方胜者是 `m3_ablate_m2`**：2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值是 3.9061，`mamba3_siso` 是 3.9276，差距 0.0215，大于 0.005。`tidal/shadow/p4.py` 的 `WINNER` 是 `kind=m3_ablate_m2`，文本情绪开、语音情绪关。
 - **文本情绪：采用，但是事件特征，不是头。** `tidal/emo_features.py` 的 11 列（8 类概率 + 效价 + 唤醒度 + 有无标记）拼在 `features_g` 后面。`Event.emotion` / `EventFeaturizer`（`tidal/duplex.py`）在 `n_extra > 0` 时写入同样的 10 个数加一个有无标记。`model.py` 的 `HEAD_DIMS` 里没有情绪头。
 - **语音情绪：头存在，不进入决策。** `tidal/emotion_speech.py` 的 `SpeechEmoHead` 在。预注册判定是不采用。全双工只把它放进 `ControlOut.affect`（`tidal/duplex.py`），事件编码器不读语音情绪。SenseVoice 只做离线教师（`emotion_speech.teacher`，可选依赖 `requirements-teacher.txt`）；软后验在 `tidal/sv_soft.py`，用的是 onnxruntime，不是 sherpa。
 - **连续体记忆：只做影子回放。** `tidal/continuum.py` 写明 "No live decisions"。
-- **第五阶段的判定（影子 tick 不改）。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个，影子 tick 不加载这几个新头。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
-- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。真实 val 上消融更低，而且差距大于 0.005，所以排名第一的是消融。**影子配置不因此改主干**，`WINNER` 仍是 `mamba3_siso`，文本情绪开，语音情绪关。
+- **第五阶段的头判定（影子 tick 仍不加载新头）。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个，影子 tick 不加载这几个新头。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
+- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值差距是 0.0215，测试集也偏向消融，所以 `WINNER` 已切换为 `m3_ablate_m2`，文本情绪开，语音情绪关。连续体记忆仍只做影子回放。已采用的打断头还没有接进影子 tick。
 
 参数量沿用第四阶段报告，不在这里另算：`mamba3_siso` 不加情绪约 469,890（报告里四个新主干大约 0.47–0.50M）。文本情绪的 11 列只加宽输入投影，不另报一个新的总数。
 
@@ -34,7 +34,7 @@
    └────────────────────────────────────────────────────────────────────────┘
                      │  每个事件一个 token（d = 128）
                      ▼
-   共享因果时序编码器（都已实现，影子配置用 mamba3_siso）：
+   共享因果时序编码器（都已实现，影子配置用 m3_ablate_m2）：
      GRU | 可学习位置的因果 Transformer | tx_kv（RoPE + KV）| Mamba-3 SISO / MIMO / 消融
    流式推理：新事件到来时，只基于已经发生的事件更新状态。填充位不改 GRU / Mamba 隐状态，也不写入 tx_kv 的 KV。
                      │
@@ -89,7 +89,7 @@
 | 共享小主干：GRU | `model.py` kind=gru | ✅ | 2 层，隐藏层 192。填充位走 `run_gru`（pack / 逐步掩码），不再在 pad 上更新状态 |
 | 共享小主干：因果 Transformer | `model.py` 里不在 `BODY_KINDS` 的 kind | ✅ | 可学习位置，因果 mask，pad key 不参与注意力 |
 | RoPE + KV 缓存 | `backbones.py` `CausalTransformer`，kind=`tx_kv` | ✅ | 不是计划项。`step` 在 `valid` 为假时不写 KV、不推进位置 |
-| SSM / Mamba-3 | `backbones.py` `mamba3` / `mamba3_siso` / `m3_ablate_m2` | ✅ | 纯 PyTorch CPU。pad 步不更新残差后的隐状态。影子配置是 SISO |
+| SSM / Mamba-3 | `backbones.py` `mamba3` / `mamba3_siso` / `m3_ablate_m2` | ✅ | 纯 PyTorch CPU。pad 步不更新残差后的隐状态。影子配置是 `m3_ablate_m2`；`mamba3_siso` 仍是可选主干 |
 | 文本情绪 | `emotion.py`、`emo_features.py`、`duplex.Event.emotion` | ✅ | 8 类 + 效价 / 唤醒度，作为 11 列事件特征接入。不是 `HEAD_DIMS` 的头 |
 | 语音情绪 | `emotion_speech.py` | ✅ 头 / ❌ 决策 | 不采用。只出现在 `ControlOut.affect`。教师是可选 extra |
 | 跨模态时间融合 | 事件 token 求和 + 模态掩码 | 🚧 | 时间、文本、文本情绪已接入事件模型；图像 / 视频 / 音乐未接 |

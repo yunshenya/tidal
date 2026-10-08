@@ -1,5 +1,8 @@
 # tidal phase 5 pre-registration (written 2026-10-08 19:13 CST, before any phase-5 training)
 
+> **2026-10-08 事后决定（不改下面的预注册原文）。** 新鲜 P5bb_* bake-off 的平均真实 val 差距大于 0.005，测试集也偏向消融，影子 `WINNER` 因此改为 `m3_ablate_m2`（文本情绪开，语音情绪关）。`mamba3_siso` 仍是主干选项。连续体记忆仍只做影子回放。已采用的打断头还没有接进影子 tick。记录下来的差距见 `docs/architecture.md`。
+
+
 Locked before training. Test numbers are report-only and are never used to choose a head, a seed's epoch, or a backbone. Speech emotion stays off. Continuum memory stays shadow-only (not retrained, not a live input). No DeepSeek calls. CPU only. No keyword or lexicon rules for any label. Krisp is not read. Twitch chat, Artemis, DanmakuTPP, and Krisp are not interrupt-training data.
 
 ## 1. Backbone bake-off (phase-4 task, not the new heads)

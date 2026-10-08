@@ -1,17 +1,17 @@
-"""Shadow mode can build and step the phase-4 winner: mamba3_siso, text emotion on, speech emotion off."""
+"""Shadow mode can build and step the phase-4 winner: m3_ablate_m2, text emotion on, speech emotion off."""
 import torch
 from tidal.duplex import Event
 from tidal.shadow.p4 import WINNER, build, n_feat, step_events
 from tidal.shadow.infer import load_phase4_winner
 
-def test_winner_config_is_siso_text_emotion_only():
-    assert WINNER["kind"] == "mamba3_siso"
+def test_winner_config_is_m2_ablation_text_emotion_only():
+    assert WINNER["kind"] == "m3_ablate_m2"
     assert WINNER["text_emotion"] is True and WINNER["speech_emotion"] is False
     assert WINNER["emo_dim"] == 11
 
 def test_build_and_step_phase4_winner():
     m = build()
-    assert m.kind == "mamba3_siso" and m.fproj.in_features == n_feat() == n_feat(WINNER)
+    assert m.kind == "m3_ablate_m2" and m.fproj.in_features == n_feat() == n_feat(WINNER)
     emo = [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.2, -0.1]   # 8 probs + valence + arousal
     events = [
         Event(id="a", ts=1_700_000_000.0, role="other", emotion=emo),

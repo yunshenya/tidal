@@ -8,7 +8,7 @@
 
 ## 0. 读法与 tidal 组件约定
 
-tidal 的**当前实现**以 [architecture.md](architecture.md) 为准，不以本节的第一阶段描述为准。事件主干已实现 GRU、RoPE 因果 Transformer（`tx_kv`）和 Mamba-3（`mamba3` / `mamba3_siso` / 消融 `m3_ablate_m2`，`tidal/backbones.py`）。按字面预注册规则（含消融）胜出的是 `m3_ablate_m2`；四个被点名的主干里胜出的是 Mamba-3 SISO。影子加载配置是 SISO，文本情绪开（`emo_features` 的 11 列事件特征，不是 `HEAD_DIMS` 里的头），语音情绪头存在但不进入决策。连续体记忆（`tidal/continuum.py`）只做影子回放。6 个已实现的头仍是 EOT、续话、被叫、说/等/不说、重检、人类接话；打断、话题转移、泛化的回复对象还不是头（`HEAD_DIMS` 里没有）。
+tidal 的**当前实现**以 [architecture.md](architecture.md) 为准，不以本节的第一阶段描述为准。事件主干已实现 GRU、RoPE 因果 Transformer（`tx_kv`）和 Mamba-3（`mamba3` / `mamba3_siso` / 消融 `m3_ablate_m2`，`tidal/backbones.py`）。按字面预注册规则（含消融）胜出的是 `m3_ablate_m2`；四个被点名的主干里，第四阶段胜出的是 Mamba-3 SISO，`mamba3_siso` 仍是代码里的主干选项。影子加载配置现在是 `m3_ablate_m2`（2026-10-08 预注册第五阶段 bake-off，head-sum 真实 val 差距 0.0215），文本情绪开（`emo_features` 的 11 列事件特征，不是 `HEAD_DIMS` 里的头），语音情绪头存在但不进入决策。连续体记忆（`tidal/continuum.py`）只做影子回放。6 个已实现的头仍是 EOT、续话、被叫、说/等/不说、重检、人类接话；打断、话题转移、泛化的回复对象还不是头（`HEAD_DIMS` 里没有）。
 
 下面这一段是**第一阶段**的出发点（见 `reports/phase1.md`），后文的建议都是相对当时写的：输入只有文本和时间节奏，事件级因果 GRU 约 55 万参数。场景是 QQ 群聊和私聊。第一阶段的主要瓶颈在**数据**：文本只覆盖 29% 的消息，被叫正例在测试集上只有个位数，所有头都没有稳定、显著地超过强基线。
 
@@ -468,7 +468,7 @@ tidal 面对两种节奏不同的场景，下文会分开讨论：
 
 ## 7. 推荐的 tidal 目标结构（草图，按依据组织）
 
-> 这是第一阶段写的目标草图（当时建议换成 minGRU）。已经落地的结构见 [architecture.md](architecture.md)：Mamba-3 SISO 是四个被点名主干里的胜出者，影子配置按它加载；本节不描述现状。
+> 这是第一阶段写的目标草图（当时建议换成 minGRU）。已经落地的结构见 [architecture.md](architecture.md)：四个被点名主干里，第四阶段胜出的是 Mamba-3 SISO；影子配置现在加载 `m3_ablate_m2`（`mamba3_siso` 仍是主干选项）。本节不描述现状。
 
 ```
 事件流（消息 / 语音帧 / 视频帧，带真实时间戳）

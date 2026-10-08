@@ -23,7 +23,7 @@ def p2_cfg():
 P4_FROZEN = S.STATE / "frozen_p4.json"
 
 def load_phase4_winner(ckpt=None, cfg=None):
-    """Build the phase-4 shadow model: mamba3_siso, text emotion on, speech emotion off.
+    """Build the phase-4 shadow model: m3_ablate_m2, text emotion on, speech emotion off.
     Enabled for a live tick when TIDAL_SHADOW_P4=1 or shadow/state/frozen_p4.json exists.
     `ckpt` is an optional .pt (not required to construct and step the architecture)."""
     from tidal.shadow.p4 import load
