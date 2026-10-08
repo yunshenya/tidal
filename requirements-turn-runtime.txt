@@ -1,0 +1,3 @@
+# Opt-in ONNX turn shadow interface; no training dependencies.
+numpy>=2.0
+onnxruntime>=1.18

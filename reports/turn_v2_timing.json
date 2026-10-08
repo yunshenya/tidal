@@ -1,0 +1,126 @@
+{
+  "task": "timing",
+  "signature": "7e93b48fdf3a75e3d5850a675bce8de73bad20a12a6b70dac95f21afff621297",
+  "n_test": 6101,
+  "test_conversations": 236,
+  "positive_rate": 0.4909031391143799,
+  "n_train": 29666,
+  "n_val": 7279,
+  "train_conversations": 1144,
+  "val_conversations": 275,
+  "selected_neural": "timing",
+  "champion": "timing",
+  "neural": {
+    "roc_auc": 0.6598533507767291,
+    "pr_auc": 0.6355360187579763,
+    "bce": 0.6540736556053162,
+    "brier": 0.23092271387577057
+  },
+  "lr": {
+    "roc_auc": 0.6574979548442511,
+    "pr_auc": 0.635908249538311,
+    "bce": 0.6552823781967163,
+    "brier": 0.2315293848514557
+  },
+  "prior": {
+    "roc_auc": 0.5,
+    "pr_auc": 0.4909031306343222,
+    "bce": 0.6930000227005549,
+    "brier": 0.24992642377857066
+  },
+  "paired_ci": {
+    "roc_delta": [
+      0.00011088539499862216,
+      0.004716321649048593
+    ],
+    "brier_improvement": [
+      3.419592976570129e-05,
+      0.0012244842946529388
+    ]
+  },
+  "neural_passed_gate": true,
+  "automatic_action_enabled": false,
+  "decisions": {
+    "neural": {
+      "threshold": 0.75,
+      "take_count": 107,
+      "wrong_take_count": 29,
+      "precision": 0.7289719626168224,
+      "recall": 0.02604340567612688,
+      "utility_per_event": -0.0014751680052450418
+    },
+    "lr": {
+      "threshold": 0.75,
+      "take_count": 67,
+      "wrong_take_count": 18,
+      "precision": 0.7313432835820896,
+      "recall": 0.016360601001669448,
+      "utility_per_event": -0.0008195377806916899
+    }
+  },
+  "validation": {
+    "neural": {
+      "roc_auc": 0.6530102126348507,
+      "pr_auc": 0.6453771272593736,
+      "bce": 0.6570850014686584,
+      "brier": 0.23239360749721527
+    },
+    "lr": {
+      "roc_auc": 0.6483630635488076,
+      "pr_auc": 0.641758001589483,
+      "bce": 0.6593953967094421,
+      "brier": 0.23349301517009735
+    }
+  },
+  "selection_manifest_sha256": "b72e4e924875eb63a6bffda1394af0a367efacc01ad99f0051d5468ff32c5ea8",
+  "export": {
+    "schema_version": 1,
+    "task": "timing",
+    "champion": "timing",
+    "signature": "7e93b48fdf3a75e3d5850a675bce8de73bad20a12a6b70dac95f21afff621297",
+    "selection_manifest_sha256": "b72e4e924875eb63a6bffda1394af0a367efacc01ad99f0051d5468ff32c5ea8",
+    "model_file": "timing_champion.onnx",
+    "model_sha256": "de15efbbcf1d4b70c89ed67ea711e62b61e2e98fe72a7f800443c436108b1862",
+    "input_names": [
+      "features"
+    ],
+    "feature_names": [
+      "log_segment_duration",
+      "log_since_self_end",
+      "self_history_missing",
+      "self_occupancy_10s",
+      "other_occupancy_10s",
+      "log_self_segments_10s",
+      "log_other_segments_10s",
+      "switch_fraction_last8",
+      "log_other_median_duration",
+      "log_other_previous_gap",
+      "log_self_segments_60s",
+      "log_other_segments_60s"
+    ],
+    "context": 150,
+    "frame_ready": 0.035,
+    "step": 0.02,
+    "logmel_cache_dtype": "float16",
+    "channel_order": [
+      "other",
+      "self"
+    ],
+    "threshold": 0.75,
+    "research_only": true,
+    "shadow_only": true,
+    "automatic_action_enabled": false,
+    "neural_passed_gate": true,
+    "reference_boundaries_required": true,
+    "parity": {
+      "onnx_vs_eager": 1.1920928955078125e-07,
+      "bundle_vs_training": 5.960464477539063e-08
+    },
+    "cpu_ms": {
+      "p50": 0.010916497558355331,
+      "p95": 0.011808646377176045
+    },
+    "parameters": 1491,
+    "limitation": "Weak behavior labels; reference speech boundaries; not assistant appropriateness."
+  }
+}

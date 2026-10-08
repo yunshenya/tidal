@@ -11,18 +11,11 @@ Derived:   p_shift = how much "other" (vs self) is predicted to talk in 0.2-2 s 
 Streaming: AudioStream.push(other_pcm, self_pcm) for each 100 ms tick -> AudioFrame-compatible dict. State is O(1)."""
 import math, numpy as np, torch, torch.nn as nn
 
-SR = 16000; HOP = 160; WIN = 400; NFFT = 512; NMEL = 40; STACK = 2
-BINS = [(0.0, 0.2), (0.2, 0.6), (0.6, 1.2), (1.2, 2.0)]; STEP = HOP * STACK / SR   # 0.02 s
+from tidal.audio_spec import (SR, HOP, WIN, NFFT, NMEL, STACK, STEP, FRAME_READY, BINS,
+                              mel_fb as _numpy_mel_fb, stack_frames)
 
 def mel_fb(n_mels=NMEL, n_fft=NFFT, sr=SR, fmin=50.0, fmax=7600.0):
-    hz2m = lambda f: 2595 * np.log10(1 + f / 700.0); m2hz = lambda m: 700 * (10 ** (m / 2595.0) - 1)
-    pts = m2hz(np.linspace(hz2m(fmin), hz2m(fmax), n_mels + 2)); bins = np.floor((n_fft + 1) * pts / sr).astype(int)
-    fb = np.zeros((n_mels, n_fft // 2 + 1), np.float32)
-    for i in range(1, n_mels + 1):
-        a, b, c = bins[i - 1], bins[i], bins[i + 1]
-        for k in range(a, b): fb[i - 1, k] = (k - a) / max(1, b - a)
-        for k in range(b, c): fb[i - 1, k] = (c - k) / max(1, c - b)
-    return torch.from_numpy(fb)
+    return torch.from_numpy(_numpy_mel_fb(n_mels, n_fft, sr, fmin, fmax))
 
 _FB = mel_fb(); _WINDOW = torch.hann_window(WIN)
 
@@ -55,11 +48,6 @@ def p_shift(vap_logits):
     s, o = p[..., 1:4], p[..., 5:8]                      # vap layout: [self bins 0..3, other bins 0..3]
     return (s.mean(-1) - o.mean(-1) + 1) / 2              # P(self takes the floor in 0.2-2 s) vs other keeps / resumes
 
-def stack_frames(m_other, m_self):
-    """two [F, NMEL] -> [F//STACK, 2*NMEL*STACK] (20 ms steps)."""
-    n = min(len(m_other), len(m_self)) // STACK * STACK
-    x = np.concatenate([m_other[:n], m_self[:n]], 1)
-    return x.reshape(n // STACK, -1)
 
 class AudioStream:
     """Streaming wrapper for the duplex tick loop: push 100 ms of PCM for each channel per tick."""

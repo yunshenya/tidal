@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "max_chunk_probability_error": 0.0,
+    "future_invariance": true,
+    "bounded_context": true,
+    "shadow_only": true,
+    "automatic_action_enabled": false
+  },
+  "fresh_process": {
+    "timing": {
+      "task": "timing",
+      "p50_ms": 0.19472898566164076,
+      "p95_ms": 0.20627882331609726,
+      "combined_tick_p95_ms": null,
+      "peak_rss_mb": 57.390625,
+      "torch_loaded": false,
+      "sklearn_loaded": false,
+      "pandas_loaded": false,
+      "scope": "Fresh process; synthetic 100-segment history; score includes causal statistics and ONNX. Combined audio tick includes 100ms PCM log-mel. Excludes VAD/ASR."
+    },
+    "audio": {
+      "task": "audio",
+      "p50_ms": 0.7811245159246027,
+      "p95_ms": 0.8518753194948658,
+      "combined_tick_p95_ms": 1.223145765834488,
+      "peak_rss_mb": 63.421875,
+      "torch_loaded": false,
+      "sklearn_loaded": false,
+      "pandas_loaded": false,
+      "scope": "Fresh process; synthetic 100-segment history; score includes causal statistics and ONNX. Combined audio tick includes 100ms PCM log-mel. Excludes VAD/ASR."
+    }
+  }
+}

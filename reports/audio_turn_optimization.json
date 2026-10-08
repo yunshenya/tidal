@@ -1,0 +1,216 @@
+{
+  "protocol": "Reference segment-end +200ms; 3s causal audio; speaker-pair-disjoint train/val/test; seeds averaged",
+  "limitation": "Behavior prediction with oracle segment boundaries, not annotated appropriateness or deployed VAD.",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "folds": [
+    {
+      "test": "A1012",
+      "val": "A1091",
+      "n_train": 477,
+      "n_val": 388,
+      "n_test": 547,
+      "model": {
+        "roc_auc": 0.55394135055152,
+        "pr_auc": 0.5019139563717745,
+        "bce": 0.6953954100608826,
+        "brier": 0.25044915080070496
+      },
+      "lr": {
+        "roc_auc": 0.476984126984127,
+        "pr_auc": 0.4438805585982522,
+        "bce": 1.0507772570464027,
+        "brier": 0.3064488869302038
+      },
+      "runs": [
+        {
+          "seed": 0,
+          "best_epoch": 2,
+          "val_bce": 0.6367632150650024
+        },
+        {
+          "seed": 1,
+          "best_epoch": 11,
+          "val_bce": 0.5975900888442993
+        },
+        {
+          "seed": 2,
+          "best_epoch": 2,
+          "val_bce": 0.6418995261192322
+        }
+      ],
+      "prior": {
+        "roc_auc": 0.5,
+        "pr_auc": 0.4606946983546618,
+        "bce": 0.6929845773865762,
+        "brier": 0.24991869853161633
+      },
+      "decisions": {
+        "model": {
+          "threshold": null,
+          "take_count": 0,
+          "wrong_take_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "utility_per_event": 0.0
+        },
+        "lr": {
+          "threshold": 0.9671432785934102,
+          "take_count": 0,
+          "wrong_take_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "utility_per_event": 0.0
+        }
+      }
+    },
+    {
+      "test": "A1091",
+      "val": "A1102",
+      "n_train": 547,
+      "n_val": 477,
+      "n_test": 388,
+      "model": {
+        "roc_auc": 0.8416203811487678,
+        "pr_auc": 0.6579604633588142,
+        "bce": 0.6192031502723694,
+        "brier": 0.21368376910686493
+      },
+      "lr": {
+        "roc_auc": 0.7682841653640203,
+        "pr_auc": 0.5741077191592139,
+        "bce": 0.6009203341445328,
+        "brier": 0.20573357280146404
+      },
+      "runs": [
+        {
+          "seed": 0,
+          "best_epoch": 2,
+          "val_bce": 0.6828985214233398
+        },
+        {
+          "seed": 1,
+          "best_epoch": 1,
+          "val_bce": 0.6888627409934998
+        },
+        {
+          "seed": 2,
+          "best_epoch": 4,
+          "val_bce": 0.6842537522315979
+        }
+      ],
+      "prior": {
+        "roc_auc": 0.5,
+        "pr_auc": 0.2757731958762887,
+        "bce": 0.6609204857168448,
+        "brier": 0.23391830317718504
+      },
+      "decisions": {
+        "model": {
+          "threshold": null,
+          "take_count": 0,
+          "wrong_take_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "utility_per_event": 0.0
+        },
+        "lr": {
+          "threshold": 0.6656038379020992,
+          "take_count": 69,
+          "wrong_take_count": 25,
+          "precision": 0.6376811594202898,
+          "recall": 0.411214953271028,
+          "utility_per_event": -0.07989690721649484
+        }
+      }
+    },
+    {
+      "test": "A1102",
+      "val": "A1012",
+      "n_train": 388,
+      "n_val": 547,
+      "n_test": 477,
+      "model": {
+        "roc_auc": 0.46266833093069865,
+        "pr_auc": 0.45948939210280537,
+        "bce": 0.7159303426742554,
+        "brier": 0.26113030314445496
+      },
+      "lr": {
+        "roc_auc": 0.5226082064625013,
+        "pr_auc": 0.5000707793590848,
+        "bce": 0.912821125242691,
+        "brier": 0.31572306512829007
+      },
+      "runs": [
+        {
+          "seed": 0,
+          "best_epoch": 0,
+          "val_bce": 0.6907339692115784
+        },
+        {
+          "seed": 1,
+          "best_epoch": 0,
+          "val_bce": 0.702719509601593
+        },
+        {
+          "seed": 2,
+          "best_epoch": 0,
+          "val_bce": 0.7178872227668762
+        }
+      ],
+      "prior": {
+        "roc_auc": 0.5,
+        "pr_auc": 0.4989517819706499,
+        "bce": 0.8044015044209112,
+        "brier": 0.29980758184434625
+      },
+      "decisions": {
+        "model": {
+          "threshold": 0.43730196356773376,
+          "take_count": 0,
+          "wrong_take_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "utility_per_event": 0.0
+        },
+        "lr": {
+          "threshold": 0.9688571569284475,
+          "take_count": 0,
+          "wrong_take_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "utility_per_event": 0.0
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "n": 1412,
+    "positive_rate": 0.4228045325779037,
+    "model_roc_auc": 0.6021582298097355,
+    "lr_roc_auc": 0.5724424136715088,
+    "model_pr_auc": 0.5304617804189934,
+    "lr_pr_auc": 0.49864746624738127,
+    "delta_roc_ci": [
+      -0.005998225072976561,
+      0.0662528638788342
+    ],
+    "brier_improvement_ci": [
+      0.021998552875891118,
+      0.05347066917053709
+    ]
+  },
+  "adopt_neural": false,
+  "dataset_revision": {
+    "repo": "MagicDataTech/multi-stream-spontaneous-conversation-training-datasets_chinese",
+    "revision": "156a68949f65c084ea04710825d21dbdb4ae6519",
+    "files": 112,
+    "ok": 112,
+    "license": "academic research only; no commercial use"
+  },
+  "parameters": 23796
+}

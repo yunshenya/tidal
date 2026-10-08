@@ -1,0 +1,86 @@
+{
+  "protocol": "Exploratory zero-shot Chinese diagnostic; data was exposed in earlier audio experiments.",
+  "independent_test": false,
+  "model_fitted_on_chinese": false,
+  "selection_or_calibration_changed": false,
+  "selection_sha256": "b72e4e924875eb63a6bffda1394af0a367efacc01ad99f0051d5468ff32c5ea8",
+  "n": 1410,
+  "positive_rate": 0.42553192377090454,
+  "neural": {
+    "roc_auc": 0.46419547325102883,
+    "pr_auc": 0.40393168301561594,
+    "bce": 0.7156761884689331,
+    "brier": 0.26044583320617676
+  },
+  "lr": {
+    "roc_auc": 0.47363168724279836,
+    "pr_auc": 0.4257072144969319,
+    "bce": 0.7068966031074524,
+    "brier": 0.2563488781452179
+  },
+  "decisions": {
+    "neural": {
+      "threshold": 0.75,
+      "take_count": 5,
+      "wrong_take_count": 4,
+      "precision": 0.2,
+      "recall": 0.0016666666666666668,
+      "utility_per_event": -0.007801418439716312
+    },
+    "lr": {
+      "threshold": 0.75,
+      "take_count": 3,
+      "wrong_take_count": 2,
+      "precision": 0.3333333333333333,
+      "recall": 0.0016666666666666668,
+      "utility_per_event": -0.0035460992907801418
+    }
+  },
+  "groups": {
+    "zh:A1012": {
+      "n": 547,
+      "neural": {
+        "roc_auc": 0.4707963411353242,
+        "pr_auc": 0.4489867600194432,
+        "bce": 0.7213291525840759,
+        "brier": 0.2635011374950409
+      },
+      "lr": {
+        "roc_auc": 0.47383642722625774,
+        "pr_auc": 0.4638176446201324,
+        "bce": 0.7173879742622375,
+        "brier": 0.2616552710533142
+      }
+    },
+    "zh:A1091": {
+      "n": 386,
+      "neural": {
+        "roc_auc": 0.4782174260591527,
+        "pr_auc": 0.33621990417698905,
+        "bce": 0.6675410270690918,
+        "brier": 0.23617616295814514
+      },
+      "lr": {
+        "roc_auc": 0.4874766853184119,
+        "pr_auc": 0.36661954784891404,
+        "bce": 0.6512385010719299,
+        "brier": 0.2287553995847702
+      }
+    },
+    "zh:A1102": {
+      "n": 477,
+      "neural": {
+        "roc_auc": 0.36826652601969057,
+        "pr_auc": 0.4111600883424934,
+        "bce": 0.7481456995010376,
+        "brier": 0.276581734418869
+      },
+      "lr": {
+        "roc_auc": 0.3938115330520393,
+        "pr_auc": 0.4345272402381106,
+        "bce": 0.739905595779419,
+        "brier": 0.27259308099746704
+      }
+    }
+  }
+}

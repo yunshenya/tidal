@@ -86,10 +86,13 @@ def pretrain(seed=0):
     log = lambda s: (print(s, flush=True), logf.write(s + "\n"), logf.flush())
     log(f"oto pretrain train={len(tr)} val={len(va)} test={len(te)}")
     m, mu, sd, best = AT.train_fold(tr, va, seed, epochs=40, crop=750, bs=16, log=log, patience=5)
-    torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, best=best[0], train=tr, val=va, test=te), "models/audio_fe_oto.pt")
+    torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, best=best[0], target_version=2, train=tr, val=va, test=te), "models/audio_fe_oto.pt")
 
 def _load(p):
-    z = torch.load(p, weights_only=False); m = AudioEncoder(); m.load_state_dict(z["state"]); m.eval(); return m, z
+    z = torch.load(p, weights_only=False)
+    if z.get("target_version") != 2:
+        raise ValueError(f"Stale audio targets in {p}; move old checkpoints aside and retrain")
+    m = AudioEncoder(); m.load_state_dict(z["state"]); m.eval(); return m, z
 
 def _summ(R, score_keys, n_boot=1000, pairs=None):
     """AUCs stratified by r['fold'] (n-weighted mean of per-fold AUCs; a single fold -> plain AUC). pairs: list of
@@ -159,7 +162,7 @@ def evaluate(n_boot=1000):
         if not os.path.exists(fp):
             m, mu, sd, best = AT.train_fold(trn, vac, 0, epochs=30, log=lambda s: open("logs/p3/audio_oto.log", "a").write(f"[ft {tp}] {s}\n"),
                                             init=dict(state=zo["state"], mu=zo["mu"], sd=zo["sd"]), lr=5e-4, patience=5)
-            torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, best=best[0]), fp)
+            torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, best=best[0], target_version=2), fp)
         mf, zf = _load(fp); mm, zm = _load(f"models/audio_fe_fold_{tp}.pt")
         E = _events(tec, {"oto_ft": (mf, zf["mu"], zf["sd"]), "md_only": (mm, zm["mu"], zm["sd"]), "oto_zeroshot": OT}); trE_md = _events(trn, {})
         for kind in ("shift", "bc"):

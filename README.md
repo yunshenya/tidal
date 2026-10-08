@@ -131,6 +131,34 @@ TIDAL_SHADOW_JSONL=examples/synthetic_stream.jsonl python -m tidal.shadow.run --
 
 训练需要你自己的数据：一张统一的事件表（字段说明见 `tidal/labels.py`）。另外，bge-small-zh-v1.5 的 ONNX 文件和 tokenizer 要放在 `models/bge/`。流程见 `scripts/run_all.sh`，以及 `reports/phase1.md` 的第 9 节。
 
+### 中文音频接话实验
+
+独立于私有聊天和文本编码器，可复现实验协议见 [audio_turn_protocol.md](reports/audio_turn_protocol.md)：
+
+```bash
+pip install huggingface-hub
+python -m tidal.public_data.download magicdata_ms
+OMP_NUM_THREADS=2 python -m tidal.audio_train prep
+python -m tidal.audio_turn                 # 三组说话人轮换留出、三个随机种子
+```
+
+数据及权重仅限本地学术研究；输出 `reports/audio_turn_optimization.json`。模型直接预测接话，输入严格限制为决策前已完整到达的音频；使用人工片段边界，尚未接入真实控制。只有相对 LR 的排序和概率误差均通过预定门槛，报告才会标记候选模型可采用；不会自动替换影子模型。
+
+### 无人值守优化与轻量影子推理
+
+完整训练、冻结评估、ONNX导出及流式核验：
+
+```bash
+.venv/bin/python -m tidal.optimize          # 本工作区环境已配置；重复执行可恢复完成结果
+# 新的 macOS arm64 / Python3.12 环境：
+uv venv .venv --python 3.12
+uv pip sync --python .venv/bin/python requirements-optimization-macos.lock
+```
+
+第二轮使用CANDOR对话留出及新的英文说话人测试；中文旧留出只作为开发资料。结果与局限见 [无人值守优化报告](reports/unattended_optimization.md)，固定协议见 [第二轮协议](reports/audio_turn_v2_protocol.md)。模型和校准由验证集选择并冻结，测试结果不会触发重调。新模型未接管中文真实决策。
+
+独立的 [turn_shadow.py](tidal/turn_shadow.py) 仅依赖 [NumPy及ONNX Runtime](requirements-turn-runtime.txt)，无需PyTorch、sklearn或pandas。它返回接话行为的影子概率，要求调用方提供已观察的语音片段边界；尚未验证真实VAD/ASR。权重在本地 `models/turn_v2/`，不再分发。
+
 ## 隐私与数据
 
 - 仓库里**没有任何真实聊天数据**：没有原始数据，也没有脱敏后的数据。在真实聊天上训练的权重也不公开，因为小模型同样可能记住训练数据。

@@ -1,0 +1,138 @@
+{
+  "task": "audio",
+  "signature": "14cd6f00bcf6df50c80f368d203ff6476f636e48c835f8a98abe67c866518eb7",
+  "n_test": 1409,
+  "test_conversations": 5,
+  "positive_rate": 0.19517388939857483,
+  "n_train": 1349,
+  "n_val": 679,
+  "train_conversations": 21,
+  "val_conversations": 9,
+  "selected_neural": "cmvn",
+  "champion": "cmvn",
+  "neural": {
+    "roc_auc": 0.6151050184383519,
+    "pr_auc": 0.25282946888287344,
+    "bce": 0.7248648405075073,
+    "brier": 0.2653926908969879
+  },
+  "lr": {
+    "roc_auc": 0.6261151194484527,
+    "pr_auc": 0.2746395346774231,
+    "bce": 0.7354295253753662,
+    "brier": 0.27078935503959656
+  },
+  "prior": {
+    "roc_auc": 0.5,
+    "pr_auc": 0.19517388218594747,
+    "bce": 0.5456159733536774,
+    "brier": 0.17834434487921852
+  },
+  "paired_ci": {
+    "roc_delta": [
+      -0.030580213696037473,
+      0.010794160551627402
+    ],
+    "brier_improvement": [
+      -0.00023385882377624512,
+      0.01195487454533577
+    ]
+  },
+  "neural_passed_gate": false,
+  "automatic_action_enabled": false,
+  "decisions": {
+    "neural": {
+      "threshold": 0.75,
+      "take_count": 17,
+      "wrong_take_count": 13,
+      "precision": 0.23529411764705882,
+      "recall": 0.014545454545454545,
+      "utility_per_event": -0.0248403122782115
+    },
+    "lr": {
+      "threshold": 0.75,
+      "take_count": 0,
+      "wrong_take_count": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "utility_per_event": 0.0
+    }
+  },
+  "validation": {
+    "neural": {
+      "roc_auc": 0.6756929824561404,
+      "pr_auc": 0.6277449616535843,
+      "bce": 0.6379137635231018,
+      "brier": 0.2238224744796753
+    },
+    "lr": {
+      "roc_auc": 0.6130526315789473,
+      "pr_auc": 0.5705635967006453,
+      "bce": 0.6679514050483704,
+      "brier": 0.2376195639371872
+    }
+  },
+  "selection_manifest_sha256": "51ea294dfc62bbf4daf793e8b7d373e57a178ce816705891b6b28662af8f7524",
+  "test_groups": [
+    "en:Group0078"
+  ],
+  "export": {
+    "schema_version": 1,
+    "task": "audio",
+    "champion": "cmvn",
+    "signature": "14cd6f00bcf6df50c80f368d203ff6476f636e48c835f8a98abe67c866518eb7",
+    "selection_manifest_sha256": "51ea294dfc62bbf4daf793e8b7d373e57a178ce816705891b6b28662af8f7524",
+    "model_file": "audio_champion.onnx",
+    "model_sha256": "38948d0a14f6cff8fcba793cbe76303b238e052b854e91715e1d7cb172e47700",
+    "input_names": [
+      "window",
+      "features"
+    ],
+    "feature_names": [
+      "log_segment_duration",
+      "log_since_self_end",
+      "self_history_missing",
+      "self_occupancy_10s",
+      "other_occupancy_10s",
+      "log_self_segments_10s",
+      "log_other_segments_10s",
+      "switch_fraction_last8",
+      "log_other_median_duration",
+      "log_other_previous_gap",
+      "log_self_segments_60s",
+      "log_other_segments_60s",
+      "other_recent_mean",
+      "self_recent_mean",
+      "other_prev_mean",
+      "self_prev_mean",
+      "other_recent_std",
+      "self_recent_std",
+      "other_window_mean",
+      "self_window_mean"
+    ],
+    "context": 150,
+    "frame_ready": 0.035,
+    "step": 0.02,
+    "logmel_cache_dtype": "float16",
+    "channel_order": [
+      "other",
+      "self"
+    ],
+    "threshold": 0.75,
+    "research_only": true,
+    "shadow_only": true,
+    "automatic_action_enabled": false,
+    "neural_passed_gate": false,
+    "reference_boundaries_required": true,
+    "parity": {
+      "onnx_vs_eager": 1.1920928955078125e-07,
+      "bundle_vs_training": 1.1920928955078125e-07
+    },
+    "cpu_ms": {
+      "p50": 0.48297946341335773,
+      "p95": 0.49475623527541757
+    },
+    "parameters": 72756,
+    "limitation": "Weak behavior labels; reference speech boundaries; not assistant appropriateness."
+  }
+}

@@ -11,13 +11,13 @@ training folds). CIs: block bootstrap over conversations."""
 import glob, json, os, re, sys, time, wave, numpy as np, torch, torch.nn.functional as Fn
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score, balanced_accuracy_score
-from tidal.audio_fe import AudioEncoder, logmel, stack_frames, p_shift, BINS, STEP, NMEL, STACK, HOP, SR
+from tidal.audio_fe import AudioEncoder, logmel, stack_frames, p_shift, BINS, STEP, NMEL, STACK, HOP, SR, FRAME_READY
 from tidal.metrics import boot, ci
 from tidal.public_data.manifest import DATA
 
 SRC = DATA / "magicdata_ms"; CACHE = DATA / "proc" / "audio_md"
-BC_CHARS = set("嗯啊哦对是好行呃哈噢唔嗷诶欸的没错嘛呀噢")
-TAG = re.compile(r"\[[^\]]*\]|[，。！？、,.!?…~\s]")
+CACHE_VERSION = 2  # BOM handling and non-speech filtering
+from tidal.turn_features import BC_CHARS, TAG, is_bc
 
 def read_wav(p):
     with wave.open(str(p)) as w:
@@ -26,41 +26,71 @@ def read_wav(p):
 
 def read_txt(p):
     seg = []
-    for l in open(p, encoding="utf-8"):
+    for l in open(p, encoding="utf-8-sig"):
         m = re.match(r"\[([\d.]+),([\d.]+)\]\s+\S+\s+\S+\s*(.*)$", l.strip())
-        if m: seg.append((float(m.group(1)), float(m.group(2)), m.group(3)))
+        if m:
+            start, end, text = float(m.group(1)), float(m.group(2)), m.group(3)
+            if end > start and TAG.sub("", text):
+                seg.append((start, end, text))
     return seg
 
-def is_bc(s):
-    t = TAG.sub("", s[2]); return (s[1] - s[0]) <= 1.2 and 0 < len(t) <= 3 and set(t) <= BC_CHARS
 
-def prep():
-    CACHE.mkdir(parents=True, exist_ok=True)
-    convs = sorted({os.path.basename(p).rsplit("_0_", 1)[0] for p in glob.glob(str(SRC / "TXT" / "*.txt"))})
+def shift_events(segments, self_ch, observed_until, bc_fn=is_bc, symmetric=False):
+    """Exact timestamp candidates; exclude speech through decision, never after it."""
+    other = segments[1-self_ch]; own = segments[self_ch]
+    for segment in other:
+        if bc_fn(segment):
+            continue
+        end = segment[1]; decision = end + .2
+        if decision > observed_until:
+            continue
+        if any(s[0] <= decision and s[1] > end for s in own):
+            continue
+        if any(s[1] > end and s[0] <= decision for s in other):
+            continue
+        ns = min((s[0] for s in own if s[0] > decision and not bc_fn(s)), default=np.inf)
+        no = min((s[0] for s in other if s[0] > decision and (not symmetric or not bc_fn(s))), default=np.inf)
+        if min(ns,no) > min(end+5.,observed_until) or ns == no:
+            continue
+        yield decision, float(ns < no), segment[1]-segment[0]
+
+def prep(src=SRC, cache=CACHE):
+    cache.mkdir(parents=True, exist_ok=True)
+    convs = sorted({os.path.basename(p).rsplit("_0_", 1)[0] for p in glob.glob(str(src / "TXT" / "*.txt"))})
     for c in convs:
-        out = CACHE / f"{c}.npz"
-        if out.exists(): continue
-        tx = sorted(glob.glob(str(SRC / "TXT" / f"{c}_0_*.txt")))
+        out = cache / f"{c}.npz"
+        if out.exists():
+            with np.load(out) as z:
+                if "cache_version" in z and int(z["cache_version"]) == CACHE_VERSION: continue
+        tx = sorted(glob.glob(str(src / "TXT" / f"{c}_0_*.txt")))
         if len(tx) != 2: continue
+        if any(not (src / "WAV" / (os.path.basename(t)[:-4] + ".wav")).exists() for t in tx):
+            print("pending audio", c, flush=True); continue
         mels, segs = [], []
         for t in tx:
-            w = SRC / "WAV" / (os.path.basename(t)[:-4] + ".wav"); mels.append(logmel(read_wav(w))); segs.append(read_txt(t))
+            w = src / "WAV" / (os.path.basename(t)[:-4] + ".wav"); mels.append(logmel(read_wav(w))); segs.append(read_txt(t))
         n = min(len(m) for m in mels) // STACK * STACK
-        np.savez(out, m0=mels[0][:n].astype(np.float16), m1=mels[1][:n].astype(np.float16),
+        np.savez(out, cache_version=CACHE_VERSION, m0=mels[0][:n].astype(np.float16), m1=mels[1][:n].astype(np.float16),
                  s0=json.dumps(segs[0], ensure_ascii=False), s1=json.dumps(segs[1], ensure_ascii=False))
         print("prep", c, n, len(segs[0]), len(segs[1]), flush=True)
 
 def labels(segs, T):
-    """per 20 ms step: va [T], future-bin activity [T,4], bc onset within 0.5 s [T]."""
+    """Targets at frame availability time k*STEP + FRAME_READY, not frame start."""
     va = np.zeros(T, np.float32); bco = np.zeros(T, np.float32)
     for s in segs:
-        a, b = int(s[0] / STEP), int(np.ceil(s[1] / STEP)); va[a:min(b, T)] = 1
-        if is_bc(s): k = int(s[0] / STEP); bco[max(0, k - int(0.5 / STEP)):min(k, T)] = 1
+        a = max(0, int(np.ceil((s[0] - FRAME_READY) / STEP - 1e-10)))
+        b = max(0, int(np.ceil((s[1] - FRAME_READY) / STEP - 1e-10)))
+        va[a:min(b, T)] = 1
+        if is_bc(s):
+            a = max(0, int(np.ceil((s[0] - .5 - FRAME_READY) / STEP - 1e-10)))
+            b = max(0, int(np.ceil((s[0] - FRAME_READY) / STEP - 1e-10)))
+            bco[a:min(b, T)] = 1
     cs = np.r_[0, np.cumsum(va)]
     fut = np.zeros((T, len(BINS)), np.float32)
     for j, (lo, hi) in enumerate(BINS):
         a = np.arange(T) + int(round(lo / STEP)); b = np.arange(T) + int(round(hi / STEP))
-        ok = b <= T; fut[ok, j] = ((cs[b[ok]] - cs[a[ok]]) / (b[ok] - a[ok]) >= 0.5).astype(np.float32); fut[~ok, j] = np.nan
+        ok = b < T; fut[ok, j] = ((cs[b[ok]] - cs[a[ok]]) / (b[ok] - a[ok]) >= 0.5).astype(np.float32); fut[~ok, j] = np.nan
+    bco[max(0, T - int(round(.5 / STEP))):] = np.nan
     return va, fut, bco
 
 def load_conv(c):
@@ -80,20 +110,15 @@ def persp(cv, self_ch):
 def events(cv, self_ch, P=None):
     """shift/hold events at other's segment ends and backchannel ticks; optionally attach model outputs P (dict of arrays per step)."""
     o = 1 - self_ch; So, Ss = cv["S"][o], cv["S"][self_ch]; vs, _, bco = cv["L"][self_ch]; vo = cv["L"][o][0]; T = cv["T"]
-    on_s = np.array([s[0] for s in Ss if not is_bc(s)]); on_o = np.array([s[0] for s in So])
     ev = []
-    for s in So:
-        if is_bc(s): continue
-        e = s[1]; t = e + 0.2; k = int(t / STEP)
-        if k >= T or vs[int(e / STEP):k + 1].any() or vo[int(e / STEP) + 1:k + 1].any(): continue
-        ns = on_s[on_s > e]; no = on_o[on_o > e + 1e-3]
-        ns = ns.min() if len(ns) else np.inf; no = no.min() if len(no) else np.inf
-        if min(ns, no) > e + 5.0: continue
-        ev.append(("shift", k, float(ns < no), s[1] - s[0]))
+    observed_until = (T-1)*STEP + FRAME_READY
+    for t, y, dur in shift_events(cv["S"], self_ch, observed_until):
+        k = int(np.floor((t-FRAME_READY+1e-10)/STEP))
+        if 0 <= k < T: ev.append(("shift", k, y, dur))
     bc_need = int(round(0.5 / STEP))                            # backchannel label looks 0.5 s ahead
     for k in range(0, T, 5):                                   # 100 ms ticks
         if vo[k] and not vs[k]:
-            if k + bc_need > T: continue                       # future window not observed -> not a negative
+            if k + bc_need >= T: continue                       # future window not observed -> not a negative
             ev.append(("bc", k, float(bco[k]), 0.0))
     return ev
 
@@ -111,6 +136,18 @@ def hand_feats(cv, self_ch, k, segdur):
     return [m(eo, 0, 10), m(eo, 10, 50), m(eo, 0, 10) - m(eo, 10, 50), m(hi_o, 0, 10) - m(hi_o, 10, 50), m(es, 0, 10),
             np.log1p(segdur), np.log1p(min(since_self, 60.0))]
 
+def audio_loss(outputs, va, future, bc):
+    """Unknown future targets contribute no loss; current activity stays supervised."""
+    loss = Fn.binary_cross_entropy_with_logits(outputs["va"], va)
+    mask = torch.isfinite(future)
+    if mask.any():
+        loss = loss + Fn.binary_cross_entropy_with_logits(outputs["vap"][mask], future[mask])
+    mask = torch.isfinite(bc)
+    if mask.any():
+        loss = loss + .5 * Fn.binary_cross_entropy_with_logits(
+            outputs["bc"][mask], bc[mask], pos_weight=outputs["bc"].new_tensor(5.))
+    return loss
+
 def train_fold(train_convs, val_convs, seed=0, epochs=40, crop=750, bs=16, log=print, init=None, lr=2e-3, patience=6):
     """init: dict(state, mu, sd) of a pretrained encoder -> fine-tune it (keeps its input normalization)."""
     torch.manual_seed(seed); rng = np.random.default_rng(seed)
@@ -123,11 +160,9 @@ def train_fold(train_convs, val_convs, seed=0, epochs=40, crop=750, bs=16, log=p
     m = AudioEncoder()
     if init is not None: m.load_state_dict(init["state"])
     opt = torch.optim.AdamW(m.parameters(), lr, weight_decay=1e-2); best = (1e9, None, -1)
-    pw = torch.tensor(5.0)
     def loss_of(X, VA, F, B):
-        o, _ = m(X); l = Fn.binary_cross_entropy_with_logits(o["va"], VA)
-        mk = ~torch.isnan(F); l = l + Fn.binary_cross_entropy_with_logits(o["vap"][mk], F[mk])
-        return l + 0.5 * Fn.binary_cross_entropy_with_logits(o["bc"], B, pos_weight=pw)
+        o, _ = m(X)
+        return audio_loss(o, VA, F, B)
     for ep in range(epochs):
         m.train(); t0 = time.time(); tl = []
         for it in range(60):
@@ -159,10 +194,13 @@ def cv(seed=0):
         log(f"fold test={test_pair} train={len(trn)} val={len(val)} test={len(te)}")
         fp = f"models/audio_fe_fold_{test_pair}.pt"
         if os.path.exists(fp):                                    # resume: fold already trained
-            z = torch.load(fp, weights_only=False); m = AudioEncoder(); m.load_state_dict(z["state"]); m.eval(); mu, sd = z["mu"], z["sd"]
+            z = torch.load(fp, weights_only=False)
+            if z.get("target_version") != 2:
+                raise ValueError(f"Stale audio targets in {fp}; move old checkpoints aside and retrain")
+            m = AudioEncoder(); m.load_state_dict(z["state"]); m.eval(); mu, sd = z["mu"], z["sd"]
         else:
             m, mu, sd, best = train_fold(trn, val, seed, log=log)
-            os.makedirs("models", exist_ok=True); torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, test_pair=test_pair, best=best[0]), fp)
+            os.makedirs("models", exist_ok=True); torch.save(dict(state=m.state_dict(), mu=mu, sd=sd, test_pair=test_pair, best=best[0], target_version=2), fp)
         # hand-feature LR baseline trained on the training convs of this fold
         def feats_events(cl, with_model):
             out = []
