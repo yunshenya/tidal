@@ -31,10 +31,12 @@ TICK_S = 0.1
 class Event:                 # a discrete event on any channel (chat message, danmaku, gift, finished ASR utterance, her own line)
     id: str; ts: float; role: str            # role: 'self' | 'current' | 'other'  (relative, scenario-general)
     speaker: Optional[str] = None; modality: Optional[str] = None
+    emotion: Optional[list] = None           # phase 4: text affect [8 class probs (tidal.emotion.EMO), valence, arousal] (EmoHead.features)
 @dataclass
 class AudioFrame:            # produced by AudioFrontEnd (tidal.audio_fe) from raw PCM, or by any external VAD
     vad_other: float = 0.0; vad_self: float = 0.0; music: float = 0.0; energy: float = 0.0
     shift: Optional[float] = None; bc: Optional[float] = None   # P(self should take the floor), P(backchannel slot) from audio
+    emotion: Optional[list] = None; valence: Optional[float] = None; arousal: Optional[float] = None   # phase 4 speech affect (other channel)
 @dataclass
 class VisionFrame:           # stub interface: produced by a future screen/video salience front end
     salience: float = 0.0; scene_change: float = 0.0
@@ -55,11 +57,12 @@ class ControlOut:            # what the content side receives every tick (non-bl
     stop_tts: bool = False                       # yield: stop speaking now, keep the remainder for 'continue'
     audio_shift: Optional[float] = None; audio_bc: Optional[float] = None   # raw audio front-end scores (pass-through)
     hint: Optional[str] = None                   # audio-only hint: 'take_turn' / 'backchannel' (simple thresholds, see AUDIO_THR)
+    affect: Optional[dict] = None                # phase 4 pass-through: text affect of the last non-self event + speech valence/arousal
 
 # ------------------------------------------------------------------ incremental event featurizer (== features_g.compute)
 class EventFeaturizer:
-    def __init__(self, mu, sd):
-        self.mu, self.sd = np.asarray(mu, np.float32), np.asarray(sd, np.float32); self.reset()
+    def __init__(self, mu, sd, n_extra=0):
+        self.mu, self.sd = np.asarray(mu, np.float32), np.asarray(sd, np.float32); self.n_extra = n_extra; self.reset()
     def reset(self):
         self.ts = collections.deque(); self.last_t = None; self.last_bot = None; self.prev_self = False; self.n = 0
     def __call__(self, e: Event, n_participants=None):
@@ -76,6 +79,10 @@ class EventFeaturizer:
         if col: g[FG.FEAT_G.index("mod_known")] = 1.0; g[FG.FEAT_G.index(col)] = 1.0
         self.ts.append(e.ts); self.last_t = e.ts; self.n += 1; self.prev_self = e.role == "self"
         if e.role == "self": self.last_bot = e.ts
+        if self.n_extra:                          # phase 4 emotion columns (== tidal/emo_features.py): 10 values + has-flag
+            x = np.zeros(self.n_extra, np.float32)
+            if e.emotion is not None: x[:10] = e.emotion; x[10] = 1.0
+            g = np.concatenate([g, x])
         return g
 
 # ------------------------------------------------------------------ streaming event encoder + addressing buffer
@@ -83,16 +90,17 @@ class EventEncoder:
     """Wraps a phase-2 VAPModel; one GRU step per event. Keeps the last K events with their head outputs so the
     controller can point at 'which event to respond to'."""
     def __init__(self, model, mu, sd, K=16):
-        self.m = model.eval(); self.f = EventFeaturizer(mu, sd); self.K = K; self.reset()
+        self.m = model.eval(); self.f = EventFeaturizer(mu, sd, n_extra=model.fproj.in_features - len(FG.FEAT_G)); self.K = K; self.reset()
     def reset(self):
-        self.f.reset(); self.state = None; self.h = torch.zeros(1, self.m.body.hidden_size); self.buf = collections.deque(maxlen=self.K)
+        self.f.reset(); self.state = None; self.last_affect = None; self.h = torch.zeros(1, self.m.vap[0].in_features); self.buf = collections.deque(maxlen=self.K)
         self.last = None
     @torch.no_grad()
     def push(self, e: Event, n_participants=None):
         x = torch.from_numpy(self.f(e, n_participants))[None]
-        o, self.state = self.m.step(x, self.state); self.h = self.state[-1]
+        o, self.state = self.m.step(x, self.state); self.h = o["h"]
         ps = torch.softmax(o["y_act"], -1)[0, 0].item(); pa = torch.sigmoid(o["y_addr"])[0, 0].item()
         pe = torch.sigmoid(o["y_eot"])[0, 0].item(); vp = torch.sigmoid(o["vap"])[0].numpy()
+        if e.role != "self" and e.emotion is not None: self.last_affect = list(map(float, e.emotion))
         self.last = dict(id=e.id, ts=e.ts, role=e.role, p_speak=ps, p_addr=pa, p_eot=pe,
                          vap_self_0_2=float(vp[VT.idx("self", 0)]), vap_self_2_5=float(vp[VT.idx("self", 1)]))
         self.buf.append(self.last)
@@ -191,4 +199,5 @@ class DuplexController:
             hint = ("take_turn" if a.shift >= AUDIO_THR["take_turn"] and a.vad_other < 0.5 else
                     "backchannel" if a.bc is not None and a.bc >= AUDIO_THR["backchannel"] and a.vad_other >= 0.5 else None)
         return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
-                          audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint)
+                          audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint,
+                          affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal))

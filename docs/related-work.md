@@ -545,3 +545,55 @@ tidal 面对两种节奏不同的场景，下文会分开讨论：
 - ACL Anthology 条目：抓取官方页面的 `<title>` 和 `citation_author` 进行核对。
 - 非论文资源：Gemma 3n 模型卡、Smart Turn v3 模型卡、LiveKit 博客已阅读原文；文中出现的 GitHub / HF 链接均返回 HTTP 200。HF 上的参数量（Qwen2.5-Omni-3B 约 5.54B，Moshi 约 7.69B，Gemma 3n E2B 约 5.44B，SmolVLM2-256M 约 256M，LFM2-Audio 约 1.47B）取自 HF API 的 `safetensors.total` 字段。
 - 规模写作"LLM 级"的条目，是因为原文摘要没有给出确切参数量，为避免误报，没有填具体数字。
+
+---
+
+## 第四阶段补充（2026-10-08，UTC+8）：主干对比、情绪头与持续记忆
+
+> 核验方式同上：下列 arXiv 条目于 2026-10-08 通过 `export.arxiv.org` API 核对标题、作者和日期。
+
+### 4.1 小型 SSM / 线性 RNN 主干（组件 B）
+
+- **Mamba-3**：Lahoti, Li, Chen, Wang, Bick, Kolter, Dao, Gu，*Mamba-3: Improved Sequence Modeling using State Space Principles*，arXiv:2603.15569（2026-03，ICLR 2026）。官方代码：`state-spaces/mamba` 的 `mamba_ssm/modules/mamba3.py`，参考实现为 `tests/ops/triton/test_mamba3_siso.py`（`mamba3_siso_step_ref` / `_fwd_ref`）和 `tests/ops/tilelang/test_mamba3_mimo.py`（`mamba3_MIMO_step_ref`）。论文的三项核心改动：
+  1. 指数-梯形离散化（Prop. 1），数据相关的 λ；
+  2. 通过数据相关 RoPE 实现复值状态（Prop. 4）；
+  3. MIMO（秩 R）。
+  
+  此外还有 BC/QK RMSNorm、头级 B/C 偏置（初始化为 1），用于取代 short conv；块布局为 Llama 式交替的 Mamba-3 / SwiGLU，采用 pre-norm。
+  - **tidal 实现**：`tidal/backbones.py`，纯 PyTorch、CPU 上运行。按官方参考逐项复现上述机制，以及 heavy-tail A、softplus DT 和官方初始化。并行形式有两种：单块二次形式（与官方 fwd_ref 相同），以及 SSD 分块形式（块内二次、块间传递状态）。`step()` 为精确递推，每事件 O(1)。`tests/test_phase4.py` 验证了以下等价性：并行形式 = 逐步递推（SISO 与 MIMO，float64，误差 1e-9）；分块形式 = 二次形式；手写官方 SISO step 公式 = 本实现；左填充不变性。
+  - **为 CPU 所做的简化**（不改变数学）：
+    - 全程 fp32；
+    - 窗口 ≤ 64，因此不用 Triton/TileLang 核；
+    - 角度不做 mod 2π，这只影响低精度核；
+    - MIMO 也用相邻成对旋转，官方 MIMO 核为 rotate-half，两者只差一个通道置换；
+    - ngroups = 1，与论文 MVA 布局一致。
+  - **消融 `m3_ablate_m2`**：λ = 1（指数-Euler）、不用 RoPE、R = 1。这样得到的是 Mamba-2（SSD）递推，但保留了 Mamba-3 的 BCNorm 和偏置，所以**不是**原版 Mamba-2 模块，仅作为廉价对照。
+- **Mamba-2 / SSD**：Dao & Gu，*Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality*，arXiv:2405.21060（2024）。
+- **RWKV-7 "Goose"**：Peng 等，arXiv:2503.14456（2025）；**RetNet**：Sun 等，arXiv:2307.08621（2023）。线性注意力 RNN 一类，本阶段未实现。
+- **设备端小 SSM**：
+  - MambaLite-Micro（Xu 等，arXiv:2509.05488，2025）：在 MCU 上运行 Mamba 做 KWS/HAR，峰值内存降低 83%；
+  - Keyword Mamba（Ding, Dong, Mao，arXiv:2508.07363，2025）：在 KWS 上以更少参数优于 KWT。
+  
+  两者都说明小 SSM 在边缘端可行，但同时指出，官方实现依赖 GPU 核，导出困难。这与本仓库的经验一致：MIMO R=4 在 CPU 上的训练成本约为 GRU 的 4 倍，见 `reports/phase4.md`。
+
+### 4.2 轮次 / VAP（组件 H、V）
+
+- **VAP**：Ekstedt & Skantze，arXiv:2205.09812（2022）。
+- **实时与多语 VAP**：Inoue 等，arXiv:2401.04868（2024）和 arXiv:2403.06487（2024）。
+- **噪声鲁棒的实地系统**：Inoue 等，arXiv:2503.06241（2025）。
+- **多模态 VAP**：Saga & Pelachaud，arXiv:2506.03980（2025）。
+
+目前没有找到把 Mamba 系主干直接用于 VAP 并做系统比较的已发表工作。本阶段的主干对比只是一个小规模、事件级的经验点，不能推广。
+
+### 4.3 情绪（组件 E、H）
+
+- **GoEmotions**：Demszky 等，arXiv:2005.00547（2020），Apache-2.0。映射到 8 类时采用论文中的 Ekman 分组。
+- **BRIGHTER**：Muhammad 等，arXiv:2502.11926（2025），CC BY 4.0，人工标注。用作中文和英文的主评测。
+- **SenseVoice / FunAudioLLM**：An 等，arXiv:2407.04051（2024）。SenseVoice-Small 采用 FunASR Model Open Source License v1.1，只作为**离线教师**，在公开音频上打情绪标签。本仓库不分发它的权重。署名：SenseVoice-Small，FunASR / 通义实验室。
+- **CREMA-D**：Cao 等，IEEE Trans. Affective Computing 2014，ODbL。
+
+### 4.4 持续记忆 / 测试时学习（第四阶段 C）
+
+- **Nested Learning / Hope / 连续记忆系统（CMS）**：Behrouz, Razaviyayn, Zhong, Mirrokni，*Nested Learning: The Illusion of Deep Learning Architectures*，NeurIPS 2025，arXiv:2512.24695。CMS 是一串 MLP 块，第 ℓ 块每 C^(ℓ) 步更新一次（式 70–71）。初始状态在更低频的层级中学习，或者直接用预训练权重初始化（§7.3 "Ad-hoc level stacking"）。
+- **Titans**：Behrouz, Zhong, Mirrokni，*Titans: Learning to Memorize at Test Time*，arXiv:2501.00663（2024-12）。用"惊讶度"（损失对输入的梯度）、动量和遗忘门来更新神经记忆。
+- **注意**：两篇论文的结果都是在 LLM 规模（数亿到十亿级参数、语言建模）上得到的。tidal 的实验在约 50 万参数的事件级模型上进行，信号是延迟约 2 s 才能观测到的 VAP 目标，并不验证原论文的结论。

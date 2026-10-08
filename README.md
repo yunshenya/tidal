@@ -32,13 +32,15 @@ tidal 想填的就是这个空档。详细的对比和文献见 [docs/related-wo
 
 | 能力 | 状态 |
 |---|---|
-| 时间节奏 + 角色特征，因果 GRU / Transformer 主干（约 0.5M 参数），6 个任务头 | ✅ 已实现 |
+| 时间节奏 + 角色特征，因果事件流主干（约 0.5M 参数），6 个任务头 | ✅ 已实现 |
 | 文本：冻结的 bge-small-zh（int8 ONNX）句向量 | ✅ 已实现 |
 | 消息类型元数据：图片、语音、视频、文件、贴纸、表情、分享（只从占位符解析，不读内容） | ✅ 已实现采集，尚未作为模型输入 |
 | 音频前端：流式 log-mel → 因果卷积 + GRU（约 7.3 万参数），双方语音活动、换人 / 保持、附和；已接入 tick 循环 | ✅ 第三阶段 |
 | 图像、视频帧、音乐前端 | 📋 计划中（接口已定义，见 `tidal/modalities/`） |
 | 公开数据加载 / 转换（多人群聊、直播聊天、B 站弹幕、口语轮次、全双工语音）；公开数据预训练 | ✅ 第三阶段（数据不再分发） |
-| 情绪 / 情感判断 | 📋 下一阶段（目前**不**判断情绪） |
+| 情绪：文本情绪头（冻结 bge + MLP）、语音情绪头（音频编码器 + GRU）；文本情绪已作为事件特征接入 | ✅ 第四阶段（语音情绪只在影子接口输出） |
+| 主干可选：GRU、RoPE + KV 缓存 Transformer、Mamba-3 SISO / MIMO（纯 PyTorch CPU 实现）、Mamba-2 式消融；全部可导出 ONNX 流式单步 | ✅ 第四阶段 |
+| 连续体记忆（Nested Learning CMS 式多时间尺度在线适配器） | 🧪 第四阶段，只做影子回放 |
 | 校准（温度缩放）、ONNX 导出和一致性测试、泄漏审计、带 CI 的基线对比 | ✅ |
 | VAP 式未来事件投影（只用时间和相对角色的自监督目标），预训练 → 多任务微调 | ✅ 第二阶段 |
 | 选择性弃权（风险-覆盖曲线、"等一下再看"策略）、ECE 报告 | ✅ 第二阶段 |
@@ -56,6 +58,8 @@ tidal 想填的就是这个空档。详细的对比和文献见 [docs/related-wo
 **第二阶段的结论**（[reports/phase2.md](reports/phase2.md)，已脱敏）：能力补齐了，但效果没有实质提升。VAP 投影能学，却没有超过同特征上的逻辑回归；零样本读出在"自我续话"上显著超过 val 选出的基线，但不超过 test 上最好的 GBDT；温度缩放只让 EOT 的 ECE 显著下降；冷启动对 EOT / 接话几乎没有代价；跨场景（合成直播、1:1）基本不迁移；全双工控制器在单线程 CPU 上远超 10 Hz，但在合成测试里"让出"和"冷场主动开口"两项不如调过参的规则。结论不变：继续影子模式，不接管真实决策。
 
 **第三阶段的结论**（[reports/phase3.md](reports/phase3.md)，已脱敏；数据集清单见 [reports/phase3_datasets.md](reports/phase3_datasets.md)）：公开数据补上了真实直播和口语数据，但文字侧在真实留出数据上仍然没有一致、显著的提升。音频前端是这一阶段最实在的进展：英文全双工语音预训练后，中文附和预测显著变好；但在 Krisp 测试集上没超过"静默时长"这个零参数基线。结论不变：继续影子模式，不接管真实决策。
+
+**第四阶段的结论**（[reports/phase4.md](reports/phase4.md)，已脱敏；数据集清单见 [reports/phase4_datasets.md](reports/phase4_datasets.md)）：文本情绪特征按预注册规则被采用（真实 val loss 下降，测试集上"说 / 等 / 不说"头在两个切分上都变好）；语音情绪在音频轮次上没有帮助，不采用。主干对比按预注册规则胜出的是 Mamba-2 式消融（四个指定主干里最好的是 Mamba-3 SISO），但测试集上没有一个主干一致超过 GRU。连续体记忆只带来很小的自监督 loss 改进，决策头不变，保持影子模式。总体结论不变：不接管真实决策。
 
 ## 任务头
 
@@ -90,6 +94,9 @@ tidal/                 核心代码
   public_data/         第三阶段：公开数据集清单（许可证）、下载器、转换器、快速打标签
   dataset3.py / eval3.py / loso3.py / quant3.py / turnorder_eval.py   第三阶段：数据集、评测、留一场景、int8 量化、轮次顺序评测
   audio_fe.py / audio_train.py / audio_oto.py   第三阶段：流式音频前端、训练和评测（MagicData、otoSpeech、Krisp）
+  backbones.py         第四阶段：Mamba-3 SISO / MIMO（含分块 SSD）、RoPE + KV 缓存 Transformer、Mamba-2 式消融
+  emotion.py / emotion_speech.py / sv_soft.py / emo_features.py / emo_speech_integ.py   第四阶段：文本 / 语音情绪头、SenseVoice 离线教师软标签、情绪特征、语音情绪接入测试
+  eval4.py / bench4.py / report4.py / continuum.py   第四阶段：评测、流式延迟与 ONNX、汇总、连续体记忆（影子回放）
   corpus_fmt.py        "!语料" 对话片段格式的通用解析器（示例见 examples/corpus_example.txt，纯虚构）
   shadow/              影子模式：数据源插件、SQLite 存储、推理、打标签、报告
 scripts/               流水线、cron 包装、示例数据生成
@@ -98,6 +105,9 @@ reports/phase1.md      第一阶段报告（脱敏版）
 reports/phase2.md      第二阶段报告（脱敏版）
 reports/phase3.md      第三阶段报告（脱敏版，只含公开数据上的数字）
 reports/phase3_datasets.md   第三阶段公开数据集清单、许可证、跳过原因
+reports/phase4.md      第四阶段报告（脱敏版）
+reports/phase4_datasets.md   第四阶段数据集清单、许可证、跳过原因
+reports/*_phase4*.json  第四阶段只用公开数据的评测结果（情绪、主干公开评测、延迟、连续体记忆公开回放）
 reports/audio_*.json   音频前端评测（只用公开数据）
 reports/duplex_*.json  全双工合成 sanity 测试和 CPU 基准（纯合成输入）
 shadow/README.md       影子模式说明

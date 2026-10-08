@@ -27,3 +27,5 @@ models/bge/.cache/
 __pycache__/
 *.pyc
 .pytest_cache/
+# third-party teacher weights (FunASR model license; never redistributed)
+models/sensevoice/

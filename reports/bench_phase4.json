@@ -1,0 +1,84 @@
+{
+ "gru": {
+  "params": 504546,
+  "step_p50_ms": 0.309,
+  "step_p95_ms": 0.392,
+  "state_bytes": 1536,
+  "param_bytes_fp32": 2018184,
+  "window64_forward_ms": 3.477,
+  "onnx": {
+   "kind": "step",
+   "bytes": 1773164,
+   "max_abs_err": 2.5331974029541016e-07,
+   "ort_p50_ms": 0.057,
+   "ort_p95_ms": 0.082
+  }
+ },
+ "tx_kv": {
+  "params": 464866,
+  "step_p50_ms": 0.639,
+  "step_p95_ms": 0.84,
+  "state_bytes": 131072,
+  "param_bytes_fp32": 1859464,
+  "window64_forward_ms": 1.667,
+  "onnx": {
+   "kind": "step(ring-buffer KV, fixed shape)",
+   "bytes": 1715178,
+   "max_abs_err": 5.960464477539062e-07,
+   "ring_vs_eager_max_err": 2.384185791015625e-07,
+   "ort_p50_ms": 0.151,
+   "ort_p95_ms": 0.204
+  }
+ },
+ "mamba3": {
+  "params": 472322,
+  "step_p50_ms": 1.157,
+  "step_p95_ms": 1.701,
+  "state_bytes": 82432,
+  "param_bytes_fp32": 1889288,
+  "window64_forward_ms": 5.682,
+  "onnx": {
+   "kind": "step",
+   "bytes": 1725624,
+   "max_abs_err": 1.5497207641601562e-06,
+   "ort_p50_ms": 0.613,
+   "ort_p95_ms": 0.981
+  }
+ },
+ "mamba3_siso": {
+  "params": 475394,
+  "step_p50_ms": 1.012,
+  "step_p95_ms": 1.354,
+  "state_bytes": 70144,
+  "param_bytes_fp32": 1901576,
+  "window64_forward_ms": 3.438,
+  "onnx": {
+   "kind": "step",
+   "bytes": 1767412,
+   "max_abs_err": 9.5367431640625e-07,
+   "ort_p50_ms": 0.386,
+   "ort_p95_ms": 0.452
+  }
+ },
+ "m3_ablate_m2": {
+  "params": 473346,
+  "step_p50_ms": 0.805,
+  "step_p95_ms": 0.938,
+  "state_bytes": 69632,
+  "param_bytes_fp32": 1893384,
+  "window64_forward_ms": 2.779,
+  "onnx": {
+   "kind": "step",
+   "bytes": 1746841,
+   "max_abs_err": 1.2516975402832031e-06,
+   "ort_p50_ms": 0.316,
+   "ort_p95_ms": 0.352
+  }
+ },
+ "note": "1 CPU thread, torch eager fp32, batch 1, random weights; box is shared with training jobs (load noted)",
+ "loadavg": [
+  4.388671875,
+  6.00732421875,
+  6.66943359375
+ ]
+}

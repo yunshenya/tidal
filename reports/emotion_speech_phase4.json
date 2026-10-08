@@ -1,0 +1,324 @@
+{
+ "crema_only_s0": {
+  "seed": 0,
+  "use_teacher": false,
+  "best_ep": 20,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.5203252032520326,
+   "macro_f1": 0.49916091702588217,
+   "macro_f1_ci": [
+    0.46280242745108047,
+    0.5363879670155869
+   ],
+   "ece": 0.042039027099363864,
+   "spearman_arousal_vs_intensity": 0.39225781016133965,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5799081325531006,
+    "disgust": 0.2470291703939438,
+    "fear": 0.3013210892677307,
+    "joy": 0.40047308802604675,
+    "neutral": 0.18013420701026917,
+    "sadness": 0.08428474515676498
+   },
+   "mean_valence_by_class": {
+    "anger": -0.4125327467918396,
+    "disgust": -0.3735726773738861,
+    "fear": -0.330601304769516,
+    "joy": -0.15782901644706726,
+    "neutral": -0.1957753300666809,
+    "sadness": -0.4401654303073883
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.5094850948509485
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.12121212121212122,
+   "kappa": 0.004392555773899076,
+   "mean_kl_teacher_student": 2.3051187992095947,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.21241805813234382
+  }
+ },
+ "crema_only_s1": {
+  "seed": 1,
+  "use_teacher": false,
+  "best_ep": 30,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.5318428184281843,
+   "macro_f1": 0.5215899916813652,
+   "macro_f1_ci": [
+    0.48113319529336873,
+    0.5628724030025949
+   ],
+   "ece": 0.042654318598712354,
+   "spearman_arousal_vs_intensity": 0.3827714565921559,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5677987933158875,
+    "disgust": 0.2123708575963974,
+    "fear": 0.26490142941474915,
+    "joy": 0.3609701991081238,
+    "neutral": 0.16022026538848877,
+    "sadness": 0.025642255321145058
+   },
+   "mean_valence_by_class": {
+    "anger": -0.3941318094730377,
+    "disgust": -0.4261532127857208,
+    "fear": -0.3525945842266083,
+    "joy": -0.1466357558965683,
+    "neutral": -0.2746717631816864,
+    "sadness": -0.478778213262558
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.5426829268292683
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.050505050505050504,
+   "kappa": 0.0,
+   "mean_kl_teacher_student": 2.7102789878845215,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.15673469387755098
+  }
+ },
+ "crema_only_s2": {
+  "seed": 2,
+  "use_teacher": false,
+  "best_ep": 26,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.5386178861788617,
+   "macro_f1": 0.5302629791672816,
+   "macro_f1_ci": [
+    0.4816139002592389,
+    0.577660071693247
+   ],
+   "ece": 0.05458984939951883,
+   "spearman_arousal_vs_intensity": 0.39569152096245525,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5812329649925232,
+    "disgust": 0.24341364204883575,
+    "fear": 0.3023603856563568,
+    "joy": 0.3879566490650177,
+    "neutral": 0.13674548268318176,
+    "sadness": 0.0853797048330307
+   },
+   "mean_valence_by_class": {
+    "anger": -0.3579349219799042,
+    "disgust": -0.4223802387714386,
+    "fear": -0.34510567784309387,
+    "joy": -0.11554805189371109,
+    "neutral": -0.2515295445919037,
+    "sadness": -0.5026648640632629
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.5210027100271003
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.0,
+   "kappa": -0.0010213461342050145,
+   "mean_kl_teacher_student": 2.9199116230010986,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.20066790352504638
+  }
+ },
+ "teacher_s0": {
+  "seed": 0,
+  "use_teacher": true,
+  "best_ep": 30,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.5237127371273713,
+   "macro_f1": 0.5135321143923643,
+   "macro_f1_ci": [
+    0.4710566733532209,
+    0.5517712147585726
+   ],
+   "ece": 0.03575892421368985,
+   "spearman_arousal_vs_intensity": 0.3921996116731852,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5327999591827393,
+    "disgust": 0.190789133310318,
+    "fear": 0.24796846508979797,
+    "joy": 0.3456827700138092,
+    "neutral": 0.12233737856149673,
+    "sadness": 0.02063068561255932
+   },
+   "mean_valence_by_class": {
+    "anger": -0.32698920369148254,
+    "disgust": -0.4318861663341522,
+    "fear": -0.39272260665893555,
+    "joy": -0.10079286992549896,
+    "neutral": -0.284126877784729,
+    "sadness": -0.5353020429611206
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.5562330623306233
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.9393939393939394,
+   "kappa": 0.0,
+   "mean_kl_teacher_student": 0.17602548003196716,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.17476808905380334
+  }
+ },
+ "teacher_s1": {
+  "seed": 1,
+  "use_teacher": true,
+  "best_ep": 36,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.551490514905149,
+   "macro_f1": 0.5414365531561188,
+   "macro_f1_ci": [
+    0.4965677378692507,
+    0.5843238538551626
+   ],
+   "ece": 0.052336937043725,
+   "spearman_arousal_vs_intensity": 0.4041303017448579,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5468099117279053,
+    "disgust": 0.20305156707763672,
+    "fear": 0.2656363248825073,
+    "joy": 0.3628610372543335,
+    "neutral": 0.13667327165603638,
+    "sadness": 0.04881148040294647
+   },
+   "mean_valence_by_class": {
+    "anger": -0.31032997369766235,
+    "disgust": -0.4024491012096405,
+    "fear": -0.3447977900505066,
+    "joy": -0.029141206294298172,
+    "neutral": -0.17620134353637695,
+    "sadness": -0.4837092459201813
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.5697831978319783
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.9292929292929293,
+   "kappa": -0.014641288433382194,
+   "mean_kl_teacher_student": 0.18199695646762848,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.04216450216450216
+  }
+ },
+ "teacher_s2": {
+  "seed": 2,
+  "use_teacher": true,
+  "best_ep": 29,
+  "temperature": 1.0,
+  "params": 42058,
+  "crema_test": {
+   "n": 1476,
+   "n_actors": 18,
+   "acc": 0.518970189701897,
+   "macro_f1": 0.5016739123051027,
+   "macro_f1_ci": [
+    0.4632524183527768,
+    0.53452444579778
+   ],
+   "ece": 0.052250092066723486,
+   "spearman_arousal_vs_intensity": 0.4025589425646864,
+   "n_intensity": 270,
+   "mean_arousal_by_class": {
+    "anger": 0.5714242458343506,
+    "disgust": 0.24368374049663544,
+    "fear": 0.3028792142868042,
+    "joy": 0.39584973454475403,
+    "neutral": 0.17138680815696716,
+    "sadness": 0.081843301653862
+   },
+   "mean_valence_by_class": {
+    "anger": -0.40862274169921875,
+    "disgust": -0.4151637554168701,
+    "fear": -0.37718331813812256,
+    "joy": -0.18237009644508362,
+    "neutral": -0.2511305809020996,
+    "sadness": -0.4941290020942688
+   },
+   "sensevoice_hard_tag_acc": 0.03997289972899729,
+   "sensevoice_hard_unknown_rate": 0.9478319783197832,
+   "sensevoice_soft_acc": 0.5365853658536586,
+   "sensevoice_soft_macro_f1": 0.49235390524988504,
+   "student_teacher_agreement": 0.508130081300813
+  },
+  "md_heldout_vs_teacher": {
+   "n": 99,
+   "argmax_agreement": 0.9292929292929293,
+   "kappa": -0.008733624454148492,
+   "mean_kl_teacher_student": 0.18852221965789795,
+   "teacher_argmax_dist": {
+    "neutral": 93,
+    "joy": 4,
+    "sadness": 2
+   },
+   "spearman_arousal_vs_teacher_expected": -0.04442795299938156
+  }
+ },
+ "latency": {
+  "per_100ms_tick_p50_ms": 0.124,
+  "p95_ms": 0.155
+ }
+}
