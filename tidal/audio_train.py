@@ -90,8 +90,11 @@ def events(cv, self_ch, P=None):
         ns = ns.min() if len(ns) else np.inf; no = no.min() if len(no) else np.inf
         if min(ns, no) > e + 5.0: continue
         ev.append(("shift", k, float(ns < no), s[1] - s[0]))
+    bc_need = int(round(0.5 / STEP))                            # backchannel label looks 0.5 s ahead
     for k in range(0, T, 5):                                   # 100 ms ticks
-        if vo[k] and not vs[k]: ev.append(("bc", k, float(bco[k]), 0.0))
+        if vo[k] and not vs[k]:
+            if k + bc_need > T: continue                       # future window not observed -> not a negative
+            ev.append(("bc", k, float(bco[k]), 0.0))
     return ev
 
 _HF = {}

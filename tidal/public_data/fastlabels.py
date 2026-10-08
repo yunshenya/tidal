@@ -17,7 +17,11 @@ def compute_labels_fast(df: pd.DataFrame) -> pd.DataFrame:
     s = pd.Series(idx).groupby(spk).shift(-1).to_numpy()
     ok = ~np.isnan(s); ns = np.where(ok, s, 0).astype(int)
     found = ok & (ts[ns] - ts <= W_SELF)
-    y_self = np.where(y_eot == 1, found.astype(float), np.nan)
+    # conversation end time: a negative is unknown until the whole W_SELF window has been seen
+    seg = np.cumsum(np.r_[True, conv[1:] != conv[:-1]]) - 1
+    mx = np.full(int(seg.max()) + 1, -np.inf); np.maximum.at(mx, seg, ts); end_ts = mx[seg]
+    covered_self = end_ts - ts >= W_SELF
+    y_self = np.where(y_eot == 1, np.where(found, 1.0, np.where(covered_self, 0.0, np.nan)), np.nan)
     # next human (other) event by a different speaker
     y_hr = np.full(n, np.nan); O = np.flatnonzero(role == "other")
     if len(O):
@@ -27,7 +31,9 @@ def compute_labels_fast(df: pd.DataFrame) -> pd.DataFrame:
         nr = run_id + 1; valid = nr < len(run_start)
         tgt = np.where(valid, run_start[np.minimum(nr, len(run_start) - 1)], 0)
         valid &= np.where(valid, run_conv[np.minimum(nr, len(run_start) - 1)] == co, False)
-        f = valid & (ts[tgt] - ts[O] <= W_HREPLY); y_hr[O] = f.astype(float)
+        f = valid & (ts[tgt] - ts[O] <= W_HREPLY)
+        covered = end_ts[O] - ts[O] >= W_HREPLY
+        y_hr[O] = np.where(f, 1.0, np.where(covered, 0.0, np.nan))
     # bot action
     y_act = np.full(n, np.nan); isstr = np.array([isinstance(a, str) for a in act])
     sp = (role == "other") & isstr & (act == "speak")
@@ -37,7 +43,8 @@ def compute_labels_fast(df: pd.DataFrame) -> pd.DataFrame:
         if sp[i]: last = i
     m = (role == "other") & isstr
     later = (nxt_sp >= 0) & (ts[np.maximum(nxt_sp, 0)] - ts <= W_WAIT)
-    y_act[m] = np.where(sp[m], 0, np.where(later[m], 1, 2))
+    covered_wait = end_ts - ts >= W_WAIT
+    y_act[m] = np.where(sp[m], 0, np.where(later[m], 1, np.where(covered_wait[m], 2, np.nan)))
     out = df.copy()
     out["y_eot"] = y_eot; out["y_self"] = y_self; out["y_act"] = y_act; out["y_recheck"] = y_rc; out["y_hreply"] = y_hr
     out["y_addr"] = np.where((out.role == "other") & (out.conv_type == "group"), out.addr_src, np.nan)

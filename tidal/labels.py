@@ -14,9 +14,15 @@ W_WAIT = 60.0         # s; bot speaks at a later event within this window -> 'wa
 W_HREPLY = 60.0       # s; another human replies within this window
 RECHECK_EDGES = [2, 5, 10, 20, 60, 300]   # s -> 7 buckets (time until next event in the conversation)
 
+def _window_closed(ts_i, end_obs, window):
+    """A negative label is only valid once the whole future window has been observed."""
+    return end_obs - ts_i >= window
+
 def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
     """horizon (shadow mode): unix time up to which the stream is known to be complete. When given, an event with
-    no later event yet still gets eot/recheck labels once the silence since it reaches the window length."""
+    no later event yet still gets eot/recheck labels once the silence since it reaches the window length.
+    Negatives for self-continuation / human-reply / silent-action stay unknown (NaN) until that window is covered
+    by a later event or by `horizon` — they are not finalized just because the log has gone quiet."""
     df = df.sort_values(["conv", "ts"], kind="stable").reset_index(drop=True)
     n = len(df)
     y_eot = np.full(n, np.nan); y_self = np.full(n, np.nan); y_act = np.full(n, np.nan)
@@ -39,6 +45,7 @@ def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
                 quiet = horizon - ts[i]
                 if quiet >= RECHECK_EDGES[-1]: y_rc[i] = len(RECHECK_EDGES)
                 if known[i] and quiet >= N_EOT: y_eot[i] = 1
+            end_obs = ts[b - 1] if horizon is None else max(horizon, ts[b - 1])
             # --- self-continuation: defined on turn-final events; same speaker returns within W_SELF
             if known[i] and y_eot[i] == 1:
                 k = i + 1; found = False; unknown_seen = False
@@ -47,8 +54,9 @@ def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
                     if not known[k]: unknown_seen = True
                     k += 1
                 if found: y_self[i] = 1
-                elif not unknown_seen: y_self[i] = 0
+                elif not unknown_seen and _window_closed(ts[i], end_obs, W_SELF): y_self[i] = 0
                 # (unknown-speaker events inside the window could be the same person -> masked)
+                # (window not yet observed -> masked, not a premature negative)
             # --- human-reply aux: another human (not bot, not same speaker) within W_HREPLY
             if role[i] == "other" and known[i]:
                 k = i + 1; found = False; unknown_seen = False
@@ -57,7 +65,7 @@ def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
                     if not known[k]: unknown_seen = True
                     k += 1
                 if found: y_hr[i] = 1
-                elif not unknown_seen: y_hr[i] = 0
+                elif not unknown_seen and _window_closed(ts[i], end_obs, W_HREPLY): y_hr[i] = 0
             # --- bot action at inbound events
             if role[i] == "other" and isinstance(act[i], str):
                 if act[i] == "speak": y_act[i] = 0
@@ -66,7 +74,8 @@ def compute_labels(df: pd.DataFrame, horizon: float = None) -> pd.DataFrame:
                     while k < b and ts[k] - ts[i] <= W_WAIT:
                         if role[k] == "other" and act[k] == "speak": later = True; break
                         k += 1
-                    y_act[i] = 1 if later else 2
+                    if later: y_act[i] = 1
+                    elif _window_closed(ts[i], end_obs, W_WAIT): y_act[i] = 2
     out = df.copy()
     out["y_eot"] = y_eot; out["y_self"] = y_self; out["y_act"] = y_act; out["y_recheck"] = y_rc; out["y_hreply"] = y_hr
     # addressed-to-bot: only inbound messages in GROUP chats (private chats are trivially addressed)
