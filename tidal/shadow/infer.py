@@ -23,9 +23,10 @@ def p2_cfg():
 P4_FROZEN = S.STATE / "frozen_p4.json"
 
 def load_phase4_winner(ckpt=None, cfg=None):
-    """Build the phase-4 shadow model: m3_ablate_m2, text emotion on, speech emotion off.
-    Enabled for a live tick when TIDAL_SHADOW_P4=1 or shadow/state/frozen_p4.json exists.
-    `ckpt` is an optional .pt (not required to construct and step the architecture)."""
+    """Build the phase-4 shadow model: m3_ablate_m2, text emotion on, speech emotion off, plus the phase-5
+    interrupt side head (p_interrupt; cfg['interrupt_heads'] = checkpoints trained on m3_ablate_m2 states).
+    The cron tick runs it as its own system (tidal.shadow.run.predict_p4) when TIDAL_SHADOW_P4=1 or
+    shadow/state/frozen_p4.json exists. `ckpt` is an optional .pt (not required to construct and step the architecture)."""
     from tidal.shadow.p4 import load
     return load(ckpt, cfg)
 
@@ -50,14 +51,7 @@ class Predictor:
         if self.p2:
             try: self.p2_sess = ort.InferenceSession(str(ROOT / "models" / f"{self.p2['tag']}.onnx"), so, providers=["CPUExecutionProvider"])
             except Exception as e: print(f"[shadow] phase-2 model not loaded: {type(e).__name__}: {e}", file=sys.stderr); self.p2 = None
-        self.p4 = None
-        if os.environ.get("TIDAL_SHADOW_P4") == "1" or P4_FROZEN.exists():
-            try:
-                spec = json.loads(P4_FROZEN.read_text()) if P4_FROZEN.exists() else None
-                path = ckpt if (ckpt := os.environ.get("TIDAL_SHADOW_P4_CKPT")) else (spec or {}).get("ckpt")
-                self.p4 = load_phase4_winner(path, spec)
-            except Exception as e:
-                print(f"[shadow] phase-4 winner not loaded: {type(e).__name__}: {e}", file=sys.stderr); self.p4 = None
+        # the phase-4 winner + interrupt head is a separate system: tidal.shadow.run.predict_p4 (not loaded here)
 
     def _embed(self, texts):
         """bge int8 embeddings, encoded one text at a time (dynamic int8 quantization makes batched outputs depend on

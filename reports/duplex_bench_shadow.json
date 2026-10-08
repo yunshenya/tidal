@@ -1,0 +1,57 @@
+{
+ "config": "shadow: m3_ablate_m2 + text emotion (28 inputs), tick GRU enc_dim=128; interrupt head = 3 x BinHead(128-64-1)",
+ "threads": 1,
+ "cpu_count": 8,
+ "cpu": "Intel(R) Xeon(R) Processor",
+ "tick_s": 0.1,
+ "n_ticks": 2000,
+ "reps": 3,
+ "params_encoder": 469250,
+ "params_tick": 72903,
+ "params_interrupt_head": 24963,
+ "note": "random weights, single thread, PyTorch eager, synthetic inputs; median of interleaved reps",
+ "without_head": {
+  "0_events_per_tick": {
+   "p50_ms": 0.13977449270896614,
+   "p95_ms": 0.2572870973381214,
+   "p99_ms": 0.3333542658947408
+  },
+  "1_events_per_tick": {
+   "p50_ms": 1.3619944948004559,
+   "p95_ms": 2.0430613847565837,
+   "p99_ms": 2.2893187528825365
+  },
+  "5_events_per_tick": {
+   "p50_ms": 6.800856499467045,
+   "p95_ms": 9.321135433856398,
+   "p99_ms": 10.384334563568698
+  },
+  "20_events_per_tick": {
+   "p50_ms": 41.40898599871434,
+   "p95_ms": 57.91203999979189,
+   "p99_ms": 65.89233678329038
+  }
+ },
+ "with_head": {
+  "0_events_per_tick": {
+   "p50_ms": 0.13571548333857208,
+   "p95_ms": 0.22747599869035182,
+   "p99_ms": 0.30591359914978966
+  },
+  "1_events_per_tick": {
+   "p50_ms": 1.5096914867172018,
+   "p95_ms": 2.205030297045596,
+   "p99_ms": 2.431425092217978
+  },
+  "5_events_per_tick": {
+   "p50_ms": 7.8506310092052445,
+   "p95_ms": 11.862236987508368,
+   "p99_ms": 12.476972058357205
+  },
+  "20_events_per_tick": {
+   "p50_ms": 43.17137702309992,
+   "p95_ms": 64.547969387786,
+   "p99_ms": 73.58458720438648
+  }
+ }
+}

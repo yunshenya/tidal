@@ -95,11 +95,25 @@ def aurc(y, P, binary):
     o = np.argsort(-conf, kind="stable"); c_ = (dec == y.astype(int))[o]; risk = 1 - np.cumsum(c_) / np.arange(1, len(c_) + 1)
     return float(risk.mean())
 
+def p4_interrupt_summary(c, since, until, max_lag):
+    """Shadow-only p_interrupt log of the P4 system (no labels: chat has no interrupt gold). Counts by role."""
+    q = "select p.probs, e.role, p.lag_s from predictions p join events e on e.msg_id = p.msg_id where p.regime='P4' and p.event_ts >= ? and p.event_ts < ?"
+    rows = [(json.loads(pr).get("p_interrupt"), role, lag) for pr, role, lag in c.execute(q, (since, until))]
+    rows = [(pi, role) for pi, role, lag in rows if pi is not None and (max_lag is None or lag <= max_lag)]
+    if not rows: return None
+    out = {}
+    for role in sorted({r for _, r in rows}):
+        v = np.array([pi for pi, r in rows if r == role], float)
+        out[role] = dict(n=int(len(v)), mean=float(v.mean()), p95=float(np.percentile(v, 95)), frac_ge_05=float((v >= 0.5).mean()))
+    return out
+
 def build(c, since, until, max_lag, n_boot):
     frozen = json.loads((S.STATE / "frozen.json").read_text())
     p2f = S.STATE / "frozen_p2.json"; frozen2 = json.loads(p2f.read_text()) if p2f.exists() else None
     d = load(c, since, until, max_lag); R = dict(generated_at=time.time(), since=since, until=until, max_lag_s=max_lag, regimes={})
     for regime, g in d.groupby("regime"):
+        if regime not in frozen["strongest_baseline"]:   # e.g. 'P4' (phase-4 winner + p_interrupt): summarised below, not
+            continue                                     # mixed into the phase-1 comparison sets
         probs = {s: dict(zip(gg.msg_id, gg.probs.map(json.loads))) for s, gg in g.groupby("system")}
         lab = g.drop_duplicates("msg_id").set_index("msg_id")
         models = sorted(s for s in probs if s.startswith("model:")); model = models[0]; RR = {}
@@ -127,6 +141,7 @@ def build(c, since, until, max_lag, n_boot):
                             median_recheck_s=float(np.median([probs[md][m]["recheck_after_s"] for m, a in zip(ids, ab) if a])) if ab.any() else None)
             RR[h] = hr
         R["regimes"][regime] = dict(model=model, models=models, n_events=int(lab.shape[0]), heads=RR)
+    R["p4_interrupt"] = p4_interrupt_summary(c, since, until, max_lag)
     tot = lambda q: c.execute(q).fetchone()
     R["coverage"] = dict(events=tot("select count(*) from events")[0], predicted=tot("select count(distinct msg_id) from predictions")[0],
                          labeled=tot("select count(*) from labels")[0],
@@ -175,6 +190,13 @@ def markdown(R):
                     L += ["", f"{md} 选择性弃权（置信度低于 val 阈值时“等一下再看”）：覆盖率 {ab['coverage']:.2f}，全部准确率 {ab['acc_all']:.3f}，"
                           f"作答部分准确率 {f3(ab['acc_answered'])}，弃权部分准确率 {f3(ab['acc_abstained'])}，弃权时建议复查间隔中位数 {f3(ab['median_recheck_s'])} s"]
             L += ["", "风险-覆盖曲线下面积 AURC（越低越好）：" + "；".join(f"{s} {v:.3f}" for s, v in hr.get("aurc", {}).items()), ""]
+    if R.get("p4_interrupt"):
+        L += ["## P4 系统的打断头（只记录，不打分）", "",
+              "第四阶段胜者 m3_ablate_m2 + 文本情绪上的 `p_interrupt`。聊天流没有打断真值，这里只给分布；它不是 tick 输入，也不改动作。", "",
+              "| 角色 | n | 平均 | p95 | ≥0.5 的比例 |", "|---|---|---|---|---|"]
+        for role, s in R["p4_interrupt"].items():
+            L.append(f"| {role} | {s['n']} | {s['mean']:.3f} | {s['p95']:.3f} | {s['frac_ge_05']:.3f} |")
+        L.append("")
     mc = R["multimodal_capture"]
     L += ["## 非文本 / 多模态信号采集情况", "", f"预测窗口内事件 {mc['events']}，其中有文本 {mc['with_text']}；占位符识别出的媒体类型：{mc['media_kinds_from_placeholders'] or '无'}；"
           f"带 msg_chars 的入站 {mc['inbound_with_msg_chars']}，其中 msg_chars=0（多半是图片/语音/表情等非文本）{mc['inbound_msg_chars_zero']}。", ""]

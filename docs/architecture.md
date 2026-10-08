@@ -3,10 +3,10 @@
 > 目标：做一个**原生多模态**（视频、图像、音乐、语音、文本）、**会判断什么时候该说话、什么时候该沉默**的极小模型。它只用 CPU，常驻参数 ≤ 2M。
 > 本文给出具体设计，并把每一项现代建模技术对应到 tidal 的某个组件上，逐项标注状态：✅ 已实现 · 🚧 进行中 · 📋 计划中。
 > 状态以本仓库代码为准，不夸大。**目前真正跑通的是"时间节奏 + 文本"两路输入、内容无关的消息类型元数据、语音的流式音频前端，以及第四阶段的主干对比和情绪特征。图像、视频、音乐的前端还是计划。**
-> 阶段：第一阶段是 GRU 与 6 个头（[../reports/phase1.md](../reports/phase1.md)）。第二阶段（[../reports/phase2.md](../reports/phase2.md)）补上了自监督投影、校准与弃权、冷启动与在线自适应、场景通用输入、全双工 tick 控制骨架，但都没有带来显著的效果提升。第三阶段（[../reports/phase3.md](../reports/phase3.md)）加了公开数据加载与预训练、真实直播留一场景、音频前端（`tidal/audio_fe.py`）和动态 int8（`tidal/quant3.py`）。第四阶段（[../reports/phase4.md](../reports/phase4.md)）见下一节。第五阶段（[../reports/phase5.md](../reports/phase5.md)）训了打断、话题转移，并把 `y_addr` 试成消息价值；只有打断头按规则采用，而且都还没进影子 tick。
+> 阶段：第一阶段是 GRU 与 6 个头（[../reports/phase1.md](../reports/phase1.md)）。第二阶段（[../reports/phase2.md](../reports/phase2.md)）补上了自监督投影、校准与弃权、冷启动与在线自适应、场景通用输入、全双工 tick 控制骨架，但都没有带来显著的效果提升。第三阶段（[../reports/phase3.md](../reports/phase3.md)）加了公开数据加载与预训练、真实直播留一场景、音频前端（`tidal/audio_fe.py`）和动态 int8（`tidal/quant3.py`）。第四阶段（[../reports/phase4.md](../reports/phase4.md)）见下一节。第五阶段（[../reports/phase5.md](../reports/phase5.md)）训了打断、话题转移，并把 `y_addr` 试成消息价值；只有打断头按规则采用；它在新主干上重训后，作为影子字段 `p_interrupt` 接进了影子 tick（只记录，不改动作）。
 > 调研和差距分析见 [related-work.md](related-work.md)。
 
-## 第四阶段（已完成的判定）与第五阶段（已判定，未进影子 tick）
+## 第四阶段（已完成的判定）与第五阶段（已判定；打断头只作影子字段）
 
 按 [../reports/phase4.md](../reports/phase4.md) 的预注册规则，对照代码：
 
@@ -14,8 +14,9 @@
 - **文本情绪：采用，但是事件特征，不是头。** `tidal/emo_features.py` 的 11 列（8 类概率 + 效价 + 唤醒度 + 有无标记）拼在 `features_g` 后面。`Event.emotion` / `EventFeaturizer`（`tidal/duplex.py`）在 `n_extra > 0` 时写入同样的 10 个数加一个有无标记。`model.py` 的 `HEAD_DIMS` 里没有情绪头。
 - **语音情绪：头存在，不进入决策。** `tidal/emotion_speech.py` 的 `SpeechEmoHead` 在。预注册判定是不采用。全双工只把它放进 `ControlOut.affect`（`tidal/duplex.py`），事件编码器不读语音情绪。SenseVoice 只做离线教师（`emotion_speech.teacher`，可选依赖 `requirements-teacher.txt`）；软后验在 `tidal/sv_soft.py`，用的是 onnxruntime，不是 sherpa。
 - **连续体记忆：只做影子回放。** `tidal/continuum.py` 写明 "No live decisions"。
-- **第五阶段的头判定（影子 tick 仍不加载新头）。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个，影子 tick 不加载这几个新头。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
-- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值差距是 0.0215，测试集也偏向消融，所以 `WINNER` 已切换为 `m3_ablate_m2`，文本情绪开，语音情绪关。连续体记忆仍只做影子回放。已采用的打断头还没有接进影子 tick。
+- **第五阶段的头判定。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个；话题头和新 `y_addr` 目标不加载。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
+- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值差距是 0.0215，测试集也偏向消融，所以 `WINNER` 已切换为 `m3_ablate_m2`，文本情绪开，语音情绪关。连续体记忆仍只做影子回放。
+- **打断头接入影子（只记录）。** 原来的打断头是在冻结 `mamba3_siso` 的状态上训的，不能直接放到 `m3_ablate_m2` 上。所以按同样的行、同样的联合训练和早停协议、同样的 3 个种子，在冻结的 `P4emo_m3_ablate_m2_s0` 状态上只重训侧头（`phase5_encode` / `phase5_train` 的 `p5_h_m2` 缓存）。公开 val BCE：0.2494 / 0.2519 / 0.2503（平均 0.2505），同一缓存上的线性探针 0.2600，训练集先验 0.4043。平均严格低于探针，按预注册规则仍然采用。公开 test（只报告）平均 0.2078。`tidal/shadow/p4.py` 把 3 个种子头的平均概率作为 `p_interrupt`：`EventEncoder` 每个事件记一份，`DuplexController` 的 `ControlOut.p_interrupt` 带上最后一个事件的值，cron 影子 tick 另写一个系统 `model:p4_m3_ablate_m2`（口径 `P4`，每条事件的六个头概率 + `p_interrupt`）。它**不是** tick 特征（`TICK_FEATS` 没变），不改任何动作，也没有重训 tick 控制器。用别的主干状态训出的头会被拒绝加载。标签含义：事件是一段说完的话，1 = 它在别人占着话轮时开口并拿到话轮，0 = 等到空档或只是附和。聊天流里没有这个真值，而且是在语音片段上训的，所以影子报告只给分布。每 tick 延迟（单线程、eager、随机权重、合成输入，`python -m tidal.duplex_sim bench_shadow` → `reports/duplex_bench_shadow.json`，影子编码器 + tick GRU，不加 → 加 3 个种子头，p50 / p95 ms）：每 tick 0 个事件 0.14 → 0.14 / 0.26 → 0.23；1 个 1.36 → 1.51 / 2.04 → 2.21；5 个 6.80 → 7.85 / 9.32 → 11.86；20 个 41.4 → 43.2 / 57.9 → 64.5。大约每个事件多 0.15 ms，都在 100 ms 的 tick 之内。
 
 参数量沿用第四阶段报告，不在这里另算：`mamba3_siso` 不加情绪约 469,890（报告里四个新主干大约 0.47–0.50M）。文本情绪的 11 列只加宽输入投影，不另报一个新的总数。
 
@@ -41,7 +42,7 @@
                      ▼
    多任务头（已实现）：EOT · 续话 · 被叫 · 说/等/不说 · 重检延迟 · 人类接话
              ＋ VAP 投影头（vap.py）
-             ＋ 第五阶段侧头：打断（规则采用，未进 tick）· 话题转移（不采用）· `y_addr` 消息价值（不采用）
+             ＋ 第五阶段侧头：打断（规则采用，影子字段 `p_interrupt`，不改动作）· 话题转移（不采用）· `y_addr` 消息价值（不采用）
              ＋ 计划：模态理解（这是什么媒体、声学事件）
                      │
                      ▼
@@ -58,7 +59,7 @@
 - 训练：`tidal/train.py`、`tidal/vap.py`。
 - 校准和评测：`tidal/evaluate.py`、`tidal/metrics.py`。
 - 导出与 int8：`tidal/export.py`、`tidal/export2.py`、`tidal/quant3.py`（动态 int8；QAT 仍是计划）。
-- 影子模式：`tidal/shadow/`。第四阶段配置：`tidal/shadow/p4.py`（`TIDAL_SHADOW_P4=1` 或 `shadow/state/frozen_p4.json` 才加载，默认不改变第一阶段 ONNX tick）。
+- 影子模式：`tidal/shadow/`。第四阶段配置：`tidal/shadow/p4.py`（`TIDAL_SHADOW_P4=1` 或 `shadow/state/frozen_p4.json` 才加载，默认不改变第一阶段 ONNX tick）。打开后 `tidal/shadow/run.py` 的 `predict_p4` 单独写 `P4` 口径（含 `p_interrupt`），出错只记进 stats，不影响第一阶段。
 
 缺失的模态在输入端就是"零向量 + 掩码位"，所以主干不需要知道某个事件带了哪些模态。
 
@@ -95,7 +96,7 @@
 | 跨模态时间融合 | 事件 token 求和 + 模态掩码 | 🚧 | 时间、文本、文本情绪已接入事件模型；图像 / 视频 / 音乐未接 |
 | 流式 / 因果推理 | `features.py`、`model.py`、`vap.py` `step`、`shadow/infer.py` | ✅ | 影子模式逐条消息预测。第四阶段模型默认不加载 |
 | 多任务头 | `model.py` `HEAD_DIMS` | ✅ | 六个：EOT、续话、被叫、说/等/不说、重检、人类接话 |
-| 打断 / 话题转移 / 泛化回复对象 | `phase5_labels.py`、`phase5_train.py`（侧头，不在 `HEAD_DIMS`） | ✅ 打断采用 / ❌ 话题与新 `y_addr` 不采用 | 影子 tick 仍是第四阶段的六个头。`yield` 仍是 tick 动作 |
+| 打断 / 话题转移 / 泛化回复对象 | `phase5_labels.py`、`phase5_train.py`（侧头，不在 `HEAD_DIMS`） | ✅ 打断采用（影子字段 `p_interrupt`）/ ❌ 话题与新 `y_addr` 不采用 | 决策仍只用六个头和 tick 控制器；`p_interrupt` 只记录。`yield` 仍是 tick 动作 |
 | 自监督：VAP 式的未来事件投影 | `vap_targets.py`、`vap.py` | ✅ | 4 个相对通道 × 5 个时间桶。桶的右端超过已观测时间则为 NaN，不记成负例 |
 | 弱标签的未来窗 | `labels.py`、`public_data/fastlabels.py` | ✅ | 续话 / 人类接话 / "沉默"只有整段窗口被观测到才标 0 或 2；否则 NaN。正例不受影响 |
 | 自监督：掩码事件建模 | `vap.py` | 📋 | |
@@ -124,5 +125,5 @@
 3. ✅ 音频前端（第三阶段）。✅ 文本情绪已作为事件特征采用；语音情绪头已训练但**不采用**为决策输入。📋 其余离线教师（转写、声学 EOT）仍是计划。
 4. 📋 图像 / 视频前端。
 5. ✅ 主干里的 RoPE（`tx_kv`）和 SSM（Mamba-3）已经实现并对比过。📋 掩码事件预训练、主干 QAT、按群挂 adapter 仍是计划。
-6. ✅/❌ 第五阶段训练已按预注册判定：打断头采用，话题转移和新的 `y_addr` 目标不采用。三项都还没进影子 tick 的 `HEAD_DIMS`。
+6. ✅/❌ 第五阶段训练已按预注册判定：打断头采用，话题转移和新的 `y_addr` 目标不采用。打断头在 `m3_ablate_m2` 上重训后只作影子字段 `p_interrupt`；三项都不在 `HEAD_DIMS`，也不是 tick 输入。
 7. 每一步都要先过影子模式门控，才考虑上线。

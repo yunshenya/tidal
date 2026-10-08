@@ -61,6 +61,14 @@ scripts/shadow_cron_install.sh remove
 
 之后的每次定时运行会自动给新事件打第二阶段的分；首次接入时会回填观测窗口内还没有第二阶段预测的事件（只用消息到达时已有的信息，但不是实时做出的）。报告里会多出新系统的一行、"新 − 旧"的配对 Δ，以及弃权统计（弃权率、作答 / 弃权部分的准确率、弃权时建议的复查间隔）。删掉 `frozen_p2.json` 即可停用第二阶段系统。
 
+## 第四阶段胜者 + 打断头（P4 口径，只记录）
+
+`shadow/state/frozen_p4.json`（或 `TIDAL_SHADOW_P4=1`）打开后，每次 tick 另写一个系统 `model:p4_m3_ablate_m2`，口径 `P4`：`m3_ablate_m2` + 文本情绪的六个头概率，加上第五阶段打断头的 `p_interrupt`（3 个种子头的平均）。文本情绪只用 TS 路径已经缓存的 bge 嵌入，没有缓存的事件按"未知"处理。聊天流没有打断真值，报告里只给 `p_interrupt` 的分布。它不改变任何动作，出错只记进 `runs.stats.p4_error`，不影响第一阶段。删掉 `frozen_p4.json` 即可停用。权重不随仓库发布；不给路径时用随机初始化（版本字段会写 `random-init`）。
+
+```json
+{"ckpt": "models/<phase-4 m3_ablate_m2 + emo checkpoint>.pt", "interrupt_heads": ["models/<head trained on m3_ablate_m2 states>.pt"]}
+```
+
 ## 多模态元数据
 
 `tidal/modalities/meta.py` 会从平台占位符和 CQ 码里解析消息类型：图片、贴纸、表情、语音、视频、文件、音乐、分享、转发；如果码里带时长，也一并记下。结果写进 `events.media_kinds`、`media_counts`、`media_refs`（引用经过哈希）和 `media_duration_s`，为以后的多模态训练积累数据。tidal **不下载媒体，也不会把媒体发给任何外部服务**。

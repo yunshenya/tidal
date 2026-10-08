@@ -9,6 +9,7 @@ import sys, json, time, math, numpy as np, torch, torch.nn as nn, torch.nn.funct
 from tidal.duplex import (ACTIONS, TICK_S, Event, AudioFrame, VisionFrame, SelfState, TickInput, TickFeaturizer, TickModel,
                           EventEncoder, DuplexController, N_TICK)
 from tidal import vap as VP
+from tidal.features_g import NB as FG_NB
 A = {a: i for i, a in enumerate(ACTIONS)}
 torch.set_num_threads(1)
 
@@ -267,6 +268,43 @@ def bench_audio(enc_tag, audio_path, n=1500):
                note="single thread, PyTorch eager; per tick: 100 ms x 2 channels of 16 kHz PCM -> log-mel -> audio encoder (5 steps) + event encoder + tick GRU", results=out)
     json.dump(rep, open("reports/duplex_bench_audio.json", "w"), indent=1); print(json.dumps(rep, indent=1))
 
+def bench_shadow(n=2000, reps=3):
+    """per-tick latency of the SHADOW config: m3_ablate_m2 + text-emotion event encoder (tidal/shadow/p4.py) + tick GRU,
+    without vs with the phase-5 interrupt side head (3 seed heads, mean prob -> ControlOut.p_interrupt).
+    Random weights (latency does not depend on them), single thread, eager. Runs are interleaved (off, on, off, on, ...)
+    and the per-load median over reps is reported."""
+    import os
+    from tidal.model import BinHead
+    from tidal.shadow import p4
+    m = p4.build(dict(interrupt=False)); with_head = p4.InterruptHead([BinHead() for _ in range(3)]).eval()
+    tm = TickModel(enc_dim=m.vap[0].in_features).eval(); r = np.random.default_rng(0); res = {"off": {}, "on": {}}
+    emo = [0.0] * 8 + [0.1, -0.2]
+    for load in (0, 1, 5, 20):
+        tis = []
+        for k in range(n):
+            tt = 1.7e9 + k * TICK_S
+            evs = [Event(f"e{k}_{j}", tt - r.uniform(0, TICK_S), "other", f"v{r.integers(50)}", "text", emo if j % 2 else None) for j in range(load)]
+            tis.append(TickInput(tt, evs, AudioFrame(r.random(), 0, 0, r.random()), VisionFrame(r.random(), 0), SelfState(), 300.0))
+        runs = {"off": [], "on": []}
+        for _ in range(reps):
+            for mode in ("off", "on"):
+                m.side_heads = {"p_interrupt": with_head} if mode == "on" else {}
+                ctl = DuplexController(tm, EventEncoder(m, np.zeros(FG_NB), np.ones(FG_NB))); lat = []
+                for ti in tis:
+                    s = time.perf_counter(); out = ctl.step(ti); lat.append((time.perf_counter() - s) * 1000)
+                assert (out.p_interrupt is not None) == (mode == "on" and load > 0)
+                lat = np.array(lat[50:]); runs[mode].append([float(np.percentile(lat, q)) for q in (50, 95, 99)])
+        for mode in runs:
+            a = np.median(np.array(runs[mode]), 0)
+            res[mode][f"{load}_events_per_tick"] = dict(p50_ms=float(a[0]), p95_ms=float(a[1]), p99_ms=float(a[2]))
+    m.side_heads = {}
+    rep = dict(config="shadow: m3_ablate_m2 + text emotion (28 inputs), tick GRU enc_dim=128; interrupt head = 3 x BinHead(128-64-1)",
+               threads=torch.get_num_threads(), cpu_count=len(os.sched_getaffinity(0)), cpu=_cpu_name(), tick_s=TICK_S, n_ticks=n, reps=reps,
+               params_encoder=sum(p.numel() for p in m.parameters()), params_tick=sum(p.numel() for p in tm.parameters()),
+               params_interrupt_head=sum(p.numel() for p in with_head.parameters()),
+               note="random weights, single thread, PyTorch eager, synthetic inputs; median of interleaved reps", without_head=res["off"], with_head=res["on"])
+    json.dump(rep, open("reports/duplex_bench_shadow.json", "w"), indent=1); print(json.dumps(rep, indent=1))
+
 def _cpu_name():
     try: return next(l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name"))
     except Exception: return None
@@ -277,5 +315,6 @@ if __name__ == "__main__":
     elif cmd == "eval": evaluate()
     elif cmd == "bench": bench(sys.argv[2])
     elif cmd == "bench_audio": bench_audio(sys.argv[2], sys.argv[3])
+    elif cmd == "bench_shadow": bench_shadow()
     elif cmd == "show":
         ticks, y, meta = session(int(sys.argv[2])); print(len(y), {a: int((y == i).sum()) for a, i in A.items()}, meta["voice"], meta["rate"])

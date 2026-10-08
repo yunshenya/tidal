@@ -58,6 +58,8 @@ class ControlOut:            # what the content side receives every tick (non-bl
     audio_shift: Optional[float] = None; audio_bc: Optional[float] = None   # raw audio front-end scores (pass-through)
     hint: Optional[str] = None                   # audio-only hint: 'take_turn' / 'backchannel' (simple thresholds, see AUDIO_THR)
     affect: Optional[dict] = None                # phase 4 pass-through: text affect of the last non-self event + speech valence/arousal
+    p_interrupt: Optional[float] = None          # phase 5 SHADOW field: P(y_interrupt) of the last event (side head on the
+                                                 # encoder state). Logged only: not a tick feature, never changes the action
 
 # ------------------------------------------------------------------ incremental event featurizer (== features_g.compute)
 class EventFeaturizer:
@@ -88,9 +90,11 @@ class EventFeaturizer:
 # ------------------------------------------------------------------ streaming event encoder + addressing buffer
 class EventEncoder:
     """Wraps a phase-2 VAPModel; one GRU step per event. Keeps the last K events with their head outputs so the
-    controller can point at 'which event to respond to'."""
+    controller can point at 'which event to respond to'. Side heads (model.side_heads, e.g. the shadow p_interrupt
+    head from tidal/shadow/p4.py) map the encoder state to a probability and are added to each event's record."""
     def __init__(self, model, mu, sd, K=16):
-        self.m = model.eval(); self.f = EventFeaturizer(mu, sd, n_extra=model.fproj.in_features - len(FG.FEAT_G)); self.K = K; self.reset()
+        self.m = model.eval(); self.f = EventFeaturizer(mu, sd, n_extra=model.fproj.in_features - len(FG.FEAT_G)); self.K = K
+        self.side = dict(getattr(model, "side_heads", None) or {}); self.reset()
     def reset(self):
         self.f.reset(); self.state = None; self.last_affect = None; self.h = torch.zeros(1, self.m.vap[0].in_features); self.buf = collections.deque(maxlen=self.K)
         self.last = None
@@ -103,6 +107,7 @@ class EventEncoder:
         if e.role != "self" and e.emotion is not None: self.last_affect = list(map(float, e.emotion))
         self.last = dict(id=e.id, ts=e.ts, role=e.role, p_speak=ps, p_addr=pa, p_eot=pe,
                          vap_self_0_2=float(vp[VT.idx("self", 0)]), vap_self_2_5=float(vp[VT.idx("self", 1)]))
+        for k, net in self.side.items(): self.last[k] = float(net(self.h).reshape(-1)[0])
         self.buf.append(self.last)
     def address(self, now, tau=20.0, window=30.0):
         """which buffered (non-self) event to respond to: argmax p_speak * recency decay."""
@@ -200,4 +205,5 @@ class DuplexController:
                     "backchannel" if a.bc is not None and a.bc >= AUDIO_THR["backchannel"] and a.vad_other >= 0.5 else None)
         return ControlOut(ti.t, act, dict(zip(ACTIONS, p.round(4).tolist())), addr, req, stop_tts=act == "yield",
                           audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint,
-                          affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal))
+                          affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal),
+                          p_interrupt=(self.enc.last or {}).get("p_interrupt"))

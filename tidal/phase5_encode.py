@@ -1,8 +1,10 @@
-"""Cache frozen mamba3_siso + text-emotion hidden states for phase-5 rows.
+"""Cache frozen body + text-emotion hidden states for phase-5 rows.
 
-The window is the same 64-event causal window training uses. Body weights are
-P4emo_mamba3_siso_s0 and are not updated. Resume-safe: one memmap, a row is skipped
-once its slot is marked done.
+The window is the same 64-event causal window training uses. Default body is
+P4emo_mamba3_siso_s0 (the pre-registered phase-5 run, cache data/proc/p5_h.npy). The
+shadow winner's cache uses P4emo_m3_ablate_m2_s0 -> data/proc/p5_h_m2.npy. Body weights
+are not updated. Resume-safe: one memmap, a row is skipped once its slot is marked done.
+usage: python -m tidal.phase5_encode [labelled|live|all] [BODY_TAG OUT_NAME]
 """
 import os, json
 import numpy as np, pandas as pd, torch
@@ -10,7 +12,6 @@ from tidal.vap import VAPModel
 from tidal.seqdata import CTX
 
 PROC = "data/proc"
-DONE = PROC + "/p5_h_done.npy"
 
 
 def _windows(X):
@@ -25,13 +26,14 @@ def _windows(X):
     return feats, valid
 
 
-def encode(which="labelled", bs=128):
+def encode(which="labelled", bs=128, body="P4emo_mamba3_siso_s0", out="p5_h"):
     torch.set_num_threads(int(os.environ.get("TIDAL_THREADS", "1")))
     rows = pd.read_parquet(PROC + "/p5_rows.parquet", columns=["source", "conv", "ts", "p3_index", "livestream", "y_interrupt", "y_addr", "y_topic", "split"])
     X = np.load(PROC + "/p5_X.npy", mmap_mode="r")
     n, F = X.shape
     assert len(rows) == n
-    h = np.lib.format.open_memmap(PROC + "/p5_h.npy", mode="w+" if not os.path.exists(PROC + "/p5_h.npy") else "r+", dtype=np.float16, shape=(n, 128))
+    HP, DONE = f"{PROC}/{out}.npy", f"{PROC}/{out}_done.npy"
+    h = np.lib.format.open_memmap(HP, mode="w+" if not os.path.exists(HP) else "r+", dtype=np.float16, shape=(n, 128))
     if os.path.exists(DONE) and np.load(DONE).shape == (n,):
         done = np.load(DONE)
     else:
@@ -43,11 +45,11 @@ def encode(which="labelled", bs=128):
         want = (rows.livestream.to_numpy() == 1) & (done == 0)
     else:
         want = done == 0
-    ck = torch.load("models/P4emo_mamba3_siso_s0.pt", map_location="cpu", weights_only=False)
+    ck = torch.load(f"models/{body}.pt", map_location="cpu", weights_only=False)
     model = VAPModel(ck["n_feat"], kind=ck["kind"])
     model.load_state_dict(ck["state"])
     model.eval()
-    print(f"encode {which}: todo {int(want.sum())} of {n}", flush=True)
+    print(f"encode {which} body={body} kind={ck['kind']} -> {HP}: todo {int(want.sum())} of {n}", flush=True)
     # group by conversation, but only conversations that still have wanted rows
     conv = rows.conv.to_numpy()
     src = rows.source.to_numpy()
@@ -92,4 +94,5 @@ def encode(which="labelled", bs=128):
 
 if __name__ == "__main__":
     import sys
-    encode(sys.argv[1] if len(sys.argv) > 1 else "labelled")
+    a = sys.argv[1:]
+    encode(a[0] if a else "labelled", **(dict(body=a[1], out=a[2]) if len(a) >= 3 else {}))

@@ -1,6 +1,10 @@
-"""Joint-train y_addr, y_interrupt, y_topic on cached frozen mamba3_siso states.
+"""Joint-train y_addr, y_interrupt, y_topic on cached frozen body states.
 
+Default cache is data/proc/p5_h.npy (frozen P4emo_mamba3_siso_s0, the pre-registered run;
+heads models/P5hd_s*.pt). The shadow winner's cache is p5_h_m2.npy (frozen
+P4emo_m3_ablate_m2_s0; heads models/P5hd_m2_s*.pt), same rows, protocol and seeds.
 Adoption rules: reports/phase5_prereg.md. Test rows are not read until the epoch is chosen.
+usage: python -m tidal.phase5_train [all|seed S|probe] [FEATS TAG]
 """
 import json, os
 import numpy as np, pandas as pd, torch, torch.nn as nn
@@ -11,12 +15,7 @@ PROC = "data/proc"
 HEADS = ("y_addr", "y_interrupt", "y_topic")
 
 
-class BinHead(nn.Module):
-    def __init__(self, d=128):
-        super().__init__()
-        self.net = nn.Sequential(nn.Linear(d, 64), nn.GELU(), nn.Linear(64, 1))
-    def forward(self, h):
-        return self.net(h).squeeze(-1)
+from tidal.model import BinHead   # same module/keys as before; lives in model.py so shadow code need not import sklearn
 
 
 def _bce_np(logits, y):
@@ -52,11 +51,11 @@ def _take(h, y, mask, rng, n, replace=False):
     return h[ch], y[ch]
 
 
-def train_seed(seed, epochs=40, patience=8, bs=64, lr=5e-4):
+def train_seed(seed, epochs=40, patience=8, bs=64, lr=5e-4, feats="p5_h", tag="P5hd"):
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
     df = pd.read_parquet(PROC + "/p5_rows.parquet")
-    H = np.load(PROC + "/p5_h.npy", mmap_mode="r")
+    H = np.load(f"{PROC}/{feats}.npy", mmap_mode="r")
     Y = {k: df[k].to_numpy(np.float32) for k in HEADS}
     M = _split_masks(df)
     # training rows per head (addr = real train + public message-value train)
@@ -140,9 +139,9 @@ def train_seed(seed, epochs=40, patience=8, bs=64, lr=5e-4):
     for name, mask in (("addr_real_test_time", (df.source.to_numpy()=="real") & (df.split.to_numpy()=="test_time") & df.y_addr.notna().to_numpy()),
                        ("addr_real_test_group", (df.source.to_numpy()=="real") & (df.split.to_numpy()=="test_group") & df.y_addr.notna().to_numpy())):
         detail[name] = _one(heads["y_addr"], H, Y["y_addr"], mask)
-    ck = dict(seed=seed, best_ep=best[2], best_crit=best[0], hist=hist, test=test, test_detail=detail,
-              state={k: v for k, v in best[1].items()})
-    torch.save(ck, f"models/P5hd_s{seed}.pt")
+    ck = dict(seed=seed, best_ep=best[2], best_crit=best[0], hist=hist, test=test, test_detail=detail, feats=feats,
+              val=hist[best[2]], state={k: v for k, v in best[1].items()})
+    torch.save(ck, f"models/{tag}_s{seed}.pt")
     print(f"seed {seed} best_ep {best[2]} crit {best[0]:.4f} test {json.dumps(test)}", flush=True)
     return ck
 
@@ -188,6 +187,19 @@ def prior_bce(y, tr, va):
     p = float(np.clip(y[tr].mean(), 1e-6, 1 - 1e-6))
     yv = y[va]
     return float(-(yv * np.log(p) + (1 - yv) * np.log(1 - p)).mean())
+
+
+def interrupt_probe(feats="p5_h"):
+    """Pre-registered bar for y_interrupt on a given cache: linear probe + train prior, public val only."""
+    df = pd.read_parquet(PROC + "/p5_rows.parquet", columns=["source", "split", "y_addr", "y_interrupt", "y_topic", "livestream"])
+    H = np.load(f"{PROC}/{feats}.npy", mmap_mode="r")
+    M = _split_masks(df)
+    y_i = df.y_interrupt.to_numpy(np.float32)
+    out = dict(feats=feats, interrupt_probe_val_bce=probe_bce(H, y_i, M["int_tr"], M["int_va"]),
+               interrupt_prior_val_bce=prior_bce(y_i, M["int_tr"], M["int_va"]),
+               n_train=int(M["int_tr"].sum()), n_val=int(M["int_va"].sum()))
+    print(json.dumps(out), flush=True)
+    return out
 
 
 def baselines():
@@ -254,11 +266,14 @@ if __name__ == "__main__":
         baselines()
     elif cmd == "live":
         livestream_scores()
+    elif cmd == "probe":
+        interrupt_probe(*(sys.argv[2:3] or ["p5_h"]))
     elif cmd == "seed":
-        train_seed(int(sys.argv[2]))
+        train_seed(int(sys.argv[2]), **(dict(feats=sys.argv[3], tag=sys.argv[4]) if len(sys.argv) > 4 else {}))
     else:
+        kw = dict(feats=sys.argv[2], tag=sys.argv[3]) if len(sys.argv) > 3 else {}
         for s in (0, 1, 2):
-            if os.path.exists(f"models/P5hd_s{s}.pt"):
+            if os.path.exists(f"models/{kw.get('tag', 'P5hd')}_s{s}.pt"):
                 print("skip", s, flush=True)
                 continue
-            train_seed(s)
+            train_seed(s, **kw)

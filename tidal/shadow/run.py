@@ -86,6 +86,27 @@ def predict(c, now, run_id, stats):
                   [(m, r, s, json.dumps(p), ets[m], now, now - ets[m], run_id, ver) for m, r, s, p in preds])
     stats["predictions_written"] = len(preds)
 
+def predict_p4(c, now, run_id, stats):
+    """Phase-4 winner (m3_ablate_m2 + text emotion) and the phase-5 interrupt head, as its own shadow system
+    (regime 'P4', system tidal.shadow.p4.SYSTEM). Off unless TIDAL_SHADOW_P4=1 or frozen_p4.json. Independent of the
+    phase-1 models; a failure here is recorded in stats and never fails the tick. Writes p_interrupt per event."""
+    from tidal.shadow import p4
+    spec = p4.shadow_spec()
+    if spec is None: return
+    lo = max(S.get_meta(c, "predict_after"), now - MAX_BACKFILL_S)
+    tP4 = [r[0] for r in c.execute("select e.msg_id from events e left join predictions p on p.msg_id=e.msg_id and p.system=? "
+                                   "where e.ts > ? and e.ts <= ? and p.msg_id is null", (p4.SYSTEM, lo, now))]
+    stats["targets_P4"] = len(tP4)
+    if not tP4: return
+    info = pd.read_sql_query(f"select msg_id, conv, ts from events where msg_id in ({','.join('?' * len(tP4))})", c, params=tP4)
+    d = load_frame(c, sorted(info.conv.unique()), info.ts.min() - CONTEXT_S)
+    model, mu, sd, ver = p4.load_shadow(spec)
+    preds = p4.score_frame(model, d, tP4, mu, sd, emo=lambda texts: p4.text_emotion_from_cache(c, texts))
+    ets = dict(zip(info.msg_id, info.ts)); v = json.dumps(ver)
+    c.executemany("insert or ignore into predictions values(?,?,?,?,?,?,?,?,?)",
+                  [(m, p4.REGIME, p4.SYSTEM, json.dumps(p), ets[m], now, now - ets[m], run_id, v) for m, p in preds.items()])
+    stats["predictions_P4"] = len(preds)
+
 def label(c, now, stats):
     from tidal.adapters import real_frame
     from tidal.labels import compute_labels
@@ -136,6 +157,11 @@ def main(argv=None):
             stats["fetched_events"] = len(ev); stats["pulled_rows"] = S.get_meta(c, "source_last_pull")
             stats["events_new"], stats["events_updated"] = upsert_events(c, ev, now); c.commit()
         t0 = time.time(); predict(c, now, run_id, stats); c.commit(); stats["predict_s"] = round(time.time() - t0, 2)
+        t0 = time.time()
+        try: predict_p4(c, now, run_id, stats); c.commit()
+        except Exception as e:   # the shadow P4 system must never break phase-1 logging; retried next run
+            c.rollback(); stats["p4_error"] = f"{type(e).__name__}: {str(e)[:300]}"
+        stats["predict_p4_s"] = round(time.time() - t0, 2)
         t0 = time.time(); label(c, now, stats); c.commit(); stats["label_s"] = round(time.time() - t0, 2)
         stats["totals"] = dict(events=c.execute("select count(*) from events").fetchone()[0],
                                predicted_events=c.execute("select count(distinct msg_id) from predictions").fetchone()[0],

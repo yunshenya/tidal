@@ -103,4 +103,11 @@ class TurnModel(nn.Module):
         h = self.drop(self.inorm(h)) * valid.unsqueeze(-1).to(h.dtype)
         h = self._encode(h, valid)
         return {k: m(h) for k, m in self.heads.items()}
+class BinHead(nn.Module):
+    """Phase-5 side head on the encoder state h (y_addr / y_interrupt / y_topic). Returns a logit. Not in HEAD_DIMS."""
+    def __init__(self, d=128):
+        super().__init__()
+        self.net = nn.Sequential(nn.Linear(d, 64), nn.GELU(), nn.Linear(64, 1))
+    def forward(self, h):
+        return self.net(h).squeeze(-1)
 def n_params(m): return sum(p.numel() for p in m.parameters())
