@@ -196,3 +196,36 @@ def test_overlap_score_due_uses_fixed_prefix_and_delivers_once():
     assert s.score_due(1.3, 1., .5, True) is None
     other=s.score_due(1.3, 1.1, .5, True); assert other is not None and other['decision_time']==1.3
     s.reset(); s.push(a, b); assert s.score_due(1.2, 1., .5, True) is not None
+
+
+def test_overlap_delivery_watermark_is_constant_size_and_rejects_stale_onsets(monkeypatch):
+    s = OverlapStream(RecordingModel())
+    calls = []
+    def score(*args):
+        calls.append(args)
+        return {'probabilities': {'backchannel': .5, 'floor_claim': .5}}
+    monkeypatch.setattr(s, 'score', score)
+    for onset in range(10000):
+        assert s.score_due(onset+.2, float(onset), 0., True) is not None
+    assert s.last_delivered_onset == 9999.
+    assert not any(isinstance(v, set) for v in vars(s).values())
+    assert s.score_due(9999.25, 9999., 0., True) is None
+    assert s.score_due(9998.25, 9998., 0., True) is None
+    assert len(calls) == 10000
+    s.reset()
+    assert s.last_delivered_onset is None
+    assert s.score_due(.2, 0., 0., True) is not None
+
+
+def test_overlap_due_retries_missing_pcm_and_excludes_delivery_delay():
+    rng = np.random.default_rng(19)
+    a = rng.normal(size=24000).astype(np.float32); b = a*.2
+    stream = OverlapStream(RecordingModel())
+    stream.push(a[:16000], b[:16000])
+    assert stream.score_due(1.2, 1., .5, True) is None
+    assert stream.last_delivered_onset is None
+    stream.push(a[16000:], b[16000:])
+    expected = stream.score(1.2, 1., .5, True)
+    got = stream.score_due(1.25, 1., .5, True)
+    assert got == dict(expected, decision_time=1.2, delivered_at=1.25)
+    assert stream.score_due(1.26, 1., .5, True) is None

@@ -89,3 +89,5 @@ print(result.task_shadow)  # 没有训练过的任务输出None
 `reply_to_v2` 仍要求已有草稿，增加只从Ubuntu train拟合的词权重、字符和作者历史特征；训练后固定评估作者 `channel_two/test`。`overlap_timing` 使用MagicData/MagicHub已锁定分组，并在第一次覆盖“对方开口+200ms”的100ms tick交付；流对象对每个开口只交付一次，交付延迟音频不进入该次特征。两个v2头都只返回影子概率，实际动作保持由旧控制器产生。
 
 v2模型需要用 `tidal.head_v2_runtime.V2Shadow` 加载；加载器核对特征名、类别、模型与IDF校验和。旧版 `TaskHeadShadow` 和 v2 分开，避免不同特征合同混用。
+
+`OverlapStream.score_due()` 按时间顺序交付开口评分，用单个时间水位拒绝重复或过期的开口，去重状态不会随会话增长。音频尚未覆盖固定200ms决策点时不推进水位，允许在交付窗口内重试；`reset()` 同时清除音频和水位。
