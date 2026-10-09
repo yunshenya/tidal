@@ -193,5 +193,6 @@ def test_overlap_score_due_uses_fixed_prefix_and_delivers_once():
     s.push(a,b)
     assert s.score_due(1.19, 1., .5, True) is None
     first=s.score_due(1.2, 1., .5, True); assert first is not None and first['decision_time']==1.2
-    second=s.score_due(1.3, 1., .5, True); assert second is not None
-    assert second['delivered_at']==1.3
+    assert s.score_due(1.3, 1., .5, True) is None
+    other=s.score_due(1.3, 1.1, .5, True); assert other is not None and other['decision_time']==1.3
+    s.reset(); s.push(a, b); assert s.score_due(1.2, 1., .5, True) is not None

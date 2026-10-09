@@ -5,6 +5,7 @@ def markdown(r):
     reply=r['reply_to'];timing=r['overlap_timing'];stats=r['runtime_checks']['runtime']
     known=reply['known_ubuntu_diagnostic']
     lines=['# 任务头第二轮优化报告','','**本轮完成词权重回复指针、MagicData/MagicHub时序重叠辅助训练及100ms调度修复；仍为影子输出。**','',
+           '回复指针使用验证集选择的细粒度温度校准；重叠头保留较粗校准网格，因为验证仅含一个对话块。','',
            '## 回复匹配','',
            f"验证选择：{reply['champion']}，训练/验证为 {reply['train_n']}/{reply['val_n']} 个查询；词IDF仅使用Ubuntu train。",'',
            f"此前未查看的channel_two测试：{reply['test_n']} 个查询，准确率 {reply['selected']['accuracy']:.4f}；冻结v1 {reply['baselines']['frozen_v1']['accuracy']:.4f}；同特征linear {reply['baselines']['linear']['accuracy']:.4f}。",'',

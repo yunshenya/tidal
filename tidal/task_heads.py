@@ -214,6 +214,7 @@ class OverlapStream:
         if not math.isfinite(start_time) or start_time < 0: raise ValueError('Invalid stream origin')
         self.origin = start_time; self.frames = deque(maxlen=100)
         self.received = [0, 0]; self.buffers = [np.empty(0, np.float32), np.empty(0, np.float32)]; self.next_step = 0
+        self.delivered_onsets = set()
 
     def push(self, incoming_pcm, self_pcm):
         from tidal.audio_spec import SR, WIN, HOP, STACK, numpy_logmel, stack_frames
@@ -248,14 +249,18 @@ class OverlapStream:
 
 
     def score_due(self, now, incoming_onset, self_start, self_speaking):
-        """Deliver a fixed-200ms prefix score at the first covering 100ms tick.
+        """Deliver one fixed-200ms prefix score at the first covering 100ms tick.
 
-        PCM from the delivery delay is excluded. Caller enforces one delivery per onset.
+        PCM from the delivery delay is excluded. A later tick cannot duplicate the
+        score, while an early tick with insufficient frames remains retryable.
         """
         if incoming_onset is None: return None
         if any(not math.isfinite(t) or t < 0 for t in (now, incoming_onset)):
             raise ValueError('Invalid onset or delivery time')
+        if incoming_onset in self.delivered_onsets: return None
         decision = incoming_onset + .2
         if now < decision-1e-9 or now >= decision+.1+1e-9: return None
         result = self.score(decision, incoming_onset, self_start, self_speaking)
-        return None if result is None else dict(result, decision_time=decision, delivered_at=now)
+        if result is None: return None
+        self.delivered_onsets.add(incoming_onset)
+        return dict(result, decision_time=decision, delivered_at=now)

@@ -2,6 +2,8 @@
 
 **本轮完成词权重回复指针、MagicData/MagicHub时序重叠辅助训练及100ms调度修复；仍为影子输出。**
 
+回复指针使用验证集选择的细粒度温度校准；重叠头保留较粗校准网格，因为验证仅含一个对话块。
+
 ## 回复匹配
 
 验证选择：mlp，训练/验证为 59217/2321 个查询；词IDF仅使用Ubuntu train。
@@ -14,7 +16,7 @@
 
 输入仍是已经可用的草稿；增加4096桶train-only词IDF余弦、加权重叠、字符二元组、作者名边界匹配和可见作者历史。哈希词面特征不等于深层语义理解。
 
-机器指标：`{"n": 796, "accuracy": 0.6243718592964824, "nll": 1.1735883829560418, "null_precision": 0.5056179775280899, "null_recall": 0.6617647058823529, "visible_target_rate": 0.914572864321608, "null_target_rate": 0.08542713567839195}`
+机器指标：`{"n": 796, "accuracy": 0.6243718592964824, "nll": 1.1729133191829293, "null_precision": 0.5056179775280899, "null_recall": 0.6617647058823529, "visible_target_rate": 0.914572864321608, "null_target_rate": 0.08542713567839195}`
 
 ## 时序重叠辅助
 
@@ -36,9 +38,9 @@ MagicData/MagicHub训练/验证/测试候选：226/21/166，对话块：{'train'
 
 ONNX最大概率差：回复 1.19e-07、时序 5.96e-08。
 
-独立v2模块回复完整调用p95 0.515ms、时序p95 0.044ms；峰值RSS 57.8MiB。32个合成候选、每次更换消息和草稿；不含VAD/ASR/内容生成/控制器。运行时不导入Torch/pandas/sklearn。
+独立v2模块回复完整调用p95 0.456ms、时序p95 0.034ms；峰值RSS 57.7MiB。32个合成候选、每次更换消息和草稿；不含VAD/ASR/内容生成/控制器。运行时不导入Torch/pandas/sklearn。
 
-测试：125 passed, 14 warnings in 7.46s。
+测试：125 passed, 14 warnings in 7.51s。
 
 一键入口：` .venv/bin/python -m tidal.head_v2_train `。恢复会校验源码、协议、源文件及每个产物SHA256。本地模型目录 `models/head_v2/`；可选 `V2Shadow` 只返回概率。使用见 [任务头说明](../docs/task_heads.md)，协议见 [训练前固定协议](head_v2_protocol.md)。
 

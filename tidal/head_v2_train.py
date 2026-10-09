@@ -15,6 +15,7 @@ from tidal.task_heads import MAX_CONTEXT
 
 ROOT=Path(__file__).resolve().parent.parent
 OUT=ROOT/'models'/'head_v2';CACHE=ROOT/'data'/'public'/'proc'/'head_v2';REPORT=ROOT/'reports'/'head_v2.json'
+CALIBRATION_TEMPERATURES=tuple(np.geomspace(.35,3.5,25).round(6))
 
 
 def source_signature():
@@ -66,7 +67,8 @@ def fit(task,train,val,test_loader,sig,rf=None):
         p0=evaluate_model(models,mu,sd,1.,val,pointer)
         # Recover equivalent logits up to a sample-wise constant to calibrate.
         z=np.log(np.maximum(p0,1e-300))
-        choices=[(summary(probabilities(z,t,val.get('mask')),val['y'])['nll'],t) for t in (.5,.75,1.,1.5,2.,3.)]
+        calibration_grid = CALIBRATION_TEMPERATURES if pointer else (.5,.75,1.,1.5,2.,3.)
+        choices=[(summary(probabilities(z,t,val.get('mask')),val['y'])['nll'],t) for t in calibration_grid]
         val_loss[kind],temps[kind]=min(choices);candidates[kind]=models
     champion=min(val_loss,key=val_loss.get)
     if rf is not None:np.save(OUT/'reply_idf.npy',rf.idf)
