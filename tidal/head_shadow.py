@@ -6,11 +6,13 @@ from tidal.task_heads import HeadEvent, TaskHeadShadow, OverlapStream, MAX_CONTE
 
 
 class ControllerTaskShadow:
-    def __init__(self, directory):
+    def __init__(self, directory, reply_shadow=None, self_speaker=''):
+        if not isinstance(self_speaker, str): raise ValueError('Expected bot speaker ID')
+        self.reply_shadow = reply_shadow; self.self_speaker = self_speaker
         self.model = TaskHeadShadow(directory); self.stream = OverlapStream(self.model); self.reset()
 
     def reset(self):
-        self.history = deque(maxlen=MAX_CONTEXT); self.stream.reset(); self.last_tick = None
+        self.history = deque(maxlen=MAX_CONTEXT); self.stream.reset(); self.last_tick = None; self.last_overlap_onset = None
 
     def observe(self, ti):
         if not math.isfinite(ti.t) or ti.t < 0: raise ValueError('Invalid tick time')
@@ -40,6 +42,10 @@ class ControllerTaskShadow:
         out = dict(shadow_only=True, automatic_action_enabled=False)
         out['policy'] = self.model.policy(self.history, ti.t, prefix=ti.incoming_prefix or '', speaking=s.speaking,
                                           elapsed_s=s.elapsed_s, remaining_s=s.remaining_s, incoming_elapsed_s=incoming_elapsed)
-        out['reply_to'] = self.model.reply(self.history, ti.draft_text, ti.t)
-        out['overlap_outcome'] = self.stream.score(ti.t, ti.incoming_onset, ti.t-s.elapsed_s, s.speaking) if ti.pcm is not None else None
+        out['reply_to'] = (self.reply_shadow or self.model).reply(self.history, ti.draft_text, ti.t, speaker=self.self_speaker)
+        out['overlap_outcome'] = None
+        if ti.pcm is not None and ti.incoming_onset != self.last_overlap_onset:
+            score = self.stream.score_due(ti.t, ti.incoming_onset, ti.t-s.elapsed_s, s.speaking)
+            out['overlap_outcome'] = score
+            if score is not None: self.last_overlap_onset = ti.incoming_onset
         return out

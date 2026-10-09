@@ -245,3 +245,17 @@ class OverlapStream:
         rows = rows[-50:]
         if rows[-1][0]-rows[0][0] != 49: return None
         return self.shadow.overlap(np.stack([x for _, x in rows]), now-self_start)
+
+
+    def score_due(self, now, incoming_onset, self_start, self_speaking):
+        """Deliver a fixed-200ms prefix score at the first covering 100ms tick.
+
+        PCM from the delivery delay is excluded. Caller enforces one delivery per onset.
+        """
+        if incoming_onset is None: return None
+        if any(not math.isfinite(t) or t < 0 for t in (now, incoming_onset)):
+            raise ValueError('Invalid onset or delivery time')
+        decision = incoming_onset + .2
+        if now < decision-1e-9 or now >= decision+.1+1e-9: return None
+        result = self.score(decision, incoming_onset, self_start, self_speaking)
+        return None if result is None else dict(result, decision_time=decision, delivered_at=now)

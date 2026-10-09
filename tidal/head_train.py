@@ -25,7 +25,7 @@ class TaskNet(nn.Module):
     def __init__(self, n_features, n_classes, kind='mlp'):
         super().__init__()
         self.body = (nn.Linear(n_features, n_classes) if kind == 'linear' else
-                     nn.Sequential(nn.Linear(n_features, 32), nn.GELU(), nn.Linear(32, n_classes)))
+                     nn.Sequential(nn.Linear(n_features, 64 if kind == 'mlp64' else 32), nn.GELU(), nn.Linear(64 if kind == 'mlp64' else 32, n_classes)))
     def forward(self, x): return self.body(x)
 
 

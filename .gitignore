@@ -41,3 +41,5 @@ models/turn_v2/
 
 # Task-head experiment bundles and local annotations
 models/task_heads/
+
+models/head_v2/

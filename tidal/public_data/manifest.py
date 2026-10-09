@@ -14,6 +14,9 @@ DATASETS = {
                     files=["ubuntu/train-00000-of-00001.parquet", "ubuntu/validation-00000-of-00001.parquet",
                            "ubuntu/test-00000-of-00001.parquet"], scenario="group", lang="en",
                     use="gold reply-to links (who responds to which message) in a busy multi-party channel"),
+    "irc_channel2": dict(repo="jkkummerfeld/irc_disentangle", revision="f6cfa2cefb604d2fbabcec58be01ee34939fdd54",
+                         license="cc-by-4.0", research_only=False, files=["channel_two/test-00000-of-00001.parquet"],
+                         scenario="group", lang="en", use="frozen-model external channel test only; never use all_ for training"),
     "ubuntu_days": dict(repo="pttrn-io/ubuntu-irc-days", license="cc0-1.0", research_only=False, files=None,
                         scenario="group", lang="en/nl", use="multi-party timing stream (minute timestamps)"),
     # (b) livestream chat

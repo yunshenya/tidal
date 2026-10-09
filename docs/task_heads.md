@@ -76,3 +76,16 @@ print(result.task_shadow)  # 没有训练过的任务输出None
 - `p_interrupt`：事后片段分类；`p_barge`：自己未来插话；`overlap_outcome`/`overlap_intent`：自己正说话时，对方开口后的在线辅助结果/语义意图。
 
 最终校验/来源约束补强后，12个模型的权重、归一化和逐条预测均与初次冻结结果一致；记录见 [校验报告](../reports/task_heads_parity.json)。再次执行一键命令已实测恢复产物并完成全部测试，没有重新训练。
+
+
+## 第二轮 v2
+
+第二轮入口：
+
+```bash
+.venv/bin/python -m tidal.head_v2_train
+```
+
+`reply_to_v2` 仍要求已有草稿，增加只从Ubuntu train拟合的词权重、字符和作者历史特征；训练后固定评估作者 `channel_two/test`。`overlap_timing` 使用MagicData/MagicHub已锁定分组，并在第一次覆盖“对方开口+200ms”的100ms tick交付；交付延迟音频不进入该次特征。两个v2头都只返回影子概率，实际动作保持由旧控制器产生。
+
+v2模型需要用 `tidal.head_v2_runtime.V2Shadow` 加载；加载器核对特征名、类别、模型与IDF校验和。旧版 `TaskHeadShadow` 和 v2 分开，避免不同特征合同混用。

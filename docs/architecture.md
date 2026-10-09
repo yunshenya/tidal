@@ -134,3 +134,8 @@
 ## 策略、回复指针与在线重叠（2026-10-09）
 
 在六主头之外增加可选 `ControllerTaskShadow`，见 [task_heads.md](task_heads.md)。原 `y_act` 明确保留行为监督，人工策略标签独立，旧检查点兼容。`reply_to` 是已生成草稿条件下的32候选+null指针；`overlap_outcome` 是自己讲话、对方开口200ms后的因果声学弱行为预测；人工 `overlap_intent` 与 `action_policy` 等通过本地JSONL训练入口，不靠时序代替意图真值。缺少人工标签的任务不提供模型。`ControlOut.task_shadow` 与所有实际动作分开；完整协议和实测结果见 [报告](../reports/task_heads.md)。
+
+
+### 任务头第二轮
+
+`tidal/head_v2_train.py` 训练 `reply_to_v2` 和 `overlap_timing`。前者用Ubuntu train词权重和作者 `channel_two/test` 冻结外部诊断，后者用MagicData/MagicHub分组并修复100ms tick与200ms观察点的交付错位。`V2Shadow` 只提供影子概率，不能改变 `DuplexController` 的动作或TTS信号。

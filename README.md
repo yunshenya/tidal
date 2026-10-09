@@ -165,9 +165,10 @@ uv pip sync --python .venv/bin/python requirements-optimization-macos.lock
 
 ```bash
 .venv/bin/python -m tidal.head_optimize
+.venv/bin/python -m tidal.head_v2_train  # 第二轮词权重/在线重叠优化
 ```
 
-使用与人工数据格式见 [任务头说明](docs/task_heads.md)，固定评估协议见 [训练前协议](reports/task_heads_protocol.md)，实际结果见 [任务头报告](reports/task_heads.md)。IRC回复链接训练是已有草稿的目标匹配代理；语音弱标签预测自然话轮结果，均尚不能证明中文机器人策略效果。
+使用与人工数据格式见 [任务头说明](docs/task_heads.md)，固定评估协议见 [训练前协议](reports/task_heads_protocol.md) 与 [第二轮协议](reports/head_v2_protocol.md)，实际结果见 [第一轮报告](reports/task_heads.md) 与 [第二轮报告](reports/head_v2.md)。IRC回复链接训练是已有草稿的目标匹配代理；语音弱标签预测自然话轮结果，均尚不能证明中文机器人策略效果。
 
 ## 隐私与数据
 

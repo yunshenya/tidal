@@ -183,3 +183,15 @@ def test_overlap_semantic_labels_require_a_real_prefix(tmp_path):
     with pytest.raises(ValueError): read_annotations(path)
     r.update(prefix='stop', prefix_available_at=2.)
     path.write_text(json.dumps(r)+'\n'); assert len(read_annotations(path)[0]) == 1
+
+
+def test_overlap_score_due_uses_fixed_prefix_and_delivers_once():
+    from tidal.task_heads import OverlapStream
+    class M:
+        def overlap(self, window, self_run, incoming_elapsed=.2): return {'mean': float(window.mean())}
+    s=OverlapStream(M()); rng=np.random.default_rng(8); a=rng.normal(size=24000).astype(np.float32); b=a*.2
+    s.push(a,b)
+    assert s.score_due(1.19, 1., .5, True) is None
+    first=s.score_due(1.2, 1., .5, True); assert first is not None and first['decision_time']==1.2
+    second=s.score_due(1.3, 1., .5, True); assert second is not None
+    assert second['delivered_at']==1.3
