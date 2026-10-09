@@ -81,7 +81,7 @@ tidal/                 核心代码
   model.py             小型因果主干 + 多任务头
   train.py / evaluate.py / baselines.py / metrics.py / audit.py / export.py / bench.py
   synth.py             用 LLM 生成合成群聊（只用抽象的场景描述；需要你自己的 key）
-  modalities/          各模态前端（meta、text 已实现；image、video、audio 是计划中的接口）
+  modalities/          各模态前端（meta、text 已实现；image、video 和统一 audio.py 仍是接口；可运行语音前端见 audio_fe.py）
   features_g.py        第二阶段：场景通用的事件输入（时间 / 节奏 / 相对角色 + 可丢弃的人数、模态块）
   vap_targets.py       第二阶段：VAP 式未来事件投影目标（4 个相对通道 × 5 个时间桶）
   vap.py               第二阶段：投影预训练 → 多任务微调；流式 step()
@@ -155,20 +155,20 @@ uv venv .venv --python 3.12
 uv pip sync --python .venv/bin/python requirements-optimization-macos.lock
 ```
 
-第二轮使用CANDOR对话留出及新的英文说话人测试；中文旧留出只作为开发资料。结果与局限见 [无人值守优化报告](reports/unattended_optimization.md)，固定协议见 [第二轮协议](reports/audio_turn_v2_protocol.md)。模型和校准由验证集选择并冻结，测试结果不会触发重调。新模型未接管中文真实决策。
+音频接话优化第二轮使用 CANDOR 对话留出及新的英文说话人测试；中文旧留出只作为开发资料。结果与局限见 [无人值守优化报告](reports/unattended_optimization.md)，固定协议见 [第二轮协议](reports/audio_turn_v2_protocol.md)。模型和校准由验证集选择并冻结，测试结果不会触发重调。新模型未接管中文真实决策。
 
 独立的 [turn_shadow.py](tidal/turn_shadow.py) 仅依赖 [NumPy及ONNX Runtime](requirements-turn-runtime.txt)，无需PyTorch、sklearn或pandas。它返回接话行为的影子概率，要求调用方提供已观察的语音片段边界；尚未验证真实VAD/ASR。权重在本地 `models/turn_v2/`，不再分发。
 
 ### 策略与目标任务头（无人值守落地）
 
-新增独立的人工策略监督、草稿条件回复指针、在线重叠结果辅助头。主模型仍为六头；`y_act_behavior` / `y_next_gap` 明确原行为与时间标签含义。人工 `action_policy`、语义结束、策略重检与重叠意图需要真实标注，缺失时明确报告，不创建随机权重冒充训练结果。所有新输出均接入可选 `ControlOut.task_shadow`，只记录。
+新增独立的人工策略监督接口/训练管线、草稿条件回复指针、在线重叠结果辅助头。主模型仍为六头；`y_act_behavior` / `y_next_gap` 明确原行为与时间标签含义。真实策略标签仍缺失，因此 `action_policy`、语义结束、策略重检与重叠意图当前没有可采用模型；不创建随机权重冒充训练结果。所有新输出均接入可选 `ControlOut.task_shadow`，只记录。
 
 ```bash
 .venv/bin/python -m tidal.head_optimize
-.venv/bin/python -m tidal.head_v2_train  # 第二轮词权重/在线重叠优化
+.venv/bin/python -m tidal.head_v2_train  # 任务头 v2：词权重/在线重叠优化
 ```
 
-使用与人工数据格式见 [任务头说明](docs/task_heads.md)，固定评估协议见 [训练前协议](reports/task_heads_protocol.md) 与 [第二轮协议](reports/head_v2_protocol.md)，实际结果见 [第一轮报告](reports/task_heads.md) 与 [第二轮报告](reports/head_v2.md)。IRC回复链接训练是已有草稿的目标匹配代理；语音弱标签预测自然话轮结果，均尚不能证明中文机器人策略效果。
+使用与人工数据格式见 [任务头说明](docs/task_heads.md)，固定评估协议见 [训练前协议](reports/task_heads_protocol.md) 与 [任务头 v2 协议](reports/head_v2_protocol.md)，实际结果见 [第一轮报告](reports/task_heads.md) 与 [任务头 v2 报告](reports/head_v2.md)。IRC回复链接训练是已有草稿的目标匹配代理；语音弱标签预测自然话轮结果，均尚不能证明中文机器人策略效果。
 
 ## 隐私与数据
 

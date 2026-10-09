@@ -51,7 +51,7 @@ def _conv_split(cid):
     b=int(hashlib.sha256(str(cid).encode()).hexdigest()[:8],16)%100
     return 'train' if b<70 else 'val' if b<85 else 'test'
 
-def candor_overlap(split):
+def magic_overlap(split):
     """Causal overlap timing from the fixed MagicData/MagicHub group split.
 
     The corpora provide two synchronized channels and segment boundaries; labels remain

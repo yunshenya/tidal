@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 from tidal.head_train import train_model, probabilities, summary, block_delta, disjoint, digest, ExportedTask
-from tidal.head_v2_data import _irc_rows, channel2_v2, candor_overlap
+from tidal.head_v2_data import _irc_rows, channel2_v2, magic_overlap
 from tidal.head_v2_features import REPLY_NAMES,TIMING_NAMES,ReplyFeatures
 from tidal.task_heads import MAX_CONTEXT
 
@@ -22,7 +22,7 @@ def source_signature():
     files=[ROOT/'tidal'/n for n in ('head_v2_features.py','head_v2_data.py','head_v2_runtime.py','head_v2_train.py','head_train.py','head_data.py','task_heads.py')]
     files+=[ROOT/'reports'/'head_v2_protocol.md']
     from tidal.public_data.manifest import DATA
-    for directory in ('irc_dis','irc_channel2','candor_tt'):
+    for directory in ('irc_dis','irc_channel2'):
         files+=list((DATA/directory).rglob('*.parquet'))
     files+=list((DATA/'proc'/'audio_md').glob('*.npz'))+list((DATA/'proc'/'audio_en').glob('*.npz'))
     hashes={str(p.relative_to(ROOT)):digest(p) for p in files}
@@ -135,8 +135,8 @@ def run():
         tr,va,rf=reply_development()
         reply=fit('reply_to_v2',tr,va,lambda:channel2_v2(rf),sig,rf=rf)
         print('Building MagicData causal overlap development data',flush=True)
-        train,val=candor_overlap('train'),candor_overlap('val')
-        overlap=fit('overlap_timing',train,val,lambda:candor_overlap('test'),sig)
+        train,val=magic_overlap('train'),magic_overlap('val')
+        overlap=fit('overlap_timing',train,val,lambda:magic_overlap('test'),sig)
         result=dict(signature=sig,reply_to=reply,overlap_timing=overlap,shadow_only=True,automatic_action_enabled=False,
                     artifacts={p.name:digest(p) for p in OUT.iterdir() if p.is_file() and p.suffix in ('.pt','.npy','.onnx','.json','.npz')})
         REPORT.write_text(json.dumps(result,indent=2)+'\n')
