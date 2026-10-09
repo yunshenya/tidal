@@ -6,6 +6,7 @@ reference controls: start / keep / yield (barge-in) / continue after a short int
 dead air. Open-loop (teacher-forced self state). This tests the plumbing + learnability, NOT real-world quality.
 usage: python -m tidal.duplex_sim train ENC_TAG | eval | bench ENC_TAG"""
 import sys, json, time, math, numpy as np, torch, torch.nn as nn, torch.nn.functional as Fn
+import os
 from tidal.duplex import (ACTIONS, TICK_S, Event, AudioFrame, VisionFrame, SelfState, TickInput, TickFeaturizer, TickModel,
                           EventEncoder, DuplexController, N_TICK)
 from tidal import vap as VP
@@ -228,7 +229,7 @@ def bench(enc_tag, n=2000):
                                              max_sustained_hz_flat_out=float(n / wall), max_hz_by_p99=float(1000 / p99),
                                              events_per_s=float(load * 10))
     params = sum(p.numel() for p in m.parameters()) + sum(p.numel() for p in tm.parameters())
-    rep = dict(encoder=enc_tag, threads=torch.get_num_threads(), cpu_count=len(os.sched_getaffinity(0)), cpu=_cpu_name(), params_total=params,
+    rep = dict(encoder=enc_tag, threads=torch.get_num_threads(), cpu_count=_cpu_count(), cpu=_cpu_name(), params_total=params,
                tick_s=TICK_S, n_ticks=n, note="single thread, PyTorch eager, synthetic inputs; 'events_per_tick' = chat/danmaku events arriving per 100 ms tick", results=out)
     json.dump(rep, open("reports/duplex_bench.json", "w"), indent=1); print(json.dumps(rep, indent=1))
 
@@ -263,7 +264,7 @@ def bench_audio(enc_tag, audio_path, n=1500):
                                              max_sustained_hz_flat_out=float(n / wall), audio_fe_only_p50_ms=float(np.percentile(alat[20:], 50)),
                                              audio_fe_only_p95_ms=float(np.percentile(alat[20:], 95)))
     params = sum(p.numel() for p in m.parameters()) + sum(p.numel() for p in tm.parameters()); pa = sum(p.numel() for p in afe.s.m.parameters())
-    rep = dict(encoder=enc_tag, audio_fe=os.path.basename(audio_path), threads=torch.get_num_threads(), cpu_count=len(os.sched_getaffinity(0)), cpu=_cpu_name(),
+    rep = dict(encoder=enc_tag, audio_fe=os.path.basename(audio_path), threads=torch.get_num_threads(), cpu_count=_cpu_count(), cpu=_cpu_name(),
                params_event_and_tick=params, params_audio_fe=pa, tick_s=TICK_S, n_ticks=n,
                note="single thread, PyTorch eager; per tick: 100 ms x 2 channels of 16 kHz PCM -> log-mel -> audio encoder (5 steps) + event encoder + tick GRU", results=out)
     json.dump(rep, open("reports/duplex_bench_audio.json", "w"), indent=1); print(json.dumps(rep, indent=1))
@@ -299,7 +300,7 @@ def bench_shadow(n=2000, reps=3):
             res[mode][f"{load}_events_per_tick"] = dict(p50_ms=float(a[0]), p95_ms=float(a[1]), p99_ms=float(a[2]))
     m.side_heads = {}
     rep = dict(config="shadow: m3_ablate_m2 + text emotion (28 inputs), tick GRU enc_dim=128; interrupt head = 3 x BinHead(128-64-1)",
-               threads=torch.get_num_threads(), cpu_count=len(os.sched_getaffinity(0)), cpu=_cpu_name(), tick_s=TICK_S, n_ticks=n, reps=reps,
+               threads=torch.get_num_threads(), cpu_count=_cpu_count(), cpu=_cpu_name(), tick_s=TICK_S, n_ticks=n, reps=reps,
                params_encoder=sum(p.numel() for p in m.parameters()), params_tick=sum(p.numel() for p in tm.parameters()),
                params_interrupt_head=sum(p.numel() for p in with_head.parameters()),
                note="random weights, single thread, PyTorch eager, synthetic inputs; median of interleaved reps", without_head=res["off"], with_head=res["on"])
@@ -344,6 +345,12 @@ def bench_barge(n=600, reps=2):
 def _cpu_name():
     try: return next(l.split(":", 1)[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name"))
     except Exception: return None
+
+def _cpu_count():
+    try:
+        return len(os.sched_getaffinity(0))
+    except (AttributeError, OSError):
+        return os.cpu_count() or 1
 
 if __name__ == "__main__":
     cmd = sys.argv[1]

@@ -208,13 +208,32 @@ AUDIO_THR = dict(take_turn=0.6, backchannel=0.5)
 class DuplexController:
     """Always-on control loop. step() must return well inside one tick; it never blocks on content generation."""
     def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None, task_shadow=None):
-        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe; self.task_shadow = task_shadow
+        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe; self.task_shadow = task_shadow; self.last_tick_t = None
     def reset(self):
-        self.enc.reset(); self.tf.reset(); self.state = None
+        self.enc.reset(); self.tf.reset(); self.state = None; self.last_tick_t = None
         if self.afe is not None: self.afe.reset()
         if self.task_shadow is not None: self.task_shadow.reset()
+    def _validate_tick(self, ti: TickInput):
+        if not isinstance(ti, TickInput) or not math.isfinite(ti.t) or ti.t < 0:
+            raise ValueError('Invalid tick time')
+        if self.last_tick_t is not None and ti.t <= self.last_tick_t:
+            raise ValueError('Ticks must increase')
+        if ti.n_participants is not None and (not math.isfinite(ti.n_participants) or ti.n_participants < 0):
+            raise ValueError('Invalid participant count')
+        s = ti.self_state
+        if any(not math.isfinite(v) or v < 0 for v in (s.elapsed_s, s.remaining_s, s.interrupted_remaining_s)):
+            raise ValueError('Invalid self playback state')
+        for e in ti.events:
+            if not isinstance(e, Event) or not isinstance(e.id, str) or not e.id or not math.isfinite(e.ts) or e.ts < 0 or e.ts > ti.t:
+                raise ValueError('Event is not causally available')
+        if ti.pcm is not None:
+            if not isinstance(ti.pcm, tuple) or len(ti.pcm) != 2:
+                raise ValueError('Expected synchronized PCM tuple')
+            if any(np.asarray(p).ndim != 1 or not np.isfinite(np.asarray(p)).all() for p in ti.pcm):
+                raise ValueError('Invalid PCM')
     @torch.no_grad()
     def step(self, ti: TickInput) -> ControlOut:
+        self._validate_tick(ti)
         if self.afe is not None and ti.pcm is not None:
             af = self.afe(*ti.pcm)
             if af is not None: ti.audio = af
@@ -233,6 +252,7 @@ class DuplexController:
                           audio_shift=None if a is None else a.shift, audio_bc=None if a is None else a.bc, hint=hint,
                           affect=dict(text=self.enc.last_affect, speech_valence=None if a is None else a.valence, speech_arousal=None if a is None else a.arousal),
                           p_interrupt=(self.enc.last or {}).get("p_interrupt"), p_barge=self.enc.barge_at(ti.t))
+        self.last_tick_t = ti.t
         if self.task_shadow is not None:
             try:
                 result.task_shadow = self.task_shadow.observe(ti)

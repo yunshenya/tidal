@@ -1,5 +1,5 @@
 """Phase-2 unit tests (synthetic only; no real data, no trained weights)."""
-import numpy as np, pandas as pd, torch
+import numpy as np, pandas as pd, torch, pytest
 from tidal import vap_targets as VT, features_g as FG, scenarios
 from tidal.vap import VAPModel
 from tidal.duplex import (EventFeaturizer, EventEncoder, TickModel, DuplexController, TickInput, Event, AudioFrame, SelfState, ACTIONS)
@@ -47,6 +47,20 @@ def test_duplex_controller_tick():
         assert out.action in ACTIONS and abs(sum(out.probs.values()) - 1) < 1e-3
     assert out.address_event is not None
 
+def test_duplex_controller_rejects_noncausal_ticks_without_advancing_state():
+    torch.manual_seed(2); enc = EventEncoder(VAPModel(len(FG.FEAT_G)), np.zeros(FG.NB), np.ones(FG.NB))
+    ctl = DuplexController(TickModel(), enc)
+    ctl.step(TickInput(10.0))
+    with pytest.raises(ValueError, match='Ticks must increase'):
+        ctl.step(TickInput(9.9))
+    with pytest.raises(ValueError, match='causally available'):
+        ctl.step(TickInput(10.1, [Event('future', 10.2, 'other')]))
+    with pytest.raises(ValueError, match='participant'):
+        ctl.step(TickInput(10.1, n_participants=-1.0))
+    ctl.step(TickInput(10.1))
+    ctl.reset()
+    ctl.step(TickInput(1.0))
+
 def test_coldstart_adapter_is_causal_in_label_time():
     from tidal import coldstart as C
     from tidal.dataset import HEADS
@@ -69,3 +83,7 @@ def test_rule_controller_runs_on_tick_features():
     from tidal.duplex import N_TICK
     X = np.zeros((50, N_TICK), np.float32); out = DS.rule_controller(X)
     assert out.shape == (50,) and set(out.tolist()) <= set(range(len(ACTIONS)))
+
+def test_duplex_benchmark_cpu_count_is_portable():
+    from tidal.duplex_sim import _cpu_count
+    assert isinstance(_cpu_count(), int) and _cpu_count() > 0

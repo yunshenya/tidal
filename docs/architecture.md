@@ -109,7 +109,7 @@
 | 数据增强 | `features_g.py` | 🚧 | 人数块和模态块可整块丢弃。时间抖动、文本扰动未做 |
 | 场景通用的统一事件流 | `features_g.py`、`scenarios.py`、`loso.py` | ✅ / 🚧 | 没有场景枚举。留一场景基本不迁移（第二阶段） |
 | 身份无关角色 + 在线自适应 | `coldstart.py` | ✅ | 收益很小 |
-| 全双工 tick 控制（100 ms） | `duplex.py`、`duplex_sim.py` | 🚧 | 动作空间含 `yield`。只在合成数据上做过 sanity 测试 |
+| 全双工 tick 控制（100 ms） | `duplex.py`、`duplex_sim.py` | 🚧 | 动作空间含 `yield`；控制器校验 tick 单调性、未来事件和输入状态。只在合成数据上做过 sanity 测试 |
 | 连续体记忆 | `continuum.py` | ✅（影子回放） | 不做线上决策 |
 | int8 量化 | `embed.py`；`quant3.py` | ✅ 动态 int8 / 📋 QAT | 主干的 QAT 仍是计划 |
 | 剪枝 / LoRA | `model.py` | 📋 | |
