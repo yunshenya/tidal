@@ -13,7 +13,7 @@ def load(regime):
     if regime in ("TS", "TSA") and not (eidx >= 0).any():
         raise ValueError("Text regime requested but no embeddings exist; rebuild with build_full_public_sixhead.py")
     Xr = X[:, cols(regime)]
-    tr = keep & meta.source.isin(["real", "pub_interactspeech", "pub_magicdata_ms"]).to_numpy() & meta.split.isin(["train", "pub_train"]).to_numpy()
+    tr = keep & meta.source.isin(["real", "pub_interactspeech", "pub_magicdata_ms", "group_review_human", "group_review_pseudo"]).to_numpy() & meta.split.isin(["train", "pub_train"]).to_numpy()
     mu, sd = Xr[tr].mean(0), Xr[tr].std(0) + 1e-6
     Xr = ((Xr - mu) / sd).astype(np.float32)
     return dict(X=Xr, Y=Y, eidx=eidx, emb=emb, meta=meta, keep=keep, mu=mu, sd=sd)

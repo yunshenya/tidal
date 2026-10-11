@@ -11,8 +11,11 @@ from scripts.build_bootstrap_sixhead import private_rows
 def main():
     root = Path(__file__).resolve().parents[1]; salt = (root / ".secrets/pseudo_salt").read_bytes().strip()
     private = private_rows(root / "data/private/turn_replays_joined.csv", salt)
-    public = pd.concat([pd.read_parquet(root / "data/public/proc/pub_interactspeech.parquet"),
-                        pd.read_parquet(root / "data/public/proc/pub_magicdata_ms.parquet")], ignore_index=True)
+    public_frames = [pd.read_parquet(root / "data/public/proc/pub_interactspeech.parquet"),
+                     pd.read_parquet(root / "data/public/proc/pub_magicdata_ms.parquet")]
+    turngate = root / "data/private/processed/turngate_group.parquet"
+    if turngate.exists(): public_frames.append(pd.read_parquet(turngate))
+    public = pd.concat(public_frames, ignore_index=True, sort=False)
     public["split"] = public["split"].replace({"pub_train":"pub_train", "pub_val":"pub_val", "pub_test":"pub_test"})
     syn = compute_labels(scenarios.build(n_live=8, n_1on1=60, seed=17)); syn["source"] = "synth"
     syn["split"] = syn["split"].map({"syn_train":"synth", "syn_val":"synth_val", "syn_test":"synth_test"})
