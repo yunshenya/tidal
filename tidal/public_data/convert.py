@@ -174,6 +174,37 @@ def aishell4(seed=6):
         g = perspective(g, rng, have_replies=False); g["n_participants"] = g.speaker.nunique(); fr.append(g)
     return finish(fr, "pub_aishell4", "meeting_voice", "group", seed)
 
+def interactspeech(max_rows=60000, seed=8):
+    """InteractSpeech text/timeline release: speaker turns with interruption/backchannel metadata."""
+    import pyarrow.parquet as pq
+    rng = np.random.default_rng(seed); fr = []; got = 0
+    paths = sorted(glob.glob(str(DATA / "interactspeech" / "data" / "*.parquet")))
+    for p in paths:
+        tab = pq.read_table(p, columns=["id", "record_json"])
+        for rid, raw in zip(tab["id"].to_pylist(), tab["record_json"].to_pylist()):
+            x = json.loads(raw); turns = x.get("turns") or []
+            if len(turns) < 2: continue
+            rows = []
+            for i, t in enumerate(turns):
+                role = "self" if t.get("role") == "assistant" else "other"
+                meta = t.get("meta") or {}; audio = t.get("audio_in") or {}
+                src = audio.get("source") or {}; text = t.get("text") or meta.get("transcript") or src.get("transcript")
+                rows.append(dict(conv="is:" + str(rid), ts=float(t.get("start_ms", 0)) / 1000.0,
+                                 role=role, speaker="BOT" if role == "self" else "user", speaker_known=True,
+                                 text=text, modality="voice" if audio else "text", n_participants=2.0,
+                                 msg_id=f"is:{rid}:{i}", responds_to=None, initiate=0,
+                                 addr_src=1.0 if role == "other" else np.nan, bot_act_src=None))
+            d = pd.DataFrame(rows).sort_values("ts", kind="stable").reset_index(drop=True)
+            # An assistant turn immediately following an inbound turn is a speak label.
+            for i in range(len(d) - 1):
+                if d.role.iat[i] == "other" and d.role.iat[i + 1] == "self": d.loc[i, "bot_act_src"] = "speak"
+            d.loc[d.role == "other", "bot_act_src"] = d.loc[d.role == "other", "bot_act_src"].fillna("silent")
+            fr.append(d); got += 1
+            if got >= max_rows: break
+        if got >= max_rows: break
+    if not fr: raise FileNotFoundError("no InteractSpeech parquet files found")
+    return finish(fr, "pub_interactspeech", "voice_1on1", "private", seed)
+
 def danmaku(n_videos=250, min_msgs=300, max_msgs=5000, seed=7):
     """Bilibili danmaku (DanmakuTPP-Events, research-only): ts = video time of the bullet comment. No user ids and no
     host -> every comment is an anonymous 'other' event (unique speaker); only the self-supervised timing targets (VAP
@@ -202,6 +233,6 @@ def danmaku(n_videos=250, min_msgs=300, max_msgs=5000, seed=7):
         if h in d: d[h] = np.nan
     d["speaker_known"] = False; d.to_parquet(PROC / "pub_danmaku.parquet"); return d
 
-ALL = {"tg": tg_ru, "irc": irc_dis, "twitch": twitch, "artemis": artemis, "candor": candor, "aishell4": aishell4, "danmaku": danmaku}
+ALL = {"tg": tg_ru, "irc": irc_dis, "twitch": twitch, "artemis": artemis, "candor": candor, "aishell4": aishell4, "interactspeech": interactspeech, "danmaku": danmaku}
 if __name__ == "__main__":
     for k in (sys.argv[1:] or list(ALL)): ALL[k]()

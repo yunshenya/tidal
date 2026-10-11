@@ -42,6 +42,9 @@ DATASETS = {
     "aishell4_seg": dict(repo="AISHELL/AISHELL-4", license="apache-2.0", research_only=False,
                          files_glob=["*.TextGrid", "*.rttm"], scenario="meeting", lang="zh",
                          use="speaker-turn timing of Mandarin multi-party meetings (annotations only, no audio)"),
+    "interactspeech": dict(repo="1f/interactspeech", license="not specified on dataset card; verify before redistribution",
+                            research_only=True, files_glob=["*.parquet", "*.json", "*.md"], scenario="1on1_voice", lang="en",
+                            use="speaker-aligned interaction timeline with interruption/backchannel events -> EOT/self/recheck/action pretraining"),
     # gated sets (terms accepted by the repo owner on HF; read token taken from the HF_TOKEN env var, never stored)
     "danmaku_tpp": dict(repo="FRENKIE-CHIANG/DanmakuTPP", license="unspecified (no license on card; gated)", research_only=True,
                         gated=True, files_glob=["DanmakuTPP-Events-part-*.zip"], scenario="live", lang="zh",
