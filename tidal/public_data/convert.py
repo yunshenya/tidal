@@ -7,7 +7,7 @@ Perspective-taking: public chats have no tidal-like bot, so in each conversation
 (only where gold reply links exist), speak = self's next message replies to / directly follows this message.
 For livestreams the streamer's own chat messages are "self" (the host); viewers are "other".
 Speakers are re-indexed per conversation (identity-free); raw ids are never written."""
-import glob, json, re, sys, numpy as np, pandas as pd
+import glob, json, re, sys, os, numpy as np, pandas as pd
 from tidal.public_data.manifest import DATA
 from tidal.public_data.fastlabels import compute_labels_fast as compute_labels
 
@@ -205,6 +205,29 @@ def interactspeech(max_rows=60000, seed=8):
     if not fr: raise FileNotFoundError("no InteractSpeech parquet files found")
     return finish(fr, "pub_interactspeech", "voice_1on1", "private", seed)
 
+def magicdata_ms(seed=9):
+    """Chinese MagicData multi-stream transcript timing (audio is kept separately for audio_train)."""
+    rng = np.random.default_rng(seed); groups = {}
+    for p in sorted(glob.glob(str(DATA / "magicdata_ms" / "TXT" / "*.txt"))):
+        base = os.path.basename(p).split("_0_", 1)[0]
+        groups.setdefault(base, []).append(p)
+    fr = []
+    for i, (base, paths) in enumerate(sorted(groups.items())):
+        rows = []
+        for p in paths:
+            channel = os.path.basename(p).rsplit("_0_", 1)[1][:-4]
+            for line in open(p, encoding="utf-8-sig"):
+                m = re.match(r"\[([\d.]+),([\d.]+)\]\s+\S+\s+\S+\s*(.*)$", line.strip())
+                if not m or float(m.group(2)) <= float(m.group(1)): continue
+                text = m.group(3).strip()
+                if not text or text.startswith("["): continue
+                rows.append(dict(ts=float(m.group(1)), speaker=channel, text=text, modality="voice"))
+        if len(rows) < 4: continue
+        d = pd.DataFrame(rows).sort_values("ts", kind="stable").reset_index(drop=True)
+        d["conv"] = f"md:{i}"; d["msg_id"] = [f"md:{i}:{k}" for k in range(len(d))]; d["reply_to"] = None
+        d = perspective(d, rng, min_msgs=2, have_replies=False); d["n_participants"] = 2.0; fr.append(d)
+    return finish(fr, "pub_magicdata_ms", "voice_1on1", "private", seed)
+
 def danmaku(n_videos=250, min_msgs=300, max_msgs=5000, seed=7):
     """Bilibili danmaku (DanmakuTPP-Events, research-only): ts = video time of the bullet comment. No user ids and no
     host -> every comment is an anonymous 'other' event (unique speaker); only the self-supervised timing targets (VAP
@@ -233,6 +256,6 @@ def danmaku(n_videos=250, min_msgs=300, max_msgs=5000, seed=7):
         if h in d: d[h] = np.nan
     d["speaker_known"] = False; d.to_parquet(PROC / "pub_danmaku.parquet"); return d
 
-ALL = {"tg": tg_ru, "irc": irc_dis, "twitch": twitch, "artemis": artemis, "candor": candor, "aishell4": aishell4, "interactspeech": interactspeech, "danmaku": danmaku}
+ALL = {"tg": tg_ru, "irc": irc_dis, "twitch": twitch, "artemis": artemis, "candor": candor, "aishell4": aishell4, "interactspeech": interactspeech, "magicdata_ms": magicdata_ms, "danmaku": danmaku}
 if __name__ == "__main__":
     for k in (sys.argv[1:] or list(ALL)): ALL[k]()

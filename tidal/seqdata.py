@@ -8,7 +8,7 @@ def load(regime):
     meta = pd.read_parquet("data/proc/meta.parquet"); emb = np.load("data/proc/emb.npy")
     keep = np.ones(len(X), bool) if regime == "T" else (eidx >= 0)
     Xr = X[:, cols(regime)]
-    tr = keep & meta.source.isin(["real", "pub_interactspeech"]).to_numpy() & meta.split.isin(["train", "pub_train"]).to_numpy()
+    tr = keep & meta.source.isin(["real", "pub_interactspeech", "pub_magicdata_ms"]).to_numpy() & meta.split.isin(["train", "pub_train"]).to_numpy()
     mu, sd = Xr[tr].mean(0), Xr[tr].std(0) + 1e-6
     Xr = ((Xr - mu) / sd).astype(np.float32)
     return dict(X=Xr, Y=Y, eidx=eidx, emb=emb, meta=meta, keep=keep, mu=mu, sd=sd)

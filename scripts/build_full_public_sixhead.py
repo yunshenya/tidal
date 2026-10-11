@@ -11,7 +11,8 @@ from scripts.build_bootstrap_sixhead import private_rows
 def main():
     root = Path(__file__).resolve().parents[1]; salt = (root / ".secrets/pseudo_salt").read_bytes().strip()
     private = private_rows(root / "data/private/turn_replays_joined.csv", salt)
-    public = pd.read_parquet(root / "data/public/proc/pub_interactspeech.parquet")
+    public = pd.concat([pd.read_parquet(root / "data/public/proc/pub_interactspeech.parquet"),
+                        pd.read_parquet(root / "data/public/proc/pub_magicdata_ms.parquet")], ignore_index=True)
     public["split"] = public["split"].replace({"pub_train":"pub_train", "pub_val":"pub_val", "pub_test":"pub_test"})
     syn = compute_labels(scenarios.build(n_live=8, n_1on1=60, seed=17)); syn["source"] = "synth"
     syn["split"] = syn["split"].map({"syn_train":"synth", "syn_val":"synth_val", "syn_test":"synth_test"})
@@ -26,7 +27,7 @@ def main():
     out = root / "data/proc"; out.mkdir(parents=True, exist_ok=True)
     np.savez(out / "dataset.npz", X=X, Y=Y, eidx=np.full(len(d), -1, np.int64))
     meta.to_parquet(out / "meta.parquet", index=False); np.save(out / "emb.npy", np.zeros((0,512), np.float16))
-    stats = {"private_rows": int(len(private)), "interactspeech_rows": int(len(public)), "synthetic_rows": int(len(syn)),
+    stats = {"private_rows": int(len(private)), "public_rows": int(len(public)), "synthetic_rows": int(len(syn)),
              "labels": {h: int(np.isfinite(d[h]).sum()) for h in HEADS},
              "warning": "public timing corpus has no group addressee labels; y_addr is weak/private or perspective-derived"}
     (out / "full_public_sixhead_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
