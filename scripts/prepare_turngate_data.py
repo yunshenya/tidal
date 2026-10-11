@@ -2,7 +2,7 @@
 """Convert local turngate review windows into the unified causal event format.
 
 The source contains short group-chat contexts rather than a full raw transcript.
-Human-consensus rows are split by source key; lexical weak labels are train-only.
+Human-consensus rows are split by source key; weak and assistant-auto labels are train-only.
 Raw JSONL stays under data/private/ and is gitignored.
 """
 import hashlib, json
@@ -22,9 +22,19 @@ def rows(path, force_human=None):
     out = []
     for line in Path(path).read_text(encoding="utf-8").splitlines():
         r = json.loads(line); ctx = r.get("context") or {}; turns = ctx.get("recent_turns") or []
-        human = ((r.get("label_provenance") or {}).get("source") == "human_consensus")
+        provenance = r.get("label_provenance") or {}
+        psource = provenance.get("source")
+        human = psource == "human_consensus"
+        auto = psource == "assistant_auto_v1"
+        # Original review batches contain both human and pseudo rows.  The
+        # generated auto file replaces pseudo rows so they are not duplicated.
+        if path.name != "review-batch-20260913-auto.jsonl" and not human:
+            continue
         if force_human is True: human = True
-        key = str(r["source_key"]); conv = ("tg_h:" if human else "tg_w:") + key
+        key = str(r["source_key"])
+        conv_prefix = "tg_h:" if human else ("tg_a:" if auto else "tg_w:")
+        conv = conv_prefix + key
+        source_name = "group_review_human" if human else ("group_review_auto" if auto else "group_review_pseudo")
         current = r.get("current_text") or ""
         all_turns = list(turns) + [{"role": "other_member", "text": current}]
         action = (r.get("labels") or {}).get("response")
@@ -39,7 +49,7 @@ def rows(path, force_human=None):
                             speaker_known=True, text=t.get("text") or None, modality="text",
                             msg_id=f"{conv}:{i}", responds_to=None, initiate=0,
                             addr_src=np.nan, bot_act_src=action if is_current else None,
-                            source="group_review_human" if human else "group_review_pseudo",
+                            source=source_name,
                             split=(split_key(key) if human else "train"),
                             y_eot=(y_eot if is_current else np.nan), y_self=np.nan,
                             y_addr=np.nan, y_act=({"speak": 0., "wait": 1., "silent": 2.}.get(action, np.nan) if is_current else np.nan),
@@ -49,7 +59,7 @@ def rows(path, force_human=None):
 
 def main():
     root = Path(__file__).resolve().parents[1]; src = root / "data/private/turngate"
-    files = [src / "review-batch-20260913.jsonl", src / "review-batch-20260913-speakers.jsonl"]
+    files = [src / "review-batch-20260913.jsonl", src / "review-batch-20260913-speakers.jsonl", src / "review-batch-20260913-auto.jsonl"]
     frames = [rows(p) for p in files if p.exists()]
     if not frames: raise FileNotFoundError(f"no turngate files in {src}")
     d = pd.concat(frames, ignore_index=True)

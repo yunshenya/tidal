@@ -153,6 +153,16 @@ PYTHONPATH=. .venv/bin/python scripts/demo_sixhead.py \
 
 可输入普通文本，也可输入 JSON，例如 `{"role":"other","speaker":"u1","text":"小潮在吗","gap_s":0}`。TSA 会保留没有文本的历史事件；文本只在本地编码，不会上传。
 
+如果已有本地 turngate 群聊审核 JSONL，可以先生成可追溯的模型辅助标注，再并入训练集：
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/auto_label_turngate.py
+PYTHONPATH=. .venv/bin/python scripts/prepare_turngate_data.py
+PYTHONPATH=. .venv/bin/python scripts/build_full_public_sixhead.py
+```
+
+辅助标注会写入 `label_provenance.source=assistant_auto_v1`，只进入训练且权重为 0.25；人工共识行保留独立的 train/val/test 划分，不能用辅助标注替代测试真值。
+
 ### 中文音频接话实验
 
 独立于私有聊天和文本编码器，可复现实验协议见 [audio_turn_protocol.md](reports/audio_turn_protocol.md)：

@@ -22,15 +22,18 @@ def run(regime, data, kind, synth_w=0.5, tag=None, epochs=60, patience=8, seed=0
     D = load(regime); use_text = regime in ("TS", "TSA"); meta = D["meta"]
     src = meta.source.to_numpy(); split = meta.split.to_numpy()
     convs = conv_index(D)
-    train_sources = {"real", "pub_interactspeech", "pub_magicdata_ms", "group_review_human", "group_review_pseudo"}
+    train_sources = {"real", "pub_interactspeech", "pub_magicdata_ms", "group_review_human", "group_review_pseudo", "group_review_auto"}
     real_train = [c for c in convs if src[c[0]] in train_sources and split[c[0]] in ("train", "pub_train") and meta.conv.iat[c[0]] not in HOLDOUT_GROUPS]
     syn = [c for c in convs if src[c[0]] == "synth"] if data == "real+synth" else []
-    W = [(w, lf, 1.0) for w, lf in train_windows(real_train)] + [(w, lf, synth_w) for w, lf in train_windows(syn)]
+    weak_sources = {"group_review_pseudo", "group_review_auto"}
+    W = [(w, lf, (0.25 if src[w[0]] in weak_sources else 1.0))
+         for w, lf in train_windows(real_train)]
+    W += [(w, lf, synth_w) for w, lf in train_windows(syn)]
     # loss only on real-train positions (+synth): mask val/test/embargo labels inside real windows
     trainable = np.isin(split, ["train", "pub_train", "synth"])
     # Synthetic-only bootstrap datasets may use the script streams as their validation source.
     # Keep the original real-only behavior when no synthetic validation rows exist.
-    val_source = np.isin(src, ["real", "pub_interactspeech", "pub_magicdata_ms", "group_review_human", "group_review_pseudo", "synth"])
+    val_source = np.isin(src, ["real", "pub_interactspeech", "pub_magicdata_ms", "group_review_human", "group_review_pseudo", "group_review_auto", "synth"])
     val_rows = np.flatnonzero(D["keep"] & val_source & np.isin(split, ["val", "pub_val", "synth_val"]) & ~np.all(np.isnan(D["Y"]), 1))
     VW = eval_windows(convs, val_rows)
     model = TurnModel(D["X"].shape[1], use_text, kind=kind, mask_text=regime == "TSA")
