@@ -1,4 +1,4 @@
-"""Train the temporal model. usage: python -m tidal.train REGIME(T|TS) DATA(real|real+synth) KIND(gru|tf) [synth_w] [tag]"""
+"""Train the temporal model. usage: python -m tidal.train REGIME(T|TS|TSA) DATA(real|real+synth) KIND(gru|tf) [synth_w] [tag]"""
 import sys, json, time, os, numpy as np, torch, torch.nn.functional as Fn
 from tidal.seqdata import load, conv_index, train_windows, eval_windows, batchify
 from tidal.model import TurnModel, n_params, HEAD_DIMS
@@ -19,7 +19,7 @@ def masked_loss(out, Yb, w_pos=None):
 def run(regime, data, kind, synth_w=0.5, tag=None, epochs=60, patience=8, seed=0, bs=32):
     torch.manual_seed(seed); np.random.seed(seed)
     tag = tag or f"{regime}_{data}_{kind}"
-    D = load(regime); use_text = regime == "TS"; meta = D["meta"]
+    D = load(regime); use_text = regime in ("TS", "TSA"); meta = D["meta"]
     src = meta.source.to_numpy(); split = meta.split.to_numpy()
     convs = conv_index(D)
     train_sources = {"real", "pub_interactspeech", "pub_magicdata_ms"}
@@ -33,7 +33,7 @@ def run(regime, data, kind, synth_w=0.5, tag=None, epochs=60, patience=8, seed=0
     val_source = np.isin(src, ["real", "pub_interactspeech", "pub_magicdata_ms", "synth"])
     val_rows = np.flatnonzero(D["keep"] & val_source & np.isin(split, ["val", "pub_val", "synth_val"]) & ~np.all(np.isnan(D["Y"]), 1))
     VW = eval_windows(convs, val_rows)
-    model = TurnModel(D["X"].shape[1], use_text, kind=kind)
+    model = TurnModel(D["X"].shape[1], use_text, kind=kind, mask_text=regime == "TSA")
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     print(f"[{tag}] params={n_params(model)} train_windows={len(W)} (real {len(real_train)} convs, synth {len(syn)} convs) val_targets={len(val_rows)}", flush=True)
     Yall = D["Y"].copy(); Yall[~trainable] = np.nan; Dtr = dict(D, Y=Yall)
@@ -47,14 +47,15 @@ def run(regime, data, kind, synth_w=0.5, tag=None, epochs=60, patience=8, seed=0
             out = model(torch.from_numpy(F), torch.from_numpy(valid), torch.from_numpy(E) if use_text else None)
             loss, _ = masked_loss(out, torch.from_numpy(Yb), wpos)
             if not torch.is_tensor(loss): continue
-            opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); tl.append(float(loss))
+            opt.zero_grad(); loss.backward(); torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0); opt.step(); tl.append(float(loss.detach()))
         vl, parts = evaluate_loss(model, D, VW, val_rows, use_text)
         hist.append(dict(ep=ep, train=float(np.mean(tl)), val=vl, **{f"val_{k}": v for k, v in parts.items()}, sec=round(time.time() - t0, 1)))
         print(json.dumps(hist[-1]), flush=True)
         if vl < best[0] - 1e-4: best = (vl, {k: v.clone() for k, v in model.state_dict().items()}, ep)
         elif ep - best[2] >= patience: break
     model.load_state_dict(best[1]); os.makedirs("models", exist_ok=True)
-    torch.save(dict(state=best[1], regime=regime, kind=kind, n_feat=D["X"].shape[1], use_text=use_text, mu=D["mu"], sd=D["sd"],
+    torch.save(dict(state=best[1], regime=regime, kind=kind, n_feat=D["X"].shape[1], use_text=use_text, mask_text=model.mask_text,
+                    context="all_events" if regime != "TS" else "text_events", mu=D["mu"], sd=D["sd"],
                     best_ep=best[2], hist=hist, data=data, synth_w=synth_w, params=n_params(model)), f"models/{tag}.pt")
     print(f"[{tag}] best_ep={best[2]} val={best[0]:.4f}", flush=True)
 def evaluate_loss(model, D, VW, rows, use_text, bs=256):

@@ -20,7 +20,7 @@ class Wrapped(torch.nn.Module):
         return tuple(outs)
 def main(tag, regime_eval_json=None):
     ck = torch.load(f"models/{tag}.pt", weights_only=False)
-    m = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"]); m.load_state_dict(ck["state"]); m.eval()
+    m = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"], mask_text=ck.get("mask_text", False)); m.load_state_dict(ck["state"]); m.eval()
     regime = ck["regime"]
     temps = json.load(open(f"reports/eval_{regime}.json"))["models"].get(tag, {}).get("temps", {})
     W = Wrapped(m, temps, ck["use_text"]).eval()

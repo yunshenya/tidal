@@ -25,14 +25,19 @@ def private_rows(path, salt):
     rows = []
     with open(path, encoding="utf-8", newline="") as f:
         for r in csv.DictReader(f):
+            # Replay control/interpretation ticks are not bot utterances.
+            if r.get("event_type") != "message_received": continue
             key = r.get("scope_key") or (r.get("scope_kind", "global") + ":" + (r.get("event_id") or r["id"]))
             conv = pseudo(salt, key)
             action = r.get("chosen_action") or None
             if action not in ("speak", "silent"): action = None
-            role = "other" if r.get("event_type") == "message_received" else "self"
-            rows.append(dict(conv=conv, conv_type="group" if r.get("is_private") != "t" else "private",
-                             ts=parse_ts(r["occurred_at"]), role=role, speaker=None, speaker_known=False,
-                             text=None, addr_src=float(r.get("mentioned_bot") == "t" or r.get("reply_to_bot") == "t"),
+            private = r.get("is_private")
+            ctype = "private" if private == "t" else ("group" if private == "f" else "unknown")
+            flags = [r.get("mentioned_bot"), r.get("reply_to_bot")]
+            addr = 1.0 if "t" in flags else (0.0 if all(v == "f" for v in flags) else np.nan)
+            rows.append(dict(conv=conv, conv_type=ctype,
+                             ts=parse_ts(r["occurred_at"]), role="other", speaker=None, speaker_known=False,
+                             text=None, addr_src=addr,
                              bot_act_src=action, msg_id=pseudo(salt, r["id"]), source="real",
                              split="train", n_participants=np.nan, modality="text"))
     return pd.DataFrame(rows)

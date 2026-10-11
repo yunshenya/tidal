@@ -65,9 +65,9 @@ def _gru_step_mask(gru, x, valid):
     return torch.stack(ys, 1), h
 
 class TurnModel(nn.Module):
-    def __init__(self, n_feat, use_text, d=128, hidden=192, layers=2, kind="gru", dropout=0.2, nhead=4):
+    def __init__(self, n_feat, use_text, d=128, hidden=192, layers=2, kind="gru", dropout=0.2, nhead=4, mask_text=False):
         super().__init__()
-        self.use_text = use_text; self.kind = kind
+        self.use_text = use_text; self.kind = kind; self.mask_text = mask_text
         self.fproj = nn.Linear(n_feat, d)
         if use_text: self.tproj = nn.Sequential(nn.Dropout(0.1), nn.Linear(512, d))
         self.inorm = nn.LayerNorm(d); self.drop = nn.Dropout(dropout)
@@ -101,7 +101,10 @@ class TurnModel(nn.Module):
         return h
     def forward(self, feats, valid, text=None):
         h = self.fproj(feats)
-        if self.use_text: h = h + self.tproj(text)
+        if self.use_text:
+            th = self.tproj(text)
+            if self.mask_text: th = th * (text.abs().sum(-1, keepdim=True) > 0).to(th.dtype)
+            h = h + th
         h = self.drop(self.inorm(h)) * valid.unsqueeze(-1).to(h.dtype)
         h = self._encode(h, valid)
         return {k: m(h) for k, m in self.heads.items()}

@@ -131,6 +131,28 @@ TIDAL_SHADOW_JSONL=examples/synthetic_stream.jsonl python -m tidal.shadow.run --
 
 训练需要你自己的数据：一张统一的事件表（字段说明见 `tidal/labels.py`）。另外，bge-small-zh-v1.5 的 ONNX 文件和 tokenizer 要放在 `models/bge/`。流程见 `scripts/run_all.sh`，以及 `reports/phase1.md` 的第 9 节。
 
+### 本地体验当前文本六头模型
+
+先准备本地公开数据和 embedding，再构建保留完整事件上下文的 TSA 数据集：
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/build_full_public_sixhead.py
+PYTHONPATH=. TIDAL_THREADS=4 .venv/bin/python - <<'PY'
+from tidal.train import run
+run("TSA", "real+synth", "gru", synth_w=0.5,
+    tag="sixhead_tsa_text_clean", epochs=3, patience=1, seed=2, bs=128)
+PY
+```
+
+然后逐条输入事件，模型会输出六头概率和复查时间（不会生成回复内容）：
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/demo_sixhead.py \
+  --model models/sixhead_tsa_text_clean.pt --interactive
+```
+
+可输入普通文本，也可输入 JSON，例如 `{"role":"other","speaker":"u1","text":"小潮在吗","gap_s":0}`。TSA 会保留没有文本的历史事件；文本只在本地编码，不会上传。
+
 ### 中文音频接话实验
 
 独立于私有聊天和文本编码器，可复现实验协议见 [audio_turn_protocol.md](reports/audio_turn_protocol.md)：

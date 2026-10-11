@@ -9,7 +9,7 @@ from sklearn.metrics import average_precision_score, f1_score
 BIN = [h for h in HEADS if HEAD_DIMS[h] == 1]
 def predict_logits(tag, D, rows):
     ck = torch.load(f"models/{tag}.pt", weights_only=False)
-    m = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"]); m.load_state_dict(ck["state"]); m.eval()
+    m = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"], mask_text=ck.get("mask_text", False)); m.load_state_dict(ck["state"]); m.eval()
     W = eval_windows(conv_index(D), rows); out = {h: [] for h in HEADS}
     with torch.no_grad():
         for b in range(0, len(W), 256):

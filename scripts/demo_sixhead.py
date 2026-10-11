@@ -56,16 +56,40 @@ def parse_line(line, i, now):
                 line = line[len(prefix):].strip()
                 break
         raw = {"role": role, "text": line, "speaker": None if role == "self" else "user"}
-    return normalise_event(raw, i, now)
+    if "gap_s" in raw:
+        gap = float(raw.pop("gap_s"))
+        if not np.isfinite(gap) or gap < 0: raise ValueError("gap_s must be finite and nonnegative")
+        raw.setdefault("ts", now + gap)
+    e = normalise_event(raw, i, now)
+    if e["role"] not in ("self", "other"): raise ValueError("role must be self or other")
+    if e["conv_type"] not in ("group", "private", "unknown"): raise ValueError("invalid conv_type")
+    if not np.isfinite(float(e["ts"])) or float(e["ts"]) < 0: raise ValueError("invalid timestamp")
+    return e
 
 
-def score(history, model, ck):
-    frame = pd.DataFrame(history).sort_values(["conv", "ts"], kind="stable").reset_index(drop=True)
-    x = features.compute(frame)[:, features.cols("T")]
+def score(history, model, ck, encoder=None, embedding_cache=None):
+    current = history[-1]
+    frame = pd.DataFrame([e for e in history if e["conv"] == current["conv"] and e["ts"] <= current["ts"]])
+    frame = frame.sort_values("ts", kind="stable").reset_index(drop=True)
+    if ck.get("context") == "text_events" or ck["regime"] == "TS":
+        frame = frame[frame.text.map(lambda t: isinstance(t, str) and bool(t))].reset_index(drop=True)
+        if frame.empty: raise ValueError("TS checkpoint requires text on the current event")
+    x = features.compute(frame)[:, features.cols(ck["regime"])]
     x = ((x - ck["mu"]) / ck["sd"]).astype(np.float32)
     x = x[-64:]
+    e = None
+    if ck["use_text"]:
+        from tidal.embed import key
+        cache = embedding_cache if embedding_cache is not None else {}
+        e = np.zeros((1, len(x), 512), np.float32)
+        for i, t in enumerate(frame.text.tolist()[-64:]):
+            if not isinstance(t, str) or not t: continue
+            k = key(t)
+            if k not in cache: cache[k] = encoder.encode([t], bs=1)[0].astype(np.float16).astype(np.float32)
+            e[0, i] = cache[k]
     with torch.inference_mode():
-        out = model(torch.from_numpy(x[None]), torch.ones((1, len(x)), dtype=torch.bool))
+        out = model(torch.from_numpy(x[None]), torch.ones((1, len(x)), dtype=torch.bool),
+                    torch.from_numpy(e) if e is not None else None)
     p = {}
     p["y_eot"] = float(torch.sigmoid(out["y_eot"][0, -1, 0]))
     p["y_self"] = float(torch.sigmoid(out["y_self"][0, -1, 0]))
@@ -103,24 +127,29 @@ def main():
     args = ap.parse_args()
     if not args.interactive and not args.input:
         ap.error("use --input FILE or --interactive")
-    ck = torch.load(Path(args.model), weights_only=False)
-    model = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"]).eval()
+    torch.set_num_threads(2)
+    ck = torch.load(Path(args.model), map_location="cpu", weights_only=False)
+    model = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"], mask_text=ck.get("mask_text", False)).eval()
     model.load_state_dict(ck["state"])
+    encoder = None; cache = {}
     if ck["use_text"]:
-        raise RuntimeError("this demo expects the current timing-only checkpoint (use_text=False)")
+        from tidal.embed import Encoder
+        encoder = Encoder(threads=2)
     history = []
     now = time.time()
     source = sys.stdin if args.interactive else open(args.input, encoding="utf-8")
     try:
-        for i, line in enumerate(source):
-            if args.interactive:
-                print("event> ", end="", flush=True)
+        i = 0
+        while True:
+            if args.interactive: print("event> ", end="", flush=True)
+            line = source.readline()
+            if not line: break
             event = parse_line(line, i, now)
             if event is None:
                 continue
-            now = max(now + 1.0, float(event["ts"]) + 1.0)
+            now = float(event["ts"])
             history.append(event)
-            print_result(event, score(history, model, ck))
+            print_result(event, score(history, model, ck, encoder, cache)); i += 1
     finally:
         if not args.interactive:
             source.close()

@@ -20,8 +20,7 @@ models/*.pt
 models/*.onnx
 models/*.npz
 models/*.joblib
-models/bge/*.onnx
-models/bge/.cache/
+models/bge/
 # python
 .venv/
 __pycache__/

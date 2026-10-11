@@ -64,4 +64,6 @@ FEAT_TS = FEAT_T + ["log_gap_same_spk", "gap_same_spk_known", "same_spk_as_prev"
                     "end_comma", "end_nopunct", "question", "end_particle", "unfinished_marker", "media_only", "has_at",
                     "has_name", "has_url", "multiline"]
 EXCLUDED = ["has_text", "speaker_known", "same_spk_unknown", "n_spk_recent"]
-def cols(regime): return [FEATURES.index(f) for f in (FEAT_T if regime == "T" else FEAT_TS)]
+def cols(regime):
+    if regime not in ("T", "TS", "TSA"): raise ValueError(f"Unknown regime: {regime}")
+    return [FEATURES.index(f) for f in (FEAT_T if regime == "T" else FEAT_TS)]

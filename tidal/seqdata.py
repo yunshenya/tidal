@@ -4,9 +4,14 @@ from tidal.features import cols
 from tidal.dataset import HEADS
 CTX = 64
 def load(regime):
+    if regime not in ("T", "TS", "TSA"): raise ValueError(f"Unknown regime: {regime}")
     z = np.load("data/proc/dataset.npz"); X, Y, eidx = z["X"], z["Y"], z["eidx"]
     meta = pd.read_parquet("data/proc/meta.parquet"); emb = np.load("data/proc/emb.npy")
-    keep = np.ones(len(X), bool) if regime == "T" else (eidx >= 0)
+    # TSA adds text to the full event stream. TS retains its historical
+    # text-only-event contract so old evaluations/checkpoints remain comparable.
+    keep = (eidx >= 0) if regime == "TS" else np.ones(len(X), bool)
+    if regime in ("TS", "TSA") and not (eidx >= 0).any():
+        raise ValueError("Text regime requested but no embeddings exist; rebuild with build_full_public_sixhead.py")
     Xr = X[:, cols(regime)]
     tr = keep & meta.source.isin(["real", "pub_interactspeech", "pub_magicdata_ms"]).to_numpy() & meta.split.isin(["train", "pub_train"]).to_numpy()
     mu, sd = Xr[tr].mean(0), Xr[tr].std(0) + 1e-6

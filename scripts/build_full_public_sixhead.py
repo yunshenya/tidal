@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Assemble private replay + InteractSpeech + script data for six-head training."""
-import json
+import json, os
 from pathlib import Path
 import numpy as np, pandas as pd
-from tidal import scenarios, features
+from tidal import scenarios, features, embed
 from tidal.labels import compute_labels
 from tidal.dataset import HEADS
 from scripts.build_bootstrap_sixhead import private_rows
@@ -25,11 +25,21 @@ def main():
     meta = d[["source", "conv", "conv_type", "ts", "role", "split", "speaker_known"]].copy()
     meta["split"] = meta["split"].fillna("train")
     out = root / "data/proc"; out.mkdir(parents=True, exist_ok=True)
-    np.savez(out / "dataset.npz", X=X, Y=Y, eidx=np.full(len(d), -1, np.int64))
-    meta.to_parquet(out / "meta.parquet", index=False); np.save(out / "emb.npy", np.zeros((0,512), np.float16))
+    texts = [t for t in d.text.tolist() if isinstance(t, str) and t]
+    # Singleton quantized inference matches interactive inference; a dedicated
+    # cache avoids mixing vectors produced by batch-dependent int8 activations.
+    k2i, emb, embed_stats = embed.ensure(texts, threads=int(os.environ.get("TIDAL_EMBED_THREADS", "1")),
+                                       bs=1, workers=int(os.environ.get("TIDAL_EMBED_WORKERS", "4")),
+                                       cache="data/emb/singleton_cache.npz")
+    eidx = np.array([k2i[embed.key(t)] if isinstance(t, str) and t else -1 for t in d.text], np.int64)
+    np.savez(out / "dataset.npz", X=X, Y=Y, eidx=eidx)
+    meta["has_text"] = eidx >= 0
+    meta.to_parquet(out / "meta.parquet", index=False)
     stats = {"private_rows": int(len(private)), "public_rows": int(len(public)), "synthetic_rows": int(len(syn)),
              "labels": {h: int(np.isfinite(d[h]).sum()) for h in HEADS},
+             "embedding": embed_stats, "unique_embedded_texts": int(len(emb)),
              "warning": "public timing corpus has no group addressee labels; y_addr is weak/private or perspective-derived"}
+    np.save(out / "emb.npy", emb.astype(np.float16))
     (out / "full_public_sixhead_stats.json").write_text(json.dumps(stats, indent=2), encoding="utf-8")
     print(json.dumps(stats, indent=2))
 if __name__ == "__main__": main()
