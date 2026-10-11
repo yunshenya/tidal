@@ -153,6 +153,19 @@ PYTHONPATH=. .venv/bin/python scripts/demo_sixhead.py \
 
 可输入普通文本，也可输入 JSON，例如 `{"role":"other","speaker":"u1","text":"小潮在吗","gap_s":0}`。TSA 会保留没有文本的历史事件；文本只在本地编码，不会上传。
 
+### 接入大模型体验回复
+
+`demo_chat_llm.py` 将六头模型作为说话门控，再调用 OpenAI 兼容的聊天接口生成正文。它只发送你在终端输入的演示上下文，不读取私有数据集：
+
+```bash
+export TIDAL_LLM_BASE_URL=https://api.deepseek.com
+export TIDAL_LLM_API_KEY=你的密钥
+export TIDAL_LLM_MODEL=deepseek-chat
+PYTHONPATH=. .venv/bin/python scripts/demo_chat_llm.py
+```
+
+也可以把 `TIDAL_LLM_BASE_URL` 指向本地 Ollama、LM Studio 或其他 OpenAI 兼容网关。默认只有六头模型选 `speak` 时才生成；需要对比时加 `--always-reply`。
+
 如果已有本地 turngate 群聊审核 JSONL，可以先生成可追溯的模型辅助标注，再并入训练集：
 
 ```bash
