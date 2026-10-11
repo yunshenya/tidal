@@ -177,13 +177,15 @@ def aishell4(seed=6):
 def interactspeech(max_rows=60000, seed=8):
     """InteractSpeech text/timeline release: speaker turns with interruption/backchannel metadata."""
     import pyarrow.parquet as pq
-    rng = np.random.default_rng(seed); fr = []; got = 0
+    rng = np.random.default_rng(seed); fr = []; got = 0; keys = {}
     paths = sorted(glob.glob(str(DATA / "interactspeech" / "data" / "*.parquet")))
     for p in paths:
         tab = pq.read_table(p, columns=["id", "record_json"])
         for rid, raw in zip(tab["id"].to_pylist(), tab["record_json"].to_pylist()):
             x = json.loads(raw); turns = x.get("turns") or []
             if len(turns) < 2: continue
+            dialogue_key = (x.get("source_record") or {}).get("dialogue_id") or str(rid)
+            keys[str(rid)] = str(dialogue_key)
             rows = []
             for i, t in enumerate(turns):
                 role = "self" if t.get("role") == "assistant" else "other"
@@ -199,11 +201,13 @@ def interactspeech(max_rows=60000, seed=8):
             for i in range(len(d) - 1):
                 if d.role.iat[i] == "other" and d.role.iat[i + 1] == "self": d.loc[i, "bot_act_src"] = "speak"
             d.loc[d.role == "other", "bot_act_src"] = d.loc[d.role == "other", "bot_act_src"].fillna("silent")
-            fr.append(d); got += 1
+            d["dialogue_key"] = str(dialogue_key); fr.append(d); got += 1
             if got >= max_rows: break
         if got >= max_rows: break
     if not fr: raise FileNotFoundError("no InteractSpeech parquet files found")
-    return finish(fr, "pub_interactspeech", "voice_1on1", "private", seed)
+    uniq = sorted(set(keys.values())); u = dict(zip(uniq, rng.random(len(uniq))))
+    split = {f"is:{rid}": ("pub_train" if u[keys[str(rid)]] < .8 else ("pub_val" if u[keys[str(rid)]] < .9 else "pub_test")) for rid in keys}
+    return finish(fr, "pub_interactspeech", "voice_1on1", "private", seed, split)
 
 def magicdata_ms(seed=9):
     """Chinese MagicData multi-stream transcript timing (audio is kept separately for audio_train)."""
@@ -211,7 +215,7 @@ def magicdata_ms(seed=9):
     for p in sorted(glob.glob(str(DATA / "magicdata_ms" / "TXT" / "*.txt"))):
         base = os.path.basename(p).split("_0_", 1)[0]
         groups.setdefault(base, []).append(p)
-    fr = []
+    fr = []; keys = {}
     for i, (base, paths) in enumerate(sorted(groups.items())):
         rows = []
         for p in paths:
@@ -224,9 +228,20 @@ def magicdata_ms(seed=9):
                 rows.append(dict(ts=float(m.group(1)), speaker=channel, text=text, modality="voice"))
         if len(rows) < 4: continue
         d = pd.DataFrame(rows).sort_values("ts", kind="stable").reset_index(drop=True)
-        d["conv"] = f"md:{i}"; d["msg_id"] = [f"md:{i}:{k}" for k in range(len(d))]; d["reply_to"] = None
+        d["conv"] = f"md:{i}"; keys[f"md:{i}"] = base; d["msg_id"] = [f"md:{i}:{k}" for k in range(len(d))]; d["reply_to"] = None
         d = perspective(d, rng, min_msgs=2, have_replies=False); d["n_participants"] = 2.0; fr.append(d)
-    return finish(fr, "pub_magicdata_ms", "voice_1on1", "private", seed)
+    uniq = sorted(set(keys.values()))
+    if len(uniq) >= 3:
+        # Keep whole source sessions together and guarantee all three splits
+        # exist for the small three-session release.
+        order = list(rng.permutation(uniq))
+        group_split = {k: ("pub_train", "pub_val", "pub_test")[i] if i < 3 else "pub_train"
+                       for i, k in enumerate(order)}
+    else:
+        u = dict(zip(uniq, rng.random(len(uniq))))
+        group_split = {k: ("pub_train" if u[k] < .8 else ("pub_val" if u[k] < .9 else "pub_test")) for k in uniq}
+    split = {c: group_split[k] for c, k in keys.items()}
+    return finish(fr, "pub_magicdata_ms", "voice_1on1", "private", seed, split)
 
 def danmaku(n_videos=250, min_msgs=300, max_msgs=5000, seed=7):
     """Bilibili danmaku (DanmakuTPP-Events, research-only): ts = video time of the bullet comment. No user ids and no
