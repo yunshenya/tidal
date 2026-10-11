@@ -54,6 +54,7 @@
 代码映射：
 
 - 前端接口：`tidal/modalities/`（`FrontEnd`：`dim`、`available()`、`encode()`）。图像、视频和统一音频接口都提供无 checkpoint 的确定性 CPU fallback；`available()` 继续表示可选的学习型 checkpoint 是否已安装。实时语音轮次模型仍是 `tidal/audio_fe.py`。
+- 全双工控制器支持通过 `TickInput.vision_payload` 接入图像或视频帧；`VisionFrontEnd` 将其转换为因果的 salience / scene-change 特征。策略权重仍由 `duplex_sim.py` 的合成协议训练，不把合成指标当作真实聊天效果。
 - 时间特征：`tidal/features.py`；场景通用事件特征：`tidal/features_g.py`。
 - 主干和头：`tidal/model.py`、`tidal/backbones.py`；VAP：`tidal/vap.py`、`tidal/vap_targets.py`。
 - 情绪：`tidal/emotion.py`、`tidal/emo_features.py`、`tidal/emotion_speech.py`。

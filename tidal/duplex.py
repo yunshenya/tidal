@@ -5,14 +5,14 @@ control decision. CONTENT (what to say) comes from an external generator (LLM/TT
 waits for it. The two sides talk only through the small message types below.
 
   inputs per tick:  text/time events (real), her OWN output stream (speaking state + her own events, fed back),
-                    audio frame features (stub interface), vision frame features (stub interface), content events
+                    audio frame features, vision frame features, content events
   outputs per tick: action in {silent, start, keep, yield, continue, backchannel, initiate}, which buffered event to
                     address, and content requests / TTS stop signals for the content side.
 
 Implemented: incremental event featurizer (identical to tidal.features_g), streaming event encoder (phase-2 VAP GRU,
 O(1)/event), tick feature builder, tick GRU controller, addressing pointer, message types. Audio/vision front ends are
 Phase 3: a real streaming audio front end (tidal.audio_fe, AudioFrontEnd below) turns raw 2-channel PCM into AudioFrame
-(VAD per channel, energy, P(shift), P(backchannel)); vision is still an interface only. The tick policy itself is still
+(VAD per channel, energy, P(shift), P(backchannel)); vision can be converted by VisionFrontEnd below. The tick policy is still
 trained on the script simulator (tidal/duplex_sim.py); audio shift/bc scores are passed through plus a simple threshold hint."""
 from __future__ import annotations
 import math, collections, numpy as np, torch, torch.nn as nn
@@ -39,7 +39,7 @@ class AudioFrame:            # produced by AudioFrontEnd (tidal.audio_fe) from r
     shift: Optional[float] = None; bc: Optional[float] = None   # P(self should take the floor), P(backchannel slot) from audio
     emotion: Optional[list] = None; valence: Optional[float] = None; arousal: Optional[float] = None   # phase 4 speech affect (other channel)
 @dataclass
-class VisionFrame:           # stub interface: produced by a future screen/video salience front end
+class VisionFrame:           # compact control features produced by VisionFrontEnd or an external detector
     salience: float = 0.0; scene_change: float = 0.0
 @dataclass
 class SelfState:             # her own output stream, fed back as an input (from the TTS/content side)
@@ -56,6 +56,7 @@ class TickInput:
     incoming_prefix: Optional[str] = None
     prefix_available_at: Optional[float] = None
     incoming_onset: Optional[float] = None
+    vision_payload: object = None
 @dataclass
 class ControlOut:            # what the content side receives every tick (non-blocking)
     t: float; action: str; probs: dict; address_event: Optional[str] = None
@@ -203,15 +204,34 @@ class AudioFrontEnd:
         o = self.s.push(other_pcm, self_pcm)
         return None if o is None else AudioFrame(o["vad_other"], o["vad_self"], 0.0, o["energy"], o["shift"], o["bc"])
 
+class VisionFrontEnd:
+    """Convert an image or frame sequence into compact causal control features."""
+    def __init__(self):
+        from tidal.modalities.image import ImageFrontEnd
+        from tidal.modalities.video import VideoFrontEnd
+        self.image, self.video, self.prev = ImageFrontEnd(), VideoFrontEnd(), None
+    def reset(self): self.prev = None
+    def __call__(self, payload):
+        if payload is None: return None
+        is_clip = isinstance(payload, np.ndarray) and payload.ndim == 4
+        if not is_clip and isinstance(payload, (list, tuple)) and payload and not np.isscalar(payload[0]): is_clip = True
+        z = self.video.encode([payload])[0] if is_clip else self.image.encode([payload])[0]
+        scale = float(np.linalg.norm(z) / max(1.0, np.sqrt(z.size)))
+        sal = float(1.0 / (1.0 + np.exp(-scale)))
+        change = 0.0 if self.prev is None else float(np.clip(np.mean(np.abs(z - self.prev)) / 2.0, 0.0, 1.0))
+        self.prev = z
+        return VisionFrame(salience=sal, scene_change=change)
+
 AUDIO_THR = dict(take_turn=0.6, backchannel=0.5)
 
 class DuplexController:
     """Always-on control loop. step() must return well inside one tick; it never blocks on content generation."""
-    def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None, task_shadow=None):
-        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe; self.task_shadow = task_shadow; self.last_tick_t = None
+    def __init__(self, tick_model: TickModel, encoder: EventEncoder, audio_fe: Optional[AudioFrontEnd] = None, task_shadow=None, vision_fe: Optional[VisionFrontEnd] = None):
+        self.tm = tick_model.eval(); self.enc = encoder; self.tf = TickFeaturizer(); self.state = None; self.afe = audio_fe; self.vfe = vision_fe; self.task_shadow = task_shadow; self.last_tick_t = None
     def reset(self):
         self.enc.reset(); self.tf.reset(); self.state = None; self.last_tick_t = None
         if self.afe is not None: self.afe.reset()
+        if self.vfe is not None: self.vfe.reset()
         if self.task_shadow is not None: self.task_shadow.reset()
     def _validate_tick(self, ti: TickInput):
         if not isinstance(ti, TickInput) or not math.isfinite(ti.t) or ti.t < 0:
@@ -237,6 +257,8 @@ class DuplexController:
         if self.afe is not None and ti.pcm is not None:
             af = self.afe(*ti.pcm)
             if af is not None: ti.audio = af
+        if self.vfe is not None and ti.vision is None and ti.vision_payload is not None:
+            ti.vision = self.vfe(ti.vision_payload)
         for e in ti.events: self.enc.push(e, ti.n_participants)
         x = torch.from_numpy(self.tf(ti, self.enc.last))[None, None]
         lg, self.state = self.tm(x, self.enc.h[None], self.state)
