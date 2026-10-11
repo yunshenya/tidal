@@ -3,8 +3,8 @@
 Chat platforms (and bot frameworks) render non-text messages as placeholders such as "[图片]", "[语音]",
 "[视频]", "[表情包]", "[STICKER name]" or OneBot CQ codes like "[CQ:image,file=...]". This module turns them into
 a small multi-hot vector so timing models can already condition on "this was a voice note / sticker / image"
-while the real image/audio/video encoders are still planned. Media file references (if any) are returned so a
-caller can store them pseudonymized for future multimodal training -- this module never fetches media."""
+The learned image/audio/video encoders are optional; deterministic CPU fallbacks live in the sibling modules.
+Media file references (if any) are returned so a caller can store them pseudonymized -- this module never fetches media."""
 import re
 import numpy as np
 
@@ -55,6 +55,7 @@ def vector(info) -> np.ndarray:
     """multi-hot media kinds + log1p(plain text chars) -> float32 [len(KINDS)+1]"""
     v = np.zeros(len(KINDS) + 1, np.float32)
     for k, n in (info.get("counts") or {}).items():
-        v[KINDS.index(k)] = 1.0
+        # Be tolerant of forward-compatible media kinds supplied by callers.
+        if k in KINDS: v[KINDS.index(k)] = 1.0
     v[-1] = np.log1p(info.get("text_chars") or 0)
     return v

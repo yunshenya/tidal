@@ -53,7 +53,7 @@
 
 代码映射：
 
-- 前端接口：`tidal/modalities/`（`FrontEnd`：`dim`、`available()`、`encode()`）。`modalities/audio.py` 的 `available()` 仍是 False（计划中的统一前端）。已经能跑的语音前端是 `tidal/audio_fe.py`，不是这个 stub。
+- 前端接口：`tidal/modalities/`（`FrontEnd`：`dim`、`available()`、`encode()`）。图像、视频和统一音频接口都提供无 checkpoint 的确定性 CPU fallback；`available()` 继续表示可选的学习型 checkpoint 是否已安装。实时语音轮次模型仍是 `tidal/audio_fe.py`。
 - 时间特征：`tidal/features.py`；场景通用事件特征：`tidal/features_g.py`。
 - 主干和头：`tidal/model.py`、`tidal/backbones.py`；VAP：`tidal/vap.py`、`tidal/vap_targets.py`。
 - 情绪：`tidal/emotion.py`、`tidal/emo_features.py`、`tidal/emotion_speech.py`。
@@ -74,7 +74,7 @@
 | 文本情绪 | 冻结 bge 上的小 MLP，报告里 13.4 万参数，**不计入事件主干**；接入时只加 11 列输入 | ✅ 已采用为事件特征 |
 | 图像前端 | patch/conv stem（96–128 px 缩略图），约 0.3M | 📋 `modalities/image.py`，`available()` 为 False |
 | 视频前端 | 复用图像 stem，额外约 0.05M | 📋 |
-| 音频前端（语音） | 16 kHz、40 维 log-mel、10 ms 帧移、两帧叠成 20 ms 一步 → 因果 conv → GRU(96) | ✅ `audio_fe.py`。`modalities/audio.py` 仍是 stub（64 mel 常量），不要把它当成这条前端。音乐 📋 |
+| 音频前端（语音） | 16 kHz、40 维 log-mel、10 ms 帧移、两帧叠成 20 ms 一步 → 因果 conv → GRU(96) | ✅ `audio_fe.py`；统一 `modalities/audio.py` 提供 128 维无 checkpoint fallback |
 | 语音情绪头 | 报告里约 4.2 万参数 | ✅ 头在；❌ 不进入轮次决策 |
 | 共享时序主干 | 0.5–0.8M。报告：不加情绪的 `mamba3_siso` 469,890；GRU 499,042 | ✅ GRU、可学习位置 Transformer、`tx_kv`、Mamba-3 SISO / MIMO、消融 |
 | 多任务头 | 约 0.1M | ✅ 6 个头 + VAP 投影头 |
@@ -86,7 +86,7 @@
 | 技术 | 在 tidal 里的落点 | 状态 | 说明 |
 |---|---|---|---|
 | 按模态划分的前端：图像 / 视频帧用 patch 或 conv | `modalities/image.py`、`video.py` | 📋 | 接口已定义，`available()` 返回 False |
-| 按模态划分的前端：语音 / 音乐用 log-mel | `modalities/audio.py` 与 `audio_fe.py` | 📋 / ✅ | stub 的 `available()` 仍是 False。能跑的是 `audio_fe.py`（40 mel、16 kHz、10 ms、stack 2） |
+| 按模态划分的前端：语音 / 音乐用 log-mel | `modalities/audio.py` 与 `audio_fe.py` | ✅ / ✅ | 前者是通用 128 维 fallback，后者是流式轮次模型（40 mel、16 kHz、10 ms、stack 2） |
 | 按模态划分的前端：文本 | `modalities/text.py`、`embed.py` | ✅ / 📋 | 现在用冻结的 bge int8；计划换成字节级或小 BPE 的自有前端 |
 | 内容无关的消息类型元数据 | `modalities/meta.py`、影子库 `events.media_*` | ✅（采集）/ 🚧（作为输入） | 从平台占位符和 CQ 码解析，不读取媒体内容。`features_g` 有模态列，但是可选块 |
 | 共享小主干：GRU | `model.py` kind=gru | ✅ | 2 层，隐藏层 192。填充位走 `run_gru`（pack / 逐步掩码），不再在 pad 上更新状态 |

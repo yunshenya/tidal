@@ -4,8 +4,8 @@
 private chats. It predicts when an utterance is finished, whether the speaker will add more, whether the bot is being
 addressed, and whether the bot should speak, wait or stay silent. The design goal is a *natively multimodal* model:
 video, images, music, speech and text, with one shared tiny causal encoder and per-modality front ends. **Status today:**
-only timing and text inputs are implemented, plus content-free message-type metadata (image, voice, video, sticker…).
-The image and video front ends are designed and scaffolded but not yet implemented; phase 3 added a real streaming
+timing, text, metadata, and dependency-free CPU fallback encoders for image, video, and audio are implemented.
+The learned image/video checkpoints remain optional; phase 3 added a real streaming
 audio front end (~73k parameters, ~0.7 ms per 100 ms on one CPU thread). Phase 2 added a VAP-style
 self-supervised future-event projection objective, temperature calibration + selective abstention, identity-free roles
 with cold-start / online-adaptation evaluation, a scenario-general event stream (no scenario enum), a 100 ms tick-based
@@ -36,7 +36,7 @@ tidal 想填的就是这个空档。详细的对比和文献见 [docs/related-wo
 | 文本：冻结的 bge-small-zh（int8 ONNX）句向量 | ✅ 已实现 |
 | 消息类型元数据：图片、语音、视频、文件、贴纸、表情、分享（只从占位符解析，不读内容） | ✅ 已实现采集，尚未作为模型输入 |
 | 音频前端：流式 log-mel → 因果卷积 + GRU（约 7.3 万参数），双方语音活动、换人 / 保持、附和；已接入 tick 循环 | ✅ 第三阶段 |
-| 图像、视频帧、音乐前端 | 📋 计划中（接口已定义，见 `tidal/modalities/`） |
+| 图像、视频帧、音乐前端 | ✅ 已实现 CPU fallback（可替换为蒸馏 checkpoint） |
 | 公开数据加载 / 转换（多人群聊、直播聊天、B 站弹幕、口语轮次、全双工语音）；公开数据预训练 | ✅ 第三阶段（数据不再分发） |
 | 情绪：文本情绪头（冻结 bge + MLP）、语音情绪头（音频编码器 + GRU）；文本情绪已作为事件特征接入 | ✅ 第四阶段（语音情绪只在影子接口输出） |
 | 主干可选：GRU、RoPE + KV 缓存 Transformer、Mamba-3 SISO / MIMO（纯 PyTorch CPU 实现）、Mamba-2 式消融；全部可导出 ONNX 流式单步 | ✅ 第四阶段 |
