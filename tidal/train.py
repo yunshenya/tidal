@@ -27,7 +27,10 @@ def run(regime, data, kind, synth_w=0.5, tag=None, epochs=60, patience=8, seed=0
     W = [(w, lf, 1.0) for w, lf in train_windows(real_train)] + [(w, lf, synth_w) for w, lf in train_windows(syn)]
     # loss only on real-train positions (+synth): mask val/test/embargo labels inside real windows
     trainable = (split == "train") | (split == "synth")
-    val_rows = np.flatnonzero(D["keep"] & (src == "real") & (split == "val") & ~np.all(np.isnan(D["Y"]), 1))
+    # Synthetic-only bootstrap datasets may use the script streams as their validation source.
+    # Keep the original real-only behavior when no synthetic validation rows exist.
+    val_source = (src == "real") | (src == "synth")
+    val_rows = np.flatnonzero(D["keep"] & val_source & np.isin(split, ["val", "synth_val"]) & ~np.all(np.isnan(D["Y"]), 1))
     VW = eval_windows(convs, val_rows)
     model = TurnModel(D["X"].shape[1], use_text, kind=kind)
     opt = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
