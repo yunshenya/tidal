@@ -42,7 +42,7 @@ DATASETS = {
     "aishell4_seg": dict(repo="AISHELL/AISHELL-4", license="apache-2.0", research_only=False,
                          files_glob=["*.TextGrid", "*.rttm"], scenario="meeting", lang="zh",
                          use="speaker-turn timing of Mandarin multi-party meetings (annotations only, no audio)"),
-    "interactspeech": dict(repo="1f/interactspeech", license="not specified on dataset card; verify before redistribution",
+    "interactspeech": dict(repo="1f/interactspeech", license="none stated on dataset card (re-checked 2026-10-15); EMNLP 2025 Findings, cite paper; treat as research-only",
                             research_only=True, files_glob=["*.parquet", "*.json", "*.md"], scenario="1on1_voice", lang="en",
                             use="speaker-aligned interaction timeline with interruption/backchannel events -> EOT/self/recheck/action pretraining"),
     # gated sets (terms accepted by the repo owner on HF; read token taken from the HF_TOKEN env var, never stored)
@@ -84,3 +84,9 @@ DATASETS = {
                     scenario="emotion_speech", lang="en", use="7,442 acted clips, 91 speakers, 6 emotions x intensity -> speech emotion head"),
 }
     # phase 5: topic shift (text only; not redistributed)
+
+
+# Every converter in tidal/public_data/convert.py -> its DATASETS entry (license + research_only).
+CONVERTERS = {"tg_ru": "tg_ru", "irc_dis": "irc_dis", "twitch": "twitchchat", "artemis": "artemis",
+              "candor": "candor_tt", "aishell4": "aishell4_seg", "interactspeech": "interactspeech",
+              "magicdata_ms": "magicdata_ms", "danmaku": "danmaku_tpp"}
