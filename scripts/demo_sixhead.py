@@ -9,6 +9,7 @@ The demo is deliberately local and does not call an API or write private data.
 The checkpoint consumes causal timing/role features; it does not generate a reply.
 """
 import argparse
+import pickle
 import json
 import sys
 import time
@@ -119,16 +120,26 @@ def print_result(event, p):
     }, ensure_ascii=False))
 
 
+def load_checkpoint(path, trust=False):
+    """Load safely (weights_only=True); pickled objects need an explicit --trust-checkpoint."""
+    try:
+        return torch.load(Path(path), map_location="cpu", weights_only=not trust)
+    except pickle.UnpicklingError as exc:
+        raise SystemExit(f"{path}: checkpoint contains non-tensor pickled objects; re-run with "
+                         f"--trust-checkpoint only if you produced this file yourself ({exc.__class__.__name__})")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="models/sixhead_interactspeech_magicdata_clean.pt")
     ap.add_argument("--input", help="JSONL file; omit with --interactive")
     ap.add_argument("--interactive", action="store_true")
+    ap.add_argument("--trust-checkpoint", action="store_true", help="allow full pickle load (only for your own files)")
     args = ap.parse_args()
     if not args.interactive and not args.input:
         ap.error("use --input FILE or --interactive")
     torch.set_num_threads(2)
-    ck = torch.load(Path(args.model), map_location="cpu", weights_only=False)
+    ck = load_checkpoint(args.model, args.trust_checkpoint)
     model = TurnModel(ck["n_feat"], ck["use_text"], kind=ck["kind"], mask_text=ck.get("mask_text", False)).eval()
     model.load_state_dict(ck["state"])
     encoder = None; cache = {}
