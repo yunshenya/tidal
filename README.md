@@ -155,26 +155,32 @@ PYTHONPATH=. .venv/bin/python scripts/demo_sixhead.py \
 
 ### 接入大模型体验回复
 
-`demo_chat_llm.py` 将六头模型作为说话门控，再调用 OpenAI 兼容的聊天接口生成正文。它只发送你在终端输入的演示上下文，不读取私有数据集：
+`demo_chat_llm.py` 将六头模型作为说话门控，再调用 OpenAI 兼容的聊天接口生成正文。它只发送你在终端输入的演示上下文，不读取私有数据集。默认没有任何端点和模型；推荐本地 Ollama：
 
 ```bash
-export TIDAL_LLM_BASE_URL=https://api.deepseek.com
-export TIDAL_LLM_API_KEY=你的密钥
-export TIDAL_LLM_MODEL=deepseek-chat
+export TIDAL_LLM_BASE_URL=http://localhost:11434/v1
+export TIDAL_LLM_MODEL=qwen2.5:3b
 PYTHONPATH=. .venv/bin/python scripts/demo_chat_llm.py
 ```
 
-也可以把 `TIDAL_LLM_BASE_URL` 指向本地 Ollama、LM Studio 或其他 OpenAI 兼容网关。默认只有六头模型选 `speak` 时才生成；需要对比时加 `--always-reply`。
+非本机端点（非 localhost/回环地址）会被拒绝，除非显式加 `--allow-external-llm`（并设置 `TIDAL_LLM_API_KEY`）；启动时会打印发送目标警告。**切勿把真实群聊输入到外部端点。** 默认只有六头模型选 `speak` 时才生成；需要对比时加 `--always-reply`。checkpoint 默认以 `weights_only=True` 安全加载，含 numpy 等对象的自产文件需加 `--trust-checkpoint`。
 
-如果已有本地 turngate 群聊审核 JSONL，可以先生成可追溯的模型辅助标注，再并入训练集：
+### 群聊审核数据（turngate，本地私有）
 
 ```bash
-PYTHONPATH=. .venv/bin/python scripts/auto_label_turngate.py
-PYTHONPATH=. .venv/bin/python scripts/prepare_turngate_data.py
-PYTHONPATH=. .venv/bin/python scripts/build_full_public_sixhead.py
+PYTHONPATH=. .venv/bin/python scripts/prepare_turngate_data.py data/private/turngate/*.jsonl
 ```
 
-辅助标注会写入 `label_provenance.source=assistant_auto_v1`，只进入训练且权重为 0.25；人工共识行保留独立的 train/val/test 划分，不能用辅助标注替代测试真值。
+划分单位是（群/scope id，7 天时间块），同群同块的窗口必定落在同一划分，块边界附近的 val/test 行被剔除；按 `source_key` 去重（人工标注优先）；发言人名用 `.secrets/pseudo_salt` 的 HMAC 假名化；窗口内时间戳只是序号，行带 `timing_known=False`，所有时间特征置零。
+
+默认**只用人工共识标注**。可选的弱标注由 `auto_label_turngate.py` 生成：它不含任何手写词表，而是只用人工共识行训练的小型本地分类器（字符 n-gram + 逻辑回归，sigmoid 校准），先按群 GroupKFold 交叉拟合报告 out-of-fold 准确率与 ECE，再为待标注行打标；低于 `--min-confidence`（默认 0.8）的行不标注，人工行少于 `--min-human`（默认 200）时拒绝运行。输出 `label_provenance.source=assistant_model_v2` 并记录输入文件 sha256，全程不联网：
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/auto_label_turngate.py data/private/turngate/review-*.jsonl --output data/private/turngate/auto.jsonl
+PYTHONPATH=. .venv/bin/python scripts/prepare_turngate_data.py data/private/turngate/review-*.jsonl data/private/turngate/auto.jsonl --include-auto
+```
+
+`--include-auto` 时弱标注只进入训练（权重 0.25），且其所在群只要有 val/test 行就整体丢弃；旧版规则标注（`assistant_auto_v1`）一律拒收。不能用弱标注替代测试真值。
 
 ### 中文音频接话实验
 

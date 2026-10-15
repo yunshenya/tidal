@@ -18,6 +18,8 @@ FEATURES = ["role_self", "conv_private", "has_text", "speaker_known", "log_gap_p
             "end_sent", "end_comma", "end_nopunct", "question", "end_particle", "unfinished_marker",
             "media_only", "has_at", "has_name", "has_url", "multiline", "prev_is_bot", "n_spk_recent"]
 F = len(FEATURES)
+TIMING_FEATURES = ["log_gap_prev", "log_gap_same_spk", "gap_same_spk_known", "log_burst", "log_since_bot",
+                   "log_act_60s", "log_act_600s", "tod_sin", "tod_cos"]
 def text_feats(t):
     if t is None or (isinstance(t, float) and math.isnan(t)): return [0.0] * 12
     s = t.strip()
@@ -51,6 +53,11 @@ def compute(df: pd.DataFrame) -> np.ndarray:
                     *text_feats(text[i]), i > a and role[i - 1] == "self", len(set(recent)) / 10.0]
             if known[i]: last_spk_t[spk[i]] = ts[i]
             if role[i] == "self": last_bot = ts[i]
+    if "timing_known" in df.columns:
+        # Rows whose timestamps are only ordinal positions (e.g. review windows) must not
+        # teach timing: zero every feature derived from ts for those rows.
+        unknown = ~df.timing_known.fillna(True).to_numpy(bool)
+        X[np.ix_(unknown, [FEATURES.index(c) for c in TIMING_FEATURES])] = 0.0
     return X
 
 # ---- feature sets per evaluation regime (see reports/phase1.md §泄漏审计) ----

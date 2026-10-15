@@ -1,75 +1,30 @@
 #!/usr/bin/env python3
-"""Convert local turngate review windows into the unified causal event format.
+"""Convert local turngate review JSONL into the unified causal event format (see tidal/turngate.py).
 
-The source contains short group-chat contexts rather than a full raw transcript.
-Human-consensus rows are split by source key; weak and assistant-auto labels are train-only.
-Raw JSONL stays under data/private/ and is gitignored.
+Raw JSONL stays under data/private/ (gitignored). Weak/auto rows are excluded unless
+--include-auto is given, and then only for groups that have no val/test rows.
 """
-import hashlib, json
+import argparse, json
 from pathlib import Path
 import numpy as np
-import pandas as pd
-
-HEADS = ["y_eot", "y_self", "y_addr", "y_act", "y_recheck", "y_hreply"]
-
-
-def split_key(key):
-    u = int(hashlib.sha256(key.encode()).hexdigest()[:8], 16) / 2**32
-    return "train" if u < .7 else ("val" if u < .85 else "test")
-
-
-def rows(path, force_human=None):
-    out = []
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
-        r = json.loads(line); ctx = r.get("context") or {}; turns = ctx.get("recent_turns") or []
-        provenance = r.get("label_provenance") or {}
-        psource = provenance.get("source")
-        human = psource == "human_consensus"
-        auto = psource == "assistant_auto_v1"
-        # Original review batches contain both human and pseudo rows.  The
-        # generated auto file replaces pseudo rows so they are not duplicated.
-        if path.name != "review-batch-20260913-auto.jsonl" and not human:
-            continue
-        if force_human is True: human = True
-        key = str(r["source_key"])
-        conv_prefix = "tg_h:" if human else ("tg_a:" if auto else "tg_w:")
-        conv = conv_prefix + key
-        source_name = "group_review_human" if human else ("group_review_auto" if auto else "group_review_pseudo")
-        current = r.get("current_text") or ""
-        all_turns = list(turns) + [{"role": "other_member", "text": current}]
-        action = (r.get("labels") or {}).get("response")
-        action = {"answer": "speak", "ack": "speak", "wait": "wait", "ignore": "silent"}.get(action)
-        completion = (r.get("labels") or {}).get("completion")
-        y_eot = {"flush_now": 1.0, "hold_for_more": 0.0}.get(completion, np.nan)
-        for i, t in enumerate(all_turns):
-            role = "self" if t.get("role") == "assistant" else "other"
-            sp = "BOT" if role == "self" else str(t.get("speaker") or t.get("role") or "member")
-            is_current = i == len(all_turns) - 1
-            out.append(dict(conv=conv, conv_type="group", ts=float(i), role=role, speaker=sp,
-                            speaker_known=True, text=t.get("text") or None, modality="text",
-                            msg_id=f"{conv}:{i}", responds_to=None, initiate=0,
-                            addr_src=np.nan, bot_act_src=action if is_current else None,
-                            source=source_name,
-                            split=(split_key(key) if human else "train"),
-                            y_eot=(y_eot if is_current else np.nan), y_self=np.nan,
-                            y_addr=np.nan, y_act=({"speak": 0., "wait": 1., "silent": 2.}.get(action, np.nan) if is_current else np.nan),
-                            y_recheck=np.nan, y_hreply=np.nan))
-    return pd.DataFrame(out)
+from tidal.turngate import HEADS, assign, read_jsonl, to_frame
 
 
 def main():
-    root = Path(__file__).resolve().parents[1]; src = root / "data/private/turngate"
-    files = [src / "review-batch-20260913.jsonl", src / "review-batch-20260913-speakers.jsonl", src / "review-batch-20260913-auto.jsonl"]
-    frames = [rows(p) for p in files if p.exists()]
-    if not frames: raise FileNotFoundError(f"no turngate files in {src}")
-    d = pd.concat(frames, ignore_index=True)
-    out = root / "data/private/processed"; out.mkdir(parents=True, exist_ok=True)
-    d.to_parquet(out / "turngate_group.parquet", index=False)
-    print(json.dumps({"rows": len(d), "conversations": int(d.conv.nunique()),
-                      "samples": int(d[d.role.eq("other")].conv.nunique()),
+    ap = argparse.ArgumentParser()
+    ap.add_argument("inputs", nargs="+", type=Path, help="review JSONL files (human + optional auto-labeled)")
+    ap.add_argument("--output", type=Path, default=Path("data/private/processed/turngate_group.parquet"))
+    ap.add_argument("--salt-file", type=Path, default=Path(".secrets/pseudo_salt"))
+    ap.add_argument("--include-auto", action="store_true", help="add model-labeled rows to train (weight 0.25)")
+    ap.add_argument("--block-days", type=float, default=7.0)
+    a = ap.parse_args()
+    rows = [r for p in a.inputs for r in read_jsonl(p)]
+    d = to_frame(assign(rows, a.block_days, include_weak=a.include_auto), a.salt_file.read_bytes().strip())
+    a.output.parent.mkdir(parents=True, exist_ok=True); d.to_parquet(a.output, index=False)
+    print(json.dumps({"rows": len(d), "samples": int(d.conv.nunique()),
                       "sources": d.groupby("source").conv.nunique().to_dict(),
                       "splits": d.groupby("split").conv.nunique().to_dict(),
-                      "labels": {h: int(np.isfinite(d[h]).sum()) for h in HEADS}}, ensure_ascii=False, indent=2))
+                      "labels": {h: int(np.isfinite(d[h]).sum()) for h in HEADS}}, indent=2))
 
 
 if __name__ == "__main__": main()

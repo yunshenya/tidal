@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Prepare locally pulled private PostgreSQL exports for tidal experiments.
 
-Inputs are CSV exports of ``yunxi_dialogue_samples`` and ``yunxi_turn_replays``.
+Inputs are two local CSV files, ``dialogue_samples.csv`` (id, scope_id, occurred_at,
+purpose, context, reply) and ``turn_replays.csv`` (one row per observed chat event).
 Outputs stay under ``data/private/`` (which is gitignored). No database access is
 performed here; the script is deliberately rerunnable and never mutates the DB.
 """
@@ -29,8 +30,7 @@ def scrub_tree(x):
     if isinstance(x, dict): return {k: scrub_tree(v) for k, v in x.items()}
     return x
 
-def pseudo(salt, kind, value):
-    return kind + "_" + hmac.new(salt, f"{kind}:{value}".encode(), hashlib.sha256).hexdigest()[:16]
+from tidal.turngate import pseudo  # one HMAC pseudonym function for all private prep scripts
 
 def ts(value):
     value = value.replace(" ", "T")
