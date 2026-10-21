@@ -6,7 +6,11 @@ to one decoder layer's residual, so the fact text is not copied into the
 prompt.
 
 The value is an answer-span pool of that layer's hidden state. It is not
-L2-normalized: magnitude is what the identity copy-through needs. The add is
+L2-normalized: magnitude is what the identity copy-through needs. The key is
+not that pool. On SmolLM2-135M the first token is an attention sink (one
+hidden dim near 2e4), and a mean over tokens collapses every fact onto one
+direction. Keys and queries drop sink tokens, then subtract a fixed center
+estimated once from a calibration set and stored with the module. The add is
 
     scale(v) + MLP(scale(v))
 
@@ -24,6 +28,7 @@ Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence, Union
 
 import numpy as np
@@ -38,6 +43,27 @@ DEFAULT_CAPACITY = 256
 DEFAULT_SOFT_K = 4
 DEFAULT_SOFT_TEMP = 0.05
 DEFAULT_OVERWRITE_COS = 0.9
+# A token is a sink when its norm is this many times the median token norm.
+# SmolLM2-135M's first token is ~100x the others; ordinary tokens are not.
+KEY_SINK_RATIO = 8.0
+KEY_GEOM_VERSION = "sink8-qmean-v1"
+_KEY_CENTER_FILE = "llm_key_center.npz"
+
+# Held-out of the eval names in ``tidal.llm_memory_data``. One fact prefix and
+# one question per name and relation. Answers are stripped from the key, so
+# the center does not depend on the answer string.
+_CALIB_NAMES = (
+    "Sam", "Robin", "Alex", "Jordan", "Casey", "Riley",
+    "Avery", "Quinn", "Parker", "Drew", "Shawn", "Logan",
+)
+_CALIB_ROWS = (
+    ("phone", "{name}'s phone number is {a}", "What is {name}'s phone number?", "+1-202-555-0142"),
+    ("birthday", "{name}'s birthday is {a}", "When is {name}'s birthday?", "March 4, 1991"),
+    ("city", "{name} lives in {a}", "Which city does {name} live in?", "Tulsa"),
+    ("color", "{name}'s favorite color is {a}", "What is {name}'s favorite color?", "maroon"),
+    ("job", "{name}'s job is {a}", "What is {name}'s job?", "dock clerk"),
+    ("team", "{name}'s team is {a}", "Which team is {name} on?", "paper kite"),
+)
 
 _LAYER_PATHS = (
     ("model", "layers"),
@@ -141,6 +167,88 @@ def pool_masked(hidden: torch.Tensor, mask: Sequence[bool]) -> torch.Tensor:
     if float(denom) <= 0.0:
         raise ValueError("answer span produced no tokens to pool")
     return (hidden * m.unsqueeze(-1)).sum(dim=0) / denom
+
+
+def pool_key_tokens(rows: np.ndarray, ratio: float = KEY_SINK_RATIO) -> np.ndarray:
+    """Mean of token rows, with attention-sink tokens left out.
+
+    A sink token is much longer than the median token in the same string.
+    Mean-pooling it makes every key point the same way, so cosine overwrite
+    collapses a stream onto one slot. The rule is a function of this string
+    only. It does not look at other facts. Values are not pooled here.
+    """
+    rows = np.asarray(rows, dtype=np.float64)
+    if rows.ndim != 2 or rows.shape[0] < 1 or rows.shape[1] < 1:
+        raise ValueError(f"key pool expected [tokens, hidden], got {tuple(rows.shape)}")
+    if not np.isfinite(rows).all():
+        raise ValueError("non-finite hidden state")
+    if rows.shape[0] == 1 or float(ratio) <= 1.0:
+        return rows.mean(axis=0)
+    norms = np.linalg.norm(rows, axis=1)
+    med = float(np.median(norms))
+    if med <= 1e-8:
+        return rows.mean(axis=0)
+    keep = norms <= float(ratio) * med
+    if not bool(np.any(keep)) or bool(np.all(keep)):
+        return rows.mean(axis=0)
+    return rows[keep].mean(axis=0)
+
+
+def key_calibration() -> list:
+    """Fixed ``(fact, answer, question)`` rows used to estimate key centers."""
+    rows = []
+    for name in _CALIB_NAMES:
+        for _rel, fact_t, question_t, answer in _CALIB_ROWS:
+            rows.append(
+                (
+                    fact_t.format(name=name, a=answer),
+                    answer,
+                    question_t.format(name=name),
+                )
+            )
+    return rows
+
+
+def _center_path() -> Path:
+    return Path(__file__).with_name(_KEY_CENTER_FILE)
+
+
+def _load_key_centers(path: Path, *, model_name: str, layer: int, hidden: int):
+    """Shipped centers for the default SmolLM checkpoint. ``None`` if they do not match."""
+    if not path.is_file():
+        return None
+    with np.load(path, allow_pickle=False) as z:
+        if str(z["version"].item()) != KEY_GEOM_VERSION:
+            return None
+        if str(z["model"].item()) != str(model_name):
+            return None
+        if int(z["layer"]) != int(layer) or int(z["hidden"]) != int(hidden):
+            return None
+        if float(z["sink_ratio"]) != float(KEY_SINK_RATIO):
+            return None
+        key_mean = np.asarray(z["key_mean"], dtype=np.float64).reshape(-1)
+        query_mean = np.asarray(z["query_mean"], dtype=np.float64).reshape(-1)
+    if key_mean.shape != (int(hidden),) or query_mean.shape != (int(hidden),):
+        return None
+    if not np.isfinite(key_mean).all() or not np.isfinite(query_mean).all():
+        return None
+    return key_mean, query_mean
+
+
+def save_key_centers(mem, path) -> None:
+    """Write this module's key and query centers. Used to refresh the shipped file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        path,
+        version=np.asarray(KEY_GEOM_VERSION),
+        model=np.asarray(mem.model_name or ""),
+        layer=np.int64(mem.layer),
+        hidden=np.int64(mem.hidden),
+        sink_ratio=np.float64(KEY_SINK_RATIO),
+        key_mean=np.asarray(mem.key_mean, dtype=np.float32),
+        query_mean=np.asarray(mem.query_mean, dtype=np.float32),
+    )
 
 
 class InjectMLP(nn.Module):
@@ -391,8 +499,10 @@ class LLMMemory:
         dtype: Optional[torch.dtype] = None,
         inject_hidden: Optional[int] = None,
     ):
+        loaded_name = None
         if model is None:
             model, tokenizer = _load_pretrained(model_name, device=device or "cpu", dtype=dtype)
+            loaded_name = str(model_name)
         elif tokenizer is None:
             raise ValueError("tokenizer is required when model is passed in")
         if device is None:
@@ -401,6 +511,7 @@ class LLMMemory:
             except StopIteration:
                 device = torch.device("cpu")
         self._device = torch.device(device)
+        self.model_name = loaded_name
         self.model = model.to(self._device)
         self.model.eval()
         for p in self.model.parameters():
@@ -431,6 +542,7 @@ class LLMMemory:
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
+        self.key_mean, self.query_mean = self._key_centers()
 
     def close(self) -> None:
         if getattr(self, "_handle", None) is not None:
@@ -485,7 +597,9 @@ class LLMMemory:
             hidden = layer_hidden(_hidden_tuple(out), self.layer, self.n_layers)
             if hidden.dim() == 3:
                 hidden = hidden[0]
-            hidden = hidden.detach()
+            # Transformers may load SmolLM2 in bfloat16. Numpy cannot hold that
+            # dtype, and the key center is estimated in float32/float64.
+            hidden = hidden.detach().float()
         return hidden, enc
 
     def _answer_mask(self, text: str, enc, answer: str, n_tokens: int) -> list:
@@ -519,12 +633,8 @@ class LLMMemory:
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
         return pool_masked(hidden, mask).detach().cpu().numpy().astype(np.float32, copy=False)
 
-    def encode_key(self, text: str, answer: Optional[str] = None) -> np.ndarray:
-        """Pool used as the slot key.
-
-        With ``answer``, the key is the fact with that span removed. Without
-        it, the key is the whole string (a question or a prefix).
-        """
+    def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
+        """Sink-dropped mean of the key tokens, before the fixed center."""
         hidden, enc = self._run_hidden(text)
         content = self._content_mask(enc, hidden.shape[0])
         if answer is None:
@@ -534,7 +644,47 @@ class LLMMemory:
             mask = [c and not a for c, a in zip(content, answer_m)]
             if not any(mask):
                 mask = content
-        return pool_masked(hidden, mask).detach().cpu().numpy().astype(np.float32, copy=False)
+        idx = [i for i, flag in enumerate(mask) if flag]
+        if not idx:
+            raise ValueError("key span produced no tokens to pool")
+        rows = hidden[idx].detach().cpu().numpy()
+        return pool_key_tokens(rows, ratio=KEY_SINK_RATIO)
+
+    def _key_centers(self):
+        """Fixed key and query means. Shipped for the default SmolLM checkpoint.
+
+        A passed-in model, or a different layer, is estimated from
+        :func:`key_calibration` once at init. The means do not move as facts
+        arrive. Fact keys and questions use different means: on SmolLM2 the
+        shared mean left the 10th-percentile cosine gap at 0.021, and the
+        question mean raised it to 0.072 (soft top-4 mass 0.66 to 0.83).
+        """
+        if self.model_name:
+            loaded = _load_key_centers(
+                _center_path(),
+                model_name=self.model_name,
+                layer=self.layer,
+                hidden=self.hidden,
+            )
+            if loaded is not None:
+                return loaded
+        keys = []
+        queries = []
+        for text, answer, question in key_calibration():
+            keys.append(self._raw_key_pool(text, answer))
+            queries.append(self._raw_key_pool(question))
+        return np.mean(np.stack(keys), axis=0), np.mean(np.stack(queries), axis=0)
+
+    def encode_key(self, text: str, answer: Optional[str] = None) -> np.ndarray:
+        """Pool used as the slot key.
+
+        With ``answer``, the key is the fact with that span removed. Without
+        it, the key is the whole string (a question or a prefix). Sink tokens
+        are dropped and the fixed key center is subtracted. Queries use
+        :meth:`_query_vector`, which subtracts the question center instead.
+        """
+        raw = self._raw_key_pool(text, answer)
+        return (raw - self.key_mean).astype(np.float32, copy=False)
 
     def remember(
         self,
@@ -572,9 +722,8 @@ class LLMMemory:
         )
 
     def _query_vector(self, prompt: str) -> np.ndarray:
-        hidden, enc = self._run_hidden(prompt)
-        mask = self._content_mask(enc, hidden.shape[0])
-        return pool_masked(hidden, mask).detach().cpu().numpy().astype(np.float64, copy=False)
+        raw = self._raw_key_pool(prompt)
+        return (raw - self.query_mean).astype(np.float64, copy=False)
 
     def _compose(self, value, *, grad: bool) -> torch.Tensor:
         arr = np.asarray(value, dtype=np.float32).reshape(-1)

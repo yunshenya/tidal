@@ -2,6 +2,7 @@
 import ast
 import inspect
 import os
+import random
 import subprocess
 import sys
 from pathlib import Path
@@ -295,3 +296,130 @@ def test_tiny_llama_empty_store_matches_and_script_runs(tmp_path):
     assert ckpt["log"][0]["loss"] == ckpt["log"][0]["loss"]
     weight = ckpt["inject"]["net.2.weight"]
     assert torch.count_nonzero(weight) > 0
+
+
+def test_pool_key_tokens_drops_only_the_sink():
+    from tidal.llm_memory import pool_key_tokens
+
+    rows = np.ones((4, 6), dtype=np.float64)
+    rows[0, 3] = 8000
+    pooled = pool_key_tokens(rows)
+    assert abs(float(pooled[3]) - 1.0) < 1e-8
+    equal = pool_key_tokens(np.eye(4))
+    assert np.allclose(equal, np.eye(4).mean(axis=0))
+
+
+def test_sink_token_does_not_collapse_distinct_facts():
+    """A planted first-token spike used to make every key cosine > 0.9."""
+    from tidal.llm_memory import ByteTokenizer, pool_masked
+
+    class SinkLM(EyeLM):
+        def forward(self, input_ids, attention_mask=None, output_hidden_states=False, use_cache=False, **kwargs):
+            out = super().forward(
+                input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=output_hidden_states,
+                use_cache=use_cache,
+                **kwargs,
+            )
+            if not output_hidden_states or out.hidden_states is None:
+                return out
+            states = []
+            for hidden in out.hidden_states:
+                hidden = hidden.clone()
+                hidden[:, 0, 7] = hidden[:, 0, 7] + 8000
+                states.append(hidden)
+            return _Out(out.logits, tuple(states))
+
+    mem = LLMMemory(SinkLM(), ByteTokenizer())  # default overwrite_cos 0.9
+    try:
+        facts = [
+            ("code is Y", "Y", "ada", "phone"),
+            ("town is Q", "Q", "bea", "city"),
+            ("team is M", "M", "cal", "team"),
+            ("hue is R", "R", "dee", "color"),
+        ]
+        legacy = []
+        fixed = []
+        for text, answer, name, rel in facts:
+            hidden, enc = mem._run_hidden(text)
+            content = mem._content_mask(enc, hidden.shape[0])
+            answer_m = mem._answer_mask(text, enc, answer, hidden.shape[0])
+            mask = [c and not a for c, a in zip(content, answer_m)]
+            legacy.append(pool_masked(hidden, mask).detach().cpu().numpy())
+            assert mem.remember(text, answer, name=name, rel=rel)
+            fixed.append(mem.encode_key(text, answer))
+        assert _offdiag_max(legacy) > 0.98
+        assert _offdiag_mean(fixed) < 0.5
+        assert _offdiag_max(fixed) < 0.9
+        assert len(mem.store) == len(facts)
+        # Same identity still replaces the slot. The other three facts stay.
+        assert mem.remember("code is Z", "Z", name="ada", rel="phone")
+        assert len(mem.store) == len(facts)
+        ada = [s for s in mem.store.slots if s.name == "ada"]
+        assert len(ada) == 1
+        assert np.allclose(ada[0].v, mem.encode_value("code is Z", "Z"))
+        bea = [s for s in mem.store.slots if s.name == "bea"][0]
+        assert np.allclose(bea.v, mem.encode_value("town is Q", "Q"))
+        # The spike dim is not what the stored key points along.
+        assert abs(float(fixed[0][7])) < 100
+    finally:
+        mem.close()
+
+
+def test_held_out_facts_do_not_reuse_calibration_names():
+    from tidal.llm_memory import _CALIB_NAMES
+    from tidal.llm_memory_data import fact_stream, names, norm, session
+
+    calib = set(_CALIB_NAMES)
+    assert calib.isdisjoint(names("train"))
+    assert calib.isdisjoint(names("test"))
+    rng = random.Random(0)
+    turns = session(rng, "test", 8)
+    facts = [t for t in turns if t["kind"] == "fact"]
+    assert facts
+    assert all(t["n"] not in calib for t in facts)
+    stream = fact_stream(rng, "test", 12)
+    assert len({(t["n"], t["rel"]) for t in stream}) == 12
+    assert len({norm(t["a"]) for t in stream}) == 12
+    phone = next(t for t in stream if t["rel"] == "phone")
+    assert phone["a"].count("-") >= 2
+    job = next(t for t in stream if t["rel"] == "job")
+    assert " " in job["a"]
+
+
+def test_shipped_smol_key_centers_are_finite_and_distinct():
+    from tidal.llm_memory import KEY_GEOM_VERSION, KEY_SINK_RATIO, _center_path
+
+    path = _center_path()
+    assert path.is_file()
+    with np.load(path, allow_pickle=False) as z:
+        assert str(z["version"].item()) == KEY_GEOM_VERSION
+        assert str(z["model"].item()) == "HuggingFaceTB/SmolLM2-135M"
+        assert int(z["layer"]) == 15
+        assert int(z["hidden"]) == 576
+        assert float(z["sink_ratio"]) == KEY_SINK_RATIO
+        key_mean = np.asarray(z["key_mean"], dtype=np.float64)
+        query_mean = np.asarray(z["query_mean"], dtype=np.float64)
+    assert key_mean.shape == (576,)
+    assert query_mean.shape == (576,)
+    assert np.isfinite(key_mean).all() and np.isfinite(query_mean).all()
+    assert not np.allclose(key_mean, query_mean)
+    assert abs(float(key_mean[507])) > 10
+
+
+def _offdiag_max(rows) -> float:
+    return _offdiag(rows, "max")
+
+
+def _offdiag_mean(rows) -> float:
+    return _offdiag(rows, "mean")
+
+
+def _offdiag(rows, which: str) -> float:
+    X = np.stack(rows).astype(np.float64)
+    nrm = np.linalg.norm(X, axis=1, keepdims=True)
+    U = X / np.maximum(nrm, 1e-12)
+    C = U @ U.T
+    v = C[~np.eye(len(X), dtype=bool)]
+    return float(v.max() if which == "max" else v.mean())
