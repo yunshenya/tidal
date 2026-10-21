@@ -520,7 +520,11 @@ def test_episodic_eval_is_larger_than_n96_and_exact():
         "causality": 100,
         "hard": 90,
         "evict": 16,
+        "question": 1200,
     }
+    qr = report["question_ret"]
+    assert qr["question_trained_hits"] > qr["question_cosine_hits"]
+    assert qr["fact_key_cosine_hits"] == qr["n_test"]
     for key, floor in floors.items():
         assert report["counts"][key] >= floor, report["counts"]
 

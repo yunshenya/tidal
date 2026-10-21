@@ -15,15 +15,16 @@ Keys are vectors already produced by tidal — encoder state ``h``, event
 features, or a bge sentence vector run through the frozen model's own text
 projection. A value is either another vector of that kind, or a positional
 byte code for a string or a token list (phones, dates, multi-token spans).
-Retrieval is cosine over slot keys. The vector added by ``Continuum.heads``
-is a convex combination of slot values (weights sum to 1). Exact text is
-decoded from the winning slot's code, not from that blend. An empty store
-returns zeros.
+Retrieval in this module is raw cosine over slot keys. The vector added by
+``Continuum.heads`` is a convex combination of slot values (weights sum to 1).
+Exact text is decoded from the winning slot's code, not from that blend. An
+empty store returns zeros.
 
-A contrastive query/key MLP and a residual inject MLP were measured on these
-encoder states and removed. Question retrieval rose, but querying with the
-stored key among other facts fell, and the inject fit knocked phone codes
-off the byte grid. The numbers are in ``docs/episodic_memory.md``.
+Natural-language questions, where the encoder state is not the stored key,
+go through ``Continuum.ask`` / ``Continuum.query`` and the contrastive head
+in ``tidal.question_head``. That head is not applied here. A residual inject
+MLP was measured on these states and is not used: it pushed phone codes off
+the byte grid. The numbers are in ``docs/episodic_memory.md``.
 """
 from __future__ import annotations
 
@@ -393,28 +394,15 @@ class EpisodicStore:
             return list(enumerate(self._slots))
         return [(i, s) for i, s in enumerate(self._slots) if s.group is None or s.group == group]
 
-    def read(
-        self,
-        q: ArrayLike,
-        *,
-        mode: str = "softtopk",
-        group: Optional[str] = None,
-    ) -> Tuple[Optional[np.ndarray], dict]:
-        """Value for query ``q``. ``top1`` is argmax cosine; ``softtopk`` mixes the top keys.
+    def _mix_visible(self, visible: list, c: np.ndarray, mode: str) -> Tuple[Optional[np.ndarray], dict]:
+        """Soft top-k or top-1 over ``c``, one score per visible slot, in that order.
 
-        ``group is None`` searches every slot. A group sees its own slots plus
-        global slots (``group is None`` on the slot). Returns ``(None, info)``
-        when nothing is visible.
+        ``read`` passes raw cosine. ``read_scored`` passes caller scores. The
+        mix itself is the same convex combination of stored values.
         """
-        visible = self._visible(group)
         info: dict[str, Any] = {"n": len(visible), "maxcos": -1.0, "top": None, "weights": None}
         if not visible:
             return None, info
-        qq = _as1d(q)
-        if self.dk is not None and qq.size != self.dk:
-            raise ValueError(f"query dim {qq.size} != store dk {self.dk}")
-        K = np.stack([s.k for _, s in visible], 0)
-        c = cosine_scores(K, qq)
         info["maxcos"] = float(c.max())
         top_local = int(np.argmax(c))
         top_i, s0 = visible[top_local]
@@ -438,6 +426,52 @@ class EpisodicStore:
         for j, loc in enumerate(local):
             out = out + w[j] * visible[int(loc)][1].v
         return out, info
+
+    def read(
+        self,
+        q: ArrayLike,
+        *,
+        mode: str = "softtopk",
+        group: Optional[str] = None,
+    ) -> Tuple[Optional[np.ndarray], dict]:
+        """Value for query ``q``. ``top1`` is argmax raw cosine; ``softtopk`` mixes the top keys.
+
+        Scores are raw cosine (``kn * qn + 1e-12``). The question head is not
+        applied. ``group is None`` searches every slot. A group sees its own
+        slots plus global slots (``group is None`` on the slot). Returns
+        ``(None, info)`` when nothing is visible.
+        """
+        visible = self._visible(group)
+        if not visible:
+            return None, {"n": 0, "maxcos": -1.0, "top": None, "weights": None}
+        qq = _as1d(q)
+        if self.dk is not None and qq.size != self.dk:
+            raise ValueError(f"query dim {qq.size} != store dk {self.dk}")
+        K = np.stack([s.k for _, s in visible], 0)
+        return self._mix_visible(visible, cosine_scores(K, qq), mode)
+
+    def read_scored(
+        self,
+        scores: ArrayLike,
+        *,
+        mode: str = "softtopk",
+        group: Optional[str] = None,
+    ) -> Tuple[Optional[np.ndarray], dict]:
+        """Same value mix as ``read``, with one score per visible slot.
+
+        ``read`` does not call this. ``Continuum.heads`` and ``readout`` stay
+        on raw cosine. ``Continuum.query`` passes question-head scores here,
+        in ``_visible(group)`` order.
+        """
+        visible = self._visible(group)
+        if not visible:
+            return None, {"n": 0, "maxcos": -1.0, "top": None, "weights": None}
+        c = np.asarray(scores, dtype=np.float64).reshape(-1)
+        if c.shape != (len(visible),):
+            raise ValueError(f"scores length {c.size} != visible slots {len(visible)}")
+        if not np.isfinite(c).all():
+            raise ValueError("non-finite scores")
+        return self._mix_visible(visible, c, mode)
 
     def read_span(
         self,

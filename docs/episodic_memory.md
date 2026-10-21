@@ -13,9 +13,13 @@ h_adapt = h + Σ_levels adapter(h)
 h' = h_adapt + soft_topk(h_adapt)
 ```
 
-空库时 `soft_topk` 是全零。连续体那层适配器也还是零的时候（刚构造，或 `levels=()`），回放就和静态模型一样。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。调用方如果仍传入这类键，读出照样加上。排序是原始余弦，分母是 `kn*qn + 1e-12`。
+空库时 `soft_topk` 是全零。连续体那层适配器也还是零的时候（刚构造，或 `levels=()`），回放就和静态模型一样。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。调用方如果仍传入这类键，读出照样加上。`heads` / `replay` / `recall` 的排序是原始余弦，分母是 `kn*qn + 1e-12`。
 
-An empty store adds zeros. With zero continuum adapters (a fresh model, or `levels=()`), replay matches the static model. Ranking is raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
+问句走另一条路，也没有开关。`ask` / `query` 用对比 q/k 头给槽打分，再走同一套 soft top-k 和字节码解码。这个头不进 `heads`，replay 也不调用它。编码器对不上随包权重时，头的末层仍是零，残差是 0，直到 `fit_question_head(..., install=True)` 把对该编码器的拟合装上。那不是一条另写的余弦分支。
+
+An empty store adds zeros. With zero continuum adapters (a fresh model, or `levels=()`), replay matches the static model. `heads`, `replay`, and `recall` rank by raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
+
+Questions use the other path, also with no switch. `ask` / `query` score slots with the contrastive query/key head, then the same soft top-k and byte-code decode. That head is not added into `heads`, and replay does not call it. When the encoder hash does not match the shipped weights, the head's last layer is still zero, so the residual is 0, until `fit_question_head(..., install=True)` copies a fit for that encoder. That is not a second cosine implementation.
 
 一条事实是一个槽 `(k, v, name, rel, group)`。
 
@@ -46,9 +50,9 @@ An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), r
 - 加到 `h` 上的是 soft top-k 凸组合。空库仍是精确的零。间隙够大时，这个残差四舍五入后还是赢的那个码。
 - 精确回忆读**赢的那个槽**里的码（`recall` / `recall_tokens`），不读混合残差。近邻把残差拉离字节网格时，混合结果对不上校验，不会变成另一个号码；槽里仍是上一次写入。
 
-评测是精确匹配（`python -m tidal.episodic_eval`，pytest 会跑）。用例数大于原先 n≈96 的自由生成抽样：覆盖、soft top-k、群隔离、写门控、因果顺序、电话 / 生日 / 多 token 都必须逐条对上。0.02 那种幅度在 96 条里分不出来，这里不估一个率。
+评测是精确匹配（`python -m tidal.episodic_eval`，pytest 会跑）。用例数大于原先 n≈96 的自由生成抽样：覆盖、soft top-k、群隔离、写门控、因果顺序、电话 / 生日 / 多 token 都必须逐条对上。问句一节另报 ret@1 的整数（余弦 13/48，头 47/48），并逐条核对 `ask` 跟头的 argmax、`recall` 跟余弦，以及 replay 在问句权重被改乱时逐位不变。0.02 那种幅度在 96 条里分不出来，这里不估一个率。
 
-Mean-pooling drops digit order, adding the new code onto the old one leaves stale digits, and L2-normalizing destroys the code. A string or token list is stored as a positional byte code in the value vector (`2*(d-4)` bytes, 248 at `d=128`). Same-identity overwrite replaces that code. Heads still add the soft top-k convex combination; exact recall decodes the winning slot. A blended residual fails its checksum instead of becoming a different phone. The exact-match harness is larger than the old n≈96 free-gen sample and is not a rate estimate.
+Mean-pooling drops digit order, adding the new code onto the old one leaves stale digits, and L2-normalizing destroys the code. A string or token list is stored as a positional byte code in the value vector (`2*(d-4)` bytes, 248 at `d=128`). Same-identity overwrite replaces that code. Heads still add the soft top-k convex combination; exact recall decodes the winning slot. A blended residual fails its checksum instead of becoming a different phone. The exact-match harness is larger than the old n≈96 free-gen sample and is not a rate estimate. Its question section reports integer ret@1 (cosine 13/48, head 47/48) and checks that `ask` follows the head, `recall` follows cosine, and replay is bitwise unchanged when the question weights are scrambled.
 
 ## 从 neuromem 留下什么 / What was kept
 
@@ -61,32 +65,46 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 | 写门控跳过闲聊 | 保留。未标注的事件流不是事实，`replay` 不写槽。 |
 | 多块矩阵读出再求和 | 不采用。求和会把检索到的值稀释掉。这里只有一块槽表。 |
 | 朴素 key shield（写完按旧键把旧读出补回去） | 不采用。同名更新会写不进去。覆盖后槽里的键就是新键。 |
-| 对比学习 q/k MLP、残差 inject MLP | 不在主路径上。在 tidal 的 `fproj`/`tproj` 上量过，问句检索会涨，但用存进去的键在其他事实里查询会从 48/48 掉到 18/48；inject 把电话字节码推离网格。两套头已从代码里删掉。数字见下一节。 |
+| 对比学习 q/k MLP | 只在 `ask` / `query`。`heads` / `recall` / replay 仍是原始余弦。问句 ret@1 从 13/48 到 47/48。同一头若用来查「存进去的键、干扰是其他事实」会从 48/48 掉到 18/48，所以 `recall` 不接它。 |
+| 残差 inject MLP | 不采用。会把电话字节码推离网格。 |
 | SmolLM2-135M、`transformers` | 不引入。存档脚本在 `research/neuromem/`，核心代码不 import。 |
 | 答案跨度做均值池化，或写入时 L2 归一化 | 不采用。池化分不出顺序；归一化毁掉字节码。字符串走位置字节码。 |
 
-## 量过、没有留下的头 / Heads that were measured and removed
+## 问句头和余弦路径 / Question head and the cosine path
 
-对比 q/k MLP 和残差 inject MLP 曾经接在这条读出上，末层零初始化。在 tidal 自己的 `fproj` + `tproj` 上训过一次（seed 0，`d=32`，检索 400 步，注入 300 步，InfoNCE τ=0.07，难负例）。问句向量不是存进去的键。这不是 SmolLM 的 n≈96 自由生成，训练脚本也没有留在仓库里。
+对比 q/k 曾经直接接在 `read` 上，末层零初始化。问句检索会涨，但「查询 = 存进去的编码器键、干扰是其他事实」从 48/48 掉到 18/48，所以不能替换 `heads` / `recall`。残差 inject 另训过 300 步，把 `+1-415-555-0134` 推离字节网格（最大绝对偏差 0.00111271），解不出来。inject 仍然不在代码里。
 
-| 集合 | raw cosine ret@1 | 训过的 q/k 头 |
+现在 q/k 只服务 `ask` / `query`。同一套协议又量了一次：seed 0，`d=32`，冻结的 `fproj` + `tproj` + 一步 GRU，400 步，InfoNCE τ=0.07，难负例。问句向量用的是反转后的关系 token，不是存进去的键。这不是 SmolLM 的 n≈96 自由生成。脚本是 `python -m tidal.question_head`，权重在 `tidal/question_qk.npz`（合成编码器和合成事实，不是在真实聊天上训的 phase-1 权重）。
+
+| 集合 | 原始余弦 ret@1 | 问句头 |
 |---|---|---|
-| 问句 ≠ 键，8 个事实干扰 | 13/48 = 0.2708 | 47/48 = 0.9792 |
-| episodic_eval：查询 = 存进去的键，8 个随机单位向量 | 48/48 = 1 | 48/48 = 1 |
-| 随机单位键，查询 = 键，8 个单位干扰 | 256/256 = 1 | 256/256 = 1 |
-| 查询 = 存进去的编码器键，干扰是另外 8 条事实的键 | 48/48 = 1 | 18/48 = 0.3750 |
+| 问句 ≠ 键，8 个事实干扰 | 13/48 = 0.2708 | 47/48 = 0.9792（`ask` 用这个） |
+| episodic_eval 那种：查询 = 存进去的键，8 个随机单位向量 | 48/48 = 1（`recall` 用这个） | 若误用头仍是 48/48 = 1 |
+| 随机单位键，查询 = 键，8 个单位干扰 | 256/256 = 1 | 若误用头仍是 256/256 = 1 |
+| 查询 = 存进去的编码器键，干扰是另外 8 条事实的键 | 48/48 = 1（`recall`） | 若把 `ask` 用在这条上是 18/48 = 0.3750 |
 
-问句检索涨了。episodic_eval 那组随机单位干扰上余弦已经是 1，头没有更好。`recall(存进去的键)` 在其他事实中间从 48 掉到 18。注入没有语言模型可以抄，目标是把电话字节码的混合拉回干净码；300 步后 `+1-415-555-0134` 的最大绝对偏差是 0.00111271，解不出来。所以两套头不在 `tidal/episodic.py` 里。排序仍是原始余弦，空库仍是精确的零。
+`recall` 的分数和一份独立的余弦实现逐位相同。把问句头的权重改乱，replay 的输出逐位不变，空库时 `heads` 仍和静态模型逐位相同。未训练的末层是零，问句分数和原始余弦逐位相同；随包的拟合装上之后，问句集合上两者会分开（评测里至少有一条余弦选错、头选对，也至少有一条存进去的键上余弦选对、头选错）。
 
 SmolLM 存档（`research/neuromem/`）里的 K100 ret@1 0.451→0.590、N0 生成 0.594→0.656 是另一个模型，不能当成这里的结果。
 
-A contrastive query/key MLP and a residual inject MLP were fit once on tidal `fproj`/`tproj` states (seed 0, `d=32`, 400 retrieval steps, 300 inject steps) and then deleted. Question vs key rose from 13/48 to 47/48. episodic_eval's random-unit distractors stayed 48/48, and random-unit keys stayed 256/256: cosine was already perfect. Recall of the stored encoder key among other facts fell from 48/48 to 18/48. The inject fit moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded. Slot match is raw cosine. SmolLM's K100 and free-gen numbers stay in `research/neuromem/` and are not these figures.
+The contrastive maps used to sit on `read`. Question retrieval rose, and recall of the stored encoder key among other facts fell from 48/48 to 18/48, so they do not replace `heads` / `recall`. A residual inject fit (300 steps) moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded. Inject is still absent.
+
+The query/key maps now serve only `ask` / `query`. The same protocol was measured again: seed 0, `d=32`, frozen `fproj` + `tproj` + one GRU step, 400 steps, InfoNCE τ=0.07, hard negatives. The question state uses the reversed relation token, not the stored key. This is not SmolLM's n≈96 free-gen sample. `python -m tidal.question_head` writes `tidal/question_qk.npz` (a synthetic encoder and synthetic facts, not phase-1 weights trained on real chat).
+
+| set | raw cosine ret@1 | question head |
+|---|---|---|
+| question ≠ key, 8 fact distractors | 13/48 = 0.2708 | 47/48 = 0.9792 (`ask` uses this) |
+| episodic_eval style: query = stored key, 8 random unit vectors | 48/48 = 1 (`recall` uses this) | 48/48 = 1 if the head were applied |
+| random unit keys, query = key, 8 unit distractors | 256/256 = 1 | 256/256 = 1 if the head were applied |
+| query = stored encoder key, distractors are 8 other fact keys | 48/48 = 1 (`recall`) | 18/48 = 0.3750 if `ask` were used on that key |
+
+`recall` scores match an independent cosine bitwise. Scrambling the question weights leaves replay outputs bitwise unchanged, and an empty store still matches the static model bitwise on `heads`. A zero last layer makes question scores bitwise-equal to raw cosine; after the shipped fit is installed, the two ranks diverge on the question set (the harness has at least one cosine miss that the head hits, and at least one stored key that cosine hits and the head misses). SmolLM's K100 and free-gen numbers stay in `research/neuromem/` and are not these figures.
 
 ## 影子策略 / Shadow policy
 
-连续体仍然只回放已记录的流、报告指标，不驱动线上动作。情景槽不进 `DuplexController`，不改 tick。按群写入的事实只影响该群的读出（加上全局槽），所以一条群的事实不会改另一条群的影子分数。
+连续体仍然只回放已记录的流、报告指标，不驱动线上动作。情景槽不进 `DuplexController`，不改 tick。`ask` 是读事实的调用，不是 tick 输入。按群写入的事实只影响该群的读出（加上全局槽），所以一条群的事实不会改另一条群的影子分数。
 
-Continuum stays shadow-only. Episodic readout is inside that replay path. It is not a live tick input.
+Continuum stays shadow-only. Episodic readout is inside that replay path. `ask` reads facts; it is not a live tick input.
 
 ## 用法 / Usage
 
@@ -101,7 +119,13 @@ v = cont.embed_event(value_feats, bge)          # bge only if model.tproj exists
 cont.remember(k, v, name="ada", rel="city", group=group_id)
 k_phone = cont.embed_event(phone_key_feats)     # a different key; cos > 0.9 would overwrite
 cont.remember(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
-cont.recall(k_phone)                            # winning slot's string, this group's scope
+cont.recall(k_phone)                            # raw cosine, winning slot's string
+q = cont.embed_event(question_feats, question_bge)
+cont.ask(q)                                     # question head, then the winning slot's byte code
+cont.query(q)                                   # same rank, soft top-k value; not added to heads
+cont.ask_tokens(q)
 ```
 
-`episodic_cfg` 只调容量、`soft_k`、温度、覆盖余弦和可选的 surprise 阈值。它不是开关。
+随包的拟合对应 `tidal.question_head.load_reference()` 那只编码器（seed 0，`d=32`，`fproj` / `tproj` / 一步 GRU）。别的冻结编码器调用 `fit_question_head(cont, install=True)`，只把映射装进 `ask` / `query`。`episodic_cfg` 只调容量、`soft_k`、温度、覆盖余弦和可选的 surprise 阈值。它不是开关。
+
+The shipped fit is the encoder from `tidal.question_head.load_reference()` (seed 0, `d=32`, `fproj` / `tproj` / one GRU step). `fit_question_head(cont, install=True)` fits any other frozen encoder and installs the maps on `ask` / `query` only. `episodic_cfg` tunes capacity, `soft_k`, temperature, overwrite cosine, and the optional surprise threshold. It is not a switch.

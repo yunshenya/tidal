@@ -3,7 +3,11 @@
 The neuromem held-out sample was n≈96 free-gen strings, so a 0.02 swing was
 noise. This harness does not estimate a rate. Every case is an exact pass/fail
 on overwrite, soft top-k, group isolation, the write gate, causal visibility,
-and phone / birthday / multi-token values. Ranking is raw cosine.
+and phone / birthday / multi-token values. Ranking on that path is raw cosine.
+
+The ``question`` section is the separate ask/query head: question ret@1 against
+raw cosine, stored-key recall staying on cosine, and replay ignoring the head.
+Those hit counts are exact integers.
 
 Run: ``python -m tidal.episodic_eval``
 """
@@ -94,11 +98,15 @@ def run(seed: int = 0) -> Dict[str, Any]:
     _causal(check, dim, rng)
     _hard(check, dim, rng)
     _evict(check, dim, rng)
+    from tidal.question_head import eval_questions
+
+    question_ret = eval_questions(check)
     return {
         "n_cases": int(sum(counts.values())),
         "n_fail": int(n_fail),
         "counts": counts,
         "failures": failures,
+        "question_ret": question_ret,
     }
 
 
@@ -276,6 +284,15 @@ def main() -> None:
     report = run()
     counts = " ".join(f"{k}={v}" for k, v in sorted(report["counts"].items()))
     print(f"n_cases={report['n_cases']} n_fail={report['n_fail']} {counts}")
+    qr = report.get("question_ret") or {}
+    if qr:
+        n = qr["n_test"]
+        print(
+            f"question ret@1 cosine {qr['question_cosine_hits']}/{n} "
+            f"head {qr['question_trained_hits']}/{n} "
+            f"fact-key cosine {qr['fact_key_cosine_hits']}/{n} "
+            f"head-if-used-on-stored-keys {qr['fact_key_head_hits']}/{n}"
+        )
     for line in report["failures"]:
         print(line)
     raise SystemExit(0 if report["n_fail"] == 0 else 1)
