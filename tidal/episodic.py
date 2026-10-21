@@ -6,17 +6,23 @@ This module does not import that package, SmolLM2, or any 135M checkpoint.
 Kept from the experiments that worked: one slot per fact ``(k, v, identity)``;
 same-identity overwrite; capacity with FIFO eviction; soft top-k readout;
 a write gate that drops chat-like noise. Not kept: summing several memory
-matrices (the mixture diluted the value) and a naïve key shield that restored
-the previous key after an update (same-identity writes stopped sticking).
+matrices (the mixture diluted the value), a naïve key shield that restored
+the previous key after an update (same-identity writes stopped sticking),
+mean-pooling a multi-token span (digit order disappears), and L2-normalizing
+values (that erases the byte code and the magnitude copy-through needs).
 
-Keys and values are vectors already produced by tidal — encoder state ``h``,
-event features, or a bge sentence vector run through the frozen model's own
-text projection. Retrieval is cosine over slot keys. The value returned to
-``Continuum.heads`` is a convex combination of slot values (weights sum to 1),
-added to ``h``. An empty store returns zeros.
+Keys are vectors already produced by tidal — encoder state ``h``, event
+features, or a bge sentence vector run through the frozen model's own text
+projection. A value is either another vector of that kind, or a positional
+byte code for a string or a token list (phones, dates, multi-token spans).
+Retrieval is cosine over slot keys. The vector added by ``Continuum.heads``
+is a convex combination of slot values (weights sum to 1). Exact text is
+decoded from the winning slot's code, not from that blend. An empty store
+returns zeros.
 """
 from __future__ import annotations
 
+import zlib
 from dataclasses import dataclass
 from typing import Any, Optional, Sequence, Tuple, Union
 
@@ -41,6 +47,175 @@ def _cos(a: np.ndarray, b: np.ndarray) -> float:
     if na < 1e-12 or nb < 1e-12:
         return 0.0
     return float(np.dot(a, b) / (na * nb))
+
+
+# Positional byte code. Two payload bytes per lane, as k/2**16, which is exact
+# in float32 and float64. Not L2-normalized: magnitude is the code.
+_SPAN_SCALE = 65536.0
+_SPAN_MAGIC = 0xE915
+_SPAN_TAG_TEXT = 0x01
+_SPAN_TAG_TOKENS = 0x02
+
+
+def span_capacity(dim: int) -> int:
+    """Bytes a value of width ``dim`` can hold, including the one-byte type tag."""
+    dim = int(dim)
+    if dim < 4:
+        return 0
+    return (dim - 4) * 2
+
+
+def _encode_raw(raw: bytes, dim: int) -> np.ndarray:
+    dim = int(dim)
+    cap = span_capacity(dim)
+    if dim < 4:
+        raise ValueError(f"span value needs dim >= 4, got {dim}")
+    if len(raw) < 1:
+        raise ValueError("empty span")
+    if len(raw) > cap:
+        raise ValueError(f"span is {len(raw)} bytes, value dim {dim} holds {cap}")
+    crc = zlib.crc32(raw) & 0xFFFFFFFF
+    v = np.zeros(dim, dtype=np.float64)
+    v[0] = _SPAN_MAGIC / _SPAN_SCALE
+    v[1] = len(raw) / _SPAN_SCALE
+    v[2] = (crc & 0xFFFF) / _SPAN_SCALE
+    v[3] = ((crc >> 16) & 0xFFFF) / _SPAN_SCALE
+    for i in range(0, len(raw), 2):
+        b0 = raw[i]
+        b1 = raw[i + 1] if i + 1 < len(raw) else 0
+        v[4 + i // 2] = (b0 + (b1 << 8)) / _SPAN_SCALE
+    return v
+
+
+def encode_span(text: str, dim: int) -> np.ndarray:
+    """Positional code for one string (phone, date, or a short span)."""
+    if not isinstance(text, str):
+        raise TypeError("span text must be a str")
+    if text == "":
+        raise ValueError("empty span")
+    return _encode_raw(bytes([_SPAN_TAG_TEXT]) + text.encode("utf-8"), dim)
+
+
+def encode_tokens(tokens: Sequence[str], dim: int) -> np.ndarray:
+    """Positional code for an ordered token list. Order is part of the code."""
+    if isinstance(tokens, (str, bytes, bytearray, np.ndarray)) or not isinstance(tokens, Sequence):
+        raise TypeError("tokens must be a sequence of strings")
+    if len(tokens) < 2:
+        raise ValueError("token span needs at least two tokens")
+    raw = bytearray([_SPAN_TAG_TOKENS])
+    for t in tokens:
+        if not isinstance(t, str) or t == "":
+            raise ValueError("tokens must be non-empty strings")
+        b = t.encode("utf-8")
+        if len(b) > 255:
+            raise ValueError("token longer than 255 bytes")
+        raw.append(len(b))
+        raw.extend(b)
+    return _encode_raw(bytes(raw), dim)
+
+
+def is_token_span(v: Any) -> bool:
+    if isinstance(v, (str, bytes, bytearray, np.ndarray)):
+        return False
+    return isinstance(v, Sequence) and len(v) >= 1 and all(isinstance(x, str) for x in v)
+
+
+def is_structured_value(v: Any) -> bool:
+    """True for a string or a sequence of strings (not a numeric vector)."""
+    return isinstance(v, str) or is_token_span(v)
+
+
+def _lane_u16(x: float) -> Optional[int]:
+    y = float(x) * _SPAN_SCALE
+    if not np.isfinite(y):
+        return None
+    k = int(np.rint(y))
+    # 0.5 is halfway between two bytes. Reject it instead of picking one.
+    if abs(y - k) > 0.49 or k < 0 or k > 0xFFFF:
+        return None
+    return k
+
+
+def _decode_raw(v: ArrayLike) -> Optional[bytes]:
+    """Inverse of ``_encode_raw``. None when the lanes are not a clean code.
+
+    A soft top-k blend of two different spans misses the uint16 grid or the
+    CRC. The winning slot's stored vector still decodes.
+    """
+    try:
+        a = np.asarray(v, dtype=np.float64).reshape(-1)
+    except (TypeError, ValueError):
+        return None
+    if a.size < 4 or not np.isfinite(a).all():
+        return None
+    if _lane_u16(a[0]) != _SPAN_MAGIC:
+        return None
+    n = _lane_u16(a[1])
+    c0 = _lane_u16(a[2])
+    c1 = _lane_u16(a[3])
+    if n is None or c0 is None or c1 is None:
+        return None
+    cap = (a.size - 4) * 2
+    if n < 1 or n > cap:
+        return None
+    n_lanes = (n + 1) // 2
+    buf = bytearray()
+    for i in range(n_lanes):
+        lane = _lane_u16(a[4 + i])
+        if lane is None:
+            return None
+        buf.append(lane & 0xFF)
+        buf.append((lane >> 8) & 0xFF)
+    if n % 2 == 1:
+        if buf[-1] != 0:
+            return None
+        buf.pop()
+    if len(buf) != n:
+        return None
+    for x in a[4 + n_lanes :]:
+        if _lane_u16(x) != 0:
+            return None
+    crc = zlib.crc32(bytes(buf)) & 0xFFFFFFFF
+    if c0 != (crc & 0xFFFF) or c1 != ((crc >> 16) & 0xFFFF):
+        return None
+    return bytes(buf)
+
+
+def decode_span(v: ArrayLike) -> Optional[str]:
+    """String from a positional code, or None if ``v`` is not one."""
+    raw = _decode_raw(v)
+    if raw is None or raw[0] != _SPAN_TAG_TEXT:
+        return None
+    try:
+        text = raw[1:].decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    if text == "":
+        return None
+    return text
+
+
+def decode_tokens(v: ArrayLike) -> Optional[Tuple[str, ...]]:
+    """Token list from a positional code, or None if ``v`` is not one."""
+    raw = _decode_raw(v)
+    if raw is None or raw[0] != _SPAN_TAG_TOKENS:
+        return None
+    body = raw[1:]
+    i = 0
+    out: list[str] = []
+    while i < len(body):
+        n = body[i]
+        i += 1
+        if n < 1 or i + n > len(body):
+            return None
+        try:
+            out.append(body[i : i + n].decode("utf-8"))
+        except UnicodeDecodeError:
+            return None
+        i += n
+    if len(out) < 2:
+        return None
+    return tuple(out)
 
 
 @dataclass
@@ -115,6 +290,13 @@ class EpisodicStore:
             return False
         return True
 
+    def _value_dim(self) -> int:
+        if self.dv is not None:
+            return int(self.dv)
+        if self._slots:
+            return int(self._slots[0].v.size)
+        raise ValueError("span write needs a value width; construct the store with dv=")
+
     def _check_dims(self, k: np.ndarray, v: np.ndarray) -> None:
         if self.dk is not None and k.size != self.dk:
             raise ValueError(f"key dim {k.size} != store dk {self.dk}")
@@ -152,7 +334,7 @@ class EpisodicStore:
     def write(
         self,
         k: ArrayLike,
-        v: ArrayLike,
+        v: Any,
         name: Optional[str] = None,
         rel: Optional[str] = None,
         *,
@@ -160,10 +342,23 @@ class EpisodicStore:
         surprise: Optional[float] = None,
         group: Optional[str] = None,
     ) -> bool:
-        """Insert or overwrite one slot. Returns True iff a write happened."""
+        """Insert or overwrite one slot. Returns True iff a write happened.
+
+        ``v`` may be a numeric vector, a string, or a list of strings. A string
+        or token list becomes a positional byte code of width ``dv`` (see
+        ``encode_span``). Same-identity overwrite replaces that code; it is
+        not added to the previous value.
+        """
         if not self.gate_write(kind, surprise):
             return False
-        kk, vv = _as1d(k), _as1d(v)
+        if isinstance(v, str):
+            vv = encode_span(v, self._value_dim())
+            kk = _as1d(k)
+        elif is_token_span(v):
+            vv = encode_tokens(v, self._value_dim())
+            kk = _as1d(k)
+        else:
+            kk, vv = _as1d(k), _as1d(v)
         if float(np.linalg.norm(kk)) < 1e-12:
             return False
         self._check_dims(kk, vv)
@@ -231,6 +426,35 @@ class EpisodicStore:
         for j, loc in enumerate(local):
             out = out + w[j] * visible[int(loc)][1].v
         return out, info
+
+    def read_span(
+        self,
+        q: ArrayLike,
+        *,
+        group: Optional[str] = None,
+    ) -> Optional[str]:
+        """Text in the winning slot, or None.
+
+        Uses that slot's stored code. The soft top-k blend is a different
+        vector: a near neighbor can push it off the byte grid, and decoding
+        the blend would invent a third string.
+        """
+        v, _info = self.read(q, mode="top1", group=group)
+        if v is None:
+            return None
+        return decode_span(v)
+
+    def read_tokens(
+        self,
+        q: ArrayLike,
+        *,
+        group: Optional[str] = None,
+    ) -> Optional[Tuple[str, ...]]:
+        """Token list in the winning slot, or None. Same rule as ``read_span``."""
+        v, _info = self.read(q, mode="top1", group=group)
+        if v is None:
+            return None
+        return decode_tokens(v)
 
     def readout(
         self,

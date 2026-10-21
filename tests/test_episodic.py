@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from tidal.episodic import EpisodicStore
+from tidal.episodic import EpisodicStore, decode_span
 
 
 def _ortho(d=8, n=4, seed=0):
@@ -325,3 +325,304 @@ def test_replay_empty_store_matches_static_and_group_fact_stays_put():
     assert len(c3.episodic) == 1
     assert not np.allclose(s1[0], s3[0])
     assert np.allclose(s1[2:], s3[2:], atol=1e-6)
+
+
+def _bag(text, dim=32):
+    out = np.zeros(dim)
+    for b in text.encode():
+        out[b % dim] += 1.0
+    return out
+
+
+def test_span_code_roundtrip_and_rejected_pool():
+    """Mean-pooling bytes collides on a reversed phone. The positional code does not.
+
+    L2-normalizing or adding two codes also fails the checksum. Magnitude stays put.
+    """
+    from tidal.episodic import decode_span, decode_tokens, encode_span, encode_tokens, span_capacity
+    phone = "+1-415-555-0134"
+    rev = phone[::-1]
+    assert np.array_equal(_bag(phone), _bag(rev))
+    assert decode_span(encode_span(phone, 32)) == phone
+    assert decode_span(encode_span(rev, 32)) == rev
+    assert not np.array_equal(encode_span(phone, 32), encode_span(rev, 32))
+    bday = "1990-03-21"
+    assert decode_span(encode_span(bday, 32)) == bday
+    assert decode_span(encode_span("03/21/1990", 32)) == "03/21/1990"
+    assert decode_span(encode_span("21.03.1990", 32)) == "21.03.1990"
+    assert decode_span(encode_span("李思", 16)) == "李思"
+    toks = ("cedar", "lantern", "north")
+    swapped = ("north", "lantern", "cedar")
+    assert decode_tokens(encode_tokens(toks, 32)) == toks
+    assert decode_tokens(encode_tokens(swapped, 32)) == swapped
+    assert decode_span(encode_tokens(toks, 32)) is None
+    assert not np.array_equal(encode_tokens(toks, 32), encode_tokens(swapped, 32))
+    # Joining either order uses the same bytes. A bag cannot tell them apart.
+    assert np.array_equal(_bag("\x1f".join(toks)), _bag("\x1f".join(toks[::-1])))
+    coded = encode_span(phone, 32)
+    assert float(np.max(np.abs(coded))) <= 1.0
+    assert decode_span(coded / np.linalg.norm(coded)) is None
+    assert decode_span(coded * 0.5) is None
+    other = encode_span("+1-415-555-0199", 32)
+    assert decode_span(coded + other) is None
+    assert decode_span(0.5 * coded + 0.5 * other) is None
+    assert decode_span(coded.astype(np.float32)) == phone
+    assert span_capacity(16) == 24
+    with pytest.raises(ValueError, match="empty"):
+        encode_span("", 16)
+    with pytest.raises(ValueError, match="dim"):
+        encode_span("a", 3)
+    with pytest.raises(ValueError, match="two"):
+        encode_tokens(["only"], 16)
+
+
+def test_span_layout_is_positional_bytes():
+    from tidal.episodic import decode_span, encode_span
+    v = encode_span("ab", 6)
+    assert v.shape == (6,)
+    assert v[0] == np.float64(0xE915) / np.float64(65536)
+    assert v[1] == np.float64(3) / np.float64(65536)  # tag + "ab"
+    assert v[4] == (np.float64(0x01) + (np.float64(ord("a")) * 256)) / np.float64(65536)
+    assert v[5] == np.float64(ord("b")) / np.float64(65536)
+    assert decode_span(v) == "ab"
+
+
+def test_span_overwrite_leaves_no_stale_phone():
+    p_old, p_new, p_dist = "+1-415-555-0134", "+1-415-555-0199", "+1-202-555-0100"
+    k_old, k_new = np.eye(4)[0], np.eye(4)[1]
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=1.0)
+    assert S.write(k_old, p_old, name="ada", rel="phone")
+    assert S.write(k_old, p_dist, name="bob", rel="phone")
+    assert len(S) == 2
+    assert S.write(k_new, p_new, name="ada", rel="phone")
+    assert len(S) == 2
+    assert S.read_span(k_new) == p_new
+    # The old key now belongs to bob. It must not bring ada's previous number back.
+    assert S.read_span(k_old) == p_dist
+    assert all(decode_span(s.v) != p_old for s in S.slots)
+    ada = next(s for s in S.slots if s.name == "ada")
+    from tidal.episodic import encode_span
+    assert np.array_equal(ada.v, encode_span(p_new, 32))
+    assert np.array_equal(ada.k, k_new)
+
+
+def test_near_duplicate_replaces_span_and_close_blend_is_not_a_phone():
+    from tidal.episodic import decode_span, encode_span
+    p_old, p_new = "+1-415-555-0134", "1990-03-21"
+    k = np.array([1.0, 0, 0, 0])
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=0.9)
+    assert S.write(k, p_old, name="a", rel="phone")
+    assert S.write(k * 1.01, p_new, name="b", rel="birthday")
+    assert len(S) == 1
+    assert S.read_span(k) == p_new
+    assert all(decode_span(s.v) != p_old for s in S.slots)
+
+    k1 = np.array([1.0, 0, 0, 0])
+    k2 = np.array([0.95, np.sqrt(1.0 - 0.95 ** 2), 0.0, 0.0])
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=1.0, soft_k=2, soft_temp=0.05)
+    assert S.write(k1, p_old, name="a", rel="phone")
+    assert S.write(k2, p_new, name="b", rel="birthday")
+    assert len(S) == 2
+    assert S.read_span(k1) == p_old
+    mix, info = S.read(k1, mode="softtopk")
+    assert info["top"] == ("a", "phone")
+    assert np.isclose(info["weights"].sum(), 1.0)
+    recon = sum(w * S.slots[int(i)].v for w, i in zip(info["weights"], info["idx"]))
+    assert np.allclose(mix, recon)
+    assert decode_span(mix) is None
+    # Orthogonal neighbor: soft top-k stays on the byte grid of the winner.
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=1.0, soft_k=4, soft_temp=0.05)
+    assert S.write(np.eye(4)[0], p_old, name="a", rel="phone")
+    assert S.write(np.eye(4)[1], p_new, name="b", rel="birthday")
+    mix, info = S.read(np.eye(4)[0], mode="softtopk")
+    assert decode_span(mix) == p_old
+    assert abs(float(info["weights"][0]) - 1.0) < 1e-6
+    assert np.allclose(mix, encode_span(p_old, 32), atol=1e-6)
+
+
+def test_softtopk_truncates_and_matches_temperature():
+    import math
+    q = np.array([1.0, 0.0, 0.0])
+    k1 = np.array([0.5, np.sqrt(0.75), 0.0])
+    k1 = k1 / np.linalg.norm(k1)
+    k2 = np.array([-0.25, 0.0, np.sqrt(1.0 - 0.0625)])
+    k2 = k2 / np.linalg.norm(k2)
+    v0 = np.array([1.0, 0.0, 0.0])
+    v1 = np.array([0.0, 2.0, 0.0])
+    v2 = np.array([0.0, 0.0, 1.0e6])
+    S = EpisodicStore(capacity=4, soft_k=2, soft_temp=0.05, overwrite_cos=1.0)
+    assert S.write(q, v0, name="a", rel="r")
+    assert S.write(k1, v1, name="b", rel="r")
+    assert S.write(k2, v2, name="c", rel="r")
+    v, info = S.read(q, mode="softtopk")
+    assert info["top"] == ("a", "r")
+    assert np.max(np.abs(v)) < 10.0
+    cos1 = float(np.dot(k1, q) / (np.linalg.norm(k1) * np.linalg.norm(q)))
+    w1 = math.exp((cos1 - 1.0) / 0.05) / (1.0 + math.exp((cos1 - 1.0) / 0.05))
+    assert np.allclose(info["weights"], [1.0 - w1, w1], atol=1e-8)
+    assert abs(w1 - 4.5397868702434395e-05) < 1e-8
+    assert np.allclose(v, (1.0 - w1) * v0 + w1 * v1, atol=1e-6)
+
+
+def test_span_write_gate_and_failed_overwrite_keep_the_old_code():
+    S = EpisodicStore(capacity=4, dk=4, dv=8, overwrite_cos=1.0)
+    k = np.ones(4)
+    assert S.write(k, "phone", name="a", rel="p")
+    step = S._step
+    with pytest.raises(ValueError, match="holds"):
+        S.write(np.array([0.0, 1, 0, 0]), "x" * 30, name="a", rel="p")
+    assert S._step == step and len(S) == 1
+    assert S.read_span(k) == "phone"
+    assert S.write(k, "x" * 30, name="a", rel="p", kind="chat") is False
+    assert S.read_span(k) == "phone"
+    bare = EpisodicStore(capacity=2)
+    with pytest.raises(ValueError, match="dv"):
+        bare.write(np.ones(4), "hi", name="a", rel="p")
+
+
+def test_span_queries_do_not_see_future_writes():
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=1.0)
+    k1, k2 = np.eye(4)[0], np.eye(4)[1]
+    phone, bday, nxt = "+1-415-555-0134", "1990-03-21", "+1-415-555-0199"
+    assert S.read_span(k1) is None
+    assert phone not in {decode_span(s.v) for s in S.slots}
+    assert S.write(k1, phone, name="ada", rel="phone")
+    assert bday not in {decode_span(s.v) for s in S.slots}
+    assert S.write(k2, bday, name="ada", rel="birthday")
+    assert S.read_span(k1) == phone and S.read_span(k2) == bday
+    assert S.write(np.eye(4)[2], nxt, name="ada", rel="phone")
+    assert S.read_span(np.eye(4)[2]) == nxt
+    assert all(decode_span(s.v) != phone for s in S.slots)
+    assert S.read_span(k2) == bday
+
+
+def test_group_scopes_spans():
+    S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=1.0, soft_k=1)
+    k = np.eye(4)
+    assert S.write(k[0], "+1-415-555-0100", name="ada", rel="phone", group="a")
+    assert S.write(k[0], "+1-415-555-0199", name="ada", rel="phone", group="b")
+    assert len(S) == 2
+    assert S.read_span(k[0], group="a") == "+1-415-555-0100"
+    assert S.read_span(k[0], group="b") == "+1-415-555-0199"
+    assert "+1-415-555-0199" not in {decode_span(s.v) for _, s in S._visible("a")}
+
+
+def test_episodic_eval_is_larger_than_n96_and_exact():
+    from tidal.episodic_eval import run
+    report = run()
+    assert report["n_fail"] == 0, report["failures"]
+    assert report["n_cases"] >= 400
+    floors = {
+        "overwrite": 80,
+        "soft_topk": 40,
+        "group": 30,
+        "gate": 30,
+        "causality": 100,
+        "hard": 90,
+        "evict": 16,
+    }
+    for key, floor in floors.items():
+        assert report["counts"][key] >= floor, report["counts"]
+
+
+def test_span_module_has_no_enable_switch():
+    import tidal.episodic as ep
+    src = inspect.getsource(ep)
+    assert "enable_episodic" not in src and "episodic_scale" not in src
+
+
+def test_continuum_injects_span_code_and_empty_stays_exact():
+    from tidal.episodic import decode_span, encode_span, encode_tokens
+    from tidal.vap import VAPModel
+    from tidal.continuum import Continuum, replay, _cfg
+    torch.manual_seed(0)
+    m = VAPModel(8, d=32, hidden=32, layers=1, dropout=0).eval()
+    c = Continuum(m, _cfg(dict(levels=())))
+    d = c.d
+    phone, new, bday = "+1-415-555-0134", "+1-415-555-0199", "1990-03-21"
+    toks = ["cedar", "lantern", "north"]
+    k = np.zeros(d); k[0] = 1.0
+    h = torch.from_numpy(k.astype(np.float32)).reshape(1, -1)
+    with torch.no_grad():
+        static = m.vap(h).clone()
+        empty = c.heads(h, [])["vap"]
+    assert torch.allclose(empty, static, atol=0, rtol=0)
+    assert c.recall(k) is None
+    assert c.remember(k, phone, name="ada", rel="phone", group="g")
+    c._mem_group = "g"
+    code = encode_span(phone, d).astype(np.float32)
+    with torch.no_grad():
+        got = c.heads(h, [])["vap"]
+        expect = m.vap(h + torch.from_numpy(code).reshape(1, -1))
+    assert torch.allclose(got, expect, atol=1e-5)
+    assert c.recall(k) == phone
+    assert decode_span(c.episodic.readout_torch(h, group="g").numpy()[0]) == phone
+    k2 = np.zeros(d); k2[1] = 1.0
+    assert c.remember(k2, new, name="ada", rel="phone", group="g")
+    h2 = torch.from_numpy(k2.astype(np.float32)).reshape(1, -1)
+    code2 = encode_span(new, d).astype(np.float32)
+    with torch.no_grad():
+        got2 = c.heads(h2, [])["vap"]
+        expect2 = m.vap(h2 + torch.from_numpy(code2).reshape(1, -1))
+        # One slot remains, so the old query is not still injecting the old code.
+        got_old_q = c.heads(h, [])["vap"]
+        stale = m.vap(h + torch.from_numpy(code).reshape(1, -1))
+        fresh_on_old_q = m.vap(h + torch.from_numpy(code2).reshape(1, -1))
+    assert torch.allclose(got2, expect2, atol=1e-5)
+    assert torch.allclose(got_old_q, fresh_on_old_q, atol=1e-5)
+    assert not torch.allclose(got_old_q, stale, atol=1e-4)
+    assert c.recall(k2) == new
+    assert all(decode_span(s.v) != phone for s in c.episodic.slots)
+    kb = np.zeros(d); kb[2] = 1.0
+    assert c.remember(kb, bday, name="ada", rel="birthday", group="g")
+    assert c.recall(kb) == bday
+    assert c.recall(k2) == new
+    kt = np.zeros(d); kt[3] = 1.0
+    assert c.remember(kt, toks, name="ada", rel="places", group="g")
+    assert c.recall_tokens(kt) == tuple(toks)
+    assert c.recall(kt) is None
+    assert np.array_equal(next(s for s in c.episodic.slots if s.rel == "places").v, encode_tokens(toks, d))
+    # Other group does not see the phone, and a cleared store matches static again.
+    assert c.recall(k2, group="other") is None
+    c._mem_group = "other"
+    with torch.no_grad():
+        other = c.heads(h2, [])["vap"]
+    assert torch.allclose(other, m.vap(h2), atol=0, rtol=0)
+    c.episodic.clear()
+    c._mem_group = "g"
+    with torch.no_grad():
+        cleared = c.heads(h, [])["vap"]
+    assert torch.allclose(cleared, static, atol=0, rtol=0)
+    assert c.remember(k, phone, name="ada", rel="phone", group="g", kind="chat") is False
+    assert len(c.episodic) == 0
+    # Med adapters start at zero, so the span residual is the only addition.
+    c2 = Continuum(m, _cfg(dict(levels=("med",))))
+    c2.new_session("g")
+    assert c2.remember(k, phone, name="ada", rel="phone", group="g")
+    c2._mem_group = "g"
+    with torch.no_grad():
+        med = c2.heads(h, c2.active("g"))["vap"]
+    assert torch.allclose(med, expect, atol=1e-5)
+    # Replay: empty matches static; a group span does not move the other group.
+    rng = np.random.default_rng(0)
+    n = 4
+    H = rng.normal(size=(n, d)).astype(np.float32)
+    V = np.zeros((n, 20), np.float32)
+    ts = np.array([0.0, 1.0, 0.5, 1.5])
+    conv = np.array(["a", "a", "b", "b"])
+    c3 = Continuum(m, _cfg(dict(levels=())))
+    s_empty, _, _ = replay(c3, H, V, ts, conv, None)
+    with torch.no_grad():
+        ref = m.vap(torch.from_numpy(H)).numpy()
+    assert len(c3.episodic) == 0
+    assert np.allclose(s_empty, ref, atol=1e-6)
+    c4 = Continuum(m, _cfg(dict(levels=())))
+    assert c4.remember(H[0], phone, name="ada", rel="phone", group="a")
+    s4, _, _ = replay(c4, H, V, ts, conv, None)
+    assert len(c4.episodic) == 1
+    assert not np.allclose(s4[0], s_empty[0])
+    assert not np.allclose(s4[1], s_empty[1])
+    assert np.allclose(s4[2:], s_empty[2:], atol=1e-6)
+    with torch.no_grad():
+        row0 = m.vap(torch.from_numpy(H[0:1]) + torch.from_numpy(code)).numpy()
+    assert np.allclose(s4[0], row0, atol=1e-5)
