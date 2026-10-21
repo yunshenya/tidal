@@ -29,7 +29,7 @@ An empty store does not change that layer's output, so greedy tokens match the s
 
 这是当年 SmolLM 研究里留下来的 A2s 注入，槽用的是现在的 `EpisodicStore`，不再单独做一套记忆。
 
-1. **答案跨度池化。** 在注入层的隐状态上池化，不做 L2 归一化，幅度留给恒等拷贝。值不减中心，也不丢弃 sink token。普通答案对整个 span 做均值。像电话这样至少有 7 个数字的答案，只对 span **最后 4 个 token** 做均值：在 SmolLM2 上这 4 个 token 就是 `+1-415-555-dddd` 里变化的四位。整段均值下，只改最后一位的 L2 是 3.93（范数 147.66），线性读出读不准。
+1. **答案跨度池化。** 在注入层的隐状态上池化，不做 L2 归一化，幅度留给恒等拷贝。值不减中心，也不丢弃 sink token。普通答案对整个 span 做均值。像电话这样至少有 7 个数字的答案，只对 span **最后 4 个 token** 做均值：在 SmolLM2 上这 4 个 token 就是 `+1-415-555-dddd` 里变化的四位。整段均值下，只改最后一位的 L2 是 3.93（范数 147.66），线性读出读不准。生日用生成器的写法 `Month D, YYYY`（日 1–27，年 1970–2019），不对 span 做均值：值是月 token、日的十位（一位数日是零向量）、日的个位、年的四位数字 token 各自前若干维拼起来的。数字在下面的生日读出。
 2. **键。** 键不是这个池。SmolLM2-135M 的第一个 token 是注意力 sink：整向量范数大约是其他 token 的 100 倍，第 507 维大约两万。对 token 做均值时，键几乎被这个 sink 决定，不同事实的余弦大约 0.99，默认 `overwrite_cos=0.9` 会把一条流收成一个槽。主路径上，键和问句先丢掉范数超过该字符串 token 范数中位数 8 倍的 token（只看当前字符串，不是会话状态），再减去一次标定得到的固定中心。事实键减 `key_mean`，问句减 `query_mean`。中心来自 12 个标定名字（Sam、Robin、Alex、Jordan、Casey、Riley、Avery、Quinn、Parker、Drew、Shawn、Logan）乘 6 种关系，和评测名字不相交；答案 span 不参与，所以中心不依赖答案文本。默认 SmolLM2-135M 第 15 层的中心存在 `tidal/llm_key_center.npz`。传入别的模型或层时，初始化时用同一批文本估一次，之后不随事实更新。没有开关。
 3. **槽。** 一条事实一个槽 `(k, v, name, rel)`。同身份直接覆盖。容量默认 256，满了按写入时间 FIFO。近重复键（余弦 > 0.9，同一 group）也覆盖。
 4. **读出是 hard top-1。** 排序是原始余弦，取余弦最大的那一槽的值，不做凸组合。`EpisodicStore` 里的 soft top-k 还在，连续体 `heads` 仍用 soft top-4、温度 0.05；这条 LM 路径不走那个混合。测量见下面的消融：温度 0.05 的 soft top-4 和 top-1 在前缀上打平，问句上 top-1 更高，温度 0.20 会把别的槽混进来并掉点。问句对比头仍然只在 `ask` / `query`（`tidal/question_head.py`），不接在这条 LM 路径上。这条路径不另训低维投影：在 sink 丢掉并减去固定中心之后，键已经能分开。
@@ -38,7 +38,7 @@ An empty store does not change that layer's output, so greedy tokens match the s
 
 连续体 `heads` 上的电话、日期仍然是位置字节码，不走这个 MLP。在那些字节码上训过的 inject 会把 `+1-415-555-0134` 推离网格（最大绝对偏差 0.00111271），号码解不出来。那边的说明在 [episodic_memory.md](episodic_memory.md)。
 
-This is the A2s inject from the SmolLM study, sitting on the current `EpisodicStore` rather than a second memory. The value is a pool of the answer-span hidden states at the inject layer, not L2-normalized, not centered, and not sink-filtered. Most answers use the mean of the whole span. A phone-like answer (at least 7 digits) uses the mean of the last four answer tokens, which on SmolLM2 are the four variable digits of `+1-415-555-dddd`. A mean of the whole span moves only L2 3.93 when the last digit changes (norm 147.66), and a linear readout cannot recover the number from that. The key is a different pool. On SmolLM2-135M the first token is an attention sink (norm about 100× the other tokens, hidden unit 507 near 2e4). A mean over tokens is that sink, distinct facts land near cosine 0.99, and the default cosine overwrite of 0.9 keeps one slot. Keys and queries drop tokens whose norm exceeds 8× the median token norm of that same string, then subtract a fixed center: `key_mean` for fact keys, `query_mean` for questions. The centers are estimated once on 12 calibration names (Sam, Robin, Alex, Jordan, Casey, Riley, Avery, Quinn, Parker, Drew, Shawn, Logan) times 6 relations, disjoint from the held-out eval names. The answer span is excluded, so the center does not depend on the answer text. The default SmolLM2-135M layer-15 centers ship in `tidal/llm_key_center.npz`. A passed-in model, or another layer, fits those same strings at init and does not update as facts arrive. There is no switch and no learned low-dim projection: after the sink drop and the fixed center, the keys separate. Slots overwrite on the same identity, evict FIFO at 256, and also overwrite a near-duplicate key (cosine > 0.9 in the same group). Readout on this path is hard top-1, ranked by raw cosine. `EpisodicStore` still implements soft top-k, and Continuum `heads` still use soft top-4 at temperature 0.05; this LM path does not mix. The ablation below is why: soft top-4 at temperature 0.05 tied top-1 on the answer-stripped prefix and trailed it on natural questions, and temperature 0.20 mixed other slots in and lost hits. The contrastive question head stays on `ask` / `query` only. The default layer is `n_layers // 2`. The add is `v + MLP(v)` (`scale` fixed at 1). The MLP is Linear → GELU → Linear with a zero last layer, so an untrained module copies `v` through. When `LLMMemory` itself loads the default SmolLM2-135M checkpoint at that layer, it replaces the MLP with `tidal/llm_inject_smollm2_135m.pt`. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer. The file is the `save_inject` dict: the inject state dict plus `layer` and `hidden`. Chat and noise writes are dropped. An empty store adds nothing.
+This is the A2s inject from the SmolLM study, sitting on the current `EpisodicStore` rather than a second memory. The value is a pool of the answer-span hidden states at the inject layer, not L2-normalized, not centered, and not sink-filtered. Most answers use the mean of the whole span. A phone-like answer (at least 7 digits) uses the mean of the last four answer tokens, which on SmolLM2 are the four variable digits of `+1-415-555-dddd`. A mean of the whole span moves only L2 3.93 when the last digit changes (norm 147.66), and a linear readout cannot recover the number from that. A birthday in the generator spelling `Month D, YYYY` (day 1–27, year 1970–2019) is not averaged. The value concatenates the leading coordinates of the month token, the day-tens token (zeros for a one-digit day), the day-ones token, and each of the four year-digit tokens. The counts are in the birthday section below. The key is a different pool. On SmolLM2-135M the first token is an attention sink (norm about 100× the other tokens, hidden unit 507 near 2e4). A mean over tokens is that sink, distinct facts land near cosine 0.99, and the default cosine overwrite of 0.9 keeps one slot. Keys and queries drop tokens whose norm exceeds 8× the median token norm of that same string, then subtract a fixed center: `key_mean` for fact keys, `query_mean` for questions. The centers are estimated once on 12 calibration names (Sam, Robin, Alex, Jordan, Casey, Riley, Avery, Quinn, Parker, Drew, Shawn, Logan) times 6 relations, disjoint from the held-out eval names. The answer span is excluded, so the center does not depend on the answer text. The default SmolLM2-135M layer-15 centers ship in `tidal/llm_key_center.npz`. A passed-in model, or another layer, fits those same strings at init and does not update as facts arrive. There is no switch and no learned low-dim projection: after the sink drop and the fixed center, the keys separate. Slots overwrite on the same identity, evict FIFO at 256, and also overwrite a near-duplicate key (cosine > 0.9 in the same group). Readout on this path is hard top-1, ranked by raw cosine. `EpisodicStore` still implements soft top-k, and Continuum `heads` still use soft top-4 at temperature 0.05; this LM path does not mix. The ablation below is why: soft top-4 at temperature 0.05 tied top-1 on the answer-stripped prefix and trailed it on natural questions, and temperature 0.20 mixed other slots in and lost hits. The contrastive question head stays on `ask` / `query` only. The default layer is `n_layers // 2`. The add is `v + MLP(v)` (`scale` fixed at 1). The MLP is Linear → GELU → Linear with a zero last layer, so an untrained module copies `v` through. When `LLMMemory` itself loads the default SmolLM2-135M checkpoint at that layer, it replaces the MLP with `tidal/llm_inject_smollm2_135m.pt`. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer. The file is the `save_inject` dict: the inject state dict plus `layer` and `hidden`. Chat and noise writes are dropped. An empty store adds nothing.
 
 Continuum `heads` still store phones and dates as positional byte codes. An inject MLP trained on those codes moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded, so that path does not use this MLP. See [episodic_memory.md](episodic_memory.md).
 
@@ -49,11 +49,17 @@ python -m tidal.llm_memory_train --tiny --steps 1 --n-cache 4 --neg-p 0   # CPU,
 python -m tidal.llm_memory_train --steps 1500 --n-cache 2000              # SmolLM2-135M
 python -m tidal.llm_memory_train --phone-readout --phone-numbers 120 --phone-alpha 100 \
     --out tidal/llm_inject_smollm2_135m.pt
+python -m tidal.llm_memory_train --date-readout --date-samples 120 --date-alpha 100 \
+    --out tidal/llm_inject_smollm2_135m.pt
 ```
 
 `--phone-readout` 只拟合电话的线性读出（24 个 train 名字 × 120 个号码，ridge α=100），不更新 MLP。这次拟合的训练集精确匹配是 2880/2880，墙钟 124.2 秒。
 
+`--date-readout` 只拟合生日的线性读出（24 个 train 名字 × 120 个日期，ridge α=100），不更新 MLP，也不改电话的五个张量。训练精确串 2880/2880。8 个 test 名字 × 40 个不在这 120 里的日期是 320/320。保存前另有一次小拟合，把 6 个年和 4 个日拿掉，用来看数字能不能重组；那组权重不写入文件。24×120 这批值的编码是 92 秒。
+
 `--phone-readout` fits only the linear phone readout (24 train names × 120 numbers, ridge α=100) and does not update the MLP. That fit's train exact-match was 2880/2880. Wall time was 124.2 seconds.
+
+`--date-readout` fits only the birthday readout (24 train names × 120 dates, ridge α=100). It does not update the MLP or the five phone tensors. Train exact spelling was 2880/2880. Eight test names × 40 dates outside those 120 were 320/320. Before saving, a smaller fit holds out 6 years and 4 days to check that the digits recombine; those weights are not written. Encoding the 24×120 values took 92 seconds.
 
 Training is teacher-forced next-token cross-entropy: the prompt does not contain the fact, and the injected vector is that fact's answer-span pool. An optional 20% wrong-value hinge matches v21.
 
@@ -208,7 +214,7 @@ The inject's own empty strings are not that newline. All 28 phone questions are 
 
 线性读出可以。6 个 train 名字 × 200 个号码拟合。另 4 个 train 名字、40 个没见过的号码上，整段均值精确串是 101/160（α=100），末 token 是 150/160（α=30）。8 个 test 名字 × 40 个没见过的号码上，末 token 是 294/320，最后 4 个 token 的均值是 310/320（α=100），权重 1、1.7、2.9、4.9 是 311/320。差 1 条，主路径用均匀的最后 4 token 均值，不引入那组权重。装进 `llm_inject_smollm2_135m.pt` 的读出是 24 个 train 名字 × 120 个号码、α=100，训练精确串 2880/2880。MLP 的五个张量和原来的 1500 step 文件逐元素相同。`phone_on` 为 0 时不拼号码，EyeLM 测试仍走语言模型。连续体字节码没改。
 
-生日没有走这个读出。span 仍是整段均值，MLP 也没动。同一网格问句自由生成仍是 1/25。另测过的线性月/日/年读出，末 token 精确是 42/160，整段均值是 43/160，没有装上。
+生日不在这一节。整段均值和末 token 的月/日/年探针是 43/160 和 42/160，没有装上。下一节改的是池，不是再训 MLP。
 
 装上之后，同一 n=48、种子 `5000+N`、`generate`、最多 16 个新 token、float32。电话问句 26/28，前缀 26/28。两条没中的是 `+1-415-555-2060` → `+1-415-555-2070` 和 `+1-415-555-2063` → `+1-415-555-2073`。事实进上下文在 16 token 时是 0/28（预算在 `+1-415-` 处用完），48 token 时是 18/28。城市、颜色、队伍、职业仍是 138/139。
 
@@ -225,7 +231,7 @@ On Ada's `+1-415-555-2499` at layer 15, the whole-span mean has norm 147.66 and 
 
 A linear readout is. Fit on 6 train names × 200 numbers. On 4 other train names and 40 unseen numbers, whole-span-mean exact is 101/160 (α=100) and last-token exact is 150/160 (α=30). On 8 test names × 40 disjoint numbers, the last token is 294/320, the mean of the last four tokens is 310/320 at ridge α=100, and weights 1, 1.7, 2.9, 4.9 are 311/320. The one-string gap is not worth those weights, so the main path is the uniform last-4 mean. The readout stored in `llm_inject_smollm2_135m.pt` is 24 train names × 120 numbers, α=100, train exact 2880/2880. The five MLP tensors are elementwise equal to the previous 1500-step file. `phone_on` 0 does not spell a number, so the EyeLM tests stay on the LM. Continuum byte codes are unchanged.
 
-Birthdays do not use this readout. Their pool is still the whole-span mean, and the MLP was not updated. Question free-gen on this grid is still 1/25. A separate linear month/day/year probe was 42/160 exact from the last token and 43/160 from the span mean, so it was not shipped.
+Birthdays are the next section. The month/day/year probe on the span mean was 43/160 and on the last token 42/160, so neither pool was shipped. The next section changes the pool. It does not train the MLP again.
 
 After the readout, same n=48, seeds `5000+N`, `generate`, at most 16 new tokens, float32. Phone questions are 26/28 and the prefix is 26/28. The two misses are `+1-415-555-2060` → `+1-415-555-2070` and `+1-415-555-2063` → `+1-415-555-2073`. Fact-in-context is 0/28 at 16 tokens (the budget runs out around `+1-415-`) and 18/28 at 48 tokens. City, color, team, and job stay 138/139.
 
@@ -236,11 +242,55 @@ After the readout, same n=48, seeds `5000+N`, `generate`, at most 16 new tokens,
 
 The gain in each cell is the newly hit phones (N0 +4, N4 +7, N16 +9, N32 +6). Hits on the other relations did not change.
 
+## 生日读出 / Birthday readout
+
+电话的最后 4 个 token 是四位数字，均值里四位都还在。生日不是。SmolLM2 把 `March 4, 1991` 切成一个月名 token、日的数字 token（一位数 1 个，两位数 2 个），然后是年的四个数字 token。层 15 是因果的。只改年的个位（1991→1992），四个年 token 的 L2 是 0、0、0、45.27。只改十位（1991→1981）是 0、0、74.67、20.37。改日时月 token 的 L2 是 0。改年时月和日都是 0。
+
+Ada 的 `March 4, 1991`，层 15，整段均值范数 140.28。改月（另外 11 个月）：整段 L2 13.21，月 token 72.59（范数 187.76），日 token 30.45，末 token 8.04，年的四位均值 7.36。改日（9 个日）：整段 11.25，日 token 82.01（范数 192.2），月 0，年四位均值 4.28。改年（9 个年）：整段 17.0，末 token 60.26（范数 169.42），年四位均值 38.26，月 0，日 0。同一个日期换名字，月 token 相对 Ada 的 L2 大约 18–25（Nell 18.23，Willa 25.30），小于换月的 72.59。
+
+年在末 token 里，日不在。诊断矩阵是 8 个 train 名字 × 96 个日期，ridge α=100，头是月的 12 类、日的两位、年的四位。另 4 个 test 名字 × 32 个没见过的日期：整段均值联合精确 79/128（月 128、日 111、年 88），末 token 35/128（月 121、日 36、年 128），年的四位均值 39/128（月 123、日 40、年 128）。这和上一节没装上的末 token 42/160、整段 43/160 是同一件事。这批 96 个日期和下面拿掉年份的那次不是同一批。
+
+字段切片可以。576 维按份额 2、1、2、2、2、2、2 切成 88、44、88、89、89、89、89，依次放月 token、日的十位（一位数日是零向量）、日的个位、年的千百十个位，各取该 token 的前这么多维。上面那批矩阵上，这个切片是 128/128。随机投影到同样的宽度也是 128/128。主路径用前若干维，不另存投影矩阵。
+
+重组不是背日期。拟合时拿掉年 1971、1984、1993、2002、2008、2016，8 个 train 名字 × 96 个其余日期，α=100。test 名字上 24 个这种年的日期 × 4 个名字是 96/96，见过的 train 名字上也是 96/96。拿掉日 7、13、16、24，test 名字上 16 个日期 × 4 个名字是 64/64。这组权重不写入文件。写入的是 24 个 train 名字 × 120 个日期、α=100，日 1–27、年 1970–2019 都覆盖到。训练精确串 2880/2880。8 个 test 名字 × 40 个不在这 120 里的日期是 320/320。网格上 25 条生日的值，读出是 25/25。MLP 的五个张量和电话的五个张量跟装上之前逐元素相同。`date_on` 为 0 时不拼日期。连续体字节码没改。
+
+写法用生成器的 `Month D, YYYY`，日不补零。事实放进上下文、最多 24 个新 token 时，模型复述的就是这一句，24/25 包含金标。没中的那条是把问句又说了一遍（`When is Ruth's birthday?`，金标 `July 16, 1988`）。没有出现 `1991-03-03`。没装这个读出时，注入说出的也是这种形状，但月日年是错的：`May 5, 2010` → `May 1, 2005, May 1, 2`，`September 3, 1990` → `In September, 1993, in September, 199`。原来中的 1 条是 `January 1, 1970`，金标包含在 `January 1, 1970, the 1 January 1` 里。字母数字包含要的就是这串，所以拼出来的是生成器原文。`September 27, 2019` 是 10 个 token，16 个新 token 够用。
+
+同一 n=48、种子 `5000+N`、`generate`、最多 16 个新 token、float32。生日从 1/25 到 25/25，生成串和金标逐字相同。电话仍是 26/28（`+1-415-555-2060` → `+1-415-555-2070`，`+1-415-555-2063` → `+1-415-555-2073`）。城市、颜色、队伍、职业仍是 138/139。问句 ret@1 不读值，键没改。
+
+| 问句自由生成 | N0 | N4 | N16 | N32 |
+|---|---|---|---|---|
+| 电话读出，生日仍是整段均值 | 41/48 = 0.854 | 42/48 = 0.875 | 40/48 = 0.833 | 42/48 = 0.875 |
+| **字段切片 + 线性生日读出** | 47/48 = 0.979 | 47/48 = 0.979 | 47/48 = 0.979 | 48/48 = 1.000 |
+
+四档的增量就是新中的生日（N0 +6、N4 +5、N16 +7、N32 +6）。N16 原来已经中了 `January 1, 1970`。
+
+The last four phone tokens are the four digits, and the mean still carries all four. A birthday does not work that way. SmolLM2 splits `March 4, 1991` into one month token, one digit token or two, then four year-digit tokens. Layer 15 is causal. Changing only the ones digit (1991→1992) moves the four year tokens by L2 0, 0, 0, 45.27. Changing the tens digit (1991→1981) moves them by 0, 0, 74.67, 20.37. A day edit leaves the month token at L2 0. A year edit leaves the month and the day at 0.
+
+On Ada's `March 4, 1991` at layer 15 the whole-span mean has norm 140.28. Editing the month (the other 11 months): span L2 13.21, month token 72.59 (norm 187.76), day token 30.45, last token 8.04, mean of the four year tokens 7.36. Editing the day (9 days): span 11.25, day token 82.01 (norm 192.2), month 0, year-token mean 4.28. Editing the year (9 years): span 17.0, last token 60.26 (norm 169.42), year-token mean 38.26, month 0, day 0. The same date under another name moves the month token by about L2 18–25 from Ada (Nell 18.23, Willa 25.30), less than a month edit (72.59).
+
+The year is in the last token. The day is not. On a diagnostic matrix of 8 train names × 96 dates, ridge α=100, with a 12-way month head and digit heads for the day and the year, 4 test names × 32 unseen date triples give whole-span mean joint exact 79/128 (month 128, day 111, year 88), last token 35/128 (month 121, day 36, year 128), and the mean of the four year tokens 39/128 (month 123, day 40, year 128). That is the same failure as the 42/160 last-token and 43/160 span-mean probes in the previous section. Those 96 dates are not the held-out-year fit below.
+
+A field slice works. The 576 coordinates are split by shares 2, 1, 2, 2, 2, 2, 2 into 88, 44, 88, 89, 89, 89, 89: the leading coordinates of the month token, the day-tens token (zeros when the day has one digit), the day-ones token, and the four year digits. On that same matrix the slice is 128/128. A random projection into the same widths is also 128/128. The main path uses the leading coordinates and does not store a second matrix.
+
+Recombination is not memorizing the date. The fit drops years 1971, 1984, 1993, 2002, 2008, and 2016, and trains on 8 train names × 96 other dates, α=100. On test names, 24 dates in those years × 4 names is 96/96, and on train names that were in the fit it is also 96/96. Dropping days 7, 13, 16, and 24, 16 dates × 4 test names is 64/64. Those weights are not saved. The saved fit is 24 train names × 120 dates, α=100, covering days 1–27 and years 1970–2019. Train exact spelling is 2880/2880. Eight test names × 40 dates outside those 120 are 320/320. The readout on the 25 grid birthday values is 25/25. The five MLP tensors and the five phone tensors are elementwise equal to the file from before this fit. `date_on` 0 does not spell a date. Continuum byte codes are unchanged.
+
+The spelling is the generator's `Month D, YYYY`, with no leading zero on the day. With the fact in the prompt and at most 24 new tokens, the model echoes that sentence and contains the gold on 24/25. The miss repeats the question (`When is Ruth's birthday?`, gold `July 16, 1988`). `1991-03-03` did not appear. Without this readout the inject already emits that shape, with the fields wrong: `May 5, 2010` → `May 1, 2005, May 1, 2`, and `September 3, 1990` → `In September, 1993, in September, 199`. The one previous hit was `January 1, 1970`, contained in `January 1, 1970, the 1 January 1`. Alphanumeric containment asks for that string, so the readout spells the generator's text. `September 27, 2019` is 10 tokens, inside the 16-token budget.
+
+Same n=48, seeds `5000+N`, `generate`, at most 16 new tokens, float32. Birthdays go from 1/25 to 25/25, and the generated string equals the gold. Phones stay 26/28 (`+1-415-555-2060` → `+1-415-555-2070`, `+1-415-555-2063` → `+1-415-555-2073`). City, color, team, and job stay 138/139. Question ret@1 does not read the value, and the keys were not changed.
+
+| question free-gen | N0 | N4 | N16 | N32 |
+|---|---|---|---|---|
+| phone readout, birthday still the span mean | 41/48 = 0.854 | 42/48 = 0.875 | 40/48 = 0.833 | 42/48 = 0.875 |
+| **field slice + linear birthday readout** | 47/48 = 0.979 | 47/48 = 0.979 | 47/48 = 0.979 | 48/48 = 1.000 |
+
+The gain in each cell is the newly hit birthdays (N0 +6, N4 +5, N16 +7, N32 +6). N16 already contained `January 1, 1970`.
+
 ## soft top-k 消融 / Soft top-k ablation
 
-同一批 n=48 会话，是上一节电话读出之前测的。注入自由生成用 `span`。电话串现在由该读出从 top-1 的值拼出，发生在 soft 混合之前。ret@1 是 argmax，不随混合方式变化，四档问句和前缀都是 48/48。有两个以上槽时，top-1 和 top-2 的余弦差全部大于 0.05（N4 / N16 / N32 问句均值 0.442 / 0.261 / 0.186）。所以 margin 0.05（差距大于 0.05 用 top-1，否则 soft top-4、温度 0.05）在这张表里和 hard top-1 是同一条路径。
+同一批 n=48 会话，是电话读出之前测的。注入自由生成用 `span`。电话串和生日串现在都由对应的线性读出从 top-1 的值拼出，发生在 soft 混合之前。ret@1 是 argmax，不随混合方式变化，四档问句和前缀都是 48/48。有两个以上槽时，top-1 和 top-2 的余弦差全部大于 0.05（N4 / N16 / N32 问句均值 0.442 / 0.261 / 0.186）。所以 margin 0.05（差距大于 0.05 用 top-1，否则 soft top-4、温度 0.05）在这张表里和 hard top-1 是同一条路径。
 
-Same n=48 sessions, measured before the phone readout above. Inject free-gen uses `span`. Phone strings now come from that readout on the top-1 value, before a soft mix. ret@1 is argmax, so it does not depend on the mix: 48/48 on questions and on prefixes at every N. Whenever a session had two or more slots, the top-1 cosine beat top-2 by more than 0.05 (question means 0.442 / 0.261 / 0.186 at N4 / N16 / N32). A margin gate at 0.05 (top-1 when the gap is larger, otherwise soft top-4 at temperature 0.05) is therefore the same path as hard top-1 in this table.
+Same n=48 sessions, measured before the phone readout above. Inject free-gen uses `span`. Phone strings and birthday strings now come from their linear readouts on the top-1 value, before a soft mix. ret@1 is argmax, so it does not depend on the mix: 48/48 on questions and on prefixes at every N. Whenever a session had two or more slots, the top-1 cosine beat top-2 by more than 0.05 (question means 0.442 / 0.261 / 0.186 at N4 / N16 / N32). A margin gate at 0.05 (top-1 when the gap is larger, otherwise soft top-4 at temperature 0.05) is therefore the same path as hard top-1 in this table.
 
 问句自由生成：
 
