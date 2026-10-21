@@ -32,13 +32,13 @@ An empty store does not change that layer's output, so greedy tokens match the s
 1. **答案跨度池化。** 在注入层的隐状态上，只对答案 span 的 token 做均值。不做 L2 归一化，幅度留给恒等拷贝。值不减中心，也不丢弃 sink token。
 2. **键。** 键不是这个池。SmolLM2-135M 的第一个 token 是注意力 sink：整向量范数大约是其他 token 的 100 倍，第 507 维大约两万。对 token 做均值时，键几乎被这个 sink 决定，不同事实的余弦大约 0.99，默认 `overwrite_cos=0.9` 会把一条流收成一个槽。主路径上，键和问句先丢掉范数超过该字符串 token 范数中位数 8 倍的 token（只看当前字符串，不是会话状态），再减去一次标定得到的固定中心。事实键减 `key_mean`，问句减 `query_mean`。中心来自 12 个标定名字（Sam、Robin、Alex、Jordan、Casey、Riley、Avery、Quinn、Parker、Drew、Shawn、Logan）乘 6 种关系，和评测名字不相交；答案 span 不参与，所以中心不依赖答案文本。默认 SmolLM2-135M 第 15 层的中心存在 `tidal/llm_key_center.npz`。传入别的模型或层时，初始化时用同一批文本估一次，之后不随事实更新。没有开关。
 3. **槽。** 一条事实一个槽 `(k, v, name, rel)`。同身份直接覆盖。容量默认 256，满了按写入时间 FIFO。近重复键（余弦 > 0.9，同一 group）也覆盖。
-4. **soft top-4。** 温度 0.05，对 value 做凸组合。排序是原始余弦，和 `heads` / `recall` 一样。问句对比头仍然只在 `ask` / `query`（`tidal/question_head.py`），不接在这条 LM 路径上。这条路径不另训低维投影：在 sink 丢掉并减去固定中心之后，键已经能分开。
+4. **读出是 hard top-1。** 排序是原始余弦，取余弦最大的那一槽的值，不做凸组合。`EpisodicStore` 里的 soft top-k 还在，连续体 `heads` 仍用 soft top-4、温度 0.05；这条 LM 路径不走那个混合。测量见下面的消融：温度 0.05 的 soft top-4 和 top-1 在前缀上打平，问句上 top-1 更高，温度 0.20 会把别的槽混进来并掉点。问句对比头仍然只在 `ask` / `query`（`tidal/question_head.py`），不接在这条 LM 路径上。这条路径不另训低维投影：在 sink 丢掉并减去固定中心之后，键已经能分开。
 5. **注入。** 默认层是 `n_layers // 2`（SmolLM2-135M 是第 15 层）。加在该层残差上，每个位置同一向量：`add = v + MLP(v)`（`scale` 固定为 1）。MLP 是 Linear → GELU → Linear，末层零初始化，所以没装上训练权重时就是把 `v` 原样加进去。`LLMMemory` 自己加载默认模型、并且就是这一层时，会换成 `tidal/llm_inject_smollm2_135m.pt`。调用方传入的模型、别的 checkpoint、别的层，末层保持为零。文件内容和 `save_inject` 一样：inject 的 state dict，加上 `layer`、`hidden`。
 6. **写门控。** `kind="chat"` / `"noise"` 不写槽。空库读出是零，生成时不加。
 
 连续体 `heads` 上的电话、日期仍然是位置字节码，不走这个 MLP。在那些字节码上训过的 inject 会把 `+1-415-555-0134` 推离网格（最大绝对偏差 0.00111271），号码解不出来。那边的说明在 [episodic_memory.md](episodic_memory.md)。
 
-This is the A2s inject from the SmolLM study, sitting on the current `EpisodicStore` rather than a second memory. The value is the mean of the answer-span hidden states at the inject layer, not L2-normalized, not centered, and not sink-filtered. The key is a different pool. On SmolLM2-135M the first token is an attention sink (norm about 100× the other tokens, hidden unit 507 near 2e4). A mean over tokens is that sink, distinct facts land near cosine 0.99, and the default cosine overwrite of 0.9 keeps one slot. Keys and queries drop tokens whose norm exceeds 8× the median token norm of that same string, then subtract a fixed center: `key_mean` for fact keys, `query_mean` for questions. The centers are estimated once on 12 calibration names (Sam, Robin, Alex, Jordan, Casey, Riley, Avery, Quinn, Parker, Drew, Shawn, Logan) times 6 relations, disjoint from the held-out eval names. The answer span is excluded, so the center does not depend on the answer text. The default SmolLM2-135M layer-15 centers ship in `tidal/llm_key_center.npz`. A passed-in model, or another layer, fits those same strings at init and does not update as facts arrive. There is no switch and no learned low-dim projection: after the sink drop and the fixed center, the keys separate. Slots overwrite on the same identity, evict FIFO at 256, and also overwrite a near-duplicate key (cosine > 0.9 in the same group). Readout is soft top-4 at temperature 0.05, ranked by raw cosine. The contrastive question head stays on `ask` / `query` only. The default layer is `n_layers // 2`. The add is `v + MLP(v)` (`scale` fixed at 1). The MLP is Linear → GELU → Linear with a zero last layer, so an untrained module copies `v` through. When `LLMMemory` itself loads the default SmolLM2-135M checkpoint at that layer, it replaces the MLP with `tidal/llm_inject_smollm2_135m.pt`. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer. The file is the `save_inject` dict: the inject state dict plus `layer` and `hidden`. Chat and noise writes are dropped. An empty store adds nothing.
+This is the A2s inject from the SmolLM study, sitting on the current `EpisodicStore` rather than a second memory. The value is the mean of the answer-span hidden states at the inject layer, not L2-normalized, not centered, and not sink-filtered. The key is a different pool. On SmolLM2-135M the first token is an attention sink (norm about 100× the other tokens, hidden unit 507 near 2e4). A mean over tokens is that sink, distinct facts land near cosine 0.99, and the default cosine overwrite of 0.9 keeps one slot. Keys and queries drop tokens whose norm exceeds 8× the median token norm of that same string, then subtract a fixed center: `key_mean` for fact keys, `query_mean` for questions. The centers are estimated once on 12 calibration names (Sam, Robin, Alex, Jordan, Casey, Riley, Avery, Quinn, Parker, Drew, Shawn, Logan) times 6 relations, disjoint from the held-out eval names. The answer span is excluded, so the center does not depend on the answer text. The default SmolLM2-135M layer-15 centers ship in `tidal/llm_key_center.npz`. A passed-in model, or another layer, fits those same strings at init and does not update as facts arrive. There is no switch and no learned low-dim projection: after the sink drop and the fixed center, the keys separate. Slots overwrite on the same identity, evict FIFO at 256, and also overwrite a near-duplicate key (cosine > 0.9 in the same group). Readout on this path is hard top-1, ranked by raw cosine. `EpisodicStore` still implements soft top-k, and Continuum `heads` still use soft top-4 at temperature 0.05; this LM path does not mix. The ablation below is why: soft top-4 at temperature 0.05 tied top-1 on the answer-stripped prefix and trailed it on natural questions, and temperature 0.20 mixed other slots in and lost hits. The contrastive question head stays on `ask` / `query` only. The default layer is `n_layers // 2`. The add is `v + MLP(v)` (`scale` fixed at 1). The MLP is Linear → GELU → Linear with a zero last layer, so an untrained module copies `v` through. When `LLMMemory` itself loads the default SmolLM2-135M checkpoint at that layer, it replaces the MLP with `tidal/llm_inject_smollm2_135m.pt`. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer. The file is the `save_inject` dict: the inject state dict plus `layer` and `hidden`. Chat and noise writes are dropped. An empty store adds nothing.
 
 Continuum `heads` still store phones and dates as positional byte codes. An inject MLP trained on those codes moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded, so that path does not use this MLP. See [episodic_memory.md](episodic_memory.md).
 
@@ -160,10 +160,77 @@ The protocol is the same answer-stripped prefix protocol as the key-fix free-gen
 | fact in context | 29/64 = 0.453 | 32/64 = 0.500 | 25/64 = 0.391 | 30/64 = 0.469 |
 | bge RAG | 29/64 = 0.453 | 32/64 = 0.500 | 23/64 = 0.359 | 30/64 = 0.469 |
 
-每一档 N 上，训过的注入都高于事实进上下文，也高于 bge RAG。事实进上下文的提示只有目标事实加前缀，不含那 N 个干扰轮，所以 N 之间的起伏主要是种子不同抽到的事实不同。soft top-4 在 N 变大时仍可能把别的槽混进来，ret@1 已经是 1 时自由生成也可以掉。
+每一档 N 上，训过的注入都高于事实进上下文，也高于 bge RAG。事实进上下文的提示只有目标事实加前缀，不含那 N 个干扰轮，所以 N 之间的起伏主要是种子不同抽到的事实不同。这一节的读出是当时的 soft top-4、温度 0.05。下面的消融在同一套种子的前 48 条上重测了前缀：top-1 和 soft top-4 打平，所以这张表里 N16 的 0.531 不是那个混合造成的。
 
-Trained inject beats fact-in-context and bge RAG at every N in this table. The fact-in-context prompt is only the target fact plus the prefix, so the swing across N is mostly different facts from seeds `5000+N`, not a longer context. Soft top-4 can still mix other slots in at larger N, so free-gen can drop after ret@1 is already 1.
+Trained inject beats fact-in-context and bge RAG at every N in this table. The fact-in-context prompt is only the target fact plus the prefix, so the swing across N is mostly different facts from seeds `5000+N`, not a longer context. The readout in this table is the soft top-4 at temperature 0.05 that was the path at the time. The ablation below reruns that prefix on the first 48 sessions of the same seeds: top-1 ties soft top-4, so the 0.531 at N16 in this table is not that mix.
 
 同一批会话的 ret@1 是 64/64 = **1.000**（N0、N4、N16、N32 都是）。同名更新 n=48、种子 42：训过的注入给出新答案 **0.604**、旧答案 **0.000**。整段对话放进上下文时，新答案 0.188，旧答案 0.062。
 
 On those same sessions ret@1 is 64/64 = **1.000** at N0, N4, N16, and N32. A same-name update (n=48, seed 42) recalls the new answer in **0.604** of sessions and the old answer in **0.000**. With the whole transcript in the prompt, the new answer shows up in 0.188 of sessions and the old answer in 0.062.
+
+## 自然问句的自由生成 / Natural-question free generation
+
+前缀协议是绕开空串的办法，不是这条路径现在的生成方式。`LLMMemory.generate` 对贪心续写先丢掉开头的空白（包括换行），再按原来的 v22 规则停：下一个换行，或者在已经有一个以上非空字符时遇到句末标点（`.` `?` `!`）。SmolLM2-135M 对自然问句的无记忆续写以换行开头，旧停规则会把事实进上下文和 bge RAG 都打成空串。训过的注入本身通常不以换行开头，它以空格加答案开头，所以两种停规则在注入上分数一样。
+
+The prefix protocol was a way around the empty string. It is not how this path generates now. `LLMMemory.generate` drops leading whitespace, including newlines, and then applies the old v22 stop: the next newline, or sentence-ending punctuation (`.` `?` `!`) once more than one non-space character has been kept. With no memory, SmolLM2-135M starts a natural question with a newline, and the old stop scores fact-in-context and bge RAG as empty. The trained inject usually does not start with a newline. It starts with a space and the answer, so the two stops score the inject the same.
+
+下面是 `scripts/eval_llm_question.py`，冻结 **SmolLM2-135M**、**float32**、CPU，**n=48**，种子 `5000+N`，和上一节是同一条会话序列的前 48 条。一条问句和一条「事实进上下文 + 前缀」上，KV cache 的 12 个贪心 token 和不用 cache 的主循环一致，之后这次数用了 cache。墙钟 999 秒。问句是自然语言（`What is Nell's phone number?`）。自由生成最多 16 个新 token。匹配是字母数字包含。注入读出是 hard top-1，也就是现在的主路径。事实进上下文和 bge RAG 都是「被选中的那一行 + 换行 + 同一个问句」，空库。bge 用这个问句检索。`span` 是 `generate` 的停规则。`v22` 是不跳过开头换行的旧停规则，列在这里是为了说明空串从哪来。同一批 token 上，只切第一行、或留下全部 16 个 token，问句的命中数和 `span` 相同，所以没有改成更松的停规则。
+
+Numbers below are from `scripts/eval_llm_question.py` on frozen **SmolLM2-135M** in **float32** on CPU, **n=48**, seeds `5000+N`, the first 48 sessions of the same sequence as the prefix table. A KV cache matched the uncached greedy ids on one question and one fact-in-context prefix (12 tokens) and was then used for the run. Wall time was 999 seconds. The prompt is the natural question (`What is Nell's phone number?`). Free generation is at most 16 new tokens. Match is alphanumeric containment. The inject readout is hard top-1, which is the main path now. Fact-in-context and bge RAG are the chosen line, a newline, and that same question, with an empty store. bge retrieves with the question. `span` is the stop `generate` uses. `v22` is the old stop that does not skip a leading newline; it is here to show where the empty string came from. On these tokens, cutting at the first line only, or keeping all 16 tokens, matched `span` on every question cell, so the stop was not loosened.
+
+| config | N0 | N4 | N16 | N32 |
+|---|---|---|---|---|
+| no memory | 0/48 = 0.000 | 0/48 = 0.000 | 0/48 = 0.000 | 0/48 = 0.000 |
+| **trained inject, top-1, span** | 37/48 = **0.771** | 35/48 = **0.729** | 31/48 = **0.646** | 36/48 = **0.750** |
+| fact in context, span | 16/48 = 0.333 | 15/48 = 0.312 | 13/48 = 0.271 | 14/48 = 0.292 |
+| bge RAG, span | 16/48 = 0.333 | 15/48 = 0.312 | 13/48 = 0.271 | 14/48 = 0.292 |
+| fact in context and bge RAG, v22 | 0/48 = 0.000 | 0/48 = 0.000 | 0/48 = 0.000 | 0/48 = 0.000 |
+
+问句 ret@1 四档都是 48/48。bge 命中是 48/48、48/48、46/48、48/48。注入的问句自由生成每一档都高于事实进上下文，也高于 bge RAG。v22 把两个基线打成 0，是开头换行，不是基线没说出答案。`span` 把那一行留下来。无记忆在两种停规则下都是 0。
+
+注入自己的空串不是这个换行。四档里电话一共 28 条，全部空：第一个贪心 token 就是 eos（id 0），`ids` 是空的，放到 64 个 token 仍是空。生日 25 条里中了 1 条，其余是差了几天或一年的日期，整段字母数字对不上。城市、颜色、队伍全中。职业 34 条里中了 33 条。这四类是 138/139。四种读出的空串条数相同，所以这不是 soft top-k 的事。
+
+Question ret@1 is 48/48 at every N. bge hits are 48/48, 48/48, 46/48, and 48/48. Trained-inject question free-gen beats fact-in-context and bge RAG at every N. v22 scores both baselines at 0 because of the leading newline, not because those baselines never said the answer. `span` keeps that line. No-memory is 0 under both stops.
+
+The inject's own empty strings are not that newline. All 28 phone questions are empty: the first greedy token is eos (id 0), so `ids` is empty, and 64 tokens is still empty. Birthdays hit 1 of 25; the rest are off by a few days or a year, and the full alphanumeric date does not match. City, color, and team all hit. Job hits 33 of 34. Those four relations are 138/139. Every readout had the same empty counts, so this is not the soft top-k mix.
+
+## soft top-k 消融 / Soft top-k ablation
+
+同一批 n=48 会话。注入自由生成用 `span`。ret@1 是 argmax，不随混合方式变化，四档问句和前缀都是 48/48。有两个以上槽时，top-1 和 top-2 的余弦差全部大于 0.05（N4 / N16 / N32 问句均值 0.442 / 0.261 / 0.186）。所以 margin 0.05（差距大于 0.05 用 top-1，否则 soft top-4、温度 0.05）在这张表里和 hard top-1 是同一条路径。
+
+Same n=48 sessions. Inject free-gen uses `span`. ret@1 is argmax, so it does not depend on the mix: 48/48 on questions and on prefixes at every N. Whenever a session had two or more slots, the top-1 cosine beat top-2 by more than 0.05 (question means 0.442 / 0.261 / 0.186 at N4 / N16 / N32). A margin gate at 0.05 (top-1 when the gap is larger, otherwise soft top-4 at temperature 0.05) is therefore the same path as hard top-1 in this table.
+
+问句自由生成：
+
+Question free-gen:
+
+| readout | N0 | N4 | N16 | N32 |
+|---|---|---|---|---|
+| soft top-4, T=0.05 | 37/48 = 0.771 | 35/48 = 0.729 | 30/48 = 0.625 | 34/48 = 0.708 |
+| **hard top-1** | 37/48 = 0.771 | 35/48 = 0.729 | 31/48 = 0.646 | 36/48 = **0.750** |
+| soft top-4, T=0.20 | 37/48 = 0.771 | 32/48 = 0.667 | 23/48 = 0.479 | 19/48 = 0.396 |
+| soft top-2, T=0.05 | 37/48 = 0.771 | 35/48 = 0.729 | 30/48 = 0.625 | 34/48 = 0.708 |
+| margin 0.05, else soft top-4 T=0.05 | 37/48 = 0.771 | 35/48 = 0.729 | 31/48 = 0.646 | 36/48 = 0.750 |
+
+前缀自由生成（`Nell's phone number is `）。soft top-4、温度 0.05 和 hard top-1 四档都相同。温度 0.20 在 N32 掉到 27/48。
+
+Prefix free-gen (`Nell's phone number is `). Soft top-4 at temperature 0.05 and hard top-1 agree at every N. Temperature 0.20 falls to 27/48 at N32.
+
+| readout | N0 | N4 | N16 | N32 |
+|---|---|---|---|---|
+| soft top-4 T=0.05 and hard top-1 | 36/48 = 0.750 | 35/48 = 0.729 | 29/48 = 0.604 | 34/48 = 0.708 |
+| soft top-4, T=0.20 | 36/48 = 0.750 | 35/48 = 0.729 | 30/48 = 0.625 | 27/48 = 0.562 |
+| fact in context | 21/48 = 0.438 | 25/48 = 0.521 | 19/48 = 0.396 | 20/48 = 0.417 |
+| bge RAG | 21/48 = 0.438 | 25/48 = 0.521 | 17/48 = 0.354 | 20/48 = 0.417 |
+
+主路径是 **hard top-1**。问句上它每一档都不低于 soft top-4、温度 0.05，N32 是 36/48 对 34/48。前缀上两者打平。温度 0.20 会把邻近槽混进注入：N32 问句从 36/48 掉到 19/48。soft top-2、温度 0.05 和 soft top-4 相同，第三名和第四名几乎没有权重。margin 0.05 没有一次落到混合上。
+
+N16 前缀从 N0 的 36/48 掉到 29/48，top-1 和 soft top-4 是同一个数字。top-1 命中时注入的就是目标槽的值，提示里也没有干扰轮，所以这 7 条之差是种子 `5000+N` 抽到的事实不同，不是混合。soft top-4、温度 0.05 的问句纯度（读出和目标值的余弦）是 1、0.9999、0.9996、0.9992，没有任何一条低于 0.90。温度 0.20 的 N32 问句纯度是 0.979，自由生成已经明显变差。
+
+The main path is **hard top-1**. On questions it is at least soft top-4 at temperature 0.05 in every cell, and at N32 it is 36/48 against 34/48. On the prefix the two agree. Temperature 0.20 mixes neighboring slots into the inject and drops N32 questions from 36/48 to 19/48. Soft top-2 at temperature 0.05 matches soft top-4; the third and fourth neighbors get almost no weight. The margin gate at 0.05 never took the mixture.
+
+The prefix drop from 36/48 at N0 to 29/48 at N16 is the same number for top-1 and for soft top-4. When top-1 hits, the injected vector is that slot's value and the prompt does not contain the distractors, so those 7 sessions are different facts from seeds `5000+N`, not a mix. Question purity of soft top-4 at temperature 0.05 (cosine of the readout with the target value) is 1, 0.9999, 0.9996, and 0.9992, and no session is under 0.90. At temperature 0.20 the N32 question purity is 0.979 and free-gen is already clearly worse.
+
+连续体 `heads` 没有改。它的读出仍是 soft top-4、温度 0.05。
+
+Continuum `heads` is unchanged. Its readout is still soft top-4 at temperature 0.05.

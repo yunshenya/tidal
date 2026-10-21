@@ -12,7 +12,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from tidal.llm_memory import LLMMemory, greedy_continuation
+from tidal.llm_memory import LLMMemory, answer_span, decode_answer, greedy_continuation, span_complete
 from tidal.llm_memory_train import fit_inject
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -168,7 +168,7 @@ def test_same_identity_overwrite_returns_new_value():
         mem.close()
 
 
-def test_other_identity_is_kept_and_soft_topk_mixes():
+def test_other_identity_is_kept_and_readout_is_top1():
     mem = _byte_memory()
     mix = None
     try:
@@ -189,14 +189,133 @@ def test_other_identity_is_kept_and_soft_topk_mixes():
         assert mix.remember("red is Y", name="a", rel="p", key="query")
         assert mix.remember("blue is Z", name="b", rel="c", key="query")
         assert len(mix.store) == 2
+        # Tied keys: hard top-1 returns the first slot, not a soft blend.
         got = mix.injection("query")
-        assert np.allclose(got, 0.5 * (v1 + v2), atol=1e-5)
+        assert np.allclose(got, v1, atol=1e-5)
+        assert not np.allclose(got, 0.5 * (v1 + v2), atol=1e-5)
         assert "self.store.write" in inspect.getsource(LLMMemory.remember)
-        assert "self.store.readout" in inspect.getsource(LLMMemory._arm)
+        assert 'mode="top1"' in inspect.getsource(LLMMemory._arm)
     finally:
         mem.close()
         if mix is not None:
             mix.close()
+
+
+def _legacy_v22(tok, ids) -> str:
+    """Old free-gen stop: cut before a newline token, then on sentence punctuation."""
+    out = []
+    for nx in ids:
+        s = tok.decode(out + [int(nx)], skip_special_tokens=True)
+        if "\n" in s:
+            break
+        out.append(int(nx))
+        if s.rstrip().endswith((".", "?", "!")) and len(s.strip()) > 1:
+            break
+    return tok.decode(out, skip_special_tokens=True)
+
+
+def test_answer_span_skips_leading_newline_then_stops():
+    assert answer_span("\n+1-415-555-0134") == "+1-415-555-0134"
+    assert answer_span("\n\n  Oslo\nnope") == "Oslo"
+    assert answer_span("\nThe color is green.\nextra") == "The color is green."
+    assert answer_span("\nSure! The number is 5") == "Sure!"
+    assert answer_span("\n") == ""
+    assert answer_span("   \n\t") == ""
+    assert answer_span("green") == "green"
+    assert answer_span(".") == "."
+    assert answer_span("..") == ".."
+    assert answer_span("x?") == "x?"
+    assert span_complete("\n") is False
+    assert span_complete("\nHi") is False
+    assert span_complete("\nHi!") is True
+    assert span_complete("\nHi\nmore") is True
+    assert span_complete(".") is False
+    assert span_complete("..") is True
+
+
+def test_answer_span_matches_v22_without_a_leading_newline():
+    from tidal.llm_memory import ByteTokenizer
+
+    tok = ByteTokenizer()
+    samples = [
+        "green",
+        "green.",
+        "harbor pilot",
+        "March 4, 1991",
+        "+1-415-555-0134",
+        "Oslo\nextra",
+        "ab.",
+        ".",
+        "..",
+        "?",
+        "x?",
+        "Sure! more",
+        "",
+    ]
+    for text in samples:
+        ids = tok.encode(text)
+        assert decode_answer(tok, ids) == _legacy_v22(tok, ids) == answer_span(text)
+
+
+def test_decode_answer_recovers_text_after_a_leading_newline():
+    from tidal.llm_memory import ByteTokenizer
+
+    tok = ByteTokenizer()
+    text = "\nYY.ZZ"
+    ids = tok.encode(text)
+    assert _legacy_v22(tok, ids) == ""
+    assert decode_answer(tok, ids) == "YY."
+    assert decode_answer(tok, []) == ""
+
+
+class _ScriptedLM(nn.Module):
+    """Emits a fixed id sequence. Logits ignore the residual, so the stop is isolated."""
+
+    def __init__(self, prompt_len, script):
+        super().__init__()
+        self.prompt_len = int(prompt_len)
+        self.script = [int(i) for i in script]
+        self.n_forward = 0
+        self.embed = nn.Embedding(260, 8)
+        self.layers = nn.ModuleList([nn.Identity(), nn.Identity()])
+        self.config = type("Cfg", (), {"hidden_size": 8, "vocab_size": 260})()
+
+    def forward(self, input_ids, attention_mask=None, output_hidden_states=False, use_cache=False, **_kwargs):
+        del attention_mask, use_cache
+        self.n_forward += 1
+        h = self.embed(input_ids)
+        states = [h]
+        for layer in self.layers:
+            h = layer(h)
+            states.append(h)
+        logits = torch.full((input_ids.shape[0], input_ids.shape[1], 260), -1.0e4)
+        step = int(input_ids.shape[1]) - self.prompt_len
+        nxt = self.script[min(max(step, 0), len(self.script) - 1)]
+        logits[:, -1, nxt] = 0.0
+        return _Out(logits, tuple(states) if output_hidden_states else None)
+
+
+def test_generate_skips_leading_newline_and_stops():
+    from tidal.llm_memory import ByteTokenizer
+
+    tok = ByteTokenizer()
+    prompt = "Ask:"
+    assert len(tok.encode(prompt)) == 4
+    script = [ord("\n"), ord("Y"), ord("Y"), ord("."), ord("Z")]
+    model = _ScriptedLM(4, script)
+    mem = LLMMemory(model, tok)
+    try:
+        model.n_forward = 0
+        assert mem.generate(prompt, max_new_tokens=8) == "YY."
+        assert model.n_forward == 4
+        model.n_forward = 0
+        ids = mem.continuation_ids(prompt, max_new_tokens=5)
+        assert ids == script
+        assert model.n_forward == 5
+        assert _legacy_v22(tok, ids) == ""
+        assert decode_answer(tok, ids) == "YY."
+    finally:
+        mem.close()
 
 
 def test_chat_write_is_dropped():
