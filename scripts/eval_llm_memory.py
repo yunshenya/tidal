@@ -4,10 +4,14 @@ The "before" column is the old key: mean-pool every content token, no sink
 drop, no center. The "after" column writes ``LLMMemory.encode_key`` into the
 store (sink token dropped, fixed center subtracted). Queries for retrieval
 are the natural questions in ``tidal.llm_memory_data``. Free generation uses
-the untrained inject and a completion prefix (``"Nell's phone number is "``),
-because a natural question makes this model emit a leading newline and the
-v22 stop rule then scores every system as empty. Fact-in-context and bge RAG
-append that same prefix after the fact line.
+the inject installed on ``LLMMemory`` and a completion prefix
+(``"Nell's phone number is "``), because a natural question makes this model
+emit a leading newline and the v22 stop rule then scores every system as
+empty. On the default SmolLM2-135M layer that inject is the shipped trained
+MLP (``tidal/llm_inject_smollm2_135m.pt``). The n=32 free-gen zeros in
+``docs/llm_memory.md`` are the pre-train identity inject, measured after the
+key fix and before this checkpoint was the default. Fact-in-context and bge
+RAG append that same prefix after the fact line.
 
 CPU bfloat16 matmul in this torch build is about 1.7s per forward.
 ``dtype=float32`` is the same checkpoint and the dtype the original harness

@@ -15,10 +15,14 @@ estimated once from a calibration set and stored with the module. The add is
     scale(v) + MLP(scale(v))
 
 with ``scale`` fixed at 1 and the MLP's last layer initialized to zeros, so an
-untrained module copies ``v`` through. This is the A2s inject from the SmolLM
-study (see ``docs/llm_memory.md``). It is a different representation from the
-positional byte codes on ``Continuum.heads``; those codes stay on the episodic
-path and do not go through this MLP.
+untrained module copies ``v`` through. When this wrapper loads the default
+SmolLM2-135M checkpoint at the default layer, that MLP is replaced by the
+shipped 1500-step weights in ``llm_inject_smollm2_135m.pt``. A caller-supplied
+model, another checkpoint, or another layer keeps the zero last layer until
+:meth:`LLMMemory.load_inject`. There is no switch. This is the A2s inject from
+the SmolLM study (see ``docs/llm_memory.md``). It is a different representation
+from the positional byte codes on ``Continuum.heads``; those codes stay on the
+episodic path and do not go through this MLP.
 
 ``torch`` is imported by this module. ``transformers`` is imported only when a
 checkpoint is loaded or :func:`build_tiny_lm` is called. Core ``import tidal``
@@ -48,6 +52,8 @@ DEFAULT_OVERWRITE_COS = 0.9
 KEY_SINK_RATIO = 8.0
 KEY_GEOM_VERSION = "sink8-qmean-v1"
 _KEY_CENTER_FILE = "llm_key_center.npz"
+# 1500-step inject trained after the key-center fix. ``save_inject`` dict.
+_INJECT_FILE = "llm_inject_smollm2_135m.pt"
 
 # Held-out of the eval names in ``tidal.llm_memory_data``. One fact prefix and
 # one question per name and relation. Answers are stripped from the key, so
@@ -249,6 +255,48 @@ def save_key_centers(mem, path) -> None:
         key_mean=np.asarray(mem.key_mean, dtype=np.float32),
         query_mean=np.asarray(mem.query_mean, dtype=np.float32),
     )
+
+
+def _inject_path() -> Path:
+    return Path(__file__).with_name(_INJECT_FILE)
+
+
+def _torch_load(path):
+    try:
+        return torch.load(str(path), map_location="cpu", weights_only=False)
+    except TypeError:
+        return torch.load(str(path), map_location="cpu")
+
+
+def _ckpt_int(ckpt: Mapping[str, Any], key: str) -> Optional[int]:
+    try:
+        value = ckpt[key]
+    except (KeyError, TypeError):
+        return None
+    if torch.is_tensor(value):
+        if value.numel() != 1:
+            return None
+        value = value.detach().cpu().item()
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _inject_state_fits(module: nn.Module, state) -> bool:
+    """True when ``state`` is a finite tensor dict with the module's shapes."""
+    if not isinstance(state, dict):
+        return False
+    current = module.state_dict()
+    if set(state) != set(current):
+        return False
+    for key, tensor in current.items():
+        got = state[key]
+        if not torch.is_tensor(got) or tuple(got.shape) != tuple(tensor.shape):
+            return False
+        if not bool(torch.isfinite(got).all()):
+            return False
+    return True
 
 
 class InjectMLP(nn.Module):
@@ -482,6 +530,12 @@ class LLMMemory:
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. An empty store leaves the residual
     untouched, so greedy tokens match the same model with the hook removed.
+
+    Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
+    (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
+    inject in ``llm_inject_smollm2_135m.pt``. A caller-supplied model, another
+    checkpoint, or another layer keeps the zero-init MLP, so the add is ``v``,
+    until :meth:`load_inject`. There is no switch.
     """
 
     def __init__(
@@ -542,6 +596,7 @@ class LLMMemory:
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
+        self._load_shipped_inject()
         self.key_mean, self.query_mean = self._key_centers()
 
     def close(self) -> None:
@@ -674,6 +729,44 @@ class LLMMemory:
             keys.append(self._raw_key_pool(text, answer))
             queries.append(self._raw_key_pool(question))
         return np.mean(np.stack(keys), axis=0), np.mean(np.stack(queries), axis=0)
+
+    def _load_shipped_inject(self) -> None:
+        """Install the packaged SmolLM2-135M MLP when this wrapper is that model.
+
+        The file is the :meth:`save_inject` dict: the MLP state dict plus
+        ``layer`` and ``hidden``. It is applied only when this object loaded
+        :data:`DEFAULT_MODEL` and those two fields match. A missing file, any
+        other model or layer, or a narrower ``inject_hidden`` keeps the zero
+        last layer (the shipped tensors would not fit a narrower MLP). There
+        is no switch. :meth:`load_inject` still replaces the MLP from any path.
+        """
+        if self.model_name != DEFAULT_MODEL:
+            return
+        path = _inject_path()
+        if not path.is_file():
+            return
+        ckpt = _torch_load(path)
+        if not isinstance(ckpt, dict):
+            raise ValueError(f"{path.name} is not an inject checkpoint")
+        layer = _ckpt_int(ckpt, "layer")
+        hidden = _ckpt_int(ckpt, "hidden")
+        state = ckpt.get("inject")
+        if layer is None or hidden is None or not isinstance(state, dict):
+            raise ValueError(f"{path.name} must contain 'inject', 'layer', and 'hidden'")
+        if layer != int(self.layer) or hidden != int(self.hidden):
+            return
+        if not _inject_state_fits(self.inject, state):
+            # Default MLP width is the hidden size. A file that names this
+            # layer and hidden but does not fit that MLP is the wrong artifact.
+            if int(self.inject.net[0].out_features) != int(self.hidden):
+                return
+            raise ValueError(
+                f"{path.name} records layer {layer} and hidden {hidden}, "
+                "but the tensors do not match the default inject MLP"
+            )
+        self.inject.load_state_dict(state)
+        self.inject.to(self._device)
+        self.inject.eval()
 
     def encode_key(self, text: str, answer: Optional[str] = None) -> np.ndarray:
         """Pool used as the slot key.
@@ -821,10 +914,13 @@ class LLMMemory:
         )
 
     def load_inject(self, path) -> None:
-        try:
-            ckpt = torch.load(str(path), map_location="cpu", weights_only=False)
-        except TypeError:
-            ckpt = torch.load(str(path), map_location="cpu")
+        """Replace the inject MLP from a :meth:`save_inject` file.
+
+        This does not check ``layer``. The tensors have to match the MLP that
+        was built for this model. Use it for a checkpoint that is not the
+        shipped SmolLM2-135M file, or to replace that file after init.
+        """
+        ckpt = _torch_load(path)
         self.inject.load_state_dict(ckpt["inject"])
         self.inject.to(self._device)
 

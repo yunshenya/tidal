@@ -106,6 +106,9 @@ def test_packaging_extra_and_missing_message(monkeypatch):
     extra = project["project"]["optional-dependencies"]["llm"]
     assert any(item.startswith("transformers") for item in extra)
     assert any(item.startswith("torch") for item in extra)
+    packaged = project["tool"]["setuptools"]["package-data"]["tidal"]
+    assert "*.npz" in packaged
+    assert "*.pt" in packaged
     assert (ROOT / "requirements-llm.txt").is_file()
 
     import tidal.optional as opt
@@ -406,6 +409,134 @@ def test_shipped_smol_key_centers_are_finite_and_distinct():
     assert np.isfinite(key_mean).all() and np.isfinite(query_mean).all()
     assert not np.allclose(key_mean, query_mean)
     assert abs(float(key_mean[507])) > 10
+
+
+class _ShapeLM(nn.Module):
+    """Layer count and hidden size only. Init of a matching default must not forward."""
+
+    def __init__(self, n_layers, hidden):
+        super().__init__()
+        self.model = nn.Module()
+        self.model.layers = nn.ModuleList([nn.Identity() for _ in range(n_layers)])
+        self.config = type("Cfg", (), {"hidden_size": int(hidden)})()
+
+    def forward(self, *args, **kwargs):
+        raise AssertionError("LLMMemory init ran the language model")
+
+
+class _UnusedTok:
+    eos_token_id = 0
+
+
+def _install_shape_loader(monkeypatch, n_layers=30, hidden=576):
+    def fake(model_name, device="cpu", dtype=None):
+        del model_name, device, dtype
+        return _ShapeLM(n_layers, hidden), _UnusedTok()
+
+    monkeypatch.setattr("tidal.llm_memory._load_pretrained", fake)
+
+
+def _zero_centers(self):
+    z = np.zeros(self.hidden, dtype=np.float64)
+    return z, z.copy()
+
+
+def _last_weight(mem):
+    return mem.inject.net[-1].weight.detach().cpu()
+
+
+def test_default_llm_memory_loads_shipped_inject(monkeypatch):
+    """Default SmolLM2-135M shape loads the packaged MLP. No 135M download."""
+    from tidal.llm_memory import DEFAULT_MODEL, InjectMLP, _inject_path
+
+    path = _inject_path()
+    assert path.is_file()
+    assert path.name == "llm_inject_smollm2_135m.pt"
+    ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    assert set(ckpt) == {"inject", "layer", "hidden"}
+    assert int(ckpt["layer"]) == 15
+    assert int(ckpt["hidden"]) == 576
+    shipped = ckpt["inject"]["net.2.weight"]
+    assert tuple(shipped.shape) == (576, 576)
+    assert torch.count_nonzero(shipped) > 0
+    assert float(ckpt["inject"]["scale"]) == 1.0
+
+    _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
+    mem = LLMMemory()
+    try:
+        assert mem.model_name == DEFAULT_MODEL
+        assert mem.n_layers == 30
+        assert mem.layer == 15
+        assert mem.hidden == 576
+        assert torch.equal(_last_weight(mem), shipped)
+        assert torch.equal(mem.inject.state_dict()["net.2.bias"].cpu(), ckpt["inject"]["net.2.bias"])
+        blank = InjectMLP(576)
+        value = torch.arange(576, dtype=torch.float32)
+        assert torch.equal(blank(value), value)
+        assert not torch.equal(mem.inject(value).cpu(), value)
+    finally:
+        mem.close()
+
+
+def test_other_model_or_layer_keeps_zero_inject(monkeypatch):
+    from tidal.llm_memory import _inject_path
+
+    monkeypatch.setattr(LLMMemory, "_key_centers", _zero_centers)
+    _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
+
+    other_layer = LLMMemory(layer=14)
+    other_name = LLMMemory(model_name="other/model")
+    passed = LLMMemory(_ShapeLM(30, 576), _UnusedTok())
+    _install_shape_loader(monkeypatch, n_layers=4, hidden=32)
+    other_shape = LLMMemory()
+    _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
+    narrow = LLMMemory(inject_hidden=32)
+    try:
+        for mem in (other_layer, other_name, passed, other_shape, narrow):
+            assert torch.count_nonzero(_last_weight(mem)) == 0
+            value = torch.arange(mem.hidden, dtype=torch.float32)
+            assert torch.equal(mem.inject(value).cpu(), value)
+        assert other_layer.layer == 14 and other_layer.hidden == 576
+        assert other_name.model_name == "other/model"
+        assert passed.model_name is None and passed.layer == 15 and passed.hidden == 576
+        assert other_shape.layer == 2 and other_shape.hidden == 32
+        assert narrow.layer == 15 and narrow.inject.net[0].out_features == 32
+
+        other_layer.load_inject(_inject_path())
+        shipped = torch.load(_inject_path(), map_location="cpu", weights_only=False)
+        assert torch.equal(_last_weight(other_layer), shipped["inject"]["net.2.weight"])
+        assert not torch.equal(other_layer.inject(torch.zeros(576)), torch.zeros(576))
+    finally:
+        for mem in (other_layer, other_name, passed, other_shape, narrow):
+            mem.close()
+
+
+def test_load_inject_custom_path(tmp_path):
+    mem = _byte_memory()
+    try:
+        assert torch.count_nonzero(_last_weight(mem)) == 0
+        with torch.no_grad():
+            mem.inject.net[-1].bias.fill_(0.25)
+            mem.inject.net[-1].weight.fill_(0.01)
+        path = tmp_path / "custom.pt"
+        mem.save_inject(path)
+        saved = torch.load(path, map_location="cpu", weights_only=False)
+        assert set(saved) == {"inject", "layer", "hidden"}
+        assert int(saved["hidden"]) == mem.hidden
+        assert int(saved["layer"]) == mem.layer
+
+        fresh = _byte_memory()
+        try:
+            assert torch.count_nonzero(_last_weight(fresh)) == 0
+            fresh.load_inject(path)
+            assert torch.equal(_last_weight(fresh), _last_weight(mem))
+            assert torch.equal(fresh.inject.net[-1].bias.detach().cpu(), mem.inject.net[-1].bias.detach().cpu())
+            value = torch.arange(fresh.hidden, dtype=torch.float32)
+            assert not torch.equal(fresh.inject(value).cpu(), value)
+        finally:
+            fresh.close()
+    finally:
+        mem.close()
 
 
 def _offdiag_max(rows) -> float:

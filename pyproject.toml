@@ -32,4 +32,4 @@ teacher = ["sherpa-onnx>=1.10"]
 include = ["tidal*"]
 
 [tool.setuptools.package-data]
-tidal = ["*.npz"]
+tidal = ["*.npz", "*.pt"]

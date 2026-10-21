@@ -14,6 +14,10 @@ The original SmolLM run used 1500 steps, batch 8, 2000 cached facts, lr 1e-3,
 and a 20% wrong-value hinge. This script's defaults are that step count and
 hinge, with a smaller cache so a CPU box can finish a real checkpoint later.
 ``--model`` defaults to SmolLM2-135M and will download it. ``--tiny`` does not.
+That default checkpoint and its default layer already hold the shipped trained
+inject (``tidal/llm_inject_smollm2_135m.pt``), so a non-tiny run continues from
+those weights. ``--tiny`` and any other model or layer still start from a zero
+last layer.
 
 Retrieval is the episodic store. This script does not train a second q/k
 adapter; contrastive questions for tidal features stay in ``tidal.question_head``.
