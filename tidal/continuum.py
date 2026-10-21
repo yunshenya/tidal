@@ -13,12 +13,14 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
+Natural-language questions use ask / query (tidal/question_head.py). That contrastive head ranks slots for those calls only. It is not added into heads, and replay does not call it.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
 import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
 from tidal import vap_targets as VT
-from tidal.episodic import EpisodicStore, is_structured_value
+from tidal.episodic import EpisodicStore, cosine_scores, decode_span, decode_tokens, is_structured_value
+from tidal.question_head import QuestionHead, install_matching, question_scores
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 _GROUP_OMIT = object()
 
@@ -59,6 +61,18 @@ class Continuum:
             surprise_thr=ec.get("surprise_thr"),
         )
         self._mem_group = None   # set by replay; None reads every slot (global + grouped)
+        # Question head is a separate ranker for ask/query. Construction must
+        # not advance the global RNG (tests seed the model, then sample h).
+        # Zero last layer until a fit for this encoder is installed. heads()
+        # never reads it. There is no enable flag.
+        rng_state = torch.random.get_rng_state()
+        try:
+            self.question_head = QuestionHead(d)
+        finally:
+            torch.random.set_rng_state(rng_state)
+        self.question_head.eval()
+        self.question_head.requires_grad_(False)
+        install_matching(self)
         for p in model.parameters(): p.requires_grad_(False)
     def active(self, group):
         lv = []
@@ -168,6 +182,47 @@ class Continuum:
         """Token list in the winning slot, or None. Same scope rule as ``recall``."""
         q, g = self._recall_query(query, group)
         return self.episodic.read_tokens(q, group=g)
+    def _question_visible(self, question, group):
+        """Encoder-state question, group scope, visible slots, raw keys. Empty → no keys."""
+        q, g = self._recall_query(question, group)
+        visible = self.episodic._visible(g)
+        if not visible:
+            return q, g, visible, None
+        keys = np.stack([s.k for _, s in visible], 0)
+        return q, g, visible, keys
+    def query(self, question, *, group=_GROUP_OMIT, mode="softtopk"):
+        """Soft top-k value for a question encoder-state.
+
+        Ranking is the contrastive question head, then the same value mix as
+        ``EpisodicStore.read``. This does not run inside ``heads`` or ``replay``,
+        and it does not write slots. Omit ``group`` to use the replay scope;
+        pass ``None`` to search every slot. An empty scope returns ``(None, info)``.
+        """
+        q, g, _visible, keys = self._question_visible(question, group)
+        if keys is None:
+            return None, {"n": 0, "maxcos": -1.0, "top": None, "weights": None, "rank": "question"}
+        scores = question_scores(self.question_head, q, keys)
+        value, info = self.episodic.read_scored(scores, mode=mode, group=g)
+        info["rank"] = "question"
+        info["raw_maxcos"] = float(np.max(cosine_scores(keys, q)))
+        return value, info
+    def ask(self, question, *, group=_GROUP_OMIT):
+        """String in the slot the question head ranks first, or None.
+
+        Decodes that slot's positional byte code, not the soft top-k blend
+        (``query`` returns the blend). Same group scope as ``recall``. The
+        stored-key path stays ``recall``, which is raw cosine.
+        """
+        value, _info = self.query(question, group=group, mode="top1")
+        if value is None:
+            return None
+        return decode_span(value)
+    def ask_tokens(self, question, *, group=_GROUP_OMIT):
+        """Token list in the slot the question head ranks first, or None."""
+        value, _info = self.query(question, group=group, mode="top1")
+        if value is None:
+            return None
+        return decode_tokens(value)
     def update(self, h, v, lv):
         """h [n, d] for matured events, v [n, NV] target with NaN except the newly matured bins.
 
