@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from tidal.episodic import EpisodicStore
-from tidal.llm_memory import KEY_SINK_RATIO, LLMMemory, pool_key_tokens, pool_masked
+from tidal.llm_memory import KEY_SINK_RATIO, LLMMemory, pool_answer, pool_key_tokens, pool_masked
 from tidal.llm_memory_data import chat, fact, fact_stream, match, norm, session
 
 MAX_NEW_TOKENS = 16
@@ -71,7 +71,7 @@ def _spans(mem, text: str, answer: str | None):
         key_mask = [c and not a for c, a in zip(content, answer_m)]
         if not any(key_mask):
             key_mask = content
-        value = pool_masked(hidden, answer_m).detach().cpu().numpy().astype(np.float32, copy=False)
+        value = pool_answer(hidden, answer_m, answer).detach().cpu().numpy().astype(np.float32, copy=False)
     legacy = pool_masked(hidden, key_mask).detach().cpu().numpy().astype(np.float32, copy=False)
     idx = [i for i, flag in enumerate(key_mask) if flag]
     raw = pool_key_tokens(hidden[idx].detach().cpu().numpy(), ratio=KEY_SINK_RATIO)
