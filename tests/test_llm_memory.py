@@ -579,6 +579,9 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
     assert tuple(shipped.shape) == (576, 576)
     assert torch.count_nonzero(shipped) > 0
     assert float(ckpt["inject"]["scale"]) == 1.0
+    assert float(ckpt["inject"]["phone_on"]) == 1.0
+    assert tuple(ckpt["inject"]["phone_w"].shape) == (4, 10, 576)
+    assert tuple(ckpt["inject"]["phone_b"].shape) == (4, 10)
 
     _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
     mem = LLMMemory()
@@ -593,6 +596,7 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
         value = torch.arange(576, dtype=torch.float32)
         assert torch.equal(blank(value), value)
         assert not torch.equal(mem.inject(value).cpu(), value)
+        assert float(mem.inject.phone_on) == 1.0
     finally:
         mem.close()
 
@@ -654,6 +658,41 @@ def test_load_inject_custom_path(tmp_path):
             assert not torch.equal(fresh.inject(value).cpu(), value)
         finally:
             fresh.close()
+    finally:
+        mem.close()
+
+
+def test_phone_pool_is_the_last_four_digit_tokens():
+    mem = _byte_memory()
+    try:
+        answer = "+1-415-555-1111"
+        pooled = mem.encode_value(f"Ada's phone number is {answer}", answer)
+        # Last four characters are '1'. EyeLM's hidden state is that token.
+        assert np.allclose(pooled, mem.model.embed.weight[ord("1")].detach().numpy())
+        city = mem.encode_value("Ada lives in Oslo", "Oslo")
+        assert not np.allclose(city, mem.model.embed.weight[ord("o")].detach().numpy())
+    finally:
+        mem.close()
+
+
+def test_phone_readout_spells_digits_and_skips_other_relations():
+    mem = _byte_memory()
+    try:
+        assert mem.scripted_continuation("Ask:", 8) is None
+        mem.inject.phone_on.fill_(1.0)
+        mem.inject.phone_sd.fill_(1.0)
+        for pos, digit in enumerate((2, 4, 9, 9)):
+            mem.inject.phone_w[pos, digit, 0] = 1.0
+        value = np.zeros(mem.hidden, dtype=np.float32)
+        value[0] = 1.0
+        key = np.ones(mem.hidden, dtype=np.float32)
+        assert mem.store.write(key, value, name="ada", rel="phone")
+        assert mem.tokenizer.decode(mem.continuation_ids("What is Ada's phone number?")) == "+1-415-555-2499"
+        assert mem.generate("What is Ada's phone number?") == "+1-415-555-2499"
+        assert len(mem.continuation_ids("What is Ada's phone number?", max_new_tokens=4)) == 4
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="city")
+        assert mem.scripted_continuation("Which city does Ada live in?") is None
     finally:
         mem.close()
 

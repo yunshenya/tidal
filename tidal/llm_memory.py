@@ -8,7 +8,9 @@ answer-stripped prefix and lost two question hits at N32; temperature 0.20
 lost many more. See ``docs/llm_memory.md``.
 
 The value is an answer-span pool of that layer's hidden state. It is not
-L2-normalized: magnitude is what the identity copy-through needs. The key is
+L2-normalized: magnitude is what the identity copy-through needs. A phone-like
+answer (at least seven digits) pools only the last four answer tokens, which
+are the variable digits; every other answer pools the whole span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
@@ -19,9 +21,11 @@ estimated once from a calibration set and stored with the module. The add is
 with ``scale`` fixed at 1 and the MLP's last layer initialized to zeros, so an
 untrained module copies ``v`` through. When this wrapper loads the default
 SmolLM2-135M checkpoint at the default layer, that MLP is replaced by the
-shipped 1500-step weights in ``llm_inject_smollm2_135m.pt``. A caller-supplied
-model, another checkpoint, or another layer keeps the zero last layer until
-:meth:`LLMMemory.load_inject`. There is no switch. This is the A2s inject from
+shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP, plus a
+linear readout that spells ``+1-415-555-dddd`` from a phone value). A
+caller-supplied model, another checkpoint, or another layer keeps the zero
+last layer until :meth:`LLMMemory.load_inject`. There is no switch. This is
+the A2s inject from
 the SmolLM study (see ``docs/llm_memory.md``). It is a different representation
 from the positional byte codes on ``Continuum.heads``; those codes stay on the
 episodic path and do not go through this MLP.
@@ -56,6 +60,11 @@ KEY_GEOM_VERSION = "sink8-qmean-v1"
 _KEY_CENTER_FILE = "llm_key_center.npz"
 # 1500-step inject trained after the key-center fix. ``save_inject`` dict.
 _INJECT_FILE = "llm_inject_smollm2_135m.pt"
+# Phone answers in ``llm_memory_data`` are ``+1-415-555-`` plus four digits.
+# Seven digits leaves ``111`` and birthdays on the full-span mean.
+PHONE_DIGIT_MIN = 7
+PHONE_TAIL = "+1-415-555-"
+_PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
 
 # Held-out of the eval names in ``tidal.llm_memory_data``. One fact prefix and
 # one question per name and relation. Answers are stripped from the key, so
@@ -175,6 +184,31 @@ def pool_masked(hidden: torch.Tensor, mask: Sequence[bool]) -> torch.Tensor:
     if float(denom) <= 0.0:
         raise ValueError("answer span produced no tokens to pool")
     return (hidden * m.unsqueeze(-1)).sum(dim=0) / denom
+
+
+def phone_like(answer: str) -> bool:
+    """True when ``answer`` has enough digits to be a phone number in this data."""
+    return sum(ch.isdigit() for ch in str(answer)) >= PHONE_DIGIT_MIN
+
+
+def pool_answer(hidden: torch.Tensor, mask: Sequence[bool], answer: str) -> torch.Tensor:
+    """Value pool at the inject layer. Not L2-normalized.
+
+    Phone-like answers use the mean of the last four answer tokens. On
+    SmolLM2 those tokens are the four variable digits; a mean of the whole
+    ``+1-415-555-dddd`` span moves only L2 3.93 when the last digit changes
+    (norm 147.66), and the last token alone is a weaker linear code for
+    the first of those digits than the four-token mean. Every other answer
+    uses :func:`pool_masked`. A one-token span is the same vector either way.
+    """
+    if hidden.dim() != 2:
+        raise ValueError(f"pool expected [tokens, hidden], got {tuple(hidden.shape)}")
+    idx = [i for i, flag in enumerate(mask) if flag]
+    if not idx:
+        raise ValueError("answer span produced no tokens to pool")
+    if phone_like(answer):
+        return hidden[idx[-4:]].mean(dim=0)
+    return pool_masked(hidden, mask)
 
 
 def pool_key_tokens(rows: np.ndarray, ratio: float = KEY_SINK_RATIO) -> np.ndarray:
@@ -301,6 +335,38 @@ def _inject_state_fits(module: nn.Module, state) -> bool:
     return True
 
 
+def _inject_core_fits(module: nn.Module, state) -> bool:
+    """MLP tensors match. Phone-readout buffers may be absent.
+
+    A checkpoint saved before the readout only has the MLP keys. Unknown keys
+    and shape mismatches do not fit.
+    """
+    if not isinstance(state, dict):
+        return False
+    current = module.state_dict()
+    if not set(state) <= set(current):
+        return False
+    required = [key for key in current if key not in _PHONE_KEYS]
+    if not set(required) <= set(state):
+        return False
+    for key, got in state.items():
+        if not torch.is_tensor(got) or tuple(got.shape) != tuple(current[key].shape):
+            return False
+        if not bool(torch.isfinite(got).all()):
+            return False
+    return True
+
+
+def _load_inject_tensors(module: nn.Module, state) -> None:
+    """Load ``state`` onto ``module``. Missing phone buffers stay at init."""
+    if not _inject_core_fits(module, state):
+        raise ValueError("inject tensors do not match this MLP")
+    merged = {key: tensor.detach().cpu().clone() for key, tensor in module.state_dict().items()}
+    for key, tensor in state.items():
+        merged[key] = tensor.detach().cpu()
+    module.load_state_dict(merged)
+
+
 class InjectMLP(nn.Module):
     """``scaled + MLP(scaled)``. Last layer is exact zeros, so the add starts as ``scaled``."""
 
@@ -314,10 +380,30 @@ class InjectMLP(nn.Module):
         nn.init.zeros_(self.net[-1].weight)
         nn.init.zeros_(self.net[-1].bias)
         self.register_buffer("scale", torch.ones((), dtype=torch.float32))
+        # Linear phone readout. ``phone_on`` stays 0 until a fit writes it, so
+        # a fresh module does not spell a number. ``phone_w[p, digit]`` is the
+        # weight of digit 0-9 at variable position p. ``phone_b`` is 0 for a
+        # digit the fit saw and a large negative for one it did not.
+        self.register_buffer("phone_on", torch.zeros((), dtype=torch.float32))
+        self.register_buffer("phone_mu", torch.zeros(d, dtype=torch.float32))
+        self.register_buffer("phone_sd", torch.ones(d, dtype=torch.float32))
+        self.register_buffer("phone_w", torch.zeros(4, 10, d, dtype=torch.float32))
+        self.register_buffer("phone_b", torch.zeros(4, 10, dtype=torch.float32))
 
     def forward(self, value: torch.Tensor) -> torch.Tensor:
         scaled = value * self.scale
         return scaled + self.net(scaled)
+
+    def phone_digits(self, value: torch.Tensor) -> Optional[list]:
+        """Four digits read from a phone value, or None when the readout is off."""
+        if float(self.phone_on.detach().cpu()) == 0.0:
+            return None
+        v = value.detach().to(dtype=torch.float32, device=self.phone_mu.device).reshape(-1)
+        if v.numel() != self.phone_mu.numel():
+            raise ValueError(f"phone value dim {v.numel()} != {self.phone_mu.numel()}")
+        z = (v - self.phone_mu) / self.phone_sd
+        logits = torch.einsum("d,pcd->pc", z, self.phone_w) + self.phone_b
+        return [int(i) for i in torch.argmax(logits, dim=-1).tolist()]
 
 
 class ByteTokenizer:
@@ -757,10 +843,14 @@ class LLMMemory:
         return [True] * n_tokens
 
     def encode_value(self, text: str, answer: str) -> np.ndarray:
-        """Answer-span pool at the inject layer. Not L2-normalized."""
+        """Answer-span pool at the inject layer. Not L2-normalized.
+
+        Phone-like answers pool the last four answer tokens. Other answers
+        pool the whole span. See :func:`pool_answer`.
+        """
         hidden, enc = self._run_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
-        return pool_masked(hidden, mask).detach().cpu().numpy().astype(np.float32, copy=False)
+        return pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
 
     def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
         """Sink-dropped mean of the key tokens, before the fixed center."""
@@ -829,7 +919,7 @@ class LLMMemory:
             raise ValueError(f"{path.name} must contain 'inject', 'layer', and 'hidden'")
         if layer != int(self.layer) or hidden != int(self.hidden):
             return
-        if not _inject_state_fits(self.inject, state):
+        if not _inject_core_fits(self.inject, state):
             # Default MLP width is the hidden size. A file that names this
             # layer and hidden but does not fit that MLP is the wrong artifact.
             if int(self.inject.net[0].out_features) != int(self.hidden):
@@ -838,7 +928,7 @@ class LLMMemory:
                 f"{path.name} records layer {layer} and hidden {hidden}, "
                 "but the tensors do not match the default inject MLP"
             )
-        self.inject.load_state_dict(state)
+        _load_inject_tensors(self.inject, state)
         self.inject.to(self._device)
         self.inject.eval()
 
@@ -925,6 +1015,32 @@ class LLMMemory:
         finally:
             self._delta = None
 
+    def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
+        """Token ids spelled by the phone readout, or None to use the LM.
+
+        Hard top-1. When the winning slot is a phone and this module's phone
+        readout is on, the ids are ``+1-415-555-`` plus the four digits read
+        from that slot's value. An empty store, any other relation, or a
+        readout that is still zero returns None. ``max_new_tokens`` truncates
+        the id list.
+        """
+        if not isinstance(prompt, str) or prompt == "":
+            raise ValueError("prompt is empty")
+        if int(max_new_tokens) < 0:
+            raise ValueError("max_new_tokens must be >= 0")
+        if len(self.store) == 0 or float(self.inject.phone_on.detach().cpu()) == 0.0:
+            return None
+        query = self._query_vector(prompt)
+        value, info = self.store.read(query, mode="top1")
+        top = info.get("top") if isinstance(info, dict) else None
+        if value is None or not top or top[1] != "phone":
+            return None
+        digits = self.inject.phone_digits(torch.as_tensor(np.asarray(value, dtype=np.float32)))
+        if digits is None:
+            return None
+        ids = _id_list(self.tokenizer, PHONE_TAIL + "".join(str(d) for d in digits), add_special_tokens=False)
+        return ids[: int(max_new_tokens)]
+
     def continuation_ids(
         self,
         prompt: str,
@@ -933,6 +1049,9 @@ class LLMMemory:
     ) -> list:
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
+        scripted = self.scripted_continuation(prompt, max_new_tokens)
+        if scripted is not None:
+            return scripted
         self._arm(prompt)
         try:
             with torch.no_grad():
@@ -951,9 +1070,11 @@ class LLMMemory:
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        Leading whitespace is skipped before the stop, so a natural question
-        whose first token is a newline still yields the following line. The
-        span then ends at the next newline or at sentence-ending punctuation.
+        A phone slot with the shipped readout is spelled from that value
+        before the LM runs. Leading whitespace is skipped before the stop, so
+        a natural question whose first token is a newline still yields the
+        following line. The span then ends at the next newline or at
+        sentence-ending punctuation.
         """
 
         def _done(new_ids: list) -> bool:
@@ -1014,7 +1135,7 @@ class LLMMemory:
         shipped SmolLM2-135M file, or to replace that file after init.
         """
         ckpt = _torch_load(path)
-        self.inject.load_state_dict(ckpt["inject"])
+        _load_inject_tensors(self.inject, ckpt["inject"])
         self.inject.to(self._device)
 
 

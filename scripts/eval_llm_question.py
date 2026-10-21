@@ -194,7 +194,14 @@ def cached_greedy(mem, prompt: str, max_new_tokens: int) -> list:
 
 
 def generate_ids(mem, prompt: str, spec, max_new: int, use_cache: bool) -> list:
-    """Greedy ids with ``spec`` armed. Empty store adds nothing."""
+    """Greedy ids with ``spec`` armed. Empty store adds nothing.
+
+    A phone slot is spelled by the linear readout (hard top-1) before any
+    soft mix. That is the same id list ``continuation_ids`` returns.
+    """
+    scripted = mem.scripted_continuation(prompt, max_new)
+    if scripted is not None:
+        return scripted
     real = mem._arm
 
     def arm(text, _spec=spec):

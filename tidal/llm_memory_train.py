@@ -1,6 +1,9 @@
 """Fit the residual inject MLP on a frozen causal LM.
 
 Value = answer-span pool at the inject layer (not L2-normalized).
+Phone-like answers pool the last four answer tokens; other answers pool
+the whole span. ``fit_phone_readout`` fits the linear phone spelling on
+those values and does not touch the MLP.
 ``add = scale(v) + MLP(scale(v))`` with the MLP's last layer starting at zero.
 Teacher-forced next-token cross-entropy on the answer, given the prompt only
 (the fact text is not in the prompt). A fraction of steps adds the v21 hinge
@@ -139,6 +142,68 @@ def fit_inject(
     return log
 
 
+def fit_phone_readout(mem, *, n_numbers: int = 120, alpha: float = 100.0, seed: int = 0) -> dict:
+    """Ridge the four variable phone digits from the phone value pool.
+
+    Train-split names only. Writes the inject buffers ``phone_on``,
+    ``phone_mu``, ``phone_sd``, ``phone_w``, and ``phone_b``. The MLP weights
+    stay where they are. ``alpha`` is the ridge penalty on standardized
+    features. Returns the train exact-match count.
+    """
+    import numpy as np
+
+    from tidal.llm_memory_data import _TEXT, _answer, names
+
+    if int(n_numbers) < 10:
+        raise ValueError("n_numbers must be >= 10")
+    if float(alpha) < 0:
+        raise ValueError("alpha must be >= 0")
+    rng = __import__("random").Random(int(seed))
+    phone_ids = list(range(8000))
+    rng.shuffle(phone_ids)
+    chosen = phone_ids[: int(n_numbers)]
+    train_names = list(names("train"))
+    values = []
+    digits = []
+    for name in train_names:
+        for i in chosen:
+            answer = _answer("phone", i)
+            text = _TEXT["phone"].format(name=name, a=answer)
+            values.append(mem.encode_value(text, answer))
+            digits.append([int(c) for c in answer[-4:]])
+    x = np.stack(values).astype(np.float64)
+    y = np.asarray(digits, dtype=np.int64)
+    mu = x.mean(axis=0)
+    sd = x.std(axis=0)
+    sd[sd < 1e-6] = 1.0
+    z = (x - mu) / sd
+    eye = np.eye(z.shape[1])
+    gram = z.T @ z + float(alpha) * eye
+    weight = np.zeros((4, 10, z.shape[1]), dtype=np.float64)
+    bias = np.full((4, 10), -1.0e4, dtype=np.float64)
+    for pos in range(4):
+        classes = np.unique(y[:, pos])
+        targets = np.eye(len(classes))[np.searchsorted(classes, y[:, pos])]
+        solved = np.linalg.solve(gram, z.T @ targets)  # [d, n_class]
+        for col, digit in enumerate(classes):
+            weight[pos, int(digit)] = solved[:, col]
+            bias[pos, int(digit)] = 0.0
+    import torch
+
+    mem.inject.phone_mu.copy_(torch.tensor(mu, dtype=torch.float32))
+    mem.inject.phone_sd.copy_(torch.tensor(sd, dtype=torch.float32))
+    mem.inject.phone_w.copy_(torch.tensor(weight, dtype=torch.float32))
+    mem.inject.phone_b.copy_(torch.tensor(bias, dtype=torch.float32))
+    mem.inject.phone_on.fill_(1.0)
+    pred = []
+    for pos in range(4):
+        logits = z @ weight[pos].T + bias[pos]
+        pred.append(logits.argmax(axis=1))
+    hat = np.stack(pred, axis=1)
+    hit = int((hat == y).all(axis=1).sum())
+    return {"train_exact": hit, "n": int(y.shape[0]), "n_numbers": int(n_numbers), "n_names": len(train_names), "alpha": float(alpha)}
+
+
 def main(argv=None) -> None:
     import torch
 
@@ -156,9 +221,27 @@ def main(argv=None) -> None:
     p.add_argument("--layer", type=int, default=None)
     p.add_argument("--hid", type=int, default=None, help="MLP width. Default: the LM hidden size.")
     p.add_argument("--out", default="models/llm_inject.pt")
+    p.add_argument(
+        "--phone-readout",
+        action="store_true",
+        help="Fit the linear phone readout on the train split and save it. Does not train the MLP.",
+    )
+    p.add_argument("--phone-numbers", type=int, default=120, dest="phone_numbers")
+    p.add_argument("--phone-alpha", type=float, default=100.0, dest="phone_alpha")
     args = p.parse_args(argv)
 
     torch.set_num_threads(max(1, min(8, torch.get_num_threads())))
+    if args.phone_readout:
+        if args.tiny:
+            raise SystemExit("--phone-readout does not run on --tiny")
+        mem = LLMMemory(model_name=args.model, layer=args.layer, inject_hidden=args.hid, dtype=torch.float32)
+        info = fit_phone_readout(mem, n_numbers=args.phone_numbers, alpha=args.phone_alpha, seed=args.seed)
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        mem.save_inject(out)
+        print({"saved": str(out), **info}, flush=True)
+        mem.close()
+        return
     if args.tiny:
         model, tok = build_tiny_lm(seed=args.seed)
         mem = LLMMemory(model, tok, layer=args.layer, inject_hidden=args.hid)
