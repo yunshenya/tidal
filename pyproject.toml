@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tidal"
+version = "0.0.0"
+description = "Tiny CPU-only conversational turn-taking, plus optional frozen-LM test-time memory"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "scikit-learn>=1.5",
+    "joblib>=1.4",
+    "onnx>=1.16",
+    "onnxruntime>=1.18",
+    "tokenizers>=0.19",
+    "torch>=2.3",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+llm = ["torch>=2.3", "transformers>=4.40"]
+audio = ["soundfile>=0.12", "scipy>=1.13"]
+teacher = ["sherpa-onnx>=1.10"]
+
+[tool.setuptools.packages.find]
+include = ["tidal*"]
+
+[tool.setuptools.package-data]
+tidal = ["*.npz"]

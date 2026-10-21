@@ -1,8 +1,8 @@
 # 情景事实记忆 / Episodic fact memory
 
-连续体（`tidal/continuum.py`）在影子回放里始终带着一块情景事实槽（`tidal/episodic.py`）。它是 `heads` 的一部分，不是 SmolLM2 旁路，也不加载 135M 权重。neuromem 那个仓库已经删除；当时的笔记在 `research/neuromem/`，活的设计在 `tidal/episodic.py`。
+连续体（`tidal/continuum.py`）在影子回放里始终带着一块情景事实槽（`tidal/episodic.py`）。它是 `heads` 的一部分，空库读出是零，不加载 135M 权重。冻结因果语言模型的测试时注入在 `tidal/llm_memory.py`（`pip install tidal[llm]`），设计和当年的 SmolLM 数字在 [llm_memory.md](llm_memory.md)。那条路径不进 `heads`。
 
-Continuum's shadow replay always owns an episodic slot store. Readout sits on the `heads` path. Nothing here imports the neuromem package, SmolLM2, or a 135M checkpoint. The study notes live in `research/neuromem/`.
+Continuum's shadow replay always owns an episodic slot store. Readout sits on the `heads` path and does not load a 135M checkpoint. Test-time residual inject for a frozen causal LM is `tidal/llm_memory.py` (`pip install tidal[llm]`). The design and the old SmolLM numbers are in [llm_memory.md](llm_memory.md). That path is not added into `heads`.
 
 ## 行为 / Behavior
 
@@ -67,12 +67,12 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 | 朴素 key shield（写完按旧键把旧读出补回去） | 不采用。同名更新会写不进去。覆盖后槽里的键就是新键。 |
 | 对比学习 q/k MLP | 只在 `ask` / `query`。`heads` / `recall` / replay 仍是原始余弦。问句 ret@1 从 13/48 到 47/48。同一头若用来查「存进去的键、干扰是其他事实」会从 48/48 掉到 18/48，所以 `recall` 不接它。 |
 | 残差 inject MLP | 不采用。会把电话字节码推离网格。 |
-| SmolLM2-135M、`transformers` | 不引入。存档脚本在 `research/neuromem/`，核心代码不 import。 |
+| SmolLM2-135M、`transformers` | 核心 `import tidal` 不 import。可选模块 `tidal/llm_memory.py`，`pip install tidal[llm]`。 |
 | 答案跨度做均值池化，或写入时 L2 归一化 | 不采用。池化分不出顺序；归一化毁掉字节码。字符串走位置字节码。 |
 
 ## 问句头和余弦路径 / Question head and the cosine path
 
-对比 q/k 曾经直接接在 `read` 上，末层零初始化。问句检索会涨，但「查询 = 存进去的编码器键、干扰是其他事实」从 48/48 掉到 18/48，所以不能替换 `heads` / `recall`。残差 inject 另训过 300 步，把 `+1-415-555-0134` 推离字节网格（最大绝对偏差 0.00111271），解不出来。inject 仍然不在代码里。
+对比 q/k 曾经直接接在 `read` 上，末层零初始化。问句检索会涨，但「查询 = 存进去的编码器键、干扰是其他事实」从 48/48 掉到 18/48，所以不能替换 `heads` / `recall`。残差 inject 另训过 300 步，把 `+1-415-555-0134` 推离字节网格（最大绝对偏差 0.00111271），解不出来。所以这条字节码路径上没有 inject MLP。冻结 LM 的 inject 在 `tidal/llm_memory.py`，注入的是隐状态，不读这些字节码。
 
 现在 q/k 只服务 `ask` / `query`。同一套协议又量了一次：seed 0，`d=32`，冻结的 `fproj` + `tproj` + 一步 GRU，400 步，InfoNCE τ=0.07，难负例。问句向量用的是反转后的关系 token，不是存进去的键。这不是 SmolLM 的 n≈96 自由生成。脚本是 `python -m tidal.question_head`，权重在 `tidal/question_qk.npz`（合成编码器和合成事实，不是在真实聊天上训的 phase-1 权重）。
 
@@ -85,9 +85,9 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 
 `recall` 的分数和一份独立的余弦实现逐位相同。把问句头的权重改乱，replay 的输出逐位不变，空库时 `heads` 仍和静态模型逐位相同。未训练的末层是零，问句分数和原始余弦逐位相同；随包的拟合装上之后，问句集合上两者会分开（评测里至少有一条余弦选错、头选对，也至少有一条存进去的键上余弦选对、头选错）。
 
-SmolLM 存档（`research/neuromem/`）里的 K100 ret@1 0.451→0.590、N0 生成 0.594→0.656 是另一个模型，不能当成这里的结果。
+旧 SmolLM 研究（[llm_memory.md](llm_memory.md)）里的 K100 ret@1 0.451→0.590、N0 生成 0.594→0.656 是另一个模型，不能当成这里的结果。
 
-The contrastive maps used to sit on `read`. Question retrieval rose, and recall of the stored encoder key among other facts fell from 48/48 to 18/48, so they do not replace `heads` / `recall`. A residual inject fit (300 steps) moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded. Inject is still absent.
+The contrastive maps used to sit on `read`. Question retrieval rose, and recall of the stored encoder key among other facts fell from 48/48 to 18/48, so they do not replace `heads` / `recall`. A residual inject fit (300 steps) moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded. This byte-code path has no inject MLP. Frozen-LM inject lives in `tidal/llm_memory.py` and adds hidden states, not these codes.
 
 The query/key maps now serve only `ask` / `query`. The same protocol was measured again: seed 0, `d=32`, frozen `fproj` + `tproj` + one GRU step, 400 steps, InfoNCE τ=0.07, hard negatives. The question state uses the reversed relation token, not the stored key. This is not SmolLM's n≈96 free-gen sample. `python -m tidal.question_head` writes `tidal/question_qk.npz` (a synthetic encoder and synthetic facts, not phase-1 weights trained on real chat).
 
@@ -98,7 +98,7 @@ The query/key maps now serve only `ask` / `query`. The same protocol was measure
 | random unit keys, query = key, 8 unit distractors | 256/256 = 1 | 256/256 = 1 if the head were applied |
 | query = stored encoder key, distractors are 8 other fact keys | 48/48 = 1 (`recall`) | 18/48 = 0.3750 if `ask` were used on that key |
 
-`recall` scores match an independent cosine bitwise. Scrambling the question weights leaves replay outputs bitwise unchanged, and an empty store still matches the static model bitwise on `heads`. A zero last layer makes question scores bitwise-equal to raw cosine; after the shipped fit is installed, the two ranks diverge on the question set (the harness has at least one cosine miss that the head hits, and at least one stored key that cosine hits and the head misses). SmolLM's K100 and free-gen numbers stay in `research/neuromem/` and are not these figures.
+`recall` scores match an independent cosine bitwise. Scrambling the question weights leaves replay outputs bitwise unchanged, and an empty store still matches the static model bitwise on `heads`. A zero last layer makes question scores bitwise-equal to raw cosine; after the shipped fit is installed, the two ranks diverge on the question set (the harness has at least one cosine miss that the head hits, and at least one stored key that cosine hits and the head misses). SmolLM's K100 and free-gen numbers are in [llm_memory.md](llm_memory.md) and are not these figures.
 
 ## 影子策略 / Shadow policy
 

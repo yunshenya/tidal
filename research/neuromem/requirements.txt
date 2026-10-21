@@ -1,6 +1,0 @@
-# Historical neuromem study only. Do not install this for tidal.
-# tidal's core (tidal/episodic.py, tidal/episodic_train.py) does not import
-# transformers. These archived scripts targeted a frozen SmolLM2-135M and
-# do not run in this repo: the package and the checkpoints are gone.
-torch>=2.3
-transformers>=4.40
