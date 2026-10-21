@@ -9,12 +9,16 @@ Titans' surprise-driven test-time memory (Behrouz et al., arXiv:2501.00663). Lev
           (CMS eq. 71: chunked update), persists across that group's sessions
   global  per-deployment (one "streamer"/persona) adapter, updated every C_glob targets, tiny step
   frozen  base model weights (all heads included)
-h' = h + sum_levels B_l (A_l h) + b_l ; heads(h') -> logits. B_l, b_l start at 0, so every level starts as the static model.
+h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_adapt) ; heads(h') -> logits. B_l, b_l start at 0.
+Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, added in full.
+An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
+Facts are explicit (identity + key/value from this frozen encoder). Replay does not store raw events.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
 import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
 from tidal import vap_targets as VT
+from tidal.episodic import EpisodicStore
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 
 class Level:
@@ -37,13 +41,23 @@ class Level:
     def load(self, s): self.B, self.b, self.SB, self.Sb = [t.clone() for t in s]; self.gB.zero_(); self.gb.zero_(); self.n = 0
 
 CFG_DEFAULT = dict(rank=8, med=dict(lr=3e-3, mom=0.9, forget=0.01, every=1), slow=dict(lr=1e-3, mom=0.9, forget=0.0, every=32),
-                   glob=dict(lr=3e-4, mom=0.9, forget=0.0, every=256), surprise=True, levels=("med", "slow", "glob"), session_gap=1800.0)
+                   glob=dict(lr=3e-4, mom=0.9, forget=0.0, every=256), surprise=True, levels=("med", "slow", "glob"), session_gap=1800.0,
+                   # slot hyperparameters (capacity, retrieval). Not an on/off switch.
+                   episodic_cfg=dict(capacity=256, soft_k=4, soft_temp=0.05, overwrite_cos=0.9))
 
 class Continuum:
     def __init__(self, model, cfg):
         self.m = model; self.cfg = cfg; d = model.vap[0].in_features; self.d = d
         mk = lambda name, seed: Level(d, cfg["rank"], seed=seed, surprise=cfg["surprise"], **cfg[name])
         self.glob = mk("glob", 3); self.slow_by_group = {}; self.med_by_group = {}; self.mk = mk; self.ema = None
+        ec = dict(cfg.get("episodic_cfg") or {})
+        self.episodic = EpisodicStore(
+            capacity=int(ec.get("capacity", 256)), dk=d, dv=d,
+            overwrite_cos=float(ec.get("overwrite_cos", 0.9)),
+            soft_k=int(ec.get("soft_k", 4)), soft_temp=float(ec.get("soft_temp", 0.05)),
+            surprise_thr=ec.get("surprise_thr"),
+        )
+        self._mem_group = None   # set by replay; None reads every slot (global + grouped)
         for p in model.parameters(): p.requires_grad_(False)
     def active(self, group):
         lv = []
@@ -54,16 +68,81 @@ class Continuum:
         if "med" in self.cfg["levels"]: lv.append(self.med_by_group[group] if group in self.med_by_group else self.med)
         return lv
     def new_session(self, group=None):
+        # medium adapter resets; episodic facts stay until overwrite, eviction, or clear()
         self.med = self.mk("med", 1)
         if group is not None: self.med_by_group[group] = self.med
-    def heads(self, h, lv):
+    def _mix(self, h, lv):
+        """Adapter residual plus episodic readout. Empty store adds exact zeros."""
         hp = h + sum(l.delta(h) for l in lv) if lv else h
+        return hp + self.episodic.readout_torch(hp, group=self._mem_group)
+    def heads(self, h, lv):
+        hp = self._mix(h, lv)
         o = {k: m(hp) for k, m in self.m.heads.items()}; o["vap"] = self.m.vap(hp); return o
+    def embed_event(self, feats, text_emb=None):
+        """Encoder state h for one fact, from this frozen model. No extra LM.
+
+        ``feats`` is one event-feature row (``features.py`` / ``features_g.py``,
+        including emotion columns when the model was built with them).
+        ``text_emb`` is a 512-d bge vector (``tidal.embed`` / ``TextFrontEnd``)
+        and is added through ``model.tproj`` when that projection exists.
+        """
+        m = self.m
+        x = torch.as_tensor(np.asarray(feats, dtype=np.float32)).reshape(1, -1)
+        if x.shape[-1] != m.fproj.in_features:
+            raise ValueError(
+                f"event features are {x.shape[-1]}-d, model.fproj expects {m.fproj.in_features}. "
+                "Pass a features.py / features_g.py row (plus emotion columns if the model has them)."
+            )
+        training = m.training
+        m.eval()
+        try:
+            with torch.no_grad():
+                if text_emb is None:
+                    h = m.step(x)[0]["h"].reshape(-1)
+                else:
+                    if not hasattr(m, "tproj"):
+                        raise ValueError(
+                            "text_emb is a 512-d bge vector and needs the frozen model's tproj "
+                            "(the in-repo text pathway). This model has no text projection; "
+                            "put bge into the event features upstream, or pass encoder state h to remember()."
+                        )
+                    te = torch.as_tensor(np.asarray(text_emb, dtype=np.float32)).reshape(1, -1)
+                    if te.shape[-1] != 512:
+                        raise ValueError(f"bge text embedding must be 512-d, got {te.shape[-1]}")
+                    tok = m.inorm(m.fproj(x) + m.tproj(te))
+                    if m.kind == "gru":
+                        y, _ = m.body(tok.unsqueeze(1)); h = y[0, 0]
+                    else:
+                        h, _ = m.body.step(tok, None); h = h.reshape(-1)
+                h = h.detach().cpu().numpy().astype(np.float64, copy=False)
+        finally:
+            m.train(training)
+        if int(h.size) != int(self.d):
+            raise RuntimeError(f"encoder state dim {h.size} != continuum d {self.d}")
+        return h
+    def remember(self, key, value, name=None, rel=None, *, kind="fact", surprise=None, group=None):
+        """Write one fact in encoder-state space (dim ``self.d``). See ``embed_event``."""
+        k = np.asarray(key, np.float64).reshape(-1); v = np.asarray(value, np.float64).reshape(-1)
+        if k.size != self.d or v.size != self.d:
+            raise ValueError(
+                f"episodic key/value must be encoder states of dim {self.d} (got {k.size}, {v.size}). "
+                "Use embed_event on event features and, when the model has tproj, a 512-d bge vector. "
+                "Episodic memory does not load another language model."
+            )
+        return self.episodic.write(k, v, name, rel, kind=kind, surprise=surprise, group=group)
+    def remember_event(self, key_feats, value_feats, name=None, rel=None, *, key_text=None, value_text=None,
+                       kind="fact", surprise=None, group=None):
+        """Encode two feature rows (optional bge vectors) and write the resulting states."""
+        k = self.embed_event(key_feats, key_text); v = self.embed_event(value_feats, value_text)
+        return self.remember(k, v, name, rel, kind=kind, surprise=surprise, group=group)
     def update(self, h, v, lv):
-        """h [n, d] for matured events, v [n, NV] target with NaN except the newly matured bins."""
+        """h [n, d] for matured events, v [n, NV] target with NaN except the newly matured bins.
+
+        The VAP loss sees the same episodic residual as ``heads`` (zeros when the store is empty).
+        """
         params = []
         for l in lv: l.B.requires_grad_(True); l.b.requires_grad_(True); params += [l.B, l.b]
-        hp = h + sum(l.delta(h) for l in lv); lo = self.m.vap(hp); mk = ~torch.isnan(v)
+        hp = self._mix(h, lv); lo = self.m.vap(hp); mk = ~torch.isnan(v)
         per = F.binary_cross_entropy_with_logits(lo[mk], v[mk], reduction="none")
         loss = per.mean(); grads = torch.autograd.grad(loss, params)
         for l in lv: l.B.requires_grad_(False); l.b.requires_grad_(False)
@@ -78,6 +157,9 @@ def replay(cont, H, V, ts, conv, rows_eval, log_every=None):
     Each group has its own session adapter. Matured bins update the originating session,
     group and shared deployment adapter before the next prediction, even if that group
     has gone quiet. No group's future targets can influence another group's past.
+    Episodic readout runs on every step (an empty store adds zero). This loop does not
+    write stream events into the slot store; facts enter through ``Continuum.remember``.
+    Grouped slots are visible only while that group (or a global slot) is the query scope.
     """
     n = len(H); out_vap = torch.zeros(n, VT.NV)
     Ht = torch.from_numpy(H); Vt = torch.from_numpy(V); cost = np.zeros(n)
@@ -100,14 +182,15 @@ def replay(cont, H, V, ts, conv, rows_eval, log_every=None):
                 remaining -= 1
                 if remaining: row_state[r] = (session, lv, remaining)
                 else: del row_state[r]
-            for lv, batch in matured.values():
+            for session, (lv, batch) in matured.items():
+                cont._mem_group = session[0]
                 idx = list(batch); vv = torch.full((len(idx), VT.NV), float("nan"))
                 for j, r in enumerate(idx): vv[j, batch[r]] = Vt[r, batch[r]]
                 cont.update(Ht[idx], vv, lv)
         group = conv[i]
         if group not in last_ts or now - last_ts[group] > cont.cfg["session_gap"]:
             cont.new_session(group); sessions[group] = sessions.get(group, -1) + 1
-        last_ts[group] = now; lv = cont.active(group)
+        last_ts[group] = now; lv = cont.active(group); cont._mem_group = group
         with torch.no_grad():
             o = cont.heads(Ht[i:i + 1], lv); out_vap[i] = o["vap"][0]
             for k in head_out: head_out[k][i] = o[k][0]
@@ -197,6 +280,7 @@ def _test(model, cfg, R, mode, split, conv, ts, D, boot):
                 lv = []
                 if "glob" in cfg["levels"]: lv.append(c.glob)
                 if "slow" in cfg["levels"] and conv[rows][i] in c.slow_by_group: lv.append(c.slow_by_group[conv[rows][i]])
+                c._mem_group = conv[rows][i]
                 fin.append(c.heads(Ht[i:i + 1], lv)["vap"][0].numpy())
         lf, _ = _rowloss(np.array(fin), V); s = ok & (split[rows] == "test_time")
         T["forgetting_seen_final_state_vs_static"] = _bdelta(lf[s], ls[s], blocks[s], boot)

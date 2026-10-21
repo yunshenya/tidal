@@ -13,9 +13,9 @@
 - **主干。** 四个被点名的主干是 GRU、`tx_kv`（RoPE + KV 缓存）、`mamba3`（Mamba-3 MIMO）、`mamba3_siso`（Mamba-3 SISO），外加消融 `m3_ablate_m2`（`tidal/backbones.py` 的 `make_body`）。字面规则把消融也算进候选，第四阶段真实验证集上胜出的是 `m3_ablate_m2`；只在那四个被点名的主干里选，第四阶段胜出的是 Mamba-3 SISO，而 `mamba3_siso` 仍留在代码里作为主干选项。**影子模式现在加载的官方胜者是 `m3_ablate_m2`**：2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值是 3.9061，`mamba3_siso` 是 3.9276，差距 0.0215，大于 0.005。`tidal/shadow/p4.py` 的 `WINNER` 是 `kind=m3_ablate_m2`，文本情绪开、语音情绪关。
 - **文本情绪：采用，但是事件特征，不是头。** `tidal/emo_features.py` 的 11 列（8 类概率 + 效价 + 唤醒度 + 有无标记）拼在 `features_g` 后面。`Event.emotion` / `EventFeaturizer`（`tidal/duplex.py`）在 `n_extra > 0` 时写入同样的 10 个数加一个有无标记。`model.py` 的 `HEAD_DIMS` 里没有情绪头。
 - **语音情绪：头存在，不进入决策。** `tidal/emotion_speech.py` 的 `SpeechEmoHead` 在。预注册判定是不采用。全双工只把它放进 `ControlOut.affect`（`tidal/duplex.py`），事件编码器不读语音情绪。SenseVoice 只做离线教师（`emotion_speech.teacher`，可选依赖 `requirements-teacher.txt`）；软后验在 `tidal/sv_soft.py`，用的是 onnxruntime，不是 sherpa。
-- **连续体记忆：只做影子回放。** `tidal/continuum.py` 写明 "No live decisions"。
+- **连续体记忆：只做影子回放。** `tidal/continuum.py` 写明 "No live decisions"。情景事实槽（`tidal/episodic.py`，说明见 [episodic_memory.md](episodic_memory.md)）接在同一条 `heads` 上，常开：空库读出是零，没有 `enable_episodic` 之类的开关。它不改线上 tick 动作。
 - **第五阶段的头判定。** 打断头、话题转移头，以及把 `y_addr` 训成消息价值，都在冻结的 `mamba3_siso` + 文本情绪上联合训练过（3 个种子，规则见 [../reports/phase5.md](../reports/phase5.md)）。按预注册：打断头采用；话题转移头不采用；`y_addr` 的新目标不采用。`HEAD_DIMS` 仍是原来的六个；话题头和新 `y_addr` 目标不加载。`duplex.ACTIONS` 里的 `yield` 仍是 tick 动作，不是这个打断头。`EventEncoder.address` 仍是 `p_speak × 时间衰减`。
-- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值差距是 0.0215，测试集也偏向消融，所以 `WINNER` 已切换为 `m3_ablate_m2`，文本情绪开，语音情绪关。连续体记忆仍只做影子回放。
+- **主干重跑。** 候选只有 `mamba3_siso` 和 `m3_ablate_m2`。2026-10-08 的预注册第五阶段 bake-off（新鲜 P5bb_*）里，head-sum 真实 val 均值差距是 0.0215，测试集也偏向消融，所以 `WINNER` 已切换为 `m3_ablate_m2`，文本情绪开，语音情绪关。连续体记忆仍只做影子回放；情景事实槽在这条回放的 `heads` 上常开，空库为零，不接线上决策。
 - **打断头接入影子（只记录）。** 原来的打断头是在冻结 `mamba3_siso` 的状态上训的，不能直接放到 `m3_ablate_m2` 上。所以按同样的行、同样的联合训练和早停协议、同样的 3 个种子，在冻结的 `P4emo_m3_ablate_m2_s0` 状态上只重训侧头（`phase5_encode` / `phase5_train` 的 `p5_h_m2` 缓存）。公开 val BCE：0.2494 / 0.2519 / 0.2503（平均 0.2505），同一缓存上的线性探针 0.2600，训练集先验 0.4043。平均严格低于探针，按预注册规则仍然采用。公开 test（只报告）平均 0.2078。`tidal/shadow/p4.py` 把 3 个种子头的平均概率作为 `p_interrupt`：`EventEncoder` 每个事件记一份，`DuplexController` 的 `ControlOut.p_interrupt` 带上最后一个事件的值，cron 影子 tick 另写一个系统 `model:p4_m3_ablate_m2`（口径 `P4`，每条事件的六个头概率 + `p_interrupt`）。它**不是** tick 特征（`TICK_FEATS` 没变），不改任何动作，也没有重训 tick 控制器。用别的主干状态训出的头会被拒绝加载。标签含义：事件是一段说完的话，1 = 它在别人占着话轮时开口并拿到话轮，0 = 等到空档或只是附和。聊天流里没有这个真值，而且是在语音片段上训的，所以影子报告只给分布。每 tick 延迟（单线程、eager、随机权重、合成输入，`python -m tidal.duplex_sim bench_shadow` → `reports/duplex_bench_shadow.json`，影子编码器 + tick GRU，不加 → 加 3 个种子头，p50 / p95 ms）：每 tick 0 个事件 0.14 → 0.14 / 0.26 → 0.23；1 个 1.36 → 1.51 / 2.04 → 2.21；5 个 6.80 → 7.85 / 9.32 → 11.86；20 个 41.4 → 43.2 / 57.9 → 64.5。大约每个事件多 0.15 ms，都在 100 ms 的 tick 之内。
 
 - **前向插话 `p_barge`（只记录）。** 上面的 `p_interrupt` 是给一段已经说完的话打分。`p_barge` 是另一件事：别人还占着话轮的时候，预测自己会不会在时限内开口，决策时刻早于开口。规则写在 [../reports/phase5_barge_prereg.md](../reports/phase5_barge_prereg.md)，先于训练提交。语音每 0.5 秒一个决策点、时限 1 秒；文本（`pub_tg`）在对方每条消息上决策、时限 8 秒。标签只来自时间和话轮，没有词表。特征是冻结的 `p5_h_m2` 状态加上 4 个过去的时间量，主干不重训。3 个种子的公开 val BCE 是 0.0989 / 0.0992 / 0.0988（平均 0.0989），同一特征上的线性探针 0.1012，训练集先验 0.1199。平均严格低于探针，按预注册采用。公开 test（只报告）0.0785 / 0.0776 / 0.0779。`ControlOut.p_barge` 和影子日志在对方占着话轮时记下 3 个种子的平均概率；自己占着话轮时不记。它不是 tick 特征，不改动作，也没有重训 tick 控制器。别的特征上训出的头会被拒绝。每 tick 延迟（打断头开着，加前向头之前 → 之后，p50 / p95 ms，`reports/duplex_bench_barge.json`）：0 个事件 0.16 → 0.15 / 0.30 → 0.30；1 个 1.49 → 1.95 / 2.15 → 2.44；5 个 7.03 → 7.12 / 9.80 → 9.42；20 个（只跑了 200 tick）30.1 → 26.2 / 34.2 → 32.9，高负载那一档噪声大于头本身。都在 100 ms 的 tick 之内。
@@ -58,7 +58,7 @@
 - 时间特征：`tidal/features.py`；场景通用事件特征：`tidal/features_g.py`。
 - 主干和头：`tidal/model.py`、`tidal/backbones.py`；VAP：`tidal/vap.py`、`tidal/vap_targets.py`。
 - 情绪：`tidal/emotion.py`、`tidal/emo_features.py`、`tidal/emotion_speech.py`。
-- 全双工 tick：`tidal/duplex.py`。连续体：`tidal/continuum.py`。
+- 全双工 tick：`tidal/duplex.py`。连续体：`tidal/continuum.py`。情景事实槽：`tidal/episodic.py`（连续体 `heads` 常开读出；见 [episodic_memory.md](episodic_memory.md)）。
 - 训练：`tidal/train.py`、`tidal/vap.py`。
 - 校准和评测：`tidal/evaluate.py`、`tidal/metrics.py`。
 - 导出与 int8：`tidal/export.py`、`tidal/export2.py`、`tidal/quant3.py`（动态 int8；QAT 仍是计划）。
@@ -111,7 +111,7 @@
 | 场景通用的统一事件流 | `features_g.py`、`scenarios.py`、`loso.py` | ✅ / 🚧 | 没有场景枚举。留一场景基本不迁移（第二阶段） |
 | 身份无关角色 + 在线自适应 | `coldstart.py` | ✅ | 收益很小 |
 | 全双工 tick 控制（100 ms） | `duplex.py`、`duplex_sim.py` | 🚧 | 动作空间含 `yield`；控制器校验 tick 单调性、未来事件和输入状态。只在合成数据上做过 sanity 测试 |
-| 连续体记忆 | `continuum.py` | ✅（影子回放） | 不做线上决策 |
+| 连续体记忆 + 情景事实槽 | `continuum.py`、`episodic.py` | ✅（影子回放，情景读出常开） | 空库为零，无开关；不做线上决策。见 [episodic_memory.md](episodic_memory.md) |
 | int8 量化 | `embed.py`；`quant3.py` | ✅ 动态 int8 / 📋 QAT | 主干的 QAT 仍是计划 |
 | 剪枝 / LoRA | `model.py` | 📋 | |
 | 校准与弃权 | `evaluate.py`、`evaluate2.py`、`shadow/infer.py` | ✅ / 🚧 | 温度缩放在；线上弃权率不能直接用离线阈值 |
