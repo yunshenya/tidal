@@ -1,7 +1,7 @@
 """Episodic fact slots for Continuum (native, always on).
 
-Design reference: https://github.com/yunshenya/neuromem (inspiration only).
-This module does not import that package, SmolLM2, or any 135M checkpoint.
+The deleted neuromem study is archived under ``research/neuromem/`` (design notes
+only). This module does not import that package, SmolLM2, or any 135M checkpoint.
 
 Kept from the experiments that worked: one slot per fact ``(k, v, identity)``;
 same-identity overwrite; capacity with FIFO eviction; soft top-k readout;
@@ -15,10 +15,16 @@ Keys are vectors already produced by tidal — encoder state ``h``, event
 features, or a bge sentence vector run through the frozen model's own text
 projection. A value is either another vector of that kind, or a positional
 byte code for a string or a token list (phones, dates, multi-token spans).
-Retrieval is cosine over slot keys. The vector added by ``Continuum.heads``
-is a convex combination of slot values (weights sum to 1). Exact text is
-decoded from the winning slot's code, not from that blend. An empty store
-returns zeros.
+
+Ranking refines those keys with a residual query/key adapter (a 2-layer MLP
+on the query and another on the key). The last layer is zero, so an untrained
+adapter adds zeros and the score is raw cosine, denominator included. The
+vector added by ``Continuum.heads`` is that soft top-k mixture passed through
+a residual inject MLP, also zero on the last layer, so an untrained readout
+equals the mixture. ``read`` returns the mixture itself (no inject); exact
+text is decoded from the winning slot's code. Same-identity overwrite and the
+paraphrase threshold use the raw key, not the adapted one. An empty store
+returns zeros before the inject MLP runs.
 """
 from __future__ import annotations
 
@@ -27,6 +33,8 @@ from dataclasses import dataclass
 from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import torch
+import torch.nn as nn
 
 ArrayLike = Union[np.ndarray, Sequence[float]]
 SKIP_KINDS = frozenset({"chat", "noise"})
@@ -47,6 +55,110 @@ def _cos(a: np.ndarray, b: np.ndarray) -> float:
     if na < 1e-12 or nb < 1e-12:
         return 0.0
     return float(np.dot(a, b) / (na * nb))
+
+
+def cosine_scores(keys: np.ndarray, query: np.ndarray) -> np.ndarray:
+    """Cosine of each row of ``keys`` with ``query``, denominator ``kn * qn + 1e-12``.
+
+    Slot ranking uses this after the residual adapter. A zero residual leaves
+    the same scores as the raw keys.
+    """
+    keys = np.asarray(keys, dtype=np.float64)
+    query = np.asarray(query, dtype=np.float64).reshape(-1)
+    kn = np.linalg.norm(keys, axis=1)
+    qn = float(np.linalg.norm(query))
+    return (keys @ query) / (kn * qn + 1e-12)
+
+
+def head_hidden(din: int) -> int:
+    """Width of the retrieval and inject MLPs. 128-d matches the 256-d neuromem head."""
+    return int(min(256, max(32, int(din) * 2)))
+
+
+def episodic_head_params(din: int) -> int:
+    """Parameter count of the query MLP, the key MLP, and the inject MLP."""
+    din = int(din)
+    hid = head_hidden(din)
+    one = din * hid + hid + hid * din + din
+    return 3 * one
+
+
+def _residual_mlp(din: int, hid: int) -> nn.Sequential:
+    """Linear → GELU → Linear. Last layer is exact zeros, so the residual adds 0."""
+    net = nn.Sequential(nn.Linear(din, hid), nn.GELU(), nn.Linear(hid, din))
+    net.double()
+    nn.init.zeros_(net[-1].weight)
+    nn.init.zeros_(net[-1].bias)
+    return net
+
+
+class QueryKeyAdapter(nn.Module):
+    """Residual maps ``q' = q + Wq(q)``, ``k' = k + Wk(k)``. Untrained, ``q' = q`` and ``k' = k``.
+
+    InfoNCE training lives in ``tidal.episodic_train``. The store always runs
+    this module; it does not swap in raw cosine through a flag.
+    """
+
+    def __init__(self, din: int, hid: Optional[int] = None):
+        super().__init__()
+        din = int(din)
+        if din < 1:
+            raise ValueError("adapter din must be >= 1")
+        self.din = din
+        self.hid = head_hidden(din) if hid is None else int(hid)
+        self.wq = _residual_mlp(self.din, self.hid)
+        self.wk = _residual_mlp(self.din, self.hid)
+
+    def forward(self, x: torch.Tensor, kind: str) -> torch.Tensor:
+        if kind not in ("q", "k"):
+            raise ValueError(f"kind must be 'q' or 'k', got {kind!r}")
+        flat = x.dim() == 1
+        if flat:
+            x = x.unsqueeze(0)
+        if x.shape[-1] != self.din:
+            raise ValueError(f"adapter input {x.shape[-1]} != din {self.din}")
+        net = self.wq if kind == "q" else self.wk
+        y = x + net(x.to(dtype=net[-1].weight.dtype))
+        return y.squeeze(0) if flat else y
+
+
+class InjectResidual(nn.Module):
+    """``v' = v + MLP(v)`` with a zero last layer. Untrained, ``v' = v``.
+
+    Applied only when a readout vector exists. An empty store does not call it,
+    so a later nonzero bias cannot turn emptiness into a constant.
+    """
+
+    def __init__(self, din: int, hid: Optional[int] = None):
+        super().__init__()
+        din = int(din)
+        if din < 1:
+            raise ValueError("inject din must be >= 1")
+        self.din = din
+        self.hid = head_hidden(din) if hid is None else int(hid)
+        self.net = _residual_mlp(self.din, self.hid)
+
+    def forward(self, v: torch.Tensor) -> torch.Tensor:
+        flat = v.dim() == 1
+        if flat:
+            v = v.unsqueeze(0)
+        if v.shape[-1] != self.din:
+            raise ValueError(f"inject input {v.shape[-1]} != din {self.din}")
+        y = v + self.net(v.to(dtype=self.net[-1].weight.dtype))
+        return y.squeeze(0) if flat else y
+
+
+def _project(module: nn.Module, rows: np.ndarray, kind: Optional[str] = None) -> np.ndarray:
+    """Run ``module`` on float64 rows. ``kind`` is passed only for the query/key adapter."""
+    arr = np.asarray(rows, dtype=np.float64)
+    single = arr.ndim == 1
+    if single:
+        arr = arr.reshape(1, -1)
+    x = torch.from_numpy(np.array(arr, dtype=np.float64, copy=True))
+    with torch.no_grad():
+        y = module(x) if kind is None else module(x, kind)
+    out = np.array(y.detach().numpy(), dtype=np.float64, copy=True)
+    return out.reshape(-1) if single else out
 
 
 # Positional byte code. Two payload bytes per lane, as k/2**16, which is exact
@@ -270,6 +382,36 @@ class EpisodicStore:
         self.surprise_thr = surprise_thr
         self._slots: list[Slot] = []
         self._step = 0
+        self.retr: Optional[QueryKeyAdapter] = None
+        self.inj: Optional[InjectResidual] = None
+        self._ensure_heads()
+
+    def _ensure_heads(self) -> None:
+        """Build the residual heads once the key and value widths are known.
+
+        The store freezes them. Training uses a separate module and does not
+        write into this one. Last layers start at zero.
+        """
+        if self.dk is not None and self.retr is None:
+            self.retr = QueryKeyAdapter(self.dk)
+            self.retr.eval()
+            self.retr.requires_grad_(False)
+        if self.dv is not None and self.inj is None:
+            self.inj = InjectResidual(self.dv)
+            self.inj.eval()
+            self.inj.requires_grad_(False)
+
+    def _adapt(self, rows: np.ndarray, kind: str) -> np.ndarray:
+        self._ensure_heads()
+        if self.retr is None:
+            raise ValueError("query/key adapter needs a key width")
+        return _project(self.retr, rows, kind)
+
+    def _inject(self, rows: np.ndarray) -> np.ndarray:
+        self._ensure_heads()
+        if self.inj is None:
+            raise ValueError("inject MLP needs a value width")
+        return _project(self.inj, rows, None)
 
     def __len__(self) -> int:
         return len(self._slots)
@@ -311,13 +453,17 @@ class EpisodicStore:
             self.dk = int(k.size)
         if self.dv is None:
             self.dv = int(v.size)
+        self._ensure_heads()
 
     def _hit(self, kk: np.ndarray, name: Optional[str], rel: Optional[str], group: Optional[str]) -> Optional[int]:
         """Identity match first, else the first in-scope near-duplicate key.
 
-        Cosine does not cross groups, and it does not override a same-identity
-        slot that happens to sit later in the list. The stored key is replaced
-        on hit — nothing writes the previous key back.
+        The cosine here is the raw stored key. The retrieval adapter does not
+        participate, so a trained map cannot merge two facts that are far apart
+        in the original key, or split a same-identity overwrite. Cosine does
+        not cross groups, and it does not override a same-identity slot that
+        happens to sit later in the list. The stored key is replaced on hit —
+        nothing writes the previous key back.
         """
         hit_id = None
         hit_cos = None
@@ -386,7 +532,11 @@ class EpisodicStore:
         mode: str = "softtopk",
         group: Optional[str] = None,
     ) -> Tuple[Optional[np.ndarray], dict]:
-        """Value for query ``q``. ``top1`` is argmax cosine; ``softtopk`` mixes the top keys.
+        """Value for query ``q``. ``top1`` is argmax score; ``softtopk`` mixes the top values.
+
+        Scores are cosine on the residual query/key adapter. With a zero last
+        layer that cosine is the raw one. The returned vector is the raw slot
+        mixture: the inject MLP is not applied here.
 
         ``group is None`` searches every slot. A group sees its own slots plus
         global slots (``group is None`` on the slot). Returns ``(None, info)``
@@ -400,9 +550,9 @@ class EpisodicStore:
         if self.dk is not None and qq.size != self.dk:
             raise ValueError(f"query dim {qq.size} != store dk {self.dk}")
         K = np.stack([s.k for _, s in visible], 0)
-        kn = np.linalg.norm(K, axis=1)
-        qn = float(np.linalg.norm(qq))
-        c = (K @ qq) / (kn * qn + 1e-12)
+        qq = self._adapt(qq, "q")
+        K = self._adapt(K, "k")
+        c = cosine_scores(K, qq)
         info["maxcos"] = float(c.max())
         top_local = int(np.argmax(c))
         top_i, s0 = visible[top_local]
@@ -464,11 +614,18 @@ class EpisodicStore:
         out_dim: Optional[int] = None,
         group: Optional[str] = None,
     ) -> np.ndarray:
-        """Float64 vector. Zeros when no slot is visible."""
+        """Float64 vector added to ``h``. Zeros when no slot is visible.
+
+        The zeros are produced before the inject MLP, so an empty store stays
+        an exact zero even if that MLP later grows a bias. A visible mixture
+        goes through the residual inject. A zero last layer leaves the mixture
+        unchanged.
+        """
         v, _ = self.read(q, mode=mode, group=group)
         dim = out_dim if out_dim is not None else (self.dv if self.dv is not None else (0 if v is None else int(v.size)))
         if v is None:
             return np.zeros(int(dim), dtype=np.float64)
+        v = self._inject(v)
         if out_dim is None or v.size == int(out_dim):
             return v
         out = np.zeros(int(out_dim), dtype=np.float64)
