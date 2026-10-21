@@ -9,8 +9,9 @@ positional byte-code decode. Nothing here is added into ``heads``.
 
 The fit is InfoNCE (τ=0.07) on synthetic facts from that encoder. The question
 vector uses the reversed relation token, so it is not the stored key. A
-residual inject MLP is not trained: it moves phone codes off the byte grid.
-No SmolLM checkpoint and no ``transformers`` import.
+residual inject MLP is not trained on these byte codes: it moves phone numbers
+off the grid. Frozen-LM residual inject is ``tidal.llm_memory`` (see
+``docs/llm_memory.md``). This module does not import ``transformers``.
 
 The shipped file ``question_qk.npz`` is the seed-0, d=32, 400-step fit plus
 the encoder it was trained on. ``load_reference`` rebuilds that pair.

@@ -1,7 +1,8 @@
 """Episodic fact slots for Continuum (native, always on).
 
-The deleted neuromem study is archived under ``research/neuromem/`` (design notes
-only). This module does not import that package, SmolLM2, or any 135M checkpoint.
+The SmolLM study notes are in ``docs/llm_memory.md``. This module does not
+import SmolLM2 or any 135M checkpoint. ``tidal.llm_memory`` reuses this store
+to inject a frozen causal LM and is not called by ``Continuum.heads``.
 
 Kept from the experiments that worked: one slot per fact ``(k, v, identity)``;
 same-identity overwrite; capacity with FIFO eviction; soft top-k readout;
@@ -23,8 +24,9 @@ empty store returns zeros.
 Natural-language questions, where the encoder state is not the stored key,
 go through ``Continuum.ask`` / ``Continuum.query`` and the contrastive head
 in ``tidal.question_head``. That head is not applied here. A residual inject
-MLP was measured on these states and is not used: it pushed phone codes off
-the byte grid. The numbers are in ``docs/episodic_memory.md``.
+MLP was measured on these byte codes and is not used here: it pushed phone
+codes off the grid. ``tidal.llm_memory`` injects LM hidden states, not these
+codes. The counts are in ``docs/episodic_memory.md`` and ``docs/llm_memory.md``.
 """
 from __future__ import annotations
 

@@ -97,10 +97,14 @@ tidal/                 核心代码
   backbones.py         第四阶段：Mamba-3 SISO / MIMO（含分块 SSD）、RoPE + KV 缓存 Transformer、Mamba-2 式消融
   emotion.py / emotion_speech.py / sv_soft.py / emo_features.py / emo_speech_integ.py   第四阶段：文本 / 语音情绪头、SenseVoice 离线教师软标签、情绪特征、语音情绪接入测试
   eval4.py / bench4.py / report4.py / continuum.py   第四阶段：评测、流式延迟与 ONNX、汇总、连续体记忆（影子回放）
+  episodic.py          情景事实槽（同身份覆盖、soft top-k、位置字节码）
+  question_head.py     问句检索，只给 ask / query
+  llm_memory.py        可选：冻结因果 LM 的测试时记忆（答案跨度池化，残差注入）。`pip install tidal[llm]`
+  llm_memory_train.py  答案跨度池化 + inject MLP 的 CPU 训练（`--tiny` 不下载模型）
   corpus_fmt.py        "!语料" 对话片段格式的通用解析器（示例见 examples/corpus_example.txt，纯虚构）
   shadow/              影子模式：数据源插件、SQLite 存储、推理、打标签、报告
 scripts/               流水线、cron 包装、示例数据生成
-docs/                  架构与路线图、相关工作
+docs/                  架构、相关工作、情景记忆（episodic_memory.md）、冻结 LM 记忆（llm_memory.md）
 reports/phase1.md      第一阶段报告（脱敏版）
 reports/phase2.md      第二阶段报告（脱敏版）
 reports/phase3.md      第三阶段报告（脱敏版，只含公开数据上的数字）

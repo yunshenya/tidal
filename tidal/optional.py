@@ -1,4 +1,4 @@
-"""Clear errors for optional extras (see requirements-audio.txt / requirements-teacher.txt)."""
+"""Clear errors for optional extras (requirements-audio.txt, requirements-teacher.txt, requirements-llm.txt)."""
 import importlib
 
 def require(module, extra, pip_name=None):
@@ -9,5 +9,6 @@ def require(module, extra, pip_name=None):
         pkg = pip_name or module.split(".")[0]
         raise ImportError(
             f"optional dependency '{pkg}' is not installed (extra '{extra}'). "
-            f"Install with: pip install -r requirements-{extra}.txt"
+            f"Install with: pip install 'tidal[{extra}]' "
+            f"or pip install -r requirements-{extra}.txt"
         ) from e

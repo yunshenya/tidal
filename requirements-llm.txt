@@ -1,0 +1,6 @@
+# Optional frozen causal-LM memory (tidal/llm_memory.py).
+#   pip install tidal[llm]
+#   pip install -r requirements-llm.txt
+# Core `import tidal` does not import torch or transformers.
+-r requirements.txt
+transformers>=4.40
