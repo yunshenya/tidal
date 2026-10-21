@@ -10,8 +10,8 @@ Titans' surprise-driven test-time memory (Behrouz et al., arXiv:2501.00663). Lev
   global  per-deployment (one "streamer"/persona) adapter, updated every C_glob targets, tiny step
   frozen  base model weights (all heads included)
 h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_adapt) ; heads(h') -> logits. B_l, b_l start at 0.
-Episodic readout is always on (tidal/episodic.py): residual query/key adapter, then one soft top-k over fact slots, then a residual inject MLP. Both MLPs are zero on the last layer, so an untrained store ranks by raw cosine and adds the mixture unchanged.
-An empty store adds zeros before that inject, so a fresh Continuum matches the static model. There is no enable flag.
+Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
+An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.

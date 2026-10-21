@@ -3,8 +3,7 @@
 The neuromem held-out sample was n≈96 free-gen strings, so a 0.02 swing was
 noise. This harness does not estimate a rate. Every case is an exact pass/fail
 on overwrite, soft top-k, group isolation, the write gate, causal visibility,
-and phone / birthday / multi-token values. Ranking goes through the residual
-query/key adapter. The default last layer is zero, so the scores are raw cosine.
+and phone / birthday / multi-token values. Ranking is raw cosine.
 
 Run: ``python -m tidal.episodic_eval``
 """

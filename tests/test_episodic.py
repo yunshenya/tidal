@@ -529,6 +529,8 @@ def test_span_module_has_no_enable_switch():
     import tidal.episodic as ep
     src = inspect.getsource(ep)
     assert "enable_episodic" not in src and "episodic_scale" not in src
+    assert "QueryKeyAdapter" not in src and "InjectResidual" not in src
+    assert "install_retr" not in src and "install_inj" not in src
 
 
 def test_continuum_injects_span_code_and_empty_stays_exact():

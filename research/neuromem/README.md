@@ -1,24 +1,29 @@
-# neuromem（已并入 tidal，仓库已删除）
+# neuromem（仓库已删除；活路径不包含那两套头）
 
-这是一次**冻结 SmolLM2-135M** 上的测试时记忆研究，不是 tidal 的运行时依赖。GitHub 上的 neuromem 仓库已经删除。这里只留设计记录：哪些写法留下来了，哪些明确失败。对应的实现现在在 `tidal/episodic.py`，用的是 tidal 自己的编码器状态（`fproj` / `tproj`），不加载 135M，也不读任何 `.pt`。
+这是一次**冻结 SmolLM2-135M** 上的测试时记忆研究，不是 tidal 的运行时依赖。GitHub 上的 neuromem 仓库已经删除。留下的设计在 `tidal/episodic.py`：离散槽、同身份覆盖、soft top-k、写门控、位置字节码。对比 q/k MLP 和残差 inject MLP 在 tidal 自己的 `fproj` / `tproj` 上量过，然后从主路径删掉。这里不加载 135M，也不提交 `.pt`。
 
-This directory archives a frozen-SmolLM2-135M study. The neuromem GitHub repo is gone. The design that survived lives in `tidal/episodic.py` and is trained, when at all, by `python -m tidal.episodic_train` on tidal's own encoder. No 135M checkpoint is loaded. Do not commit `.pt` files here.
+This directory archives a frozen-SmolLM2-135M study. The neuromem GitHub repo is gone. What tidal kept is the slot store in `tidal/episodic.py` (raw cosine, soft top-k, same-identity overwrite, the write gate, positional byte codes). The contrastive query/key MLP and the residual inject MLP were measured on tidal's encoder and removed. No 135M checkpoint is loaded. Do not commit `.pt` files here.
 
-## 留下的设计 / What moved into tidal
+## 留在 tidal 里的 / What tidal kept
 
 - 一条事实一个槽 `(k, v, identity)`，同身份覆盖，容量 FIFO。
-- soft top-4，温度 0.05。写门控丢掉闲聊。
-- 检索：两层 q/k MLP（Linear → GELU → Linear），InfoNCE，难负例（同名异关系、同关系异名）。在 tidal 里这是**残差**（末层零初始化）。没训练时排序就是原始余弦。SmolLM 实验里的适配器是投影到 128 维再 L2 归一化，不是残差；投影不能零初始化成恒等映射，所以 tidal 用残差。
-- 读出：残差 inject MLP，末层零初始化。没训练、且库为空时，加到 `h` 上的是 0。空库在进 inject 之前就返回 0。
+- soft top-4，温度 0.05。排序是原始余弦。
+- 写门控丢掉闲聊。空库读出是精确的零。
 - 电话、日期、多 token 用位置字节码，不均值池化，不 L2 归一化。
 
-SmolLM 上的自由生成数字（n=96，约 0.02 的起伏分不出来）不能当成 tidal 的结果。tidal 上重新量过的 ret@1 写在 `docs/episodic_memory.md`。问句检索会涨，episodic_eval 那种随机单位干扰上余弦已经是 1，训过的头不会更好；用存进去的编码器键在其他事实里做查询时，训过的头会退步，所以默认不加载权重。
+## 量过并删掉的 / Measured, then removed
 
-## 明确不要的 / Discarded
+在 tidal 特征上（seed 0，`d=32`，不是 SmolLM）：问句检索 ret@1 从 13/48 升到 47/48；episodic_eval 那种随机单位干扰上余弦已经是 48/48 和 256/256，头没有更好；用存进去的编码器键在其他事实里查询从 48/48 掉到 18/48。inject 把 `+1-415-555-0134` 推离字节网格（最大绝对偏差 0.00111271），号码解不出来。两套头和当时的训练脚本不在 `tidal/` 里。说明见 `docs/episodic_memory.md`。
+
+SmolLM 上的自由生成（n=96，约 0.02 的起伏分不出来）不能当成 tidal 的结果。
+
+On tidal features the question task rose from 13/48 to 47/48, the episodic_eval unit-distractor sets stayed saturated at 1, and recall of the stored key among other facts fell from 48/48 to 18/48. The inject fit broke the phone byte code. Those modules are not in `tidal/`.
+
+## 更早明确不要的 / Discarded on SmolLM
 
 - 多块矩阵读出再求和（v16）：值被稀释。
 - 朴素 key shield（v17）：同名更新写不进去。
-- v23 把 retr 和 inj 用 next-token CE 绑在一起训：没有作为 tidal 的路径。tidal 没有 token 语言模型，inject 不能抄那份损失。
+- v23 把 retr 和 inj 用 next-token CE 绑在一起训：不作为 tidal 的路径。tidal 没有 token 语言模型。
 
 ## 文件 / Files
 
