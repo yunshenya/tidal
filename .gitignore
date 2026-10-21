@@ -17,6 +17,7 @@ logs/
 *.log
 # weights (phase-1 weights were trained on real chat -> never publish)
 models/*.pt
+research/neuromem/*.pt
 models/*.onnx
 models/*.npz
 models/*.joblib

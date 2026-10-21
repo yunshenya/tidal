@@ -10,16 +10,17 @@ Titans' surprise-driven test-time memory (Behrouz et al., arXiv:2501.00663). Lev
   global  per-deployment (one "streamer"/persona) adapter, updated every C_glob targets, tiny step
   frozen  base model weights (all heads included)
 h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_adapt) ; heads(h') -> logits. B_l, b_l start at 0.
-Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, added in full.
+Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
-Facts are explicit (identity + key/value from this frozen encoder). Replay does not store raw events.
+Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
 import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
 from tidal import vap_targets as VT
-from tidal.episodic import EpisodicStore
+from tidal.episodic import EpisodicStore, is_structured_value
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
+_GROUP_OMIT = object()
 
 class Level:
     def __init__(self, d, rank, lr, mom, forget, every, surprise=True, seed=0):
@@ -121,12 +122,25 @@ class Continuum:
             raise RuntimeError(f"encoder state dim {h.size} != continuum d {self.d}")
         return h
     def remember(self, key, value, name=None, rel=None, *, kind="fact", surprise=None, group=None):
-        """Write one fact in encoder-state space (dim ``self.d``). See ``embed_event``."""
-        k = np.asarray(key, np.float64).reshape(-1); v = np.asarray(value, np.float64).reshape(-1)
+        """Write one fact. ``value`` is an encoder state, a string, or a token list.
+
+        A string or token list is stored as a positional byte code of width ``d``
+        (phones, dates, multi-token spans). Numeric values must already be dim ``d``.
+        """
+        k = np.asarray(key, np.float64).reshape(-1)
+        if is_structured_value(value):
+            if k.size != self.d:
+                raise ValueError(
+                    f"episodic key must be an encoder state of dim {self.d} (got {k.size}). "
+                    "Episodic memory does not load another language model."
+                )
+            return self.episodic.write(k, value, name, rel, kind=kind, surprise=surprise, group=group)
+        v = np.asarray(value, np.float64).reshape(-1)
         if k.size != self.d or v.size != self.d:
             raise ValueError(
                 f"episodic key/value must be encoder states of dim {self.d} (got {k.size}, {v.size}). "
                 "Use embed_event on event features and, when the model has tproj, a 512-d bge vector. "
+                "Pass a string or a list of strings for a phone, date, or multi-token span. "
                 "Episodic memory does not load another language model."
             )
         return self.episodic.write(k, v, name, rel, kind=kind, surprise=surprise, group=group)
@@ -135,6 +149,25 @@ class Continuum:
         """Encode two feature rows (optional bge vectors) and write the resulting states."""
         k = self.embed_event(key_feats, key_text); v = self.embed_event(value_feats, value_text)
         return self.remember(k, v, name, rel, kind=kind, surprise=surprise, group=group)
+    def _recall_query(self, query, group):
+        g = self._mem_group if group is _GROUP_OMIT else group
+        q = np.asarray(query, np.float64).reshape(-1)
+        if q.size != self.d:
+            raise ValueError(f"episodic query must be dim {self.d} (got {q.size})")
+        return q, g
+    def recall(self, query, *, group=_GROUP_OMIT):
+        """String in the winning slot under the current group scope, or None.
+
+        Decodes the slot's positional code. Token lists are ``recall_tokens``.
+        Omit ``group`` to use the replay scope (``_mem_group``); pass ``None``
+        to search every slot.
+        """
+        q, g = self._recall_query(query, group)
+        return self.episodic.read_span(q, group=g)
+    def recall_tokens(self, query, *, group=_GROUP_OMIT):
+        """Token list in the winning slot, or None. Same scope rule as ``recall``."""
+        q, g = self._recall_query(query, group)
+        return self.episodic.read_tokens(q, group=g)
     def update(self, h, v, lv):
         """h [n, d] for matured events, v [n, NV] target with NaN except the newly matured bins.
 
