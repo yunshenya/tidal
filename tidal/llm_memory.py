@@ -1,9 +1,11 @@
 """Test-time memory for a frozen causal language model.
 
 Facts are written into :class:`tidal.episodic.EpisodicStore` (one slot, same
-identity overwrites, soft top-k). At generation the retrieved value is added
-to one decoder layer's residual, so the fact text is not copied into the
-prompt.
+identity overwrites). At generation the top slot's value is added to one
+decoder layer's residual, so the fact text is not copied into the prompt.
+Readout is hard top-1. A soft top-4 mix at temperature 0.05 tied top-1 on the
+answer-stripped prefix and lost two question hits at N32; temperature 0.20
+lost many more. See ``docs/llm_memory.md``.
 
 The value is an answer-span pool of that layer's hidden state. It is not
 L2-normalized: magnitude is what the identity copy-through needs. The key is
@@ -33,7 +35,7 @@ Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence, Union
+from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
 import numpy as np
 import torch
@@ -468,6 +470,66 @@ def _answer_from_offsets(offsets: Sequence[tuple], text: str, answer: str) -> li
     return [b > start and a < end and a != b for a, b in offsets]
 
 
+def answer_span(text: str) -> str:
+    """First answer line of a greedy continuation.
+
+    Leading whitespace, including the newline a base SmolLM2 emits after a
+    natural question, is not part of the span. The span then ends at the next
+    newline, or at sentence-ending punctuation once more than one non-space
+    character has been kept. Cutting at a leading newline, which is what the
+    old v22 stop did, scores that continuation as empty.
+    """
+    if not isinstance(text, str):
+        raise TypeError("text must be a str")
+    body = text.lstrip()
+    if not body:
+        return ""
+    kept: list[str] = []
+    for ch in body:
+        if ch == "\n":
+            break
+        kept.append(ch)
+        cur = "".join(kept)
+        if cur.rstrip().endswith((".", "?", "!")) and len(cur.strip()) > 1:
+            break
+    return "".join(kept)
+
+
+def span_complete(text: str) -> bool:
+    """True once another character cannot extend :func:`answer_span`.
+
+    A string that is still only leading whitespace is not complete: the
+    answer may start on a later token.
+    """
+    if not isinstance(text, str):
+        raise TypeError("text must be a str")
+    body = text.lstrip()
+    if body == "":
+        return False
+    line, sep, _rest = body.partition("\n")
+    if sep:
+        return True
+    return line.rstrip().endswith((".", "?", "!")) and len(line.strip()) > 1
+
+
+def decode_answer(tokenizer, ids) -> str:
+    """Answer span of greedy ``ids``, using incremental detokenization.
+
+    Stops when :func:`span_complete` flips, so a later token cannot be pulled
+    into the span. ``ids`` may be longer than that cut; the extra tokens are
+    ignored.
+    """
+    out: list[int] = []
+    for nx in ids:
+        out.append(int(nx))
+        text = tokenizer.decode(out, skip_special_tokens=True)
+        if span_complete(text):
+            return answer_span(text)
+    if not out:
+        return ""
+    return answer_span(tokenizer.decode(out, skip_special_tokens=True))
+
+
 def greedy_continuation(
     model: nn.Module,
     tokenizer,
@@ -475,8 +537,13 @@ def greedy_continuation(
     max_new_tokens: int,
     eos_token_id: Optional[int],
     device,
+    done: Optional[Callable[[list], bool]] = None,
 ) -> list:
-    """Greedy token ids appended to ``prompt``. Full prefix each step (no cache)."""
+    """Greedy token ids appended to ``prompt``. Full prefix each step (no cache).
+
+    ``done`` sees the new ids so far and ends the loop. Generation also stops
+    on ``eos_token_id`` before that id is appended.
+    """
     if max_new_tokens < 0:
         raise ValueError("max_new_tokens must be >= 0")
     enc = tokenizer(prompt, return_tensors="pt", add_special_tokens=True)
@@ -485,6 +552,7 @@ def greedy_continuation(
         raise ValueError("prompt tokenized to an empty sequence")
     attn = _batch_mask(enc, device)
     prompt_len = int(ids.shape[1])
+    new_ids: list[int] = []
     for _ in range(max_new_tokens):
         kwargs = {"input_ids": ids, "use_cache": False}
         if attn is not None:
@@ -497,7 +565,10 @@ def greedy_continuation(
         ids = torch.cat([ids, step], dim=1)
         if attn is not None:
             attn = torch.cat([attn, torch.ones((1, 1), device=attn.device, dtype=attn.dtype)], dim=1)
-    return [int(i) for i in ids[0, prompt_len:].tolist()]
+        new_ids.append(nxt)
+        if done is not None and done(new_ids):
+            break
+    return new_ids
 
 
 def build_tiny_lm(seed: int = 0, *, hidden: int = 32, layers: int = 4, vocab: int = 260):
@@ -528,8 +599,11 @@ class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
-    prompt is the only text the LM sees. An empty store leaves the residual
-    untouched, so greedy tokens match the same model with the hook removed.
+    prompt is the only text the LM sees. The armed value is the top slot
+    (hard top-1 on raw cosine), not a soft mixture. ``soft_k`` and
+    ``soft_temp`` are kept on the episodic store; ``generate`` does not read
+    them. An empty store leaves the residual untouched, so greedy tokens
+    match the same model with the hook removed.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -833,7 +907,10 @@ class LLMMemory:
             self._delta = None
             return
         query = self._query_vector(prompt)
-        value = self.store.readout(query, mode="softtopk")
+        # Hard top-1. Soft top-4 at T=0.05 matched this on prefix free-gen and
+        # trailed it on natural questions; T=0.20 mixed neighbors and dropped
+        # N32 questions from 36/48 to 19/48. Measured in docs/llm_memory.md.
+        value = self.store.readout(query, mode="top1")
         self._delta = self._compose(value, grad=False)
 
     def injection(self, prompt: str) -> np.ndarray:
@@ -848,7 +925,12 @@ class LLMMemory:
         finally:
             self._delta = None
 
-    def continuation_ids(self, prompt: str, max_new_tokens: int = 32) -> list:
+    def continuation_ids(
+        self,
+        prompt: str,
+        max_new_tokens: int = 32,
+        done: Optional[Callable[[list], bool]] = None,
+    ) -> list:
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
         self._arm(prompt)
@@ -861,14 +943,25 @@ class LLMMemory:
                     int(max_new_tokens),
                     getattr(self.tokenizer, "eos_token_id", None),
                     self._device,
+                    done=done,
                 )
         finally:
             self._delta = None
 
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
-        """Greedy continuation. ``prompt`` is the only text passed to the LM."""
-        ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens)
-        return self.tokenizer.decode(ids, skip_special_tokens=True)
+        """Greedy answer span. ``prompt`` is the only text passed to the LM.
+
+        Leading whitespace is skipped before the stop, so a natural question
+        whose first token is a newline still yields the following line. The
+        span then ends at the next newline or at sentence-ending punctuation.
+        """
+
+        def _done(new_ids: list) -> bool:
+            text = self.tokenizer.decode(new_ids, skip_special_tokens=True)
+            return span_complete(text)
+
+        ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done)
+        return decode_answer(self.tokenizer, ids)
 
     def teacher_force_loss(self, prompt: str, answer: str, value) -> torch.Tensor:
         """Next-token cross-entropy on ``answer`` with ``value`` injected.
