@@ -119,3 +119,7 @@ One probe answer moved and stayed a miss. `Ignore the side topics and read Owen'
 ## What stays open
 
 One-character typos, 16/16 still false abstain. Indirect descriptions, 12/12 still false abstain. Misleading cues are unchanged. English two-name answerable asks are still 3/6, and the misses are the other matched person, which the ranker is supposed to keep. Chinese two-name answerable asks are still 3/6; the 周涛 places row now loses to 刘洋 rather than to 张强. Four unique-person `missing_rel` rows still return a fact, now the matched person's other relation. Owen's birthday still loses to his own places. None of those are a reason to change `W`.
+
+## Checks
+
+`python3 -m pytest` on this revision: 242 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. That package is not installed in this environment. The other `LLMMemory` tests passed. `tidal/llm_memory.py` and the inject weights are unchanged. The held-out probe invariants in that suite are green: gold lost at overwrite 0.9 is 0, and no co-resident pair has cosine above 0.9.
