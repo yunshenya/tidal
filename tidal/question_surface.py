@@ -4,9 +4,12 @@ A flat feature row has no name or relation code in it. ``embed_event`` still
 returns a ``d``-dimensional encoder state (that state is the slot key, so
 overwrite and ``recall`` stay on raw cosine), and it keeps the 512-d sentence
 vector that produced the state. ``ask`` / ``query`` rank those slots by
-cosine of the sentence vectors plus a relation logit. Sparse name/relation
-rows, the ones ``question_head.build_facts`` uses, do not carry a sentence
-vector, so those asks stay on the contrastive head.
+cosine of the sentence vectors plus a relation logit. Once the surface
+string has selected people, only their facts are ranked. The cue-nearest
+narrowing stays on the missing-relation check: a two-name question keeps
+every matched person in the ranker, and a distance tie is not a new rule.
+Sparse name/relation rows, the ones ``question_head.build_facts`` uses,
+do not carry a sentence vector, so those asks stay on the contrastive head.
 
 The logit is a ridge map fit on generated paraphrases. Names and strings in
 that corpus are not the held-out probe. ``python -m tidal.question_surface
@@ -796,6 +799,76 @@ def _matched_names(text: str, names: Sequence[Optional[str]]) -> List[str]:
     return matched_people(text, names)
 
 
+def _rows_for(names: Sequence[Optional[str]], chosen: Sequence[str]) -> Optional[List[int]]:
+    bag = set(chosen)
+    rows = [i for i, name in enumerate(names) if name in bag]
+    if not rows:
+        return None
+    return rows
+
+
+def matched_fact_rows(
+    text: Optional[str],
+    names: Sequence[Optional[str]],
+) -> Optional[List[int]]:
+    """Indices of ``names`` that ``matched_people`` returned, or None.
+
+    None leaves every fact in the ranker: no surface string, or the string
+    selected nobody (an absent person, or a deictic question). A list is the
+    whole matched set, before the cue-nearest narrowing. Two stored names
+    in one question both stay. There is no extra threshold and no flag.
+    """
+    if not isinstance(text, str) or text == "" or not names:
+        return None
+    matched = _matched_names(text, names)
+    if not matched:
+        return None
+    return _rows_for(names, matched)
+
+
+def selected_fact_rows(
+    text: Optional[str],
+    names: Sequence[Optional[str]],
+) -> Optional[List[int]]:
+    """Indices abstain uses for ``missing_rel``.
+
+    ``matched_fact_rows`` after the cue-nearest focus rule. A distance tie
+    keeps every name at that distance. The ranker does not call this: a
+    two-name question still ranks every matched person. None means nobody
+    was selected.
+    """
+    if not isinstance(text, str) or text == "" or not names:
+        return None
+    matched = _matched_names(text, names)
+    if not matched:
+        return None
+    matched = _focus_names(text, matched, lex_labels(text))
+    if not matched:
+        return None
+    return _rows_for(names, matched)
+
+
+def limit_scores(scores: np.ndarray, rows: Optional[Sequence[int]]) -> np.ndarray:
+    """One score per slot. Rows outside ``rows`` cannot win.
+
+    ``rows`` is the ranker's keep-set (``matched_fact_rows``). None, or a
+    list that covers every slot, returns ``scores`` unchanged. Otherwise
+    in-scope values stay as ``surface_scores`` wrote them (``W`` and
+    ``alpha`` are not touched) and every other row sits one below the worst
+    in-scope score.
+    """
+    if rows is None:
+        return scores
+    base = np.asarray(scores, dtype=np.float64).reshape(-1)
+    keep = np.zeros(base.shape[0], dtype=bool)
+    keep[list(rows)] = True
+    if not keep.any() or bool(keep.all()):
+        return scores
+    out = np.array(base, dtype=np.float64, copy=True)
+    out[~keep] = float(out[keep].min()) - 1.0
+    return out
+
+
 def surface_abstain(
     query_emb: np.ndarray,
     key_embs: np.ndarray,
@@ -811,7 +884,9 @@ def surface_abstain(
     ``query_text`` is the surface string recorded at ``embed_event``. Without
     it there is no abstention: the call is not a flag, the string is the
     evidence. A cosine of at least ``ABSTAIN_EXACT_COS`` against a stored
-    sentence is that sentence and is not an abstention.
+    sentence is that sentence and is not an abstention. After a person is
+    selected, that cosine is taken only against the selected person's
+    sentences, so another person's copy does not cancel ``missing_rel``.
 
     No stored name in the string, and the string is not deictic
     (``is_deictic``): ``absent_person``. A deictic question with no stored
@@ -845,17 +920,18 @@ def surface_abstain(
         weights = load_weights()
     if weights is None:
         return None
-    cos = cosine_scores(np.asarray(key_embs, dtype=np.float64), _unit(query_emb))
-    if float(np.max(cos)) >= ABSTAIN_EXACT_COS:
+    rows = selected_fact_rows(query_text, names)
+    cos_embs = np.asarray(key_embs, dtype=np.float64)
+    if rows is not None:
+        cos_embs = cos_embs[rows]
+    if cos_embs.shape[0] and float(np.max(cosine_scores(cos_embs, _unit(query_emb)))) >= ABSTAIN_EXACT_COS:
         return None
-    matched = _matched_names(query_text, names)
-    if not matched:
+    if rows is None:
         if is_deictic(query_text):
             return None
         return "absent_person"
     lex = lex_labels(query_text)
-    matched = _focus_names(query_text, matched, lex)
-    have = {rels[i] for i, name in enumerate(names) if name in matched}
+    have = {rels[i] for i in rows}
     Wa = weights.get("Wa")
     pred = ""
     gap = 0.0
