@@ -71,6 +71,11 @@ def test_heldout_eval_measures_and_keeps_invariants():
         assert "cosine_hits" in row and "head_hits" in row
     un = report["rollups"]["unanswerable"]
     assert un["false_n"] == un["n"] > 0
+    assert un["false_head"] + un["abstain_head"] == un["false_n"]
+    assert report["abstain_dev"]["rel_margin"] == 0.2
+    assert report["abstain_dev"]["person_margin"] == 0.0
+    for key in ("answerable_en", "answerable_zh"):
+        assert "false_abstain" in report["rollups"][key]
     assert report["confidence"]["unanswerable_head_margin"]["50"] >= 0.0
     assert report["confidence"]["head_sweep"]
     # Accuracy is intentionally not asserted. A mediocre ret@1 must stay green.

@@ -4,16 +4,18 @@ A flat feature row has no name or relation code in it. ``embed_event`` still
 returns a ``d``-dimensional encoder state (that state is the slot key, so
 overwrite and ``recall`` stay on raw cosine), and it keeps the 512-d sentence
 vector that produced the state. ``ask`` / ``query`` rank those slots by
-cosine of the sentence vectors plus a relation logit. Sparse name/relation
-rows, the ones ``question_head.build_facts`` uses, do not carry a sentence
-vector, so those asks stay on the contrastive head.
+cosine of the sentence vectors plus a relation logit. The same logit decides
+abstention: ``ask`` / ``query`` return no fact when the nearest stored person
+does not have the asked relation. Sparse name/relation rows, the ones
+``question_head.build_facts`` uses, do not carry a sentence vector, so those
+asks stay on the contrastive head and do not abstain.
 
 The logit is a ridge map fit on generated paraphrases. Names and strings in
 that corpus are not the held-out probe. ``python -m tidal.question_surface
 --fit`` rebuilds ``question_surface.npz`` (needs transformers). Runtime only
 reads the file. There is no enable flag: a question state with a stored
 sentence vector is ranked here, and a bare encoder state is ranked by the
-contrastive head.
+contrastive head. Abstention uses the dev pools below, not the probe.
 """
 from __future__ import annotations
 
@@ -36,6 +38,20 @@ LABELS: Tuple[str, ...] = ("phone", "birthday", "places")
 # A tie on the total keeps the smaller alpha, so a flat curve stays at 0.
 # The probe is not an input to this choice.
 ALPHA_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5)
+# Abstention grid. A point is kept only when neither language loses an
+# answerable hit and neither language abstains on an answerable question.
+# The kept point with the most unanswerable abstentions wins. A tie keeps
+# the larger relation margin, then the larger person margin. The probe is
+# not an input. Person margin 0 means a unique nearest person is enough;
+# an exact cosine tie unions those people's relations.
+ABSTAIN_REL_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.2, 0.3, 0.4)
+ABSTAIN_PERSON_GRID: Tuple[float, ...] = (0.0, 0.01, 0.02, 0.05)
+# Shipped point from ``choose_abstain_margins`` on the dev pools.
+ABSTAIN_REL_MARGIN = 0.2
+ABSTAIN_PERSON_MARGIN = 0.0
+# A query this close to a stored sentence is that sentence. Not a fit.
+ABSTAIN_EXACT_COS = 0.999
+ABSTAIN_TIE_EPS = 1e-8
 # sha256 of question_surface.npz. Refit, then update this, if the corpus changes.
 EXPECTED_BUNDLE_SHA256 = "10e098a204e555ebf5a1a7cf884e629b7629ed88aa01e07e71426430e4ec08c5"
 RIDGE = 1e-2
@@ -267,6 +283,241 @@ def surface_scores(
         if rel in labels:
             bonus[i] = float(logits[labels.index(rel)])
     return scores + float(weights["alpha"]) * bonus
+
+
+def relation_logits(query_emb: np.ndarray, weights: Optional[dict] = None) -> np.ndarray:
+    """Logit for each shipped relation, from the unit query sentence plus a bias."""
+    if weights is None:
+        weights = load_weights()
+    if weights is None:
+        raise RuntimeError("surface bundle is missing")
+    x = np.concatenate([_unit(query_emb), np.ones(1, dtype=np.float64)])
+    return x @ weights["W"]
+
+
+def surface_abstain(
+    query_emb: np.ndarray,
+    key_embs: np.ndarray,
+    rels: Sequence[Optional[str]],
+    names: Sequence[Optional[str]],
+    weights: Optional[dict] = None,
+    *,
+    rel_margin: Optional[float] = None,
+    person_margin: Optional[float] = None,
+) -> Optional[str]:
+    """``missing_rel`` when the nearest stored person lacks the asked relation.
+
+    The asked relation is the argmax of ``relation_logits``. Slots are grouped
+    by ``name``. The nearest person is the group with the highest sentence
+    cosine; groups within ``ABSTAIN_TIE_EPS`` are one tie and their relations
+    are unioned. Abstain when that union does not contain the asked relation
+    and the logit margin is at least ``rel_margin`` (the shipped value when
+    omitted). ``person_margin`` is the gap to the next person outside the tie;
+    the shipped value is 0, so a unique nearest person is enough. A cosine of
+    at least ``ABSTAIN_EXACT_COS`` is the stored sentence itself and is not
+    an abstention. Returns None when the bundle is missing, which leaves the
+    ranker on sentence cosine alone. No enable flag.
+    """
+    if len(rels) != len(key_embs) or len(names) != len(rels):
+        raise ValueError(
+            f"{len(names)} names and {len(rels)} relations for {len(key_embs)} sentence vectors"
+        )
+    if len(rels) == 0:
+        return None
+    if weights is None:
+        weights = load_weights()
+    if weights is None:
+        return None
+    rm = ABSTAIN_REL_MARGIN if rel_margin is None else float(rel_margin)
+    pm = ABSTAIN_PERSON_MARGIN if person_margin is None else float(person_margin)
+    labels = weights["labels"]
+    logits = relation_logits(query_emb, weights)
+    order = np.argsort(-logits)
+    pred = labels[int(order[0])]
+    gap = float(logits[order[0]] - logits[order[1]]) if len(labels) > 1 else float(logits[order[0]])
+    if gap < rm:
+        return None
+    cos = cosine_scores(key_embs, _unit(query_emb))
+    groups: Dict[Optional[str], List[int]] = {}
+    for i, name in enumerate(names):
+        groups.setdefault(name, []).append(i)
+    person_cos = {name: float(np.max(cos[idx])) for name, idx in groups.items()}
+    best = max(person_cos.values())
+    if best >= ABSTAIN_EXACT_COS:
+        return None
+    tied = [name for name, score in person_cos.items() if best - score <= ABSTAIN_TIE_EPS]
+    tied_rels = {rels[i] for name in tied for i in groups[name]}
+    if pred in tied_rels:
+        return None
+    outsiders = [score for name, score in person_cos.items() if name not in tied]
+    second = max(outsiders) if outsiders else best
+    if best - second < pm:
+        return None
+    return "missing_rel"
+
+
+def _dev_statement_table(table: Dict[str, np.ndarray]) -> Dict[Tuple[str, str, str], Tuple[str, np.ndarray]]:
+    out = {}
+    for lang in ("en", "zh"):
+        for rel in LABELS:
+            bank = DEV_S[lang][rel]
+            for i, name in enumerate(DEV_NAMES[lang]):
+                text = bank[i % len(bank)].format(name=name)
+                out[(lang, name, rel)] = (text, np.asarray(table[text], dtype=np.float64))
+    return out
+
+
+def _name_ring(names: Sequence[str]) -> List[Tuple[str, str]]:
+    return [(name, rel) for name in names for rel in LABELS]
+
+
+def _dev_distractors(names: Sequence[str], name: str, rel: str, k: int, *, skip_name: bool) -> List[Tuple[str, str]]:
+    items = _name_ring(names)
+    start = items.index((name, rel))
+    out: List[Tuple[str, str]] = []
+    step = 1
+    while len(out) < k:
+        item = items[(start + step) % len(items)]
+        step += 1
+        if item == (name, rel):
+            continue
+        if skip_name and item[0] == name:
+            continue
+        out.append(item)
+        if step > len(items) + 5:
+            break
+    return out
+
+
+def abstain_dev_pools(table: Optional[Dict[str, np.ndarray]] = None) -> List[dict]:
+    """Answerable, missing-relation, and absent-person pools from the dev split.
+
+    Eight names, three relations, two question templates per language. The
+    answerable store is the gold fact plus four distractors. ``missing_rel``
+    keeps the person's other relations and fills to six facts without the
+    asked pair. ``absent_person`` keeps six facts and omits the asked name.
+    Strings are the dev corpus already in the bundle. The probe is not read.
+    """
+    if table is None:
+        table = load_corpus_table()
+    statements = _dev_statement_table(table)
+    pools = []
+    for lang in ("en", "zh"):
+        names = DEV_NAMES[lang]
+        for name in names:
+            for rel in LABELS:
+                for tmpl in DEV_Q[lang][rel]:
+                    question = tmpl.format(name=name)
+                    q = np.asarray(table[question], dtype=np.float64)
+                    builds = {
+                        "answerable": [(name, rel)] + _dev_distractors(names, name, rel, 4, skip_name=False),
+                        "missing_rel": [(name, other) for other in LABELS if other != rel],
+                        "absent_person": _dev_distractors(names, name, rel, 6, skip_name=True),
+                    }
+                    missing = builds["missing_rel"]
+                    for item in _dev_distractors(names, name, rel, 6, skip_name=True):
+                        if len(missing) >= 6:
+                            break
+                        missing.append(item)
+                    for kind, slots in builds.items():
+                        texts = [statements[(lang, n, r)][0] for n, r in slots]
+                        embs = np.stack([statements[(lang, n, r)][1] for n, r in slots])
+                        gold = None
+                        if kind == "answerable":
+                            gold = 0
+                        pools.append({
+                            "lang": lang,
+                            "kind": kind,
+                            "rel": rel,
+                            "name": name,
+                            "question": question,
+                            "q": q,
+                            "embs": embs,
+                            "rels": [r for _n, r in slots],
+                            "names": [n for n, _r in slots],
+                            "texts": texts,
+                            "gold": gold,
+                        })
+    return pools
+
+
+def _pool_hit(pool: dict, weights: dict) -> bool:
+    if pool["gold"] is None:
+        return False
+    scores = surface_scores(pool["q"], pool["embs"], pool["rels"], weights)
+    return int(np.argmax(scores)) == int(pool["gold"])
+
+
+def score_abstain_margins(pools: Sequence[dict], weights: dict, rel_margin: float, person_margin: float) -> dict:
+    """Hit loss, false abstentions, and unanswerable catches at one grid point."""
+    lost = {"en": 0, "zh": 0}
+    false_abstain = {"en": 0, "zh": 0}
+    hits = {"en": 0, "zh": 0}
+    answerable_n = {"en": 0, "zh": 0}
+    caught = {"en": {"missing_rel": 0, "absent_person": 0}, "zh": {"missing_rel": 0, "absent_person": 0}}
+    caught_n = {"en": {"missing_rel": 0, "absent_person": 0}, "zh": {"missing_rel": 0, "absent_person": 0}}
+    for pool in pools:
+        lang = pool["lang"]
+        reason = surface_abstain(
+            pool["q"], pool["embs"], pool["rels"], pool["names"], weights,
+            rel_margin=rel_margin, person_margin=person_margin,
+        )
+        abstained = reason is not None
+        if pool["kind"] == "answerable":
+            answerable_n[lang] += 1
+            hit = _pool_hit(pool, weights)
+            if hit:
+                hits[lang] += 1
+            if abstained:
+                false_abstain[lang] += 1
+                if hit:
+                    lost[lang] += 1
+        else:
+            caught_n[lang][pool["kind"]] += 1
+            if abstained:
+                caught[lang][pool["kind"]] += 1
+    total = sum(caught[lang][kind] for lang in ("en", "zh") for kind in ("missing_rel", "absent_person"))
+    return {
+        "rel_margin": float(rel_margin),
+        "person_margin": float(person_margin),
+        "hits": hits,
+        "lost": lost,
+        "false_abstain": false_abstain,
+        "answerable_n": answerable_n,
+        "caught": caught,
+        "caught_n": caught_n,
+        "caught_total": int(total),
+    }
+
+
+def abstain_dev_curve(weights: Optional[dict] = None, pools: Optional[Sequence[dict]] = None) -> List[dict]:
+    """Every grid point on the dev pools. Does not read the probe."""
+    if weights is None:
+        weights = load_weights()
+    if weights is None:
+        raise RuntimeError("surface bundle is missing")
+    if pools is None:
+        pools = abstain_dev_pools()
+    return [
+        score_abstain_margins(pools, weights, rel_margin, person_margin)
+        for person_margin in ABSTAIN_PERSON_GRID
+        for rel_margin in ABSTAIN_REL_GRID
+    ]
+
+
+def choose_abstain_margins(curve: Optional[Sequence[dict]] = None) -> Tuple[float, float]:
+    """Operating point. See ``ABSTAIN_REL_GRID`` for the rule."""
+    if curve is None:
+        curve = abstain_dev_curve()
+    allowed = [
+        row for row in curve
+        if row["lost"]["en"] == 0 and row["lost"]["zh"] == 0
+        and row["false_abstain"]["en"] == 0 and row["false_abstain"]["zh"] == 0
+    ]
+    if not allowed:
+        raise RuntimeError("no abstain margin keeps both languages' answerable hits")
+    best = max(allowed, key=lambda row: (row["caught_total"], row["rel_margin"], row["person_margin"]))
+    return float(best["rel_margin"]), float(best["person_margin"])
 
 
 def _fit_matrix(emb: np.ndarray, rels: Sequence[str]) -> np.ndarray:

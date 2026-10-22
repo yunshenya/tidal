@@ -13,7 +13,7 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py). Neither ranker is added into heads, and replay does not call them.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). That path returns no fact when the nearest stored person does not have the asked relation. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
@@ -21,7 +21,7 @@ import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch
 from tidal import vap_targets as VT
 from tidal.episodic import EpisodicStore, cosine_scores, decode_span, decode_tokens, is_structured_value
 from tidal.question_head import QuestionHead, install_matching, question_scores
-from tidal.question_surface import surface_scores
+from tidal.question_surface import surface_abstain, surface_scores
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 _GROUP_OMIT = object()
 
@@ -304,7 +304,8 @@ class Continuum:
         Flat-row slots carry the sentence vector and are ranked by sentence
         cosine plus the relation logit. Anything else, including the synthetic
         name/relation codes, is ranked by the contrastive head. ``recall`` does
-        not call this.
+        not call this. Abstention is applied in ``query``, not here, so a
+        caller can still read the scores of a question that returns no fact.
         """
         q, _g, visible, keys = self._question_visible(question, group)
         if keys is None:
@@ -320,38 +321,71 @@ class Continuum:
         # question_scores is the contrastive head. Sparse rows land here.
         return question_scores(self.question_head, q, keys), "question"
     def query(self, question, *, group=_GROUP_OMIT, mode="softtopk"):
-        """Soft top-k value for a question encoder-state.
+        """Soft top-k value for a question encoder-state, or ``(None, info)``.
 
         Flat-row questions rank by sentence cosine plus a relation logit.
         Sparse name/relation questions rank by the contrastive question head.
-        Either way the value mix is ``EpisodicStore.read``. This does not run
+        Either way the value mix is ``EpisodicStore.read`` when a fact is
+        returned. A flat-row question whose nearest stored person does not
+        have the asked relation returns ``(None, info)`` with
+        ``info["abstain"] == "missing_rel"`` and ``info["top"] is None``.
+        That is no fact, not a blend of other people's values. Sparse rows
+        do not abstain (``info["abstain"] is None``). This does not run
         inside ``heads`` or ``replay``, and it does not write slots. Omit
         ``group`` to use the replay scope; pass ``None`` to search every slot.
-        An empty scope returns ``(None, info)``.
+        An empty scope returns ``(None, info)`` with ``n == 0`` and
+        ``abstain is None``.
         """
         q, g, visible, keys = self._question_visible(question, group)
         if keys is None:
-            return None, {"n": 0, "maxcos": -1.0, "top": None, "weights": None, "rank": "question"}
+            return None, {
+                "n": 0, "maxcos": -1.0, "top": None, "weights": None,
+                "rank": "question", "abstain": None,
+            }
         scores, rank = self._scores_for(q, keys, visible)
+        abstain = None
+        if rank == "sentence":
+            abstain = surface_abstain(
+                self._sentence_lookup(q),
+                np.stack([slot.sentence for _, slot in visible], 0),
+                [slot.rel for _, slot in visible],
+                [slot.name for _, slot in visible],
+            )
+        raw_max = float(np.max(cosine_scores(keys, q)))
+        if abstain:
+            return None, {
+                "n": len(visible),
+                "maxcos": float(np.max(scores)),
+                "top": None,
+                "weights": None,
+                "rank": rank,
+                "abstain": abstain,
+                "raw_maxcos": raw_max,
+            }
         value, info = self.episodic.read_scored(scores, mode=mode, group=g)
         info["rank"] = rank
-        info["raw_maxcos"] = float(np.max(cosine_scores(keys, q)))
+        info["abstain"] = None
+        info["raw_maxcos"] = raw_max
         return value, info
     def ask(self, question, *, group=_GROUP_OMIT):
-        """String in the slot ranked first, or None.
+        """String in the slot ranked first, or None when there is no fact.
 
-        Decodes that slot's positional byte code, not the soft top-k blend
-        (``query`` returns the blend). Same group scope as ``recall``. The
-        stored-key path stays ``recall``, which is raw cosine. A flat-row
-        question is ranked in sentence space; a sparse name/relation question
-        is ranked by the contrastive head.
+        None is an empty scope, or a flat-row question the sentence ranker
+        abstains: the nearest stored person does not have the asked relation
+        (``query``'s ``info["abstain"]`` is ``"missing_rel"``). Decodes that
+        slot's positional byte code when a fact is returned, not the soft
+        top-k blend (``query`` returns the blend). Same group scope as
+        ``recall``. The stored-key path stays ``recall``, which is raw cosine
+        and does not abstain. A flat-row question is ranked in sentence
+        space; a sparse name/relation question is ranked by the contrastive
+        head and does not abstain.
         """
         value, _info = self.query(question, group=group, mode="top1")
         if value is None:
             return None
         return decode_span(value)
     def ask_tokens(self, question, *, group=_GROUP_OMIT):
-        """Token list in the slot ranked first, or None. Same ranker as ``ask``."""
+        """Token list in the slot ranked first, or None. Same ranker and abstention as ``ask``."""
         value, _info = self.query(question, group=group, mode="top1")
         if value is None:
             return None

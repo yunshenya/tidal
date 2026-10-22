@@ -210,6 +210,7 @@ def test_flat_row_ask_ignores_a_scrambled_head():
     assert cont.ask(hq, group=None) == "phone-zero"
     _value, info = cont.query(hq, group=None, mode="top1")
     assert info["rank"] == "sentence"
+    assert info["abstain"] is None
     assert cont.recall(h0) == "phone-zero"
     assert cont.recall(h1) == "phone-one"
 
@@ -257,6 +258,7 @@ def test_tied_sentences_follow_the_relation_logit():
     assert cont.ask(hq, group=None) == "better"
     _value, info = cont.query(hq, group=None, mode="top1")
     assert info["rank"] == "sentence"
+    assert info["abstain"] is None
 
 
 def test_sparse_rows_keep_the_contrastive_head():
@@ -278,6 +280,7 @@ def test_sparse_rows_keep_the_contrastive_head():
     assert cont.episodic.slots[0].sentence is None
     _value, info = cont.query(q)
     assert info["rank"] == "question"
+    assert info["abstain"] is None
 
 
 def test_surface_alpha_is_the_dev_rule_and_the_bundle_is_locked():
@@ -311,3 +314,86 @@ def test_surface_alpha_is_the_dev_rule_and_the_bundle_is_locked():
         stored = json.loads(str(blob["dev"].item()))
     parsed = {float(key): row for key, row in stored.items()}
     assert _choose_alpha(parsed) == float(weights["alpha"]) == 0.5
+
+
+def test_abstain_margins_are_the_dev_rule():
+    """The shipped margins are the dev chooser. The probe is not an input."""
+    from pathlib import Path
+
+    import tidal.question_surface as surface
+
+    src = Path(surface.__file__).read_text(encoding="utf-8")
+    assert "question_heldout" not in src
+    assert "enable_abstain" not in src and "use_abstain" not in src
+    curve = surface.abstain_dev_curve()
+    assert surface.choose_abstain_margins(curve) == (
+        surface.ABSTAIN_REL_MARGIN,
+        surface.ABSTAIN_PERSON_MARGIN,
+    )
+    assert (surface.ABSTAIN_REL_MARGIN, surface.ABSTAIN_PERSON_MARGIN) == (0.2, 0.0)
+    chosen = next(
+        row for row in curve
+        if row["rel_margin"] == 0.2 and row["person_margin"] == 0.0
+    )
+    assert chosen["lost"] == {"en": 0, "zh": 0}
+    assert chosen["false_abstain"] == {"en": 0, "zh": 0}
+    assert chosen["hits"] == {"en": 20, "zh": 38}
+    assert chosen["answerable_n"] == {"en": 48, "zh": 48}
+    assert chosen["caught"]["en"] == {"missing_rel": 12, "absent_person": 0}
+    assert chosen["caught"]["zh"] == {"missing_rel": 37, "absent_person": 0}
+    assert chosen["caught_n"]["en"] == {"missing_rel": 48, "absent_person": 48}
+    assert chosen["caught_n"]["zh"] == {"missing_rel": 48, "absent_person": 48}
+    # The exact-sentence guard is not what makes the dev point. Questions are not copies.
+    assert surface.ABSTAIN_EXACT_COS > 0.99
+    for pool in surface.abstain_dev_pools():
+        cos = surface.cosine_scores(pool["embs"], surface._unit(pool["q"]))
+        assert float(np.max(cos)) < surface.ABSTAIN_EXACT_COS
+
+
+def test_ask_returns_none_when_the_person_lacks_the_relation():
+    """A flat-row ask abstains on a dev missing-relation pool and still answers a hit."""
+    from tidal.continuum import Continuum, _cfg
+    from tidal.question_surface import abstain_dev_pools, surface_abstain, surface_scores
+    from tidal.vap import VAPModel
+
+    torch.manual_seed(3)
+    model = VAPModel(8, d=16, hidden=16, layers=1, dropout=0).eval()
+    model.tproj = torch.nn.Sequential(torch.nn.Dropout(0.0), torch.nn.Linear(512, 16))
+    model.tproj.eval()
+    pools = abstain_dev_pools()
+    missing = next(
+        pool for pool in pools
+        if pool["lang"] == "zh" and pool["kind"] == "missing_rel"
+        and surface_abstain(pool["q"], pool["embs"], pool["rels"], pool["names"]) == "missing_rel"
+    )
+    answerable = next(
+        pool for pool in pools
+        if pool["lang"] == "zh" and pool["kind"] == "answerable"
+        and surface_abstain(pool["q"], pool["embs"], pool["rels"], pool["names"]) is None
+        and int(np.argmax(surface_scores(pool["q"], pool["embs"], pool["rels"]))) == pool["gold"]
+    )
+    rng = np.random.default_rng(3)
+
+    def flat():
+        return rng.choice([0.2, 0.4, 0.6, 0.8], size=8).astype(np.float32)
+
+    def run(pool):
+        cont = Continuum(model, _cfg(dict(levels=(), episodic_cfg={"overwrite_cos": 1.0})))
+        values = []
+        for i, (name, rel, emb) in enumerate(zip(pool["names"], pool["rels"], pool["embs"])):
+            value = f"v{i}"
+            values.append(value)
+            state = cont.embed_event(flat(), np.asarray(emb, dtype=np.float32))
+            assert cont.remember(state, value, name=name, rel=rel) is True
+        question = cont.embed_event(flat(), np.asarray(pool["q"], dtype=np.float32))
+        return values, cont.ask(question, group=None), cont.query(question, group=None, mode="top1")
+
+    _values, missed, (miss_value, miss_info) = run(missing)
+    assert missed is None and miss_value is None
+    assert miss_info["abstain"] == "missing_rel"
+    assert miss_info["top"] is None and miss_info["rank"] == "sentence"
+    values, hit, (hit_value, hit_info) = run(answerable)
+    assert hit == values[answerable["gold"]]
+    assert hit_info["abstain"] is None and hit_info["rank"] == "sentence"
+    from tidal.episodic import decode_span
+    assert decode_span(hit_value) == hit
