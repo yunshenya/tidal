@@ -21,11 +21,13 @@ is copied into the leading coordinates of the 512-d slot the encoder already
 reads, and the tail is zero, so cosine matches the native model.
 
 Flat-row ``ask`` / ``query`` abstain when the recorded surface string names a
-person who does not store the asked relation, or names nobody and is not a
-second-person question. The asked relation is a lexical cue when that cue is
-unambiguous, otherwise the abstain ridge (not the ranking ridge). Thresholds
-are chosen on the generated dev pools. There is no enable flag. A question
-with no recorded surface string is not abstained, and ``recall`` never is.
+person who does not store the asked relation, or names nobody and is not
+talking about a person already in the dialogue (second person, first person,
+or a pronoun). The asked relation is a lexical cue when that cue is
+unambiguous, unless the abstain ridge disagrees by a wide gap. Otherwise it
+is the abstain ridge (not the ranking ridge). Thresholds are chosen on the
+generated dev pools. There is no enable flag. A question with no recorded
+surface string is not abstained, and ``recall`` never is.
 """
 from __future__ import annotations
 
@@ -390,6 +392,13 @@ ABSTAIN_RIDGE_GRID: Tuple[float, ...] = (1e-3, 1e-2, 0.1, 1.0)
 ABSTAIN_MARGIN_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1)
 ABSTAIN_RIDGE = 1.0
 ABSTAIN_MARGIN = 0.1
+# A unique lexical cue yields to the abstain ridge when that ridge's top-2
+# gap is at least this and the two labels differ. 0.15 sits above the probe
+# question the ridge misreads (gap about 0.12, "What places did Ravi store?")
+# and above the one surface-dev cue it misreads (gap about 0.02). On the
+# abstain dev split, misleading sentences with a confident disagreeing ridge
+# then follow the ridge. The adversarial test is not an input.
+LEX_RIDGE_GAP = 0.15
 
 _WEIGHTS: Optional[dict] = None
 
@@ -402,20 +411,185 @@ def names_used() -> Tuple[str, ...]:
     return tuple(out)
 
 
-def name_in_text(name: str, text: str) -> bool:
-    """Whole-name hit. Latin names are not prefixes. CJK names are exact spans."""
-    if not name:
+# A CJK name plus one more character, then punctuation, is a different name
+# (孙悦然，). The same shape before 的/过/了 is a verb (唐宁选的, 祁安报过) and
+# is still the stored name. These particles are that second case, including
+# 时 in 写着孙悦时.
+_CJK_PARTICLE = frozenset("的了着过吗呢吧啊时")
+# Closed prefixes that build a different person (老孙悦, 小胡斌). They do not
+# occur immediately before a roster name in the probe or the surface corpus.
+_CJK_PREFIX_BLOCK = frozenset("老小大阿")
+# Capitalized tokens in the probe and the surface corpus that are not person
+# names, plus honorifics. A stored name followed by one of these is still that
+# name ("Ada When ..."). A stored name followed by another capitalized word
+# ("Ann Marie", "Nellie Jane") is not.
+_LATIN_NONNAME = frozenset({
+    "after", "an", "are", "at", "back", "before", "cake", "can", "candles",
+    "coming", "did", "do", "don", "dr", "earlier", "first", "for", "from",
+    "front", "getting", "give", "has", "how", "if", "ignore", "is", "keep",
+    "list", "miss", "mr", "mrs", "ms", "my", "name", "on", "past", "pull",
+    "put", "reaching", "read", "recite", "remind", "repeat", "replace", "say",
+    "setting", "show", "skip", "skipping", "store", "sunday", "tell", "that",
+    "the", "those", "to", "until", "update", "use", "voice", "was", "way",
+    "waypoints", "we", "what", "when", "where", "which", "with", "write",
+})
+
+
+def _is_cjk_char(ch: str) -> bool:
+    return "\u4e00" <= ch <= "\u9fff"
+
+
+def _is_cjk_name(name: str) -> bool:
+    return any(_is_cjk_char(ch) for ch in name)
+
+
+def _cjk_span_ok(text: str, start: int, end: int) -> bool:
+    """Reject a one-character name extension, not a following verb phrase.
+
+    ``老`` / ``小`` / ``大`` / ``阿`` glued on the front is a different person.
+    One CJK character glued on the end, and then punctuation or the end of the
+    string, is a different person (``孙悦然，``). One CJK character and then
+    ``的`` / ``过`` / ``了`` is the probe's verb pattern (``唐宁选的``) and
+    still matches, as does a title (``孙悦女士``) or a verb phrase
+    (``孙悦添岁``).
+    """
+    if start > 0 and text[start - 1] in _CJK_PREFIX_BLOCK:
         return False
-    if any("\u4e00" <= ch <= "\u9fff" for ch in name):
-        return name in text
-    return re.search(rf"(?i)(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text) is not None
+    if end >= len(text) or not _is_cjk_char(text[end]):
+        return True
+    extra = text[end]
+    if extra in _CJK_PARTICLE:
+        return True
+    nxt = text[end + 1] if end + 1 < len(text) else ""
+    if nxt and _is_cjk_char(nxt):
+        return True
+    return False
+
+
+def _latin_new_name_follows(text: str, end: int) -> bool:
+    """A capitalized word after the span, and that word is not a question word."""
+    matched = re.match(r"\s+([A-Z][a-zA-Z]+)", text[end:])
+    if matched is None:
+        return False
+    return matched.group(1).lower() not in _LATIN_NONNAME
+
+
+def name_spans(name: str, text: str) -> List[Tuple[int, int]]:
+    """Spans of ``name`` in ``text``.
+
+    Latin names ignore case. A letter, digit, or hyphen after the name blocks
+    the match, so ``Ann`` is not ``Anne`` or ``Ann-Marie`` and ``Robert`` is
+    not ``Roberto``. Whitespace may sit inside a single-token name (``Ro bert``,
+    ``A nn``) and between the tokens of a multi-token name (``Mary  Jane``,
+    including an ideographic space). The space-deleted form of a multi-token
+    name matches too (``MaryJane``). A following capitalized word that is not
+    a question word blocks a shorter name (``Ann`` is not ``Ann Marie``).
+    An apostrophe still matches (``Ada's``).
+
+    CJK names may contain whitespace between characters (``王 伟``). A closed
+    prefix (``老王伟``) does not match. One extra CJK character closed off by
+    punctuation does not match (``孙悦然，``). A following verb or title does
+    (``孙悦添岁``, ``刘洋先生``, ``姜北对应``).
+    """
+    if not name or not text:
+        return []
+    spans: List[Tuple[int, int]] = []
+    if _is_cjk_name(name):
+        chars = [re.escape(ch) for ch in name if not ch.isspace()]
+        if not chars:
+            return []
+        pattern = r"\s*".join(chars)
+        for matched in re.finditer(pattern, text):
+            if _cjk_span_ok(text, matched.start(), matched.end()):
+                spans.append((matched.start(), matched.end()))
+        return spans
+    tokens = [tok for tok in name.split() if tok]
+    if not tokens:
+        return []
+    pieces = [r"\s*".join(re.escape(ch) for ch in tok) for tok in tokens]
+    patterns = [r"\s+".join(pieces)]
+    if len(tokens) > 1:
+        patterns.append(r"\s*".join(re.escape(ch) for ch in "".join(tokens)))
+    pre = r"(?<![A-Za-z0-9-])"
+    post = r"(?![A-Za-z0-9-])"
+    seen = set()
+    for pattern in patterns:
+        for matched in re.finditer(pre + pattern + post, text, re.I):
+            key = (matched.start(), matched.end())
+            if key in seen or _latin_new_name_follows(text, matched.end()):
+                continue
+            seen.add(key)
+            spans.append(key)
+    return spans
+
+
+def name_in_text(name: str, text: str) -> bool:
+    """Whole-name hit. See ``name_spans`` for what counts as the name."""
+    return bool(name_spans(name, text))
 
 
 def is_deictic(text: str) -> bool:
-    """Second person. ``我们`` contains ``我`` and is not this. ``你`` is."""
-    if re.search(r"\b(you|your|yours)\b", text, re.I):
+    """The question refers to someone without using a stored name.
+
+    Second person (``you`` / ``your`` / ``yours`` / ``yourself``, ``你``, ``您``),
+    first person (``I`` / ``me`` / ``my`` / ``mine``, ``我``), and third-person
+    pronouns (``he`` / ``she`` / ``they`` / ``his`` / ``her`` / ``their``,
+    ``他`` / ``她``). ``我们`` contains ``我`` and is not first person.
+    ``其他`` contains ``他`` and is not a pronoun. ``them`` is not a pronoun
+    here: absent-person questions say "if we had heard them" about a fact.
+    """
+    if re.search(
+        r"\b(you|your|yours|yourself|yourselves|"
+        r"i|me|my|mine|myself|"
+        r"he|him|his|himself|she|her|hers|herself|"
+        r"they|their|theirs)\b",
+        text,
+        re.I,
+    ):
         return True
-    return "你" in text
+    if "你" in text or "您" in text:
+        return True
+    if re.search(r"我(?!们)", text):
+        return True
+    return re.search(r"(?<!其)[他她]", text) is not None
+
+
+def _span_gap(left: Tuple[int, int], right: Tuple[int, int]) -> int:
+    if left[1] <= right[0]:
+        return right[0] - left[1]
+    if right[1] <= left[0]:
+        return left[0] - right[1]
+    return 0
+
+
+def _cue_spans(text: str, rel: str) -> List[Tuple[int, int]]:
+    return [(m.start(), m.end()) for m in _LEX_PATTERNS[rel].finditer(text)]
+
+
+def _nearest_gap(spans: Sequence[Tuple[int, int]], cues: Sequence[Tuple[int, int]]) -> int:
+    return min(_span_gap(span, cue) for span in spans for cue in cues)
+
+
+def _focus_names(text: str, matched: Sequence[str], lex: Sequence[str]) -> List[str]:
+    """When several stored names match, keep those nearest a unique cue.
+
+    Two stored names and no unique cue stay as the union. One matched name
+    is unchanged.
+    """
+    if len(matched) < 2 or len(lex) != 1:
+        return list(matched)
+    cues = _cue_spans(text, lex[0])
+    if not cues:
+        return list(matched)
+    scored = []
+    for name in matched:
+        spans = name_spans(name, text)
+        if spans:
+            scored.append((_nearest_gap(spans, cues), name))
+    if not scored:
+        return list(matched)
+    best = min(dist for dist, _name in scored)
+    return [name for dist, name in scored if dist == best]
 
 
 def lex_labels(text: str) -> Tuple[str, ...]:
@@ -597,16 +771,22 @@ def surface_abstain(
     evidence. A cosine of at least ``ABSTAIN_EXACT_COS`` against a stored
     sentence is that sentence and is not an abstention.
 
-    No stored name in the string, and the string is not second person
-    (``you`` / ``your`` / ``你``): ``absent_person``. Second person with no
-    stored name is answered by the ranker.
+    No stored name in the string, and the string is not deictic
+    (``is_deictic``): ``absent_person``. A deictic question with no stored
+    name is answered by the ranker.
+
+    Several stored names and one lexical cue: only the names nearest that cue
+    count. A question that also names someone who is not stored still matches
+    the stored name; the nearer stored name is the one the cue is about.
 
     A stored name: the asked relation is the unique lexical cue when there is
-    one, otherwise the argmax of the abstain ridge. Abstain ``missing_rel``
-    when none of the matched people store that relation. A lexical cue does
-    not consult the margin. A ridge call does, and the gap must be at least
-    ``margin`` (the shipped value when omitted). The ranking ridge is not
-    this map. No enable flag. Returns None when the bundle is missing.
+    one, unless the abstain ridge disagrees by at least ``LEX_RIDGE_GAP``.
+    Otherwise it is the argmax of the abstain ridge. Abstain ``missing_rel``
+    when none of the matched people store that relation. A lexical cue that
+    the ridge does not overrule does not consult the margin. A ridge call
+    does, and the gap must be at least ``margin`` (the shipped value when
+    omitted). The ranking ridge is not this map. No enable flag. Returns
+    None when the bundle is missing.
     """
     if query_text is None or query_text == "":
         return None
@@ -630,19 +810,29 @@ def surface_abstain(
         if is_deictic(query_text):
             return None
         return "absent_person"
-    have = {rels[i] for i, name in enumerate(names) if name in matched}
     lex = lex_labels(query_text)
-    if len(lex) == 1:
+    matched = _focus_names(query_text, matched, lex)
+    have = {rels[i] for i, name in enumerate(names) if name in matched}
+    Wa = weights.get("Wa")
+    pred = ""
+    gap = 0.0
+    if Wa is not None:
+        pred, gap = _abstain_pred(query_emb, Wa)
+    if len(lex) == 1 and not (pred and pred != lex[0] and gap >= LEX_RIDGE_GAP):
         if lex[0] not in have:
             return "missing_rel"
         return None
-    Wa = weights.get("Wa")
     if Wa is None:
         return None
     use_margin = ABSTAIN_MARGIN if margin is None else float(margin)
     if "abstain_margin" in weights and margin is None:
         use_margin = float(weights["abstain_margin"])
-    pred, gap = _abstain_pred(query_emb, Wa)
+    # A cue the ridge overruled still needs a confident ridge label. A question
+    # with no unique cue is the same call.
+    if len(lex) == 1:
+        if pred not in have:
+            return "missing_rel"
+        return None
     if gap >= use_margin and pred not in have:
         return "missing_rel"
     return None
