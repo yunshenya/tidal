@@ -10,7 +10,10 @@ and the stored key is the same name unit plus the forward relation unit plus
 ``heads`` / ``recall`` / replay stay on raw cosine. On these flat rows
 ``ask`` / ``query`` rank by sentence cosine plus the relation logit from
 ``question_surface`` (the sentence vector is the one passed into
-``embed_event``). Sparse name/relation rows still use the contrastive head.
+``embed_event``). The same call records the surface string, and ``ask``
+abstains when that string names a person who lacks the asked relation or
+names nobody and is not second person. Sparse name/relation rows still use
+the contrastive head and do not abstain.
 The decode is the same top-1 byte code either way.
 
 This probe does not refit that head. It asks Chinese and English surface
@@ -64,6 +67,8 @@ from tidal.question_surface import (
     SENTENCE_POOLING,
     SENTENCE_REVISION,
     STORED_DIM,
+    ABSTAIN_MARGIN,
+    abstain_dev_curve,
     bundle_sha256,
     corpus_errors,
     corpus_strings,
@@ -322,7 +327,7 @@ class _States:
         if key not in self.cache:
             feats = surface_feats(text, role)
             self.feats[key] = feats
-            self.cache[key] = self.cont.embed_event(feats, self.table[text])
+            self.cache[key] = self.cont.embed_event(feats, self.table[text], surface=text)
         return self.cache[key]
 
 
@@ -520,6 +525,8 @@ def eval_heldout(check) -> Dict[str, Any]:
         wire_fail = 0
         sent_missing = 0
         q_missing = 0
+        surface_missing = 0
+        abstain_cases: List[dict] = []
         fact_fail = 0
         chat_fail = 0
         id_fail = 0
@@ -584,8 +591,12 @@ def eval_heldout(check) -> Dict[str, Any]:
             q = states.get(case.question, "question")
             if cont._sentence_lookup(q) is None:
                 q_missing += 1
+            if cont._surface_lookup(q) != case.question:
+                surface_missing += 1
             head_ans = _api_answer(cont, q, "head")
             cos_ans = _api_answer(cont, q, "cosine")
+            _abstain_value, abstain_info = cont.query(q, group=None, mode="top1")
+            abstain_reason = abstain_info.get("abstain")
             visible = cont.episodic._visible(None)
             visible_keys = np.stack([s.k for _, s in visible], 0)
             if any(slot.sentence is None for _, slot in visible):
@@ -594,7 +605,10 @@ def eval_heldout(check) -> Dict[str, Any]:
             adapted = cont.rank_question_scores(q, group=None)
             head_top, head_info = _top_value(cont, adapted)
             cos_top, cos_info = _top_value(cont, raw)
-            if head_top != head_ans or cos_top != cos_ans:
+            if abstain_reason:
+                if head_ans is not None or _abstain_value is not None:
+                    wire_fail += 1
+            elif head_top != head_ans or cos_top != cos_ans:
                 wire_fail += 1
             head_m_top, head_m = _margin(adapted)
             cos_m_top, cos_m = _margin(raw)
@@ -667,6 +681,15 @@ def eval_heldout(check) -> Dict[str, Any]:
                 un_cos_m.append(cos_m)
                 un_head_top.append(head_m_top)
                 un_cos_top.append(cos_m_top)
+            abstain_cases.append({
+                "lang": case.lang,
+                "rel": case.rel,
+                "category": case.category,
+                "subtype": case.subtype or "",
+                "reason": abstain_reason,
+                "answerable": case.gold is not None,
+                "hit": bool(case.gold is not None and head_ans == case.gold),
+            })
             if case.old is not None:
                 row["stale_n"] += 1
                 if head_ans == case.old:
@@ -688,7 +711,39 @@ def eval_heldout(check) -> Dict[str, Any]:
         check("heldout", wire_fail == 0, f"ask/recall diverged from top-1 decode: {wire_fail}")
         check("heldout", sent_missing == 0, f"probe fact missing its sentence vector ({sent_missing})")
         check("heldout", q_missing == 0, f"probe question missing its sentence vector ({q_missing})")
+        check("heldout", surface_missing == 0, f"probe question missing its surface string ({surface_missing})")
         _replay_unchanged(cont, check)
+
+        def _abstain_blank():
+            return {"n": 0, "abstain": 0, "hits": 0, "false_abstain": 0}
+
+        abstain_slices: Dict[str, Dict[str, int]] = {}
+
+        def _abstain_bump(key: str, row: dict) -> None:
+            slot = abstain_slices.setdefault(key, _abstain_blank())
+            slot["n"] += 1
+            if row["reason"]:
+                slot["abstain"] += 1
+            if row["answerable"] and row["hit"]:
+                slot["hits"] += 1
+            if row["answerable"] and row["reason"]:
+                slot["false_abstain"] += 1
+
+        for row in abstain_cases:
+            if row["answerable"]:
+                _abstain_bump(f"{row['lang']}/answerable", row)
+                _abstain_bump("answerable", row)
+                _abstain_bump(f"{row['lang']}/answerable/{row['rel']}", row)
+            else:
+                _abstain_bump(f"{row['lang']}/{row['subtype']}", row)
+                _abstain_bump(row["subtype"], row)
+                _abstain_bump("unanswerable", row)
+        dev_curve = abstain_dev_curve(weights)
+        check(
+            "heldout",
+            abs(float(weights.get("abstain_margin", -1)) - ABSTAIN_MARGIN) < 1e-9,
+            f"abstain margin {weights.get('abstain_margin')}",
+        )
 
         answerable = _new_tally()
         unanswerable = _new_tally()
@@ -758,6 +813,12 @@ def eval_heldout(check) -> Dict[str, Any]:
                 "max_pair_cosine": float(max_pair),
             },
             "examples": examples,
+            "abstain": {
+                "margin": float(weights.get("abstain_margin", ABSTAIN_MARGIN)),
+                "ridge": None if weights.get("abstain_ridge") is None else float(weights["abstain_ridge"]),
+                "slices": abstain_slices,
+                "dev_curve": dev_curve,
+            },
             "embedder": {
                 "model": emb_meta["model"],
                 "revision": emb_meta["revision"],
@@ -906,8 +967,10 @@ def format_heldout(report: Dict[str, Any]) -> str:
         "The cosine column is still the encoder state, which recall uses."
     )
     lines.append("Stale is an answer equal to the value from before the same-identity overwrite.")
-    lines.append("False is an unanswerable question that still returned some stored fact.")
-    lines.append("`ask` has no abstain. A false cell of n/n means every unanswerable ask returned a fact.")
+    lines.append(
+        "False is an unanswerable question that still returned some stored fact. "
+        "An abstained ask is not that cell: `ask` is None and `query` sets `info['abstain']`."
+    )
     lines.append("Ranking uses overwrite_cos=1 so a near-duplicate key cannot delete another identity.")
     lines.append("gold lost @0.9 replays the same writes at the live threshold 0.9.")
     d = report["disjoint"]
@@ -968,9 +1031,67 @@ def format_heldout(report: Dict[str, Any]) -> str:
             if key in stats:
                 ordered.append(f"{key}={stats[key]:.4f}")
         lines.append(f"- {label}: " + " ".join(ordered))
+    ab = report.get("abstain") or {}
+    slices = ab.get("slices") or {}
+    if slices:
+        lines.append("")
+        lines.append(
+            "Abstain on the flat-row path (`ask` is None, `query` info['abstain'] is "
+            "`missing_rel` or `absent_person`). "
+            f"Ridge {ab.get('ridge')}, margin {ab.get('margin')}."
+        )
+        lines.append(
+            "| slice | n | abstained | still answered | ask hits | false abstain |"
+        )
+        lines.append("|---|---:|---:|---:|---:|---:|")
+        order = [
+            "en/missing_rel", "zh/missing_rel", "missing_rel",
+            "en/absent_person", "zh/absent_person", "absent_person",
+            "unanswerable",
+            "en/answerable", "zh/answerable", "answerable",
+            "en/answerable/phone", "zh/answerable/phone",
+            "en/answerable/birthday", "zh/answerable/birthday",
+            "en/answerable/places", "zh/answerable/places",
+        ]
+        for key in order:
+            slot = slices.get(key)
+            if not slot:
+                continue
+            still = int(slot["n"]) - int(slot["abstain"])
+            lines.append(
+                f"| {key} | {int(slot['n'])} | {int(slot['abstain'])} | {still} "
+                f"| {int(slot['hits'])} | {int(slot['false_abstain'])} |"
+            )
+        lines.append(
+            "Ask hits are exact decodes among answerable questions (abstained rows count as misses). "
+            "False abstain is an answerable question that returned no fact."
+        )
+    curve = ab.get("dev_curve") or []
+    if curve:
+        lines.append("")
+        lines.append(
+            "Dev trade-off (generated pools, disjoint from this probe). "
+            "False abstain and missing-relation use a one-relation store. "
+            "A margin is eligible only when false abstain and deictic false abstain are 0 in both languages."
+        )
+        lines.append(
+            "| margin | false en | false zh | missing en | missing zh | "
+            "absent en | absent zh | deictic false en | deictic false zh |"
+        )
+        lines.append("|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+        for row in curve:
+            fa, miss, absent = row["false_abstain"], row["missing"], row["absent"]
+            deic = row["deictic_false"]
+            lines.append(
+                f"| {float(row['margin']):.2f} | {fa['en']}/{row['false_n']['en']} "
+                f"| {fa['zh']}/{row['false_n']['zh']} "
+                f"| {miss['en']}/{row['missing_n']['en']} | {miss['zh']}/{row['missing_n']['zh']} "
+                f"| {absent['en']}/{row['absent_n']['en']} | {absent['zh']}/{row['absent_n']['zh']} "
+                f"| {deic['en']}/{row['deictic_n']['en']} | {deic['zh']}/{row['deictic_n']['zh']} |"
+            )
     lines.append("")
     lines.append(
-        "If abstain were 'margin < t' (not implemented; `ask` always returns the top slot):"
+        "Ranker margin sweep (not the shipped abstain; that rule is the table above):"
     )
     lines.append("| ranker | t | answerable kept | exact among kept | unanswerable still answered |")
     lines.append("|---|---:|---:|---:|---:|")
