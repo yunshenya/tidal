@@ -1,8 +1,9 @@
 """Fit the residual inject MLP on a frozen causal LM.
 
 Value = answer-span pool at the inject layer (not L2-normalized).
-Phone-like answers pool the last four answer tokens. Birthday answers
-concatenate field-token slices. Other answers pool the whole span.
+Phone-like answers concatenate leading slices of the last four answer
+tokens. Birthday answers concatenate field-token slices. Other answers
+pool the whole span.
 ``fit_phone_readout`` and ``fit_date_readout`` fit the linear spellings
 and do not touch the MLP.
 ``add = scale(v) + MLP(scale(v))`` with the MLP's last layer starting at zero.
@@ -145,54 +146,93 @@ def fit_inject(
     return log
 
 
-def fit_phone_readout(mem, *, n_numbers: int = 120, alpha: float = 100.0, seed: int = 0) -> dict:
-    """Ridge the four variable phone digits from the phone value pool.
+def _assert_phone_slices(mem) -> None:
+    """Ones-digit edit must not touch the tens block. That is the slice pack.
 
-    Train-split names only. Writes the inject buffers ``phone_on``,
-    ``phone_mu``, ``phone_sd``, ``phone_w``, and ``phone_b``. The MLP weights
-    stay where they are. ``alpha`` is the ridge penalty on standardized
-    features. Returns the train exact-match count.
+    A last-4 mean moves when the ones digit changes, and that move is what
+    flips tens 6 to 7. Causal models leave the earlier digit tokens fixed.
     """
-    import numpy as np
+    from tidal.llm_memory import phone_block_sizes
 
-    from tidal.llm_memory_data import _TEXT, _answer, names
+    def value(suffix: str):
+        answer = f"+1-415-555-{suffix}"
+        return np.asarray(mem.encode_value(f"Ada's phone number is {answer}", answer), dtype=np.float32)
 
-    if int(n_numbers) < 10:
-        raise ValueError("n_numbers must be >= 10")
-    if float(alpha) < 0:
-        raise ValueError("alpha must be >= 0")
-    rng = __import__("random").Random(int(seed))
-    phone_ids = list(range(8000))
-    rng.shuffle(phone_ids)
-    chosen = phone_ids[: int(n_numbers)]
-    train_names = list(names("train"))
-    values = []
-    digits = []
-    for name in train_names:
-        for i in chosen:
-            answer = _answer("phone", i)
+    sizes = phone_block_sizes(mem.hidden)
+    if int(np.sum(sizes)) != int(mem.hidden):
+        raise RuntimeError(f"phone block sizes {sizes} do not cover hidden {mem.hidden}")
+    cuts = np.cumsum(sizes)
+    base = value("2060")
+    ones = value("2061")
+    tens = value("2070")
+    if base.shape != (mem.hidden,) or not np.array_equal(base[: cuts[2]], ones[: cuts[2]]):
+        raise RuntimeError("phone value is not the four-digit slice pack: a ones-digit edit moved the tens block")
+    if np.array_equal(base[cuts[2] :], ones[cuts[2] :]):
+        raise RuntimeError("phone ones block did not change with the ones digit")
+    if not np.array_equal(base[: cuts[1]], tens[: cuts[1]]) or np.array_equal(base[cuts[1] : cuts[2]], tens[cuts[1] : cuts[2]]):
+        raise RuntimeError("phone tens block did not follow the tens digit")
+
+
+def _phone_rows(mem, name_list, suffixes) -> list:
+    import time
+
+    from tidal.llm_memory_data import _TEXT
+
+    rows = []
+    t0 = time.time()
+    for i, name in enumerate(name_list):
+        for suffix in suffixes:
+            answer = f"+1-415-555-{suffix}"
             text = _TEXT["phone"].format(name=name, a=answer)
-            values.append(mem.encode_value(text, answer))
-            digits.append([int(c) for c in answer[-4:]])
-    x = np.stack(values).astype(np.float64)
-    y = np.asarray(digits, dtype=np.int64)
-    mu = x.mean(axis=0)
-    sd = x.std(axis=0)
-    sd[sd < 1e-6] = 1.0
-    z = (x - mu) / sd
-    eye = np.eye(z.shape[1])
-    gram = z.T @ z + float(alpha) * eye
-    weight = np.zeros((4, 10, z.shape[1]), dtype=np.float64)
-    bias = np.full((4, 10), -1.0e4, dtype=np.float64)
-    for pos in range(4):
-        classes = np.unique(y[:, pos])
-        targets = np.eye(len(classes))[np.searchsorted(classes, y[:, pos])]
-        solved = np.linalg.solve(gram, z.T @ targets)  # [d, n_class]
-        for col, digit in enumerate(classes):
-            weight[pos, int(digit)] = solved[:, col]
-            bias[pos, int(digit)] = 0.0
+            rows.append({"value": mem.encode_value(text, answer), "suffix": answer[-4:], "name": name})
+        print(f"phone encode {name} {i + 1}/{len(name_list)} n={len(rows)} {time.time() - t0:.0f}s", flush=True)
+    return rows
+
+
+def _score_phone_rows(mem, rows) -> dict:
+    """Float32 module exact digits. ``rows`` items have ``value`` and ``suffix``."""
     import torch
 
+    hit = 0
+    misses = []
+    margins = []
+    inj = mem.inject
+    mu = inj.phone_mu.detach().cpu()
+    sd = inj.phone_sd.detach().cpu()
+    weight = inj.phone_w.detach().cpu()
+    bias = inj.phone_b.detach().cpu()
+    for row in rows:
+        value = torch.tensor(np.asarray(row["value"], dtype=np.float32))
+        logits = torch.einsum("d,pcd->pc", (value - mu) / sd, weight) + bias
+        pred = "".join(str(int(i)) for i in torch.argmax(logits, dim=-1).tolist())
+        suffix = row["suffix"]
+        gaps = []
+        for pos, ch in enumerate(suffix):
+            gold = int(ch)
+            other = torch.cat((logits[pos, :gold], logits[pos, gold + 1 :]))
+            gaps.append(float(logits[pos, gold] - other.max()))
+        margins.append(min(gaps) if gaps else None)
+        if pred == suffix:
+            hit += 1
+        elif len(misses) < 8:
+            misses.append({"name": row.get("name"), "gold": suffix, "spelled": pred, "min_margin": margins[-1]})
+    finite = [m for m in margins if m is not None]
+    return {
+        "hits": hit,
+        "n": len(rows),
+        "misses": misses,
+        "min_margin": min(finite) if finite else None,
+    }
+
+
+def _write_phone_readout(mem, x, y, alpha: float):
+    import torch
+
+    mu, sd, z, gram = _standardize(x, alpha)
+    weight = np.zeros((4, 10, z.shape[1]), dtype=np.float64)
+    bias = np.zeros((4, 10), dtype=np.float64)
+    for pos in range(4):
+        weight[pos], bias[pos] = _solve_class(z, y[:, pos], 10, gram)
     mem.inject.phone_mu.copy_(torch.tensor(mu, dtype=torch.float32))
     mem.inject.phone_sd.copy_(torch.tensor(sd, dtype=torch.float32))
     mem.inject.phone_w.copy_(torch.tensor(weight, dtype=torch.float32))
@@ -202,9 +242,75 @@ def fit_phone_readout(mem, *, n_numbers: int = 120, alpha: float = 100.0, seed: 
     for pos in range(4):
         logits = z @ weight[pos].T + bias[pos]
         pred.append(logits.argmax(axis=1))
-    hat = np.stack(pred, axis=1)
+    return np.stack(pred, axis=1)
+
+
+def fit_phone_readout(mem, *, n_numbers: int = 120, alpha: float = 100.0, seed: int = 0) -> dict:
+    """Ridge the four variable phone digits from the phone digit slices.
+
+    Train-split names only. Writes the inject buffers ``phone_on``,
+    ``phone_mu``, ``phone_sd``, ``phone_w``, and ``phone_b``. The MLP weights
+    and the birthday readout stay where they are. ``alpha`` is the ridge
+    penalty on standardized features.
+
+    The training ids are the same shuffle as the last-4 mean fit (seed 0,
+    first ``n_numbers`` of ``range(8000)``). After that fit, the 28 phone
+    targets on the question grid and the ``206x`` / ``207x`` suffixes on the
+    test names are scored through the float32 module. ``206x`` is the family
+    the mean readout flipped to ``207x``.
+    """
+    from tidal.llm_memory_data import _answer, names, session
+
+    if int(n_numbers) < 10:
+        raise ValueError("n_numbers must be >= 10")
+    if float(alpha) < 0:
+        raise ValueError("alpha must be >= 0")
+    _assert_phone_slices(mem)
+    rng = __import__("random").Random(int(seed))
+    phone_ids = list(range(8000))
+    rng.shuffle(phone_ids)
+    chosen = phone_ids[: int(n_numbers)]
+    train_names = list(names("train"))
+    train_suffixes = [_answer("phone", i)[-4:] for i in chosen]
+    train_rows = _phone_rows(mem, train_names, train_suffixes)
+    x = np.stack([row["value"] for row in train_rows]).astype(np.float64)
+    y = np.array([[int(c) for c in row["suffix"]] for row in train_rows], dtype=np.int64)
+    hat = _write_phone_readout(mem, x, y, alpha)
     hit = int((hat == y).all(axis=1).sum())
-    return {"train_exact": hit, "n": int(y.shape[0]), "n_numbers": int(n_numbers), "n_names": len(train_names), "alpha": float(alpha)}
+    held_ids = phone_ids[int(n_numbers) : int(n_numbers) + 40]
+    held_suffixes = [_answer("phone", i)[-4:] for i in held_ids]
+    held_names = list(names("test"))[:8]
+    held = _score_phone_rows(mem, _phone_rows(mem, held_names, held_suffixes))
+    fragile_suffixes = [f"206{d}" for d in range(10)] + [f"207{d}" for d in range(10)]
+    fragile = _score_phone_rows(mem, _phone_rows(mem, list(names("test")), fragile_suffixes))
+    grid_rows = []
+    for distract in (0, 4, 16, 32):
+        session_rng = __import__("random").Random(5000 + distract)
+        for _ in range(48):
+            turns = session(session_rng, "test", distract)
+            facts = [turn for turn in turns if turn["kind"] == "fact"]
+            target = session_rng.choice(facts)
+            if target["rel"] != "phone":
+                continue
+            grid_rows.append(
+                {
+                    "value": mem.encode_value(target["text"], target["a"]),
+                    "suffix": target["a"][-4:],
+                    "name": target["n"],
+                    "N": distract,
+                }
+            )
+    grid = _score_phone_rows(mem, grid_rows)
+    return {
+        "train_exact": hit,
+        "n": int(y.shape[0]),
+        "n_numbers": int(n_numbers),
+        "n_names": len(train_names),
+        "alpha": float(alpha),
+        "heldout_names": {key: held[key] for key in ("hits", "n", "misses", "min_margin")},
+        "fragile_206_207": {key: fragile[key] for key in ("hits", "n", "misses", "min_margin")},
+        "grid": {key: grid[key] for key in ("hits", "n", "misses", "min_margin")},
+    }
 
 
 def _date_block_ok(value, day: int, hidden: int) -> bool:
@@ -524,7 +630,15 @@ def main(argv=None) -> None:
         if args.tiny:
             raise SystemExit("--phone-readout does not run on --tiny")
         mem = LLMMemory(model_name=args.model, layer=args.layer, inject_hidden=args.hid, dtype=torch.float32)
+        frozen = {
+            key: tensor.detach().cpu().clone()
+            for key, tensor in mem.inject.state_dict().items()
+            if key not in {"phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b"}
+        }
         info = fit_phone_readout(mem, n_numbers=args.phone_numbers, alpha=args.phone_alpha, seed=args.seed)
+        for key, tensor in frozen.items():
+            if not torch.equal(tensor, mem.inject.state_dict()[key].detach().cpu()):
+                raise SystemExit(f"phone readout changed {key}")
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         mem.save_inject(out)
