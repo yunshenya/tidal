@@ -409,7 +409,10 @@ def test_flat_row_abstain_returns_none_and_recall_does_not():
     _value, info = cont.query(bare, group=None, mode="top1")
     assert info["abstain"] is None
 
-    zh_missing = cont.embed_event(flat(), _axis(9), surface="港务台在问姜北对应的是哪一部电话。")
+    # Axis 12 is a phone-cue question whose abstain-ridge gap stays under
+    # LEX_RIDGE_GAP, so the cue still wins. A confident disagreeing ridge is
+    # covered by test_confident_ridge_overrides_a_misleading_cue.
+    zh_missing = cont.embed_event(flat(), _axis(12), surface="港务台在问姜北对应的是哪一部电话。")
     assert cont.remember(
         cont.embed_event(flat(), _axis(10), surface="姜北的生日卡。"),
         "zh-day", name="姜北", rel="birthday",
@@ -461,3 +464,87 @@ def test_abstain_margin_is_the_dev_rule():
     assert shipped["deictic_n"] == {"en": 6, "zh": 6}
     assert by_margin[0.0]["false_abstain"]["en"] == 1
     assert by_margin[0.05]["false_abstain"]["en"] == 1
+
+
+def test_name_spans_keep_verbs_and_reject_closed_extensions():
+    """A following verb still matches. A punctuated one-character extension does not."""
+    from tidal.question_surface import _focus_names, is_deictic, name_in_text
+
+    assert name_in_text("Ada", "What is Ada's phone number?")
+    assert name_in_text("Ann", "Ann's")
+    assert not name_in_text("Ann", "Anne")
+    assert not name_in_text("Ann", "Ann-Marie")
+    assert not name_in_text("Ann", "Ann Marie")
+    assert name_in_text("Robert", "Ro bert")
+    assert name_in_text("Robert", "Mr. Robert")
+    assert not name_in_text("Robert", "Roberto")
+    assert name_in_text("Mary Jane", "Mary  Jane")
+    assert name_in_text("Mary Jane", "MaryJane")
+    assert name_in_text("姜北", "港务台在问姜北对应的是哪一部电话。")
+    assert name_in_text("唐宁", "唐宁选的碰面点是哪里？")
+    assert name_in_text("祁安", "祁安报过路点，按原顺序重复，不要重排。")
+    assert name_in_text("孙悦", "孙悦添岁是哪一天？")
+    assert name_in_text("孙悦", "值班簿写着孙 悦时，地方该念哪一条？")
+    assert name_in_text("刘洋", "刘洋先生")
+    assert name_in_text("赵敏", "赵敏女士")
+    assert not name_in_text("孙悦", "值班簿若写的是孙悦然，电话记过没有？")
+    assert not name_in_text("王伟", "老王伟，")
+    assert not name_in_text("Nellie", "Nellie-Jane")
+    assert not name_in_text("Nellie", "Nellie Jane")
+    # 王伟强的 is the same shape as 唐宁选的, so the stored name still matches.
+    assert name_in_text("王伟", "名下是王伟强的话，电话存了没有？")
+
+    assert is_deictic("For yourself, which telephone is kept?")
+    assert is_deictic("您那边的电话")
+    assert is_deictic("我的电话该回读哪一条？")
+    assert is_deictic("他的电话")
+    assert is_deictic("Their ordered locations are which?")
+    assert is_deictic("我们有没有写下姜北的电话？") is False
+    assert is_deictic("其他地方") is False
+    assert is_deictic("if we had heard them") is False
+
+    focused = _focus_names(
+        "Of Ada and Mei, ask only Mei: which telephone is filed?",
+        ["Ada", "Mei"],
+        ("phone",),
+    )
+    assert focused == ["Mei"]
+
+
+def test_lex_ridge_gap_stays_above_the_probe_disagreement():
+    from tidal.question_heldout import load_text_table
+    from tidal.question_surface import LEX_RIDGE_GAP, _abstain_pred, load_weights
+
+    assert LEX_RIDGE_GAP == 0.15
+    table, _meta = load_text_table()
+    question = "Those other records aren't the one I want. What places did Ravi store?"
+    pred, gap = _abstain_pred(table[question], load_weights()["Wa"])
+    assert pred != "places"
+    assert gap < LEX_RIDGE_GAP
+
+
+def test_confident_ridge_overrides_a_misleading_cue():
+    from tidal.question_surface import STORED_DIM, surface_abstain
+
+    query = np.zeros(STORED_DIM, np.float64)
+    query[0] = 1.0
+    keys = np.zeros((1, STORED_DIM), np.float64)
+    wide = np.zeros((STORED_DIM + 1, 3), np.float64)
+    wide[0, 1] = 1.0  # birthday, gap 1.0 over phone and places
+    weights = {"Wa": wide, "abstain_margin": 0.1, "W": wide, "alpha": 0.0, "labels": ("phone", "birthday", "places")}
+    text = "Which telephone belongs with Ingrid?"
+    assert surface_abstain(query, keys, ["birthday"], ["Ingrid"], weights, query_text=text) is None
+    assert surface_abstain(query, keys, ["places"], ["Ingrid"], weights, query_text=text) == "missing_rel"
+    narrow = np.zeros((STORED_DIM + 1, 3), np.float64)
+    narrow[0, 1] = 0.05  # gap under LEX_RIDGE_GAP, so the cue still wins
+    weights = {**weights, "Wa": narrow}
+    assert surface_abstain(query, keys, ["birthday"], ["Ingrid"], weights, query_text=text) == "missing_rel"
+    assert surface_abstain(query, keys, ["phone"], ["Ingrid"], weights, query_text=text) is None
+    assert surface_abstain(
+        query, keys, ["phone"], ["Ingrid"], weights,
+        query_text="For yourself, which telephone is kept?",
+    ) is None
+    assert surface_abstain(
+        query, keys, ["phone"], ["Ingrid"], weights,
+        query_text="如果我们听过，方甯的地点会是哪些？",
+    ) == "absent_person"
