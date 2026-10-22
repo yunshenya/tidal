@@ -21,6 +21,7 @@ dependencies = [
     "tokenizers>=0.19",
     "torch>=2.3",
     "httpx>=0.27",
+    "pypinyin>=0.50",
 ]
 
 [project.optional-dependencies]
