@@ -126,13 +126,13 @@ The contrastive maps used to sit on `read`. Question retrieval rose, and recall 
 | zh_after_update | 36 | 2/36 | 36/36 |
 | 可答合计 | 370 | 84/370 | 360/370 |
 
-可答的电话 / 生日 / 多 token：编码器余弦 23/124、29/124、32/122；`ask` 121/124、122/124、117/122。英文 `ask` 182/185，中文 `ask` 178/185。更新后的旧值 0/72。下面的表是 dev 上的弃权取舍，不是探针。探针上不可答 72 条里弃掉多少、可答 ret@1 掉多少，由 `python -m tidal.question_heldout` 打印。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8927。
+可答的电话 / 生日 / 多 token：编码器余弦 23/124、29/124、32/122；`ask` 121/124、122/124、117/122。英文 `ask` 182/185，中文 `ask` 178/185。更新后的旧值 0/72。弃权打开之后这些可答数字不变：误弃权 0/370，不可答 `ask` 从 72/72 返回事实变成 72/72 返回 None。dev 取舍和分语言计数在下面。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8927。
 
 句向量余弦本身（`alpha=0`）是 345/370（英 174/185，中 171/185）。关系项把它收到 360/370：电话 107→121，生日 117→122，地点 121→117；`en_indirect` 34→39，`zh_indirect` 34→38，`zh_after_distractors` 33→35。没有按探针再调 `alpha`。`en_after_distractors` 在两项下都是 34/36。
 
 探针里 18 个英文名字都不是单个 `[UNK]`（`Ada` 是 `▁Ada`，`Priya` 是 `▁Pri/ya`，`Noah` 是 `▁No/ah`）。中文名字按字切开，也没有 `[UNK]`。同一句模板只换名字时，英文 18/18、中文 18/18 能对上本人。`bge-small-zh-v1.5` 把每个英文名字切成一个 `[UNK]`，同模板的句向量余弦是 1，对不上人。
 
-和探针的不相交：表面训练集在原来的 384 句上加了弃权用的释义（字面、人名、句向量余弦、token Jaccard 的门槛不变：0、0、< 0.98、< 0.65）。对合成训练文本的最大余弦仍要低于 0.5，特征行和编码器状态碰撞仍是 0。`python -m tidal.question_heldout` 打印当次的最大余弦和 Jaccard。
+和探针的不相交：表面训练集 1124 句（原来的 384 句加上弃权用的释义），字面重合 0，名字重合 0，对探针句向量最大余弦 0.9513，token Jaccard 最大 0.600。对合成训练文本的最大余弦是 0.1573，特征行和编码器状态碰撞仍是 0。
 
 平坦行的弃权不改上面的排序。排序仍是句向量余弦加 `alpha=0.3` 的关系 logit，排序岭回归的字节不变。弃权用的是另一张岭回归 `Wa`（同样是 513×3），只在生成的 fit 问句上拟合，不参与打分。`lambda` 在 `1e-3, 1e-2, 0.1, 1.0` 里选，标准是具名 dev 问句错得最少，平手取更大的 `lambda`。随包是 `1.0`，错 2 条。
 
@@ -155,7 +155,17 @@ The contrastive maps used to sit on `read`. Question retrieval rose, and recall 
 
 `absent_person` 不看间隔，所以每一行都是 36/36。0.00 和 0.05 因为英文有 1 条误弃权，不能用。
 
-探针上的语言 × 子类型计数、可答 ret@1 和误弃权条数由同一次 `python -m tidal.question_heldout` 打印。阈值在那之前已经固定。
+探针在阈值固定之后跑了一次（`python -m tidal.question_heldout`）。可答 `ask` ret@1 仍是 360/370（英 182/185，中 178/185），电话 / 生日 / 地点仍是 121/124、122/124、117/122。误弃权 0/370。不可答 72/72 弃权，`ask` 不再返回事实；`recall` 用的编码器余弦仍是 72/72 返回一条事实。
+
+| 切片 | n | 弃权 | 仍回答 | ask 命中 | 误弃权 |
+|---|---:|---:|---:|---:|---:|
+| en missing_rel | 18 | 18 | 0 | 0 | 0 |
+| zh missing_rel | 18 | 18 | 0 | 0 | 0 |
+| en absent_person | 18 | 18 | 0 | 0 | 0 |
+| zh absent_person | 18 | 18 | 0 | 0 | 0 |
+| 可答 | 370 | 0 | 370 | 360 | 0 |
+
+`en_unanswerable` 和 `zh_unanswerable` 的 false 格是编码器余弦 · `ask`：36/36 · 0/36。上面可答类别表里的 `ask` 列没有变。
 
 Flat-row `ask` does not score the encoder state. That state folds the sentence into a `d=32` GRU output. On this embedder, held-out surface questions sit at encoder cosine ret@1 84/370. On the previous embedder that column was 87/370 and the contrastive head was 95/370. Another head on that state does not put the sentence back. `embed_event` stores the unit 512-d sentence vector on the slot. The key stays the encoder state, so overwrite, `recall`, and the synthetic 47/48 stay put.
 
@@ -179,13 +189,13 @@ The probe is `python -m tidal.question_heldout` (also printed by `python -m tida
 | zh_after_update | 36 | 2/36 | 36/36 |
 | answerable | 370 | 84/370 | 360/370 |
 
-Answerable phone / birthday / multi-token: encoder cosine 23/124, 29/124, 32/122; `ask` 121/124, 122/124, 117/122. English `ask` is 182/185. Chinese `ask` is 178/185. Stale values after an update: 0/72. The table below is the dev abstain trade-off, not the probe. How many of the 72 unanswerable asks abstain, and whether answerable ret@1 moves, is what `python -m tidal.question_heldout` prints. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8927.
+Answerable phone / birthday / multi-token: encoder cosine 23/124, 29/124, 32/122; `ask` 121/124, 122/124, 117/122. English `ask` is 182/185. Chinese `ask` is 178/185. Stale values after an update: 0/72. With abstention on, those answerable counts stay put: false abstain is 0/370, and unanswerable `ask` goes from returning a fact on 72/72 to returning None on 72/72. The dev trade-off and the per-language counts are below. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8927.
 
 Sentence cosine alone (`alpha=0`) is 345/370 (en 174/185, zh 171/185). The relation term moves that to 360/370: phone 107→121, birthday 117→122, places 121→117, `en_indirect` 34→39, `zh_indirect` 34→38, `zh_after_distractors` 33→35. `alpha` was not retuned on the probe. `en_after_distractors` is 34/36 at both.
 
 None of the 18 English names in the probe is a single `[UNK]` (`Ada` is `▁Ada`, `Priya` is `▁Pri/ya`, `Noah` is `▁No/ah`). Chinese names are characters and are not `[UNK]` either. On one template with only the name changed, English is 18/18 and Chinese is 18/18. `bge-small-zh-v1.5` tokenized every English name as one `[UNK]`, so same-template sentence vectors had cosine 1 and could not tell the people apart.
 
-Disjoint from the probe: the surface corpus is the original 384 ranking strings plus the abstain paraphrases. The gates are unchanged: 0 literal hits, 0 name hits, sentence cosine < 0.98, token Jaccard < 0.65. Max cosine against the synthetic training text stays under 0.5. Feature-row and encoder-state collisions stay 0. `python -m tidal.question_heldout` prints that run's max cosine and Jaccard.
+Disjoint from the probe: 1124 surface strings (the original 384 plus the abstain paraphrases), 0 literal hits, 0 name hits, max sentence cosine 0.9513, max token Jaccard 0.600. Max cosine against the synthetic training text is 0.1573. Feature-row and encoder-state collisions stay 0.
 
 Abstention does not change the ranking above. Ranking is still sentence cosine plus the `alpha=0.3` relation logit, and the ranking ridge bytes are unchanged. Abstention uses a second ridge `Wa` (same 513×3 shape), fit only on the generated fit questions, and it is not added into the score. `lambda` is chosen from `1e-3, 1e-2, 0.1, 1.0` by the fewest errors on named dev questions; a tie keeps the larger `lambda`. The shipped value is `1.0`, with 2 errors.
 
@@ -208,7 +218,17 @@ The margin is chosen only on dev. The probe is not an input. Answerable question
 
 `absent_person` does not read the margin, so every row is 36/36. Margins 0.00 and 0.05 are out because English has 1 false abstain.
 
-Per-language subtype counts, answerable ret@1, and the false-abstain count on the probe are printed by the same `python -m tidal.question_heldout` run. The thresholds were fixed before that run.
+The probe was run once after the thresholds were fixed (`python -m tidal.question_heldout`). Answerable `ask` ret@1 stays 360/370 (en 182/185, zh 178/185). Phone / birthday / places stay 121/124, 122/124, 117/122. False abstain is 0/370. Unanswerable asks abstain on 72/72, so `ask` no longer returns a fact; encoder cosine, which `recall` uses, still returns a fact on 72/72.
+
+| slice | n | abstained | still answered | ask hits | false abstain |
+|---|---:|---:|---:|---:|---:|
+| en missing_rel | 18 | 18 | 0 | 0 | 0 |
+| zh missing_rel | 18 | 18 | 0 | 0 | 0 |
+| en absent_person | 18 | 18 | 0 | 0 | 0 |
+| zh absent_person | 18 | 18 | 0 | 0 | 0 |
+| answerable | 370 | 0 | 370 | 360 | 0 |
+
+The false cell on `en_unanswerable` and `zh_unanswerable` is encoder cosine · `ask`: 36/36 · 0/36. The `ask` column in the answerable category table above did not move.
 
 ## 影子策略 / Shadow policy
 
