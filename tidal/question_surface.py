@@ -6,8 +6,10 @@ overwrite and ``recall`` stay on raw cosine), and it keeps the 512-d sentence
 vector that produced the state. ``ask`` / ``query`` rank those slots by
 cosine of the sentence vectors plus a relation logit. Once the surface
 string has selected people, only their facts are ranked. The cue-nearest
-narrowing stays on the missing-relation check: a two-name question keeps
-every matched person in the ranker, and a distance tie is not a new rule.
+narrowing stays on the missing-relation check. Two matched names both stay
+in the ranker unless one is only in a dismissed clause, only one possessively
+governs the live cue, or a focus restrictor governs a proper subset. A
+distance tie is not a new rule.
 Sparse name/relation rows, the ones ``question_head.build_facts`` uses,
 do not carry a sentence vector, so those asks stay on the contrastive head.
 
@@ -882,6 +884,97 @@ def _cue_possessors(text: str, matched: Sequence[str]) -> List[str]:
     return found
 
 
+# A focus restrictor is a closed class, not a list of sentences. The adverb
+# ``only`` / ``just`` / ``solely`` governs the matched name that follows, with
+# an optional ``about``. Chinese ``只问`` / ``只看`` / ``单独问`` do the same.
+# ``not only`` and ``不只`` are not restrictors. A partner joined by
+# ``and`` / ``和`` / ``与`` / ``跟`` is governed too, so the pair is not
+# narrowed to the first name. The frozen two-name sentences are not an input.
+_EN_RESTRICT = re.compile(
+    r"\b(?:only|just|solely)\b(?:\s+about\b)?",
+    re.I,
+)
+_ZH_RESTRICT = re.compile(r"单独问|只问|只看")
+_NOT_BEFORE = re.compile(r"\bnot\s+$", re.I)
+_COORD_AFTER = re.compile(r"^\s*(?:和|与|跟|\band\b)\s*", re.I)
+
+
+def _name_at(
+    text: str, pos: int, matched: Sequence[str],
+) -> Optional[Tuple[str, int]]:
+    """Matched name whose span starts at ``pos``, preferring the longer one."""
+    best: Optional[Tuple[int, str, int]] = None
+    for name in matched:
+        for start, end in name_spans(name, text):
+            if start != pos:
+                continue
+            length = end - start
+            if best is None or length > best[0]:
+                best = (length, name, end)
+    if best is None:
+        return None
+    return best[1], best[2]
+
+
+def _coord_follower(
+    text: str, span_end: int, matched: Sequence[str], name: str,
+) -> Optional[str]:
+    """Matched name joined after this span by ``and`` / ``和`` / ``与`` / ``跟``."""
+    coord = _COORD_AFTER.match(text[span_end:])
+    if coord is None:
+        return None
+    hit = _name_at(text, span_end + coord.end(), matched)
+    if hit is None or hit[0] == name:
+        return None
+    return hit[0]
+
+
+def _governed_names(text: str, matched: Sequence[str]) -> List[str]:
+    """Matched names a focus restrictor governs, including a coordinated partner."""
+    found: List[str] = []
+
+    def add(name: Optional[str]) -> None:
+        if name and name not in found:
+            found.append(name)
+
+    def take(pos: int) -> None:
+        while pos < len(text) and text[pos].isspace():
+            pos += 1
+        hit = _name_at(text, pos, matched)
+        if hit is None:
+            return
+        name, end = hit
+        add(name)
+        add(_coord_partner(text, pos, matched, name))
+        add(_coord_follower(text, end, matched, name))
+
+    for match in _EN_RESTRICT.finditer(text):
+        if _NOT_BEFORE.search(text[:match.start()]):
+            continue
+        take(match.end())
+    for match in _ZH_RESTRICT.finditer(text):
+        if match.start() > 0 and text[match.start() - 1] == "不":
+            continue
+        take(match.end())
+    return found
+
+
+def _restrict_targets(text: str, matched: Sequence[str]) -> List[str]:
+    """Proper subset a focus restrictor governs, or empty when nothing narrows.
+
+    Empty means no restrictor attached to a remaining name, or every remaining
+    name is governed. One governed name among several is that name. A
+    coordinated pair stays the pair.
+    """
+    if len(matched) < 2:
+        return []
+    governed = _governed_names(text, matched)
+    if not governed or set(matched) <= set(governed):
+        return []
+    chosen = set(governed)
+    return [name for name in matched if name in chosen]
+
+
 def ask_targets(
     text: str,
     names: Sequence[Optional[str]],
@@ -892,8 +985,9 @@ def ask_targets(
     ``ask_people`` is the match, including a resolved hearer. One match is
     that person. Two matches drop a name that sits only in a dismissed
     clause when the other remains, then keep a unique possessor of the live
-    cue. Otherwise every remaining match stays. Cue-nearest is not applied
-    here. No enable flag.
+    cue, then keep the proper subset a focus restrictor governs. Otherwise
+    every remaining match stays. Cue-nearest is not applied here. No enable
+    flag.
     """
     matched = ask_people(text, names, surfaces)
     if len(matched) < 2:
@@ -903,6 +997,10 @@ def ask_targets(
         possessors = _cue_possessors(text, kept)
         if len(possessors) == 1:
             kept = possessors
+    if len(kept) >= 2:
+        focused = _restrict_targets(text, kept)
+        if focused:
+            kept = focused
     order = {name: i for i, name in enumerate(matched)}
     return sorted(kept, key=lambda name: order.get(name, len(matched)))
 
@@ -911,8 +1009,8 @@ def _focus_names(text: str, matched: Sequence[str], lex: Sequence[str]) -> List[
     """When several stored names match, keep those nearest a unique cue.
 
     Two stored names and no unique cue stay as the union. One matched name
-    is unchanged. Dismissed names and a unique cue possessor are already
-    gone: ``ask_targets`` runs before this.
+    is unchanged. Dismissed names, a unique cue possessor, and a focus
+    restrictor are already gone: ``ask_targets`` runs before this.
     """
     if len(matched) < 2 or len(lex) != 1:
         return list(matched)
@@ -1291,10 +1389,10 @@ def matched_fact_rows(
     None leaves every fact in the ranker: no surface string, or the string
     selected nobody (an absent person, or a deictic question). A list is the
     ask-target set, before the cue-nearest narrowing. Two stored names both
-    stay unless one sits only in a dismissed clause or only one of them
-    possessively governs the live cue. A resolved hearer is that one person,
-    so the other people's facts cannot win. There is no extra threshold and
-    no flag.
+    stay unless one sits only in a dismissed clause, only one of them
+    possessively governs the live cue, or a focus restrictor governs a
+    proper subset. A resolved hearer is that one person, so the other
+    people's facts cannot win. There is no extra threshold and no flag.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
@@ -1376,10 +1474,14 @@ def surface_abstain(
     first-person person is that person; the relation check then applies.
 
     Two stored names: a name that occurs only inside a dismissed clause is
-    not the ask target when the other name remains, and a unique possessor
-    of the live cue is the ask target. Among whoever remains, one lexical
-    cue keeps the names nearest that cue. An unmatched name in that cue's
-    name slot clears the match, so the asked person is not stored. A longer
+    not the ask target when the other name remains, a unique possessor of
+    the live cue is the ask target, and a focus restrictor (``only`` /
+    ``just`` / ``solely``, optional ``about``, or ``只问`` / ``只看`` /
+    ``单独问``) keeps the name it governs when another name remains.
+    ``not only`` and a coordinated pair do not narrow. Among whoever
+    remains, one lexical cue keeps the names nearest that cue. An unmatched
+    name in that cue's name slot clears the match, so the asked person is
+    not stored. A longer
     string that still contains a stored name, such as a following verb or a
     title, is not a second person.
 
