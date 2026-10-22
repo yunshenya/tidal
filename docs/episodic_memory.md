@@ -15,11 +15,11 @@ h' = h_adapt + soft_topk(h_adapt)
 
 空库时 `soft_topk` 是全零。连续体那层适配器也还是零的时候（刚构造，或 `levels=()`），回放就和静态模型一样。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。调用方如果仍传入这类键，读出照样加上。`heads` / `replay` / `recall` 的排序是原始余弦，分母是 `kn*qn + 1e-12`。
 
-问句走另一条路，也没有开关。`ask` / `query` 用对比 q/k 头给槽打分，再走同一套 soft top-k 和字节码解码。这个头不进 `heads`，replay 也不调用它。编码器对不上随包权重时，头的末层仍是零，残差是 0，直到 `fit_question_head(..., install=True)` 把对该编码器的拟合装上。那不是一条另写的余弦分支。
+问句走另一条路，也没有开关。平坦特征行在 `embed_event` 时记下 512 维句向量，`ask` / `query` 用句向量余弦加上关系 logit 打分。稀疏的名字/关系行不记句向量，仍用对比 q/k 头。两条都再走同一套 soft top-k 和字节码解码。头和关系图都不进 `heads`，replay 也不调用它们。编码器对不上随包问句头权重时，头的末层仍是零，残差是 0，直到 `fit_question_head(..., install=True)` 把对该编码器的拟合装上。关系图文件不在时，平坦行只剩句向量余弦。`recall` 仍是编码器状态上的原始余弦，不是这套分数。
 
 An empty store adds zeros. With zero continuum adapters (a fresh model, or `levels=()`), replay matches the static model. `heads`, `replay`, and `recall` rank by raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
 
-Questions use the other path, also with no switch. `ask` / `query` score slots with the contrastive query/key head, then the same soft top-k and byte-code decode. That head is not added into `heads`, and replay does not call it. When the encoder hash does not match the shipped weights, the head's last layer is still zero, so the residual is 0, until `fit_question_head(..., install=True)` copies a fit for that encoder. That is not a second cosine implementation.
+Questions use the other path, also with no switch. A flat feature row keeps the 512-d sentence vector from `embed_event`, and `ask` / `query` score those slots by sentence cosine plus a relation logit. A sparse name/relation row keeps no sentence vector and still uses the contrastive query/key head. Either score then uses the same soft top-k and byte-code decode. The head and the relation map are not added into `heads`, and replay does not call them. When the encoder hash does not match the shipped question-head weights, the head's last layer is still zero, so the residual is 0, until `fit_question_head(..., install=True)` copies a fit for that encoder. A checkout without the relation file ranks flat rows by sentence cosine alone. `recall` stays raw cosine on the encoder state.
 
 一条事实是一个槽 `(k, v, name, rel, group)`。
 
@@ -34,12 +34,12 @@ Questions use the other path, also with no switch. `ask` / `query` score slots w
 键和值用 tidal 已有的通路，宽度就是编码器状态 `d`：
 
 - `embed_event(feats)`：冻结模型的 `fproj` + 主干一步。`feats` 是 `features.py` / `features_g.py` 的一行（模型若带情绪列，把那几列算进去）。
-- `embed_event(feats, text_emb)`：`text_emb` 是 `tidal.embed` / `TextFrontEnd` 的 512 维 bge。只有模型自己带 `tproj` 时才走这条文本投影。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。有对比度的稀疏行（问句头用的名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`。没有开关。
+- `embed_event(feats, text_emb)`：`text_emb` 是 `tidal.embed` / `TextFrontEnd` 的 512 维 bge。只有模型自己带 `tproj` 时才走这条文本投影。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。同一条平坦行把单位句向量记在槽的 `sentence` 上，给 `ask` 用；`recall` 不读它。有对比度的稀疏行（问句头用的名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`，也不记句向量。没有开关。
 - `remember(k, v, ...)` 的数值向量必须已经在 `d` 里。512 维 bge 不能直接当槽。字符串或 token 列表会编成宽度 `d` 的位置字节码再写入。
 
 An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), replay matches the static model. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. Numeric keys and values are encoder states from the frozen event model; a 512-d bge vector goes through that model's `tproj` when it exists. A phone, date, or token list is a positional byte code of the same width.
 
-`embed_event(feats, text)` leaves a feature row alone when the constant direction holds at most half its energy. That is the question head's sparse name/relation code, so those encoder states stay `fproj + tproj`. A flat row (every coordinate the same size) is the other regime: `fproj` plus its bias is one shared vector, several times `tproj` of a unit sentence, and raw cosine then overwrites unrelated sentences at 0.9. The flat row drops that offset and the bias, and adds a fixed sign code of the 512-d text vector, scaled to the larger of the leftover feature ripple and `tproj`. The code is not a learned map and it is not in the question-head fingerprint. There is no switch.
+`embed_event(feats, text)` leaves a feature row alone when the constant direction holds at most half its energy. That is the question head's sparse name/relation code, so those encoder states stay `fproj + tproj` and carry no sentence vector. A flat row (every coordinate the same size) is the other regime: `fproj` plus its bias is one shared vector, several times `tproj` of a unit sentence, and raw cosine then overwrites unrelated sentences at 0.9. The flat row drops that offset and the bias, and adds a fixed sign code of the 512-d text vector, scaled to the larger of the leftover feature ripple and `tproj`. The same call stores the unit sentence vector on the slot for `ask`. `recall` does not read it. The code is not a learned map and it is not in the question-head fingerprint. There is no switch.
 
 ## 难值 / Hard values
 
@@ -67,7 +67,7 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 | 写门控跳过闲聊 | 保留。未标注的事件流不是事实，`replay` 不写槽。 |
 | 多块矩阵读出再求和 | 不采用。求和会把检索到的值稀释掉。这里只有一块槽表。 |
 | 朴素 key shield（写完按旧键把旧读出补回去） | 不采用。同名更新会写不进去。覆盖后槽里的键就是新键。 |
-| 对比学习 q/k MLP | 只在 `ask` / `query`。`heads` / `recall` / replay 仍是原始余弦。问句 ret@1 从 13/48 到 47/48。同一头若用来查「存进去的键、干扰是其他事实」会从 48/48 掉到 18/48，所以 `recall` 不接它。 |
+| 对比学习 q/k MLP | 只给没有句向量的 `ask` / `query`（合成的稀疏名字/关系行）。`heads` / `recall` / replay 仍是原始余弦。这类问句 ret@1 从 13/48 到 47/48。同一头若用来查「存进去的键、干扰是其他事实」会从 48/48 掉到 18/48，所以 `recall` 不接它。平坦行的表面问句不走这个头，见下节。 |
 | 残差 inject MLP | 不采用。会把电话字节码推离网格。 |
 | SmolLM2-135M、`transformers` | 核心 `import tidal` 不 import。可选模块 `tidal/llm_memory.py`，`pip install tidal[llm]`。 |
 | 答案跨度做均值池化，或写入时 L2 归一化 | 不采用。池化分不出顺序；归一化毁掉字节码。字符串走位置字节码。 |
@@ -76,11 +76,11 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 
 对比 q/k 曾经直接接在 `read` 上，末层零初始化。问句检索会涨，但「查询 = 存进去的编码器键、干扰是其他事实」从 48/48 掉到 18/48，所以不能替换 `heads` / `recall`。残差 inject 另训过 300 步，把 `+1-415-555-0134` 推离字节网格（最大绝对偏差 0.00111271），解不出来。所以这条字节码路径上没有 inject MLP。冻结 LM 的 inject 在 `tidal/llm_memory.py`，注入的是隐状态，不读这些字节码。
 
-现在 q/k 只服务 `ask` / `query`。同一套协议又量了一次：seed 0，`d=32`，冻结的 `fproj` + `tproj` + 一步 GRU，400 步，InfoNCE τ=0.07，难负例。问句向量用的是反转后的关系 token，不是存进去的键。这不是 SmolLM 的 n≈96 自由生成。脚本是 `python -m tidal.question_head`，权重在 `tidal/question_qk.npz`（合成编码器和合成事实，不是在真实聊天上训的 phase-1 权重）。
+没有句向量的 `ask` / `query` 仍走 q/k。同一套协议又量了一次：seed 0，`d=32`，冻结的 `fproj` + `tproj` + 一步 GRU，400 步，InfoNCE τ=0.07，难负例。问句向量用的是反转后的关系 token，不是存进去的键。这不是 SmolLM 的 n≈96 自由生成。脚本是 `python -m tidal.question_head`，权重在 `tidal/question_qk.npz`（合成编码器和合成事实，不是在真实聊天上训的 phase-1 权重）。
 
 | 集合 | 原始余弦 ret@1 | 问句头 |
 |---|---|---|
-| 问句 ≠ 键，8 个事实干扰 | 13/48 = 0.2708 | 47/48 = 0.9792（`ask` 用这个） |
+| 问句 ≠ 键，8 个事实干扰 | 13/48 = 0.2708 | 47/48 = 0.9792（稀疏行的 `ask` 用这个） |
 | episodic_eval 那种：查询 = 存进去的键，8 个随机单位向量 | 48/48 = 1（`recall` 用这个） | 若误用头仍是 48/48 = 1 |
 | 随机单位键，查询 = 键，8 个单位干扰 | 256/256 = 1 | 若误用头仍是 256/256 = 1 |
 | 查询 = 存进去的编码器键，干扰是另外 8 条事实的键 | 48/48 = 1（`recall`） | 若把 `ask` 用在这条上是 18/48 = 0.3750 |
@@ -91,16 +91,74 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 
 The contrastive maps used to sit on `read`. Question retrieval rose, and recall of the stored encoder key among other facts fell from 48/48 to 18/48, so they do not replace `heads` / `recall`. A residual inject fit (300 steps) moved `+1-415-555-0134` by max abs 0.00111271 and the code no longer decoded. This byte-code path has no inject MLP. Frozen-LM inject lives in `tidal/llm_memory.py` and adds hidden states, not these codes.
 
-The query/key maps now serve only `ask` / `query`. The same protocol was measured again: seed 0, `d=32`, frozen `fproj` + `tproj` + one GRU step, 400 steps, InfoNCE τ=0.07, hard negatives. The question state uses the reversed relation token, not the stored key. This is not SmolLM's n≈96 free-gen sample. `python -m tidal.question_head` writes `tidal/question_qk.npz` (a synthetic encoder and synthetic facts, not phase-1 weights trained on real chat).
+`ask` / `query` still use the query/key maps when the slot has no sentence vector. The same protocol was measured again: seed 0, `d=32`, frozen `fproj` + `tproj` + one GRU step, 400 steps, InfoNCE τ=0.07, hard negatives. The question state uses the reversed relation token, not the stored key. This is not SmolLM's n≈96 free-gen sample. `python -m tidal.question_head` writes `tidal/question_qk.npz` (a synthetic encoder and synthetic facts, not phase-1 weights trained on real chat).
 
 | set | raw cosine ret@1 | question head |
 |---|---|---|
-| question ≠ key, 8 fact distractors | 13/48 = 0.2708 | 47/48 = 0.9792 (`ask` uses this) |
+| question ≠ key, 8 fact distractors | 13/48 = 0.2708 | 47/48 = 0.9792 (`ask` uses this on sparse rows) |
 | episodic_eval style: query = stored key, 8 random unit vectors | 48/48 = 1 (`recall` uses this) | 48/48 = 1 if the head were applied |
 | random unit keys, query = key, 8 unit distractors | 256/256 = 1 | 256/256 = 1 if the head were applied |
 | query = stored encoder key, distractors are 8 other fact keys | 48/48 = 1 (`recall`) | 18/48 = 0.3750 if `ask` were used on that key |
 
 `recall` scores match an independent cosine bitwise. Scrambling the question weights leaves replay outputs bitwise unchanged, and an empty store still matches the static model bitwise on `heads`. A zero last layer makes question scores bitwise-equal to raw cosine; after the shipped fit is installed, the two ranks diverge on the question set (the harness has at least one cosine miss that the head hits, and at least one stored key that cosine hits and the head misses). SmolLM's K100 and free-gen numbers are in [llm_memory.md](llm_memory.md) and are not these figures.
+
+## 表面问句 / Surface questions
+
+平坦行的 `ask` 不在编码器状态上打分。那个状态把句向量收成 `d=32` 的 GRU 输出，held-out 表面问句的余弦 ret@1 是 87/370，对比头是 95/370。在编码器状态上再训一个头补不回丢掉的句子。`embed_event` 把单位 512 维句向量记在槽上，键仍是原来的编码器状态，所以覆盖、`recall`、合成问句的 47/48 都不动。
+
+分数是句向量余弦，加上 `alpha` 乘关系 logit。logit 是岭回归（λ=1e-2），把单位 bge 加一维偏置映到 `phone` / `birthday` / `places`。训练字符串是生成的释义，名字和措辞都不在探针里（`tidal/question_surface.py`，权重 `tidal/question_surface.npz`）。`alpha` 只在这份生成的 dev 池上选：不能让英文或中文低于 `alpha=0`，总数最大，平手取更小的 `alpha`。曲线是 `alpha=0` 时 33/96（英 4/48，中 29/48），`alpha=0.5` 时 46/96（英 8/48，中 38/48），所以随包 `alpha` 是 0.5。探针不参与这次选择。
+
+探针是 `python -m tidal.question_heldout`（也在 `python -m tidal.episodic_eval` 里）：442 条，bge-small-zh-v1.5 CLS、L2、最长 64、无检索指令。可答 370。余弦列是编码器状态，`ask` 列是现在的主路径。对比头那一列是改排名之前的 `ask`。
+
+| 类别 | n | 余弦 | 对比头（之前） | ask（现在） |
+|---|---:|---:|---:|---:|
+| en_direct | 36 | 9/36 | 12/36 | 17/36 |
+| zh_direct | 36 | 11/36 | 8/36 | 35/36 |
+| en_indirect | 40 | 15/40 | 12/40 | 18/40 |
+| zh_indirect | 40 | 13/40 | 17/40 | 36/40 |
+| en_cross_turn | 37 | 7/37 | 11/37 | 21/37 |
+| zh_cross_turn | 37 | 5/37 | 7/37 | 34/37 |
+| en_after_distractors | 36 | 7/36 | 5/36 | 5/36 |
+| zh_after_distractors | 36 | 3/36 | 8/36 | 34/36 |
+| en_after_update | 36 | 12/36 | 8/36 | 21/36 |
+| zh_after_update | 36 | 5/36 | 7/36 | 36/36 |
+| 可答合计 | 370 | 87/370 | 95/370 | 257/370 |
+
+可答的电话 / 生日 / 多 token：余弦 27/124、30/124、30/122；对比头 31/124、33/124、31/122；`ask` 80/124、95/124、82/122。英文 50/185 → 48/185 → 82/185，中文 37/185 → 47/185 → 175/185（余弦 → 头 → ask）。更新后的旧值 0/72。不可答仍是 72/72 返回了某条事实，这条不在这次改动里。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8891。
+
+句向量余弦本身（`alpha=0`）是 245/370。关系项把它收到 257/370：电话 66→80，生日 93→95，地点 86→82；`zh_cross_turn` 35→34。没有按探针再调 `alpha`。
+
+`en_after_distractors` 停在 5/36，和句向量余弦、旧头一样。bge-small-zh-v1.5 把探针里每个英文名字都切成一个 `[UNK]`，CLS 里没有「是哪个人」。干扰池里同一关系有好几条事实，句向量分不出人。中文名字是字，所以中文类都上去了。
+
+和探针的不相交：表面训练集 384 句，字面重合 0，名字重合 0，对探针 bge 最大余弦 0.8509，token Jaccard 最大 0.500。对合成训练文本的最大余弦仍是 0.1983，特征行和编码器状态碰撞仍是 0。
+
+Flat-row `ask` does not score the encoder state. That state folds the sentence into a `d=32` GRU output, and held-out surface questions sit at cosine ret@1 87/370 and contrastive-head ret@1 95/370. Another head on that state does not put the sentence back. `embed_event` stores the unit 512-d sentence vector on the slot. The key stays the encoder state, so overwrite, `recall`, and the synthetic 47/48 stay put.
+
+The score is sentence cosine plus `alpha` times a relation logit. The logit is a ridge map (λ=1e-2) from the unit bge vector plus a bias onto `phone` / `birthday` / `places`. The strings are generated paraphrases whose names and wording are not in the probe (`tidal/question_surface.py`, weights in `tidal/question_surface.npz`). `alpha` is chosen only on those generated dev pools: neither language may fall below `alpha=0`, the total is maximized, and a tie keeps the smaller `alpha`. The curve is 33/96 at `alpha=0` (en 4/48, zh 29/48) and 46/96 at `alpha=0.5` (en 8/48, zh 38/48), so the shipped `alpha` is 0.5. The probe is not an input to that choice.
+
+The probe is `python -m tidal.question_heldout` (also printed by `python -m tidal.episodic_eval`): 442 cases, bge-small-zh-v1.5 CLS, L2, maxlen 64, no retrieval instruction. 370 are answerable. The cosine column is the encoder state. The ask column is the path that ships. The head column is `ask` before this ranker.
+
+| category | n | cosine | head (before) | ask (now) |
+|---|---:|---:|---:|---:|
+| en_direct | 36 | 9/36 | 12/36 | 17/36 |
+| zh_direct | 36 | 11/36 | 8/36 | 35/36 |
+| en_indirect | 40 | 15/40 | 12/40 | 18/40 |
+| zh_indirect | 40 | 13/40 | 17/40 | 36/40 |
+| en_cross_turn | 37 | 7/37 | 11/37 | 21/37 |
+| zh_cross_turn | 37 | 5/37 | 7/37 | 34/37 |
+| en_after_distractors | 36 | 7/36 | 5/36 | 5/36 |
+| zh_after_distractors | 36 | 3/36 | 8/36 | 34/36 |
+| en_after_update | 36 | 12/36 | 8/36 | 21/36 |
+| zh_after_update | 36 | 5/36 | 7/36 | 36/36 |
+| answerable | 370 | 87/370 | 95/370 | 257/370 |
+
+Answerable phone / birthday / multi-token: cosine 27/124, 30/124, 30/122; head 31/124, 33/124, 31/122; `ask` 80/124, 95/124, 82/122. English 50/185 → 48/185 → 82/185, Chinese 37/185 → 47/185 → 175/185 (cosine → head → ask). Stale values after an update: 0/72. Unanswerable asks still return some fact on 72/72; that is not part of this change. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8891.
+
+Sentence cosine alone (`alpha=0`) is 245/370. The relation term moves that to 257/370: phone 66→80, birthday 93→95, places 86→82, and `zh_cross_turn` 35→34. `alpha` was not retuned on the probe.
+
+`en_after_distractors` stays 5/36, the same as sentence cosine and the old head. bge-small-zh-v1.5 tokenizes every English name in the probe as one `[UNK]`, so the CLS vector has no person identity. A distractor pool holds several facts of the same relation, and the sentence vector cannot tell the people apart. Chinese names are characters, which is why those categories move.
+
+Disjoint from the probe: 384 surface-training strings, 0 literal hits, 0 name hits, max bge cosine 0.8509, max token Jaccard 0.500. Max cosine against the synthetic training text stays 0.1983. Feature-row and encoder-state collisions stay 0.
 
 ## 影子策略 / Shadow policy
 
@@ -123,11 +181,11 @@ k_phone = cont.embed_event(phone_key_feats)     # a different key; cos > 0.9 wou
 cont.remember(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
 cont.recall(k_phone)                            # raw cosine, winning slot's string
 q = cont.embed_event(question_feats, question_bge)
-cont.ask(q)                                     # question head, then the winning slot's byte code
+cont.ask(q)                                     # flat row: sentence rank; sparse row: question head
 cont.query(q)                                   # same rank, soft top-k value; not added to heads
 cont.ask_tokens(q)
 ```
 
-随包的拟合对应 `tidal.question_head.load_reference()` 那只编码器（seed 0，`d=32`，`fproj` / `tproj` / 一步 GRU）。别的冻结编码器调用 `fit_question_head(cont, install=True)`，只把映射装进 `ask` / `query`。`episodic_cfg` 只调容量、`soft_k`、温度、覆盖余弦和可选的 surprise 阈值。它不是开关。
+随包的问句头对应 `tidal.question_head.load_reference()` 那只编码器（seed 0，`d=32`，`fproj` / `tproj` / 一步 GRU），只排没有句向量的问句。别的冻结编码器调用 `fit_question_head(cont, install=True)`，只把映射装进这类 `ask` / `query`。平坦行的关系图是 `question_surface.npz`，不看编码器。`episodic_cfg` 只调容量、`soft_k`、温度、覆盖余弦和可选的 surprise 阈值。它不是开关。
 
-The shipped fit is the encoder from `tidal.question_head.load_reference()` (seed 0, `d=32`, `fproj` / `tproj` / one GRU step). `fit_question_head(cont, install=True)` fits any other frozen encoder and installs the maps on `ask` / `query` only. `episodic_cfg` tunes capacity, `soft_k`, temperature, overwrite cosine, and the optional surprise threshold. It is not a switch.
+The shipped question head is the encoder from `tidal.question_head.load_reference()` (seed 0, `d=32`, `fproj` / `tproj` / one GRU step) and ranks only questions that have no sentence vector. `fit_question_head(cont, install=True)` fits any other frozen encoder and installs the maps on that kind of `ask` / `query` only. The flat-row relation map is `question_surface.npz` and does not read the encoder. `episodic_cfg` tunes capacity, `soft_k`, temperature, overwrite cosine, and the optional surprise threshold. It is not a switch.

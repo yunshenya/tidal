@@ -13,7 +13,7 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query (tidal/question_head.py). That contrastive head ranks slots for those calls only. It is not added into heads, and replay does not call it.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py). Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
@@ -21,6 +21,7 @@ import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch
 from tidal import vap_targets as VT
 from tidal.episodic import EpisodicStore, cosine_scores, decode_span, decode_tokens, is_structured_value
 from tidal.question_head import QuestionHead, install_matching, question_scores
+from tidal.question_surface import surface_scores
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 _GROUP_OMIT = object()
 
@@ -72,6 +73,24 @@ def _text_axes(width, ref):
     return found
 
 
+def row_has_no_contrast(feats) -> bool:
+    """True when a feature row is constant-heavy and the sentence has to carry the fact.
+
+    Half the energy in the constant direction is the cut. Sparse name/relation
+    rows sit below it. Flat rows, and an all-zero row, sit above it. Not a switch.
+    """
+    row = feats.reshape(-1)
+    if not torch.is_tensor(row):
+        row = torch.as_tensor(np.asarray(feats, dtype=np.float32)).reshape(-1)
+    row = row.detach().float()
+    nrm = float(row.norm())
+    width = int(row.numel())
+    if nrm < 1e-8 or width < 1:
+        return True
+    align2 = (float(row.sum()) / (nrm * math.sqrt(width))) ** 2
+    return align2 > _DC_ENERGY
+
+
 def _combine_text(model, feats, text):
     """Pre-norm sum of the feature projection and the text projection.
 
@@ -82,12 +101,10 @@ def _combine_text(model, feats, text):
     the larger of the leftover feature ripple and ``tproj``. The code is what
     keeps two flat rows from agreeing after the constant is gone.
     """
-    row = feats.reshape(-1)
-    nrm = float(row.norm())
-    width = int(row.numel())
-    align2 = 0.0 if nrm < 1e-8 or width < 1 else (float(row.sum()) / (nrm * math.sqrt(width))) ** 2
-    if nrm >= 1e-8 and align2 <= _DC_ENERGY:
+    if not row_has_no_contrast(feats):
         return model.fproj(feats) + model.tproj(text)
+    row = feats.reshape(-1)
+    nrm = float(row.detach().float().norm()) if torch.is_tensor(row) else float(np.linalg.norm(np.asarray(row)))
     if nrm < 1e-8:
         centered = torch.zeros_like(row)
     else:
@@ -127,6 +144,10 @@ class Continuum:
         self.question_head.eval()
         self.question_head.requires_grad_(False)
         install_matching(self)
+        # Sentence vectors for flat rows, keyed by the encoder-state bytes.
+        # ask uses them. recall does not. Not a flag.
+        self._sentence_by_state = {}
+        self._sentence_conflicts = 0
         for p in model.parameters(): p.requires_grad_(False)
     def active(self, group):
         lv = []
@@ -167,6 +188,7 @@ class Continuum:
             )
         training = m.training
         m.eval()
+        note = None
         try:
             with torch.no_grad():
                 if text_emb is None:
@@ -181,6 +203,9 @@ class Continuum:
                     te = torch.as_tensor(np.asarray(text_emb, dtype=np.float32)).reshape(1, -1)
                     if te.shape[-1] != 512:
                         raise ValueError(f"bge text embedding must be 512-d, got {te.shape[-1]}")
+                    # Flat rows keep the sentence vector for ask. Sparse rows do not:
+                    # those are the synthetic name/relation codes, ranked by the contrastive head.
+                    note = np.asarray(text_emb, dtype=np.float64).reshape(-1) if row_has_no_contrast(x) else None
                     tok = m.inorm(_combine_text(m, x, te))
                     if m.kind == "gru":
                         y, _ = m.body(tok.unsqueeze(1)); h = y[0, 0]
@@ -191,6 +216,8 @@ class Continuum:
             m.train(training)
         if int(h.size) != int(self.d):
             raise RuntimeError(f"encoder state dim {h.size} != continuum d {self.d}")
+        if text_emb is not None and note is not None:
+            self._note_sentence(h, note)
         return h
     def remember(self, key, value, name=None, rel=None, *, kind="fact", surprise=None, group=None):
         """Write one fact. ``value`` is an encoder state, a string, or a token list.
@@ -205,7 +232,9 @@ class Continuum:
                     f"episodic key must be an encoder state of dim {self.d} (got {k.size}). "
                     "Episodic memory does not load another language model."
                 )
-            return self.episodic.write(k, value, name, rel, kind=kind, surprise=surprise, group=group)
+            return self.episodic.write(
+                k, value, name, rel, kind=kind, surprise=surprise, group=group, sentence=self._sentence_for(k),
+            )
         v = np.asarray(value, np.float64).reshape(-1)
         if k.size != self.d or v.size != self.d:
             raise ValueError(
@@ -214,7 +243,9 @@ class Continuum:
                 "Pass a string or a list of strings for a phone, date, or multi-token span. "
                 "Episodic memory does not load another language model."
             )
-        return self.episodic.write(k, v, name, rel, kind=kind, surprise=surprise, group=group)
+        return self.episodic.write(
+            k, v, name, rel, kind=kind, surprise=surprise, group=group, sentence=self._sentence_for(k),
+        )
     def remember_event(self, key_feats, value_feats, name=None, rel=None, *, key_text=None, value_text=None,
                        kind="fact", surprise=None, group=None):
         """Encode two feature rows (optional bge vectors) and write the resulting states."""
@@ -247,35 +278,80 @@ class Continuum:
             return q, g, visible, None
         keys = np.stack([s.k for _, s in visible], 0)
         return q, g, visible, keys
+    def _state_token(self, vec) -> bytes:
+        return np.ascontiguousarray(np.asarray(vec, dtype=np.float64).reshape(-1)).tobytes()
+    def _note_sentence(self, state, text_emb) -> None:
+        """Remember the sentence vector that this flat-row state was built from."""
+        vec = np.asarray(text_emb, dtype=np.float64).reshape(-1)
+        nrm = float(np.linalg.norm(vec))
+        if vec.size != 512 or nrm < 1e-12:
+            return
+        vec = vec / nrm
+        key = self._state_token(state)
+        prev = self._sentence_by_state.get(key)
+        if prev is not None and not np.array_equal(prev, vec):
+            self._sentence_conflicts += 1
+            return
+        self._sentence_by_state[key] = vec
+    def _sentence_lookup(self, state):
+        return self._sentence_by_state.get(self._state_token(state))
+    def _sentence_for(self, state):
+        found = self._sentence_lookup(state)
+        return None if found is None else found.copy()
+    def rank_question_scores(self, question, *, group=_GROUP_OMIT):
+        """Scores ``ask`` / ``query`` use, one per visible slot, or None when empty.
+
+        Flat-row slots carry the sentence vector and are ranked by sentence
+        cosine plus the relation logit. Anything else, including the synthetic
+        name/relation codes, is ranked by the contrastive head. ``recall`` does
+        not call this.
+        """
+        q, _g, visible, keys = self._question_visible(question, group)
+        if keys is None:
+            return None
+        scores, _rank = self._scores_for(q, keys, visible)
+        return scores
+    def _scores_for(self, q, keys, visible):
+        sent_q = self._sentence_lookup(q)
+        if sent_q is not None and all(slot.sentence is not None for _, slot in visible):
+            stacked = np.stack([slot.sentence for _, slot in visible], 0)
+            rels = [slot.rel for _, slot in visible]
+            return surface_scores(sent_q, stacked, rels), "sentence"
+        # question_scores is the contrastive head. Sparse rows land here.
+        return question_scores(self.question_head, q, keys), "question"
     def query(self, question, *, group=_GROUP_OMIT, mode="softtopk"):
         """Soft top-k value for a question encoder-state.
 
-        Ranking is the contrastive question head, then the same value mix as
-        ``EpisodicStore.read``. This does not run inside ``heads`` or ``replay``,
-        and it does not write slots. Omit ``group`` to use the replay scope;
-        pass ``None`` to search every slot. An empty scope returns ``(None, info)``.
+        Flat-row questions rank by sentence cosine plus a relation logit.
+        Sparse name/relation questions rank by the contrastive question head.
+        Either way the value mix is ``EpisodicStore.read``. This does not run
+        inside ``heads`` or ``replay``, and it does not write slots. Omit
+        ``group`` to use the replay scope; pass ``None`` to search every slot.
+        An empty scope returns ``(None, info)``.
         """
-        q, g, _visible, keys = self._question_visible(question, group)
+        q, g, visible, keys = self._question_visible(question, group)
         if keys is None:
             return None, {"n": 0, "maxcos": -1.0, "top": None, "weights": None, "rank": "question"}
-        scores = question_scores(self.question_head, q, keys)
+        scores, rank = self._scores_for(q, keys, visible)
         value, info = self.episodic.read_scored(scores, mode=mode, group=g)
-        info["rank"] = "question"
+        info["rank"] = rank
         info["raw_maxcos"] = float(np.max(cosine_scores(keys, q)))
         return value, info
     def ask(self, question, *, group=_GROUP_OMIT):
-        """String in the slot the question head ranks first, or None.
+        """String in the slot ranked first, or None.
 
         Decodes that slot's positional byte code, not the soft top-k blend
         (``query`` returns the blend). Same group scope as ``recall``. The
-        stored-key path stays ``recall``, which is raw cosine.
+        stored-key path stays ``recall``, which is raw cosine. A flat-row
+        question is ranked in sentence space; a sparse name/relation question
+        is ranked by the contrastive head.
         """
         value, _info = self.query(question, group=group, mode="top1")
         if value is None:
             return None
         return decode_span(value)
     def ask_tokens(self, question, *, group=_GROUP_OMIT):
-        """Token list in the slot the question head ranks first, or None."""
+        """Token list in the slot ranked first, or None. Same ranker as ``ask``."""
         value, _info = self.query(question, group=group, mode="top1")
         if value is None:
             return None

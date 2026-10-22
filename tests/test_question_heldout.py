@@ -32,10 +32,13 @@ def test_heldout_sources_have_no_enable_flag():
     root = Path("tidal")
     blob = (root / "question_heldout.py").read_text(encoding="utf-8")
     blob += (root / "question_heldout_data.py").read_text(encoding="utf-8")
+    blob += (root / "question_surface.py").read_text(encoding="utf-8")
     assert "enable_question" not in blob
     assert "use_question_head" not in blob
     assert "enable_episodic" not in blob
     assert "episodic_scale" not in blob
+    assert "enable_surface" not in blob
+    assert "use_surface" not in blob
 
 
 def test_heldout_eval_measures_and_keeps_invariants():
@@ -57,6 +60,11 @@ def test_heldout_eval_measures_and_keeps_invariants():
     assert report["disjoint"]["state_collisions"] == 0
     assert report["disjoint"]["literal_hits"] == 0
     assert report["disjoint"]["max_text_cosine_vs_training"] < 0.5
+    assert report["disjoint"]["surface_literal_hits"] == 0
+    assert report["disjoint"]["surface_name_hits"] == 0
+    assert report["disjoint"]["surface_max_bge_cosine"] < 0.98
+    assert report["disjoint"]["surface_max_jaccard"] < 0.65
+    assert report["disjoint"]["surface_alpha"] == 0.5
     for cat in CATEGORIES:
         row = report["categories"][cat]
         assert row["n"] >= 24
