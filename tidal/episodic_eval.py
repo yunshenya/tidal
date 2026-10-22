@@ -9,6 +9,10 @@ The ``question`` section is the separate ask/query head: question ret@1 against
 raw cosine, stored-key recall staying on cosine, and replay ignoring the head.
 Those hit counts are exact integers.
 
+The ``heldout`` section is a separate measurement (``tidal.question_heldout``):
+surface questions, not the training template. Its ret@1 is printed and is not
+a pass/fail gate. Invariants in that section still fail the process.
+
 Run: ``python -m tidal.episodic_eval``
 """
 from __future__ import annotations
@@ -99,14 +103,17 @@ def run(seed: int = 0) -> Dict[str, Any]:
     _hard(check, dim, rng)
     _evict(check, dim, rng)
     from tidal.question_head import eval_questions
+    from tidal.question_heldout import eval_heldout
 
     question_ret = eval_questions(check)
+    heldout = eval_heldout(check)
     return {
         "n_cases": int(sum(counts.values())),
         "n_fail": int(n_fail),
         "counts": counts,
         "failures": failures,
         "question_ret": question_ret,
+        "heldout": heldout,
     }
 
 
@@ -293,6 +300,10 @@ def main() -> None:
             f"fact-key cosine {qr['fact_key_cosine_hits']}/{n} "
             f"head-if-used-on-stored-keys {qr['fact_key_head_hits']}/{n}"
         )
+    heldout = report.get("heldout")
+    if heldout:
+        from tidal.question_heldout import format_heldout
+        print(format_heldout(heldout))
     for line in report["failures"]:
         print(line)
     raise SystemExit(0 if report["n_fail"] == 0 else 1)

@@ -48,6 +48,60 @@ CFG_DEFAULT = dict(rank=8, med=dict(lr=3e-3, mom=0.9, forget=0.01, every=1), slo
                    # slot hyperparameters (capacity, retrieval). Not an on/off switch.
                    episodic_cfg=dict(capacity=256, soft_k=4, soft_temp=0.05, overwrite_cos=0.9))
 
+# A feature row whose constant direction holds more than half its energy has no
+# coordinate contrast. ``fproj`` of that row, bias included, is then one shared
+# vector several times larger than ``tproj`` of a unit sentence, and raw cosine
+# treats unrelated sentences as the same fact. Half the energy is the cut:
+# sparse name/relation rows sit below it, flat rows sit above it. Not a switch.
+_DC_ENERGY = 0.5
+_TEXT_AXES = {}
+
+
+def _text_axes(width, ref):
+    """Fixed hyperplanes for a sign code of a 512-d text vector. Not a parameter.
+
+    Kept off the encoder modules on purpose: the question-head fingerprint is a
+    hash of those weights, and this matrix is not part of that fit.
+    """
+    key = (int(width), ref.device.type, ref.device.index, str(ref.dtype))
+    found = _TEXT_AXES.get(key)
+    if found is None:
+        raw = np.random.default_rng(0).normal(size=(int(width), 512)).astype(np.float32)
+        found = torch.as_tensor(raw, device=ref.device, dtype=ref.dtype)
+        _TEXT_AXES[key] = found
+    return found
+
+
+def _combine_text(model, feats, text):
+    """Pre-norm sum of the feature projection and the text projection.
+
+    ``feats`` is ``[1, F]``, ``text`` is ``[1, 512]``. A row with contrast
+    (the question head's sparse name/relation codes) returns ``fproj + tproj``
+    unchanged. A row with no contrast drops the constant feature offset and
+    the feature bias, and adds a fixed sign code of the text vector scaled to
+    the larger of the leftover feature ripple and ``tproj``. The code is what
+    keeps two flat rows from agreeing after the constant is gone.
+    """
+    row = feats.reshape(-1)
+    nrm = float(row.norm())
+    width = int(row.numel())
+    align2 = 0.0 if nrm < 1e-8 or width < 1 else (float(row.sum()) / (nrm * math.sqrt(width))) ** 2
+    if nrm >= 1e-8 and align2 <= _DC_ENERGY:
+        return model.fproj(feats) + model.tproj(text)
+    if nrm < 1e-8:
+        centered = torch.zeros_like(row)
+    else:
+        centered = row - row.mean()
+    fp = F.linear(centered.reshape(1, -1), model.fproj.weight, bias=None)
+    tp = model.tproj(text)
+    code = torch.sign(text @ _text_axes(fp.shape[-1], text).T)
+    fn = fp.norm(dim=-1, keepdim=True)
+    tn = tp.norm(dim=-1, keepdim=True)
+    cn = code.norm(dim=-1, keepdim=True).clamp_min(1e-6)
+    anchor = torch.maximum(fn, tn)
+    return fp + tp + code * (anchor / cn)
+
+
 class Continuum:
     def __init__(self, model, cfg):
         self.m = model; self.cfg = cfg; d = model.vap[0].in_features; self.d = d
@@ -100,6 +154,9 @@ class Continuum:
         including emotion columns when the model was built with them).
         ``text_emb`` is a 512-d bge vector (``tidal.embed`` / ``TextFrontEnd``)
         and is added through ``model.tproj`` when that projection exists.
+        A feature row whose energy is mostly constant is not added as that
+        constant: the offset would otherwise pin every sentence to one cosine.
+        Sparse rows are left on ``fproj + tproj``. No switch.
         """
         m = self.m
         x = torch.as_tensor(np.asarray(feats, dtype=np.float32)).reshape(1, -1)
@@ -124,7 +181,7 @@ class Continuum:
                     te = torch.as_tensor(np.asarray(text_emb, dtype=np.float32)).reshape(1, -1)
                     if te.shape[-1] != 512:
                         raise ValueError(f"bge text embedding must be 512-d, got {te.shape[-1]}")
-                    tok = m.inorm(m.fproj(x) + m.tproj(te))
+                    tok = m.inorm(_combine_text(m, x, te))
                     if m.kind == "gru":
                         y, _ = m.body(tok.unsqueeze(1)); h = y[0, 0]
                     else:

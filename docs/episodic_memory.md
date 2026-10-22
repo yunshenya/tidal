@@ -34,10 +34,12 @@ Questions use the other path, also with no switch. `ask` / `query` score slots w
 键和值用 tidal 已有的通路，宽度就是编码器状态 `d`：
 
 - `embed_event(feats)`：冻结模型的 `fproj` + 主干一步。`feats` 是 `features.py` / `features_g.py` 的一行（模型若带情绪列，把那几列算进去）。
-- `embed_event(feats, text_emb)`：`text_emb` 是 `tidal.embed` / `TextFrontEnd` 的 512 维 bge。只有模型自己带 `tproj` 时才走这条文本投影。
+- `embed_event(feats, text_emb)`：`text_emb` 是 `tidal.embed` / `TextFrontEnd` 的 512 维 bge。只有模型自己带 `tproj` 时才走这条文本投影。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。有对比度的稀疏行（问句头用的名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`。没有开关。
 - `remember(k, v, ...)` 的数值向量必须已经在 `d` 里。512 维 bge 不能直接当槽。字符串或 token 列表会编成宽度 `d` 的位置字节码再写入。
 
 An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), replay matches the static model. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. Numeric keys and values are encoder states from the frozen event model; a 512-d bge vector goes through that model's `tproj` when it exists. A phone, date, or token list is a positional byte code of the same width.
+
+`embed_event(feats, text)` leaves a feature row alone when the constant direction holds at most half its energy. That is the question head's sparse name/relation code, so those encoder states stay `fproj + tproj`. A flat row (every coordinate the same size) is the other regime: `fproj` plus its bias is one shared vector, several times `tproj` of a unit sentence, and raw cosine then overwrites unrelated sentences at 0.9. The flat row drops that offset and the bias, and adds a fixed sign code of the 512-d text vector, scaled to the larger of the leftover feature ripple and `tproj`. The code is not a learned map and it is not in the question-head fingerprint. There is no switch.
 
 ## 难值 / Hard values
 
