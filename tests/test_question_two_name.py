@@ -356,7 +356,9 @@ def test_other_banks_do_not_change_ask_targets():
                 moved += 1
             else:
                 assert case.focus in people or targets == people
-        assert moved == 18
+        # 18 from the dismissed-clause / unique-possessor rule, plus 6 English
+        # restrictor rows (only about / asks only) that narrow to the focus.
+        assert moved == 24
 
 
 def test_a_closer_other_fact_does_not_answer():
@@ -423,8 +425,11 @@ def test_surface_does_not_import_the_two_name_bank():
     continuum = Path("tidal/continuum.py").read_text(encoding="utf-8")
     data = Path("tidal/question_two_name_dev_data.py").read_text(encoding="utf-8")
     assert "question_two_name" not in surface
+    assert "question_focus_dev" not in surface
+    # The frozen sentences are not copied. The restrictor is an operator class.
     assert "ask only about" not in surface
-    assert "只问" not in surface
+    assert "里面，只问" not in surface
+    assert "which birthday is filed" not in surface
     for blob in (surface, continuum):
         assert "enable_abstain" not in blob and "use_abstain" not in blob
         assert "llm_memory" not in blob and "LLMMemory" not in blob

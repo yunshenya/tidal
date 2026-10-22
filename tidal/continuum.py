@@ -13,7 +13,7 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check, so a two-name question still ranks every matched person. That path returns no fact when the cue-nearest person lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check. Two matched names both stay unless one is only in a dismissed clause, only one possessively governs the live cue, or a focus restrictor governs a proper subset. That path returns no fact when the person who remains lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
@@ -317,9 +317,10 @@ class Continuum:
         Flat-row slots carry the sentence vector and are ranked by sentence
         cosine plus the relation logit. People the surface string selected
         as the ask target limit those scores to their facts; other slots
-        stay in the vector and cannot win. A dismissed name, or a name that
-        does not possess the live cue when the other name does, is not a
-        target. Cue-nearest is not applied here.
+        stay in the vector and cannot win. A dismissed name, a name that
+        does not possess the live cue when the other name does, or a name
+        outside a focus restrictor is not a target. Cue-nearest is not
+        applied here.
         Anything else, including the synthetic name/relation codes, is ranked
         by the contrastive head. ``recall`` does not call this. Abstention is
         applied in ``query``, not here, so a caller can still read the scores
@@ -351,9 +352,10 @@ class Continuum:
         limited to the ask targets. A stored name, including a nickname or
         pinyin, selects those people. An indirect hearer description selects
         the unique first-person person when the store has exactly one. Two
-        stored names both stay unless one is only in a dismissed clause, or
-        only one possessively governs the live cue. Cue-nearest stays on
-        abstain, and only among the names that remain.
+        stored names both stay unless one is only in a dismissed clause,
+        only one possessively governs the live cue, or a focus restrictor
+        governs a proper subset. Cue-nearest stays on abstain, and only
+        among the names that remain.
         Sparse name/relation questions rank by the contrastive question head
         and are not limited.
         Either way the value mix is ``EpisodicStore.read`` when a fact is
