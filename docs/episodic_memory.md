@@ -34,10 +34,10 @@ Questions use the other path, also with no switch. A flat feature row keeps the 
 键和值用 tidal 已有的通路，宽度就是编码器状态 `d`：
 
 - `embed_event(feats)`：冻结模型的 `fproj` + 主干一步。`feats` 是 `features.py` / `features_g.py` 的一行（模型若带情绪列，把那几列算进去）。
-- `embed_event(feats, text_emb)`：`text_emb` 是 `tidal.embed` / `TextFrontEnd` 的 512 维 bge。只有模型自己带 `tproj` 时才走这条文本投影。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。同一条平坦行把单位句向量记在槽的 `sentence` 上，给 `ask` 用；`recall` 不读它。有对比度的稀疏行（问句头用的名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`，也不记句向量。没有开关。
-- `remember(k, v, ...)` 的数值向量必须已经在 `d` 里。512 维 bge 不能直接当槽。字符串或 token 列表会编成宽度 `d` 的位置字节码再写入。
+- `embed_event(feats, text_emb)`：`text_emb` 是 `question_surface.embed_sentences` 的 512 维句向量（`multilingual-e5-small` 的 384 维单位向量写在前 384 个坐标，后面是 0）。只有模型自己带 `tproj` 时才走这条文本投影。VAP 前端 `tidal.embed` 仍是另一套 bge，不是这个槽。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。同一条平坦行把单位句向量记在槽的 `sentence` 上，给 `ask` 用；`recall` 不读它。有对比度的稀疏行（问句头用的名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`，也不记句向量。没有开关。
+- `remember(k, v, ...)` 的数值向量必须已经在 `d` 里。512 维句向量不能直接当槽。字符串或 token 列表会编成宽度 `d` 的位置字节码再写入。
 
-An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), replay matches the static model. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. Numeric keys and values are encoder states from the frozen event model; a 512-d bge vector goes through that model's `tproj` when it exists. A phone, date, or token list is a positional byte code of the same width.
+An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), replay matches the static model. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. Numeric keys and values are encoder states from the frozen event model; a 512-d sentence vector from `question_surface.embed_sentences` goes through that model's `tproj` when it exists. The VAP frontend `tidal.embed` is a different model and is not this slot. A phone, date, or token list is a positional byte code of the same width.
 
 `embed_event(feats, text)` leaves a feature row alone when the constant direction holds at most half its energy. That is the question head's sparse name/relation code, so those encoder states stay `fproj + tproj` and carry no sentence vector. A flat row (every coordinate the same size) is the other regime: `fproj` plus its bias is one shared vector, several times `tproj` of a unit sentence, and raw cosine then overwrites unrelated sentences at 0.9. The flat row drops that offset and the bias, and adds a fixed sign code of the 512-d text vector, scaled to the larger of the leftover feature ripple and `tproj`. The same call stores the unit sentence vector on the slot for `ask`. `recall` does not read it. The code is not a learned map and it is not in the question-head fingerprint. There is no switch.
 
@@ -104,61 +104,65 @@ The contrastive maps used to sit on `read`. Question retrieval rose, and recall 
 
 ## 表面问句 / Surface questions
 
-平坦行的 `ask` 不在编码器状态上打分。那个状态把句向量收成 `d=32` 的 GRU 输出，held-out 表面问句的余弦 ret@1 是 87/370，对比头是 95/370。在编码器状态上再训一个头补不回丢掉的句子。`embed_event` 把单位 512 维句向量记在槽上，键仍是原来的编码器状态，所以覆盖、`recall`、合成问句的 47/48 都不动。
+平坦行的 `ask` 不在编码器状态上打分。那个状态把句向量收成 `d=32` 的 GRU 输出。这次嵌入器上，held-out 表面问句的编码器余弦 ret@1 是 84/370。换嵌入器之前，同一列是 87/370，对比头是 95/370；在编码器状态上再训一个头补不回丢掉的句子。`embed_event` 把单位 512 维句向量记在槽上，键仍是原来的编码器状态，所以覆盖、`recall`、合成问句的 47/48 都不动。
 
-分数是句向量余弦，加上 `alpha` 乘关系 logit。logit 是岭回归（λ=1e-2），把单位 bge 加一维偏置映到 `phone` / `birthday` / `places`。训练字符串是生成的释义，名字和措辞都不在探针里（`tidal/question_surface.py`，权重 `tidal/question_surface.npz`）。`alpha` 只在这份生成的 dev 池上选：不能让英文或中文低于 `alpha=0`，总数最大，平手取更小的 `alpha`。曲线是 `alpha=0` 时 33/96（英 4/48，中 29/48），`alpha=0.5` 时 46/96（英 8/48，中 38/48），所以随包 `alpha` 是 0.5。探针不参与这次选择。
+分数是句向量余弦，加上 `alpha` 乘关系 logit。logit 是岭回归（λ=1e-2），把单位句向量加一维偏置映到 `phone` / `birthday` / `places`。训练字符串是生成的释义，名字和措辞都不在探针里（`tidal/question_surface.py`，权重 `tidal/question_surface.npz`）。`alpha` 只在这份生成的 dev 池上选：不能让英文或中文低于 `alpha=0`，总数最大，平手取更小的 `alpha`。曲线是 `alpha=0` 时 70/96（英 36/48，中 34/48），`alpha=0.3`、`0.4`、`0.5` 都是 89/96（英 44/48，中 45/48），平手取更小的，所以随包 `alpha` 是 0.3。探针不参与这次选择。
 
-探针是 `python -m tidal.question_heldout`（也在 `python -m tidal.episodic_eval` 里）：442 条，bge-small-zh-v1.5 CLS、L2、最长 64、无检索指令。可答 370。余弦列是编码器状态，`ask` 列是现在的主路径。对比头那一列是改排名之前的 `ask`。
+句向量是冻结的 `intfloat/multilingual-e5-small`（mean pool、L2、最长 64、无 query 前缀，revision `614241f6…`）。模型输出 384 维。单位向量写在 512 维槽的前 384 个坐标，后面是 0，余弦和原模型一样，冻结的 `tproj` 仍读 512。常驻主路径，没有开关。CPU 上加载约 2.2 s，约 6.1 ms/句，1.18 亿参数。
 
-| 类别 | n | 余弦 | 对比头（之前） | ask（现在） |
-|---|---:|---:|---:|---:|
-| en_direct | 36 | 9/36 | 12/36 | 17/36 |
-| zh_direct | 36 | 11/36 | 8/36 | 35/36 |
-| en_indirect | 40 | 15/40 | 12/40 | 18/40 |
-| zh_indirect | 40 | 13/40 | 17/40 | 36/40 |
-| en_cross_turn | 37 | 7/37 | 11/37 | 21/37 |
-| zh_cross_turn | 37 | 5/37 | 7/37 | 34/37 |
-| en_after_distractors | 36 | 7/36 | 5/36 | 5/36 |
-| zh_after_distractors | 36 | 3/36 | 8/36 | 34/36 |
-| en_after_update | 36 | 12/36 | 8/36 | 21/36 |
-| zh_after_update | 36 | 5/36 | 7/36 | 36/36 |
-| 可答合计 | 370 | 87/370 | 95/370 | 257/370 |
+探针是 `python -m tidal.question_heldout`（也在 `python -m tidal.episodic_eval` 里）：442 条，可答 370。余弦列是编码器状态，`ask` 列是现在的主路径。换嵌入器之前，`bge-small-zh-v1.5` 的 `ask` 是 257/370（英 82/185，中 175/185）。
 
-可答的电话 / 生日 / 多 token：余弦 27/124、30/124、30/122；对比头 31/124、33/124、31/122；`ask` 80/124、95/124、82/122。英文 50/185 → 48/185 → 82/185，中文 37/185 → 47/185 → 175/185（余弦 → 头 → ask）。更新后的旧值 0/72。不可答仍是 72/72 返回了某条事实，这条不在这次改动里。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8891。
+| 类别 | n | 余弦（编码器） | ask |
+|---|---:|---:|---:|
+| en_direct | 36 | 12/36 | 36/36 |
+| zh_direct | 36 | 9/36 | 33/36 |
+| en_indirect | 40 | 14/40 | 39/40 |
+| zh_indirect | 40 | 10/40 | 38/40 |
+| en_cross_turn | 37 | 8/37 | 37/37 |
+| zh_cross_turn | 37 | 6/37 | 36/37 |
+| en_after_distractors | 36 | 5/36 | 34/36 |
+| zh_after_distractors | 36 | 6/36 | 35/36 |
+| en_after_update | 36 | 12/36 | 36/36 |
+| zh_after_update | 36 | 2/36 | 36/36 |
+| 可答合计 | 370 | 84/370 | 360/370 |
 
-句向量余弦本身（`alpha=0`）是 245/370。关系项把它收到 257/370：电话 66→80，生日 93→95，地点 86→82；`zh_cross_turn` 35→34。没有按探针再调 `alpha`。
+可答的电话 / 生日 / 多 token：编码器余弦 23/124、29/124、32/122；`ask` 121/124、122/124、117/122。英文 `ask` 182/185，中文 `ask` 178/185。更新后的旧值 0/72。不可答仍是 72/72 返回了某条事实，这条不在这次改动里。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8927。
 
-`en_after_distractors` 停在 5/36，和句向量余弦、旧头一样。bge-small-zh-v1.5 把探针里每个英文名字都切成一个 `[UNK]`，CLS 里没有「是哪个人」。干扰池里同一关系有好几条事实，句向量分不出人。中文名字是字，所以中文类都上去了。
+句向量余弦本身（`alpha=0`）是 345/370（英 174/185，中 171/185）。关系项把它收到 360/370：电话 107→121，生日 117→122，地点 121→117；`en_indirect` 34→39，`zh_indirect` 34→38，`zh_after_distractors` 33→35。没有按探针再调 `alpha`。`en_after_distractors` 在两项下都是 34/36。
 
-和探针的不相交：表面训练集 384 句，字面重合 0，名字重合 0，对探针 bge 最大余弦 0.8509，token Jaccard 最大 0.500。对合成训练文本的最大余弦仍是 0.1983，特征行和编码器状态碰撞仍是 0。
+探针里 18 个英文名字都不是单个 `[UNK]`（`Ada` 是 `▁Ada`，`Priya` 是 `▁Pri/ya`，`Noah` 是 `▁No/ah`）。中文名字按字切开，也没有 `[UNK]`。同一句模板只换名字时，英文 18/18、中文 18/18 能对上本人。`bge-small-zh-v1.5` 把每个英文名字切成一个 `[UNK]`，同模板的句向量余弦是 1，对不上人。
 
-Flat-row `ask` does not score the encoder state. That state folds the sentence into a `d=32` GRU output, and held-out surface questions sit at cosine ret@1 87/370 and contrastive-head ret@1 95/370. Another head on that state does not put the sentence back. `embed_event` stores the unit 512-d sentence vector on the slot. The key stays the encoder state, so overwrite, `recall`, and the synthetic 47/48 stay put.
+和探针的不相交：表面训练集 384 句，字面重合 0，名字重合 0，对探针句向量最大余弦 0.9414，token Jaccard 最大 0.500。对合成训练文本的最大余弦是 0.1573，特征行和编码器状态碰撞仍是 0。
 
-The score is sentence cosine plus `alpha` times a relation logit. The logit is a ridge map (λ=1e-2) from the unit bge vector plus a bias onto `phone` / `birthday` / `places`. The strings are generated paraphrases whose names and wording are not in the probe (`tidal/question_surface.py`, weights in `tidal/question_surface.npz`). `alpha` is chosen only on those generated dev pools: neither language may fall below `alpha=0`, the total is maximized, and a tie keeps the smaller `alpha`. The curve is 33/96 at `alpha=0` (en 4/48, zh 29/48) and 46/96 at `alpha=0.5` (en 8/48, zh 38/48), so the shipped `alpha` is 0.5. The probe is not an input to that choice.
+Flat-row `ask` does not score the encoder state. That state folds the sentence into a `d=32` GRU output. On this embedder, held-out surface questions sit at encoder cosine ret@1 84/370. On the previous embedder that column was 87/370 and the contrastive head was 95/370. Another head on that state does not put the sentence back. `embed_event` stores the unit 512-d sentence vector on the slot. The key stays the encoder state, so overwrite, `recall`, and the synthetic 47/48 stay put.
 
-The probe is `python -m tidal.question_heldout` (also printed by `python -m tidal.episodic_eval`): 442 cases, bge-small-zh-v1.5 CLS, L2, maxlen 64, no retrieval instruction. 370 are answerable. The cosine column is the encoder state. The ask column is the path that ships. The head column is `ask` before this ranker.
+The score is sentence cosine plus `alpha` times a relation logit. The logit is a ridge map (λ=1e-2) from the unit sentence vector plus a bias onto `phone` / `birthday` / `places`. The strings are generated paraphrases whose names and wording are not in the probe (`tidal/question_surface.py`, weights in `tidal/question_surface.npz`). `alpha` is chosen only on those generated dev pools: neither language may fall below `alpha=0`, the total is maximized, and a tie keeps the smaller `alpha`. The curve is 70/96 at `alpha=0` (en 36/48, zh 34/48). `alpha=0.3`, `0.4`, and `0.5` are all 89/96 (en 44/48, zh 45/48), so the shipped `alpha` is 0.3. The probe is not an input to that choice.
 
-| category | n | cosine | head (before) | ask (now) |
-|---|---:|---:|---:|---:|
-| en_direct | 36 | 9/36 | 12/36 | 17/36 |
-| zh_direct | 36 | 11/36 | 8/36 | 35/36 |
-| en_indirect | 40 | 15/40 | 12/40 | 18/40 |
-| zh_indirect | 40 | 13/40 | 17/40 | 36/40 |
-| en_cross_turn | 37 | 7/37 | 11/37 | 21/37 |
-| zh_cross_turn | 37 | 5/37 | 7/37 | 34/37 |
-| en_after_distractors | 36 | 7/36 | 5/36 | 5/36 |
-| zh_after_distractors | 36 | 3/36 | 8/36 | 34/36 |
-| en_after_update | 36 | 12/36 | 8/36 | 21/36 |
-| zh_after_update | 36 | 5/36 | 7/36 | 36/36 |
-| answerable | 370 | 87/370 | 95/370 | 257/370 |
+The sentence vector is frozen `intfloat/multilingual-e5-small` (mean pool, L2, maxlen 64, no query prefix, revision `614241f6…`). The model is 384-d. The unit vector is copied into the leading coordinates of the 512-d slot and the tail is zero, so cosine matches the native model and the frozen `tproj` still reads 512. It is on the main path. There is no flag. On CPU the load is about 2.2 s, about 6.1 ms per sentence, 118M parameters.
 
-Answerable phone / birthday / multi-token: cosine 27/124, 30/124, 30/122; head 31/124, 33/124, 31/122; `ask` 80/124, 95/124, 82/122. English 50/185 → 48/185 → 82/185, Chinese 37/185 → 47/185 → 175/185 (cosine → head → ask). Stale values after an update: 0/72. Unanswerable asks still return some fact on 72/72; that is not part of this change. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8891.
+The probe is `python -m tidal.question_heldout` (also printed by `python -m tidal.episodic_eval`): 442 cases, 370 answerable. The cosine column is the encoder state. The ask column is the path that ships. Before this embedder, `bge-small-zh-v1.5` `ask` was 257/370 (en 82/185, zh 175/185).
 
-Sentence cosine alone (`alpha=0`) is 245/370. The relation term moves that to 257/370: phone 66→80, birthday 93→95, places 86→82, and `zh_cross_turn` 35→34. `alpha` was not retuned on the probe.
+| category | n | cosine (encoder) | ask |
+|---|---:|---:|---:|
+| en_direct | 36 | 12/36 | 36/36 |
+| zh_direct | 36 | 9/36 | 33/36 |
+| en_indirect | 40 | 14/40 | 39/40 |
+| zh_indirect | 40 | 10/40 | 38/40 |
+| en_cross_turn | 37 | 8/37 | 37/37 |
+| zh_cross_turn | 37 | 6/37 | 36/37 |
+| en_after_distractors | 36 | 5/36 | 34/36 |
+| zh_after_distractors | 36 | 6/36 | 35/36 |
+| en_after_update | 36 | 12/36 | 36/36 |
+| zh_after_update | 36 | 2/36 | 36/36 |
+| answerable | 370 | 84/370 | 360/370 |
 
-`en_after_distractors` stays 5/36, the same as sentence cosine and the old head. bge-small-zh-v1.5 tokenizes every English name in the probe as one `[UNK]`, so the CLS vector has no person identity. A distractor pool holds several facts of the same relation, and the sentence vector cannot tell the people apart. Chinese names are characters, which is why those categories move.
+Answerable phone / birthday / multi-token: encoder cosine 23/124, 29/124, 32/122; `ask` 121/124, 122/124, 117/122. English `ask` is 182/185. Chinese `ask` is 178/185. Stale values after an update: 0/72. Unanswerable asks still return some fact on 72/72; that is not part of this change. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8927.
 
-Disjoint from the probe: 384 surface-training strings, 0 literal hits, 0 name hits, max bge cosine 0.8509, max token Jaccard 0.500. Max cosine against the synthetic training text stays 0.1983. Feature-row and encoder-state collisions stay 0.
+Sentence cosine alone (`alpha=0`) is 345/370 (en 174/185, zh 171/185). The relation term moves that to 360/370: phone 107→121, birthday 117→122, places 121→117, `en_indirect` 34→39, `zh_indirect` 34→38, `zh_after_distractors` 33→35. `alpha` was not retuned on the probe. `en_after_distractors` is 34/36 at both.
+
+None of the 18 English names in the probe is a single `[UNK]` (`Ada` is `▁Ada`, `Priya` is `▁Pri/ya`, `Noah` is `▁No/ah`). Chinese names are characters and are not `[UNK]` either. On one template with only the name changed, English is 18/18 and Chinese is 18/18. `bge-small-zh-v1.5` tokenized every English name as one `[UNK]`, so same-template sentence vectors had cosine 1 and could not tell the people apart.
+
+Disjoint from the probe: 384 surface-training strings, 0 literal hits, 0 name hits, max sentence cosine 0.9414, max token Jaccard 0.500. Max cosine against the synthetic training text is 0.1573. Feature-row and encoder-state collisions stay 0.
 
 ## 影子策略 / Shadow policy
 
@@ -175,12 +179,12 @@ from tidal.vap import VAPModel
 model = VAPModel(n_feat).eval()
 cont = Continuum(model, _cfg(dict(levels=("med",))))
 k = cont.embed_event(key_feats)                 # feature row -> encoder state
-v = cont.embed_event(value_feats, bge)          # bge only if model.tproj exists
+v = cont.embed_event(value_feats, sentence)     # sentence vector only if model.tproj exists
 cont.remember(k, v, name="ada", rel="city", group=group_id)
 k_phone = cont.embed_event(phone_key_feats)     # a different key; cos > 0.9 would overwrite
 cont.remember(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
 cont.recall(k_phone)                            # raw cosine, winning slot's string
-q = cont.embed_event(question_feats, question_bge)
+q = cont.embed_event(question_feats, question_sentence)
 cont.ask(q)                                     # flat row: sentence rank; sparse row: question head
 cont.query(q)                                   # same rank, soft top-k value; not added to heads
 cont.ask_tokens(q)

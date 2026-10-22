@@ -14,6 +14,11 @@ that corpus are not the held-out probe. ``python -m tidal.question_surface
 reads the file. There is no enable flag: a question state with a stored
 sentence vector is ranked here, and a bare encoder state is ranked by the
 contrastive head.
+
+The sentence vector is ``embed_sentences``: frozen ``intfloat/multilingual-e5-small``,
+mean pool, L2, maxlen 64, no query prefix. The model is 384-d. The unit vector
+is copied into the leading coordinates of the 512-d slot the encoder already
+reads, and the tail is zero, so cosine matches the native model.
 """
 from __future__ import annotations
 
@@ -28,16 +33,23 @@ import numpy as np
 from tidal.episodic import cosine_scores
 
 BUNDLE = Path(__file__).with_name("question_surface.npz")
-BGE_MODEL = "BAAI/bge-small-zh-v1.5"
-BGE_REVISION = "7999e1d3359715c523056ef9478215996d62a620"
-BGE_MAXLEN = 64
+# multilingual-e5-small. English probe names are wordpieces, not one [UNK].
+# Mean pool is the model's pooling. A "query: "/"passage: " prefix was measured
+# and dropped: it lost co-resident keys above cosine 0.9 and did not raise
+# held-out ret@1. Revision is pinned so a Hub move does not change the slot.
+SENTENCE_MODEL = "intfloat/multilingual-e5-small"
+SENTENCE_REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"
+SENTENCE_MAXLEN = 64
+SENTENCE_POOLING = "mean"
+NATIVE_DIM = 384
+STORED_DIM = 512
 LABELS: Tuple[str, ...] = ("phone", "birthday", "places")
 # An alpha that drops either language below plain cosine is discarded.
 # A tie on the total keeps the smaller alpha, so a flat curve stays at 0.
 # The probe is not an input to this choice.
 ALPHA_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5)
 # sha256 of question_surface.npz. Refit, then update this, if the corpus changes.
-EXPECTED_BUNDLE_SHA256 = "10e098a204e555ebf5a1a7cf884e629b7629ed88aa01e07e71426430e4ec08c5"
+EXPECTED_BUNDLE_SHA256 = "ff784aa1fda21189814352a8d7840c974a41f96377bdcd53afc6d02cc73e92d4"
 RIDGE = 1e-2
 
 FIT_NAMES = {
@@ -233,7 +245,7 @@ def load_weights(path: Path = BUNDLE) -> Optional[dict]:
             "alpha": float(blob["alpha"]),
             "labels": tuple(json.loads(str(blob["labels"].item()))),
         }
-    if weights["W"].shape != (513, len(LABELS)) or weights["labels"] != LABELS:
+    if weights["W"].shape != (STORED_DIM + 1, len(LABELS)) or weights["labels"] != LABELS:
         raise RuntimeError(f"surface bundle has shape {weights['W'].shape} labels {weights['labels']}")
     if path == BUNDLE:
         _WEIGHTS = weights
@@ -339,23 +351,58 @@ def _choose_alpha(curve: dict) -> float:
     return float(best)
 
 
-def _embed(texts: Sequence[str]) -> np.ndarray:
+def embed_sentences(texts: Sequence[str]) -> np.ndarray:
+    """Unit sentence vectors in the stored 512-d slot. Not used by tests.
+
+    Mean-pool ``multilingual-e5-small`` (attention mask, special tokens included),
+    L2-normalize, then copy the 384-d unit vector into the leading coordinates.
+    The tail is zero. Cosine matches the native model. ``tproj`` still reads 512.
+    """
     import torch
     import torch.nn.functional as F
     from transformers import AutoModel, AutoTokenizer
 
-    tok = AutoTokenizer.from_pretrained(BGE_MODEL, revision=BGE_REVISION)
-    model = AutoModel.from_pretrained(BGE_MODEL, revision=BGE_REVISION)
-    model.eval()
-    rows = []
-    for start in range(0, len(texts), 32):
-        chunk = list(texts[start:start + 32])
-        batch = tok(chunk, padding=True, truncation=True, max_length=BGE_MAXLEN, return_tensors="pt")
-        with torch.no_grad():
-            hidden = model(**batch).last_hidden_state[:, 0]
-            hidden = F.normalize(hidden, p=2, dim=-1)
-        rows.append(hidden.cpu().numpy().astype(np.float32))
-    return np.concatenate(rows, 0)
+    if not texts:
+        return np.zeros((0, STORED_DIM), np.float32)
+    prev = torch.backends.mkldnn.enabled
+    torch.backends.mkldnn.enabled = False
+    try:
+        tok = AutoTokenizer.from_pretrained(SENTENCE_MODEL, revision=SENTENCE_REVISION)
+        model = AutoModel.from_pretrained(SENTENCE_MODEL, revision=SENTENCE_REVISION)
+        model.float()
+        model.eval()
+        rows = []
+        for start in range(0, len(texts), 32):
+            chunk = list(texts[start:start + 32])
+            batch = tok(
+                chunk, padding=True, truncation=True,
+                max_length=SENTENCE_MAXLEN, return_tensors="pt",
+            )
+            with torch.no_grad():
+                hidden = model(**batch).last_hidden_state
+                if int(hidden.shape[-1]) != NATIVE_DIM:
+                    raise RuntimeError(
+                        f"{SENTENCE_MODEL} hidden {hidden.shape[-1]} != {NATIVE_DIM}"
+                    )
+                if SENTENCE_POOLING == "mean":
+                    mask = batch["attention_mask"].unsqueeze(-1).to(hidden.dtype)
+                    vec = (hidden * mask).sum(1) / mask.sum(1).clamp(min=1e-9)
+                elif SENTENCE_POOLING == "cls":
+                    vec = hidden[:, 0]
+                else:
+                    raise RuntimeError(f"unknown pooling {SENTENCE_POOLING}")
+                vec = F.normalize(vec, p=2, dim=-1)
+            native = vec.detach().cpu().numpy().astype(np.float32, copy=True)
+            stored = np.zeros((native.shape[0], STORED_DIM), np.float32)
+            stored[:, :native.shape[1]] = native
+            rows.append(stored)
+        return np.concatenate(rows, 0)
+    finally:
+        torch.backends.mkldnn.enabled = prev
+
+
+def _embed(texts: Sequence[str]) -> np.ndarray:
+    return embed_sentences(texts)
 
 
 def fit_bundle(path: Path = BUNDLE) -> dict:
@@ -381,8 +428,10 @@ def fit_bundle(path: Path = BUNDLE) -> dict:
         "labels": np.asarray(json.dumps(list(LABELS))),
         "texts": np.asarray(json.dumps(list(texts))),
         "emb": emb.astype(np.float32),
-        "model": np.asarray(BGE_MODEL),
-        "revision": np.asarray(BGE_REVISION),
+        "model": np.asarray(SENTENCE_MODEL),
+        "revision": np.asarray(SENTENCE_REVISION),
+        "pooling": np.asarray(SENTENCE_POOLING),
+        "native_dim": np.int64(NATIVE_DIM),
         "dev": np.asarray(json.dumps({str(k): v for k, v in curve.items()})),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -408,7 +457,7 @@ def load_corpus_table(path: Path = BUNDLE) -> Dict[str, np.ndarray]:
     with np.load(path, allow_pickle=False) as blob:
         texts = json.loads(str(blob["texts"].item()))
         emb = np.array(blob["emb"], dtype=np.float64, copy=True)
-    if emb.shape != (len(texts), 512):
+    if emb.shape != (len(texts), STORED_DIM):
         raise RuntimeError(f"surface corpus shape {emb.shape} for {len(texts)} strings")
     return {text: emb[i] for i, text in enumerate(texts)}
 
