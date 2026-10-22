@@ -22,11 +22,13 @@ Exact text is decoded from the winning slot's code, not from that blend. An
 empty store returns zeros.
 
 Natural-language questions, where the encoder state is not the stored key,
-go through ``Continuum.ask`` / ``Continuum.query`` and the contrastive head
-in ``tidal.question_head``. That head is not applied here. A residual inject
-MLP was measured on these byte codes and is not used here: it pushed phone
-codes off the grid. ``tidal.llm_memory`` injects LM hidden states, not these
-codes. The counts are in ``docs/episodic_memory.md`` and ``docs/llm_memory.md``.
+go through ``Continuum.ask`` / ``Continuum.query``. Flat rows carry a sentence
+vector on the slot and are ranked in that space. Sparse name/relation rows
+use the contrastive head in ``tidal.question_head``. Neither ranker is applied
+here. A residual inject MLP was measured on these byte codes and is not used
+here: it pushed phone codes off the grid. ``tidal.llm_memory`` injects LM
+hidden states, not these codes. The counts are in ``docs/episodic_memory.md``
+and ``docs/llm_memory.md``.
 """
 from __future__ import annotations
 
@@ -243,6 +245,9 @@ class Slot:
     rel: Optional[str]
     t: int
     group: Optional[str] = None
+    # Sentence vector that produced a flat-row key. ask ranks these.
+    # recall keeps using ``k``. None on a sparse name/relation key.
+    sentence: Optional[np.ndarray] = None
 
 
 class EpisodicStore:
@@ -358,6 +363,7 @@ class EpisodicStore:
         kind: str = "fact",
         surprise: Optional[float] = None,
         group: Optional[str] = None,
+        sentence: Optional[np.ndarray] = None,
     ) -> bool:
         """Insert or overwrite one slot. Returns True iff a write happened.
 
@@ -380,7 +386,8 @@ class EpisodicStore:
             return False
         self._check_dims(kk, vv)
         self._step += 1
-        entry = Slot(k=kk.copy(), v=vv.copy(), name=name, rel=rel, t=self._step, group=group)
+        sent = None if sentence is None else _as1d(sentence).copy()
+        entry = Slot(k=kk.copy(), v=vv.copy(), name=name, rel=rel, t=self._step, group=group, sentence=sent)
         hit = self._hit(kk, name, rel, group)
         if hit is not None:
             self._slots[hit] = entry

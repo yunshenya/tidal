@@ -7,8 +7,11 @@ The shipped head was fit by ``question_head.build_facts`` (seed 0, 36 names,
 
 and the stored key is the same name unit plus the forward relation unit plus
 ``0.3 * value_unit``, with Gaussian unit vectors from ``default_rng(0)``.
-``heads`` / ``recall`` / replay stay on raw cosine. ``ask`` / ``query`` apply
-the contrastive maps and then the same top-1 byte-code decode.
+``heads`` / ``recall`` / replay stay on raw cosine. On these flat rows
+``ask`` / ``query`` rank by sentence cosine plus the relation logit from
+``question_surface`` (the sentence vector is the one passed into
+``embed_event``). Sparse name/relation rows still use the contrastive head.
+The decode is the same top-1 byte code either way.
 
 This probe does not refit that head. It asks Chinese and English surface
 questions (``question_heldout_data``), embeds each string with frozen
@@ -42,12 +45,23 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import numpy as np
 
 from tidal.question_heldout_data import (
+    ABSENT,
     CATEGORIES,
+    PEOPLE,
     build_cases,
     corpus_summary,
     probe_strings,
     validate_corpus,
     _tokens,
+)
+from tidal.question_surface import (
+    EXPECTED_BUNDLE_SHA256,
+    bundle_sha256,
+    corpus_errors,
+    corpus_strings,
+    load_corpus_table,
+    load_weights,
+    names_used,
 )
 
 BGE_MODEL = "BAAI/bge-small-zh-v1.5"
@@ -102,6 +116,22 @@ def surface_feats(text: str, role: str) -> np.ndarray:
     for i in range(8):
         feats[i] = np.float32((1 + (digest[i] % 4)) * 0.2)
     return feats
+
+
+def _unit_row(vec: np.ndarray) -> np.ndarray:
+    arr = np.asarray(vec, dtype=np.float64).reshape(-1)
+    nrm = float(np.linalg.norm(arr))
+    if nrm < 1e-12:
+        return arr
+    return arr / nrm
+
+
+def _name_in_text(name: str, text: str) -> bool:
+    """Whole-name hit. Latin names are not prefixes; CJK names are exact spans."""
+    import re
+    if any("\u4e00" <= ch <= "\u9fff" for ch in name):
+        return name in text
+    return re.search(rf"(?i)(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text) is not None
 
 
 def _jaccard(a: str, b: str) -> float:
@@ -318,12 +348,12 @@ def eval_heldout(check) -> Dict[str, Any]:
     import torch
 
     from tidal.episodic import EpisodicStore, cosine_scores
-    from tidal.question_head import build_facts, load_meta, load_reference, question_scores
+    from tidal.question_head import build_facts, load_meta, load_reference
 
     cases = build_cases()
     summary = corpus_summary(cases)
-    corpus_errors = validate_corpus(cases)
-    check("heldout", not corpus_errors, "; ".join(corpus_errors[:4]) or "corpus")
+    probe_errors = validate_corpus(cases)
+    check("heldout", not probe_errors, "; ".join(probe_errors[:4]) or "corpus")
     check("heldout", summary["n"] >= 300, f"n={summary['n']}")
     for cat in CATEGORIES:
         check("heldout", summary["frames"].get(cat, 0) >= 12, f"{cat} frames {summary['frames'].get(cat)}")
@@ -399,6 +429,49 @@ def eval_heldout(check) -> Dict[str, Any]:
         check("heldout", state_hit == 0, f"encoder states match build_facts ({state_hit})")
         check("heldout", max_text_cos < 0.5, f"bge cosine vs training text {max_text_cos:.4f}")
         check("heldout", literal_hits == 0, f"question strings collide with question_head literals ({literal_hits})")
+        surf_err = corpus_errors()
+        check("heldout", not surf_err, "; ".join(surf_err[:4]) or "surface corpus")
+        surf_texts = corpus_strings()
+        probe_set = set(probe_strings(cases))
+        surf_literal = sum(1 for text in surf_texts if text in probe_set)
+        probe_names = [name for lang in ("en", "zh") for name in (*PEOPLE[lang], *ABSENT[lang])]
+        surf_name_hits = 0
+        for name in probe_names:
+            if any(_name_in_text(name, text) for text in surf_texts):
+                surf_name_hits += 1
+                continue
+            if any(_name_in_text(name, other) or _name_in_text(other, name) for other in names_used()):
+                surf_name_hits += 1
+        surf_table = load_corpus_table()
+        missing_surf = [text for text in surf_texts if text not in surf_table]
+        check("heldout", not missing_surf, f"surface bundle missing {missing_surf[:2]}")
+        probe_mat = np.stack([np.asarray(table[text], dtype=np.float64) for text in probe_strings(cases)])
+        surf_mat = np.stack([_unit_row(surf_table[text]) for text in surf_texts])
+        probe_mat = probe_mat / np.linalg.norm(probe_mat, axis=1, keepdims=True)
+        surf_cos = surf_mat @ probe_mat.T
+        max_surf_cos = float(surf_cos.max())
+        flat_i = int(np.argmax(surf_cos))
+        si, pi = divmod(flat_i, surf_cos.shape[1])
+        max_jaccard = 0.0
+        for left in surf_texts:
+            for right in probe_set:
+                max_jaccard = max(max_jaccard, _jaccard(left, right))
+        weights = load_weights()
+        check("heldout", weights is not None, "surface relation bundle missing")
+        check(
+            "heldout",
+            bundle_sha256() == EXPECTED_BUNDLE_SHA256,
+            f"surface bundle sha {bundle_sha256()}",
+        )
+        check("heldout", surf_literal == 0, f"surface strings copy the probe ({surf_literal})")
+        check("heldout", surf_name_hits == 0, f"surface names collide with the probe ({surf_name_hits})")
+        check("heldout", max_surf_cos < 0.98, f"surface bge cosine vs probe {max_surf_cos:.4f}")
+        check("heldout", max_jaccard < 0.65, f"surface/probe token jaccard {max_jaccard:.3f}")
+        check(
+            "heldout",
+            cont._sentence_conflicts == 0,
+            f"one encoder state mapped to two sentence vectors ({cont._sentence_conflicts})",
+        )
 
         held_q = np.stack([states.get(case.question, "question") for case in cases])
         train_q_ratio = _resid_ratio(cont.question_head, facts["q"], "q")
@@ -435,6 +508,8 @@ def eval_heldout(check) -> Dict[str, Any]:
         examples: List[dict] = []
         seen_example = set()
         wire_fail = 0
+        sent_missing = 0
+        q_missing = 0
         fact_fail = 0
         chat_fail = 0
         id_fail = 0
@@ -497,11 +572,16 @@ def eval_heldout(check) -> Dict[str, Any]:
                 update_09_fail += 1
 
             q = states.get(case.question, "question")
+            if cont._sentence_lookup(q) is None:
+                q_missing += 1
             head_ans = _api_answer(cont, q, "head")
             cos_ans = _api_answer(cont, q, "cosine")
-            visible_keys = np.stack([s.k for _, s in cont.episodic._visible(None)], 0)
+            visible = cont.episodic._visible(None)
+            visible_keys = np.stack([s.k for _, s in visible], 0)
+            if any(slot.sentence is None for _, slot in visible):
+                sent_missing += 1
             raw = cosine_scores(visible_keys, q)
-            adapted = question_scores(cont.question_head, q, visible_keys)
+            adapted = cont.rank_question_scores(q, group=None)
             head_top, head_info = _top_value(cont, adapted)
             cos_top, cos_info = _top_value(cont, raw)
             if head_top != head_ans or cos_top != cos_ans:
@@ -596,6 +676,8 @@ def eval_heldout(check) -> Dict[str, Any]:
         check("heldout", stale_fail == 0, f"stale value still stored after overwrite: {stale_fail}")
         check("heldout", update_09_fail == 0, f"live 0.9 overwrite kept a stale update: {update_09_fail}")
         check("heldout", wire_fail == 0, f"ask/recall diverged from top-1 decode: {wire_fail}")
+        check("heldout", sent_missing == 0, f"probe fact missing its sentence vector ({sent_missing})")
+        check("heldout", q_missing == 0, f"probe question missing its sentence vector ({q_missing})")
         _replay_unchanged(cont, check)
 
         answerable = _new_tally()
@@ -623,6 +705,14 @@ def eval_heldout(check) -> Dict[str, Any]:
                 "max_text_cosine_vs_training": float(max_text_cos),
                 "literal_hits": int(literal_hits),
                 "n_training_pairs": int(len(facts["k"])),
+                "surface_literal_hits": int(surf_literal),
+                "surface_name_hits": int(surf_name_hits),
+                "surface_max_bge_cosine": float(max_surf_cos),
+                "surface_max_jaccard": float(max_jaccard),
+                "surface_closest_train": surf_texts[si],
+                "surface_closest_probe": list(probe_strings(cases))[pi],
+                "surface_alpha": None if weights is None else float(weights["alpha"]),
+                "surface_n_strings": int(len(surf_texts)),
                 "training": (
                     "build_facts seed 0: _feats(name, rel, query) plus Gaussian "
                     "name + rel_k + 0.3*value for keys, name + reversed(rel_k) for questions. "
@@ -782,8 +872,8 @@ def _row_line(name: str, row: Dict[str, Any]) -> str:
 def format_heldout(report: Dict[str, Any]) -> str:
     """Markdown table plus the abstain distributions. Measurements, not a gate."""
     header = (
-        "| category | n | jaccard | cosine ret@1 | head ret@1 | head only | cosine only "
-        "| phone cos·head | date cos·head | tokens cos·head | stale cos·head | false cos·head "
+        "| category | n | jaccard | cosine ret@1 | ask ret@1 | ask only | cosine only "
+        "| phone cos·ask | date cos·ask | tokens cos·ask | stale cos·ask | false cos·ask "
         "| gold lost @0.9 |"
     )
     rule = "|" + "---|" * 13
@@ -796,7 +886,13 @@ def format_heldout(report: Dict[str, Any]) -> str:
     for name in ("answerable", "unanswerable", "all"):
         lines.append(_row_line(name, report["rollups"][name]))
     lines.append("")
-    lines.append("Paired cells are cosine · head. ret@1 is an exact decode of the current value.")
+    lines.append(
+        "Paired cells are encoder-state cosine · ask. ret@1 is an exact decode of the current value."
+    )
+    lines.append(
+        "ask on these flat rows is sentence cosine plus the relation logit. "
+        "The cosine column is still the encoder state, which recall uses."
+    )
     lines.append("Stale is an answer equal to the value from before the same-identity overwrite.")
     lines.append("False is an unanswerable question that still returned some stored fact.")
     lines.append("`ask` has no abstain. A false cell of n/n means every unanswerable ask returned a fact.")
@@ -808,7 +904,12 @@ def format_heldout(report: Dict[str, Any]) -> str:
         f"Disjoint from training: feature collisions {d['feature_collisions']}, "
         f"encoder-state collisions {d['state_collisions']}, "
         f"max cosine of bge rows vs training text vectors {d['max_text_cosine_vs_training']:.4f}, "
-        f"literal hits {d['literal_hits']}."
+        f"literal hits {d['literal_hits']}. "
+        f"Surface-training strings {d['surface_n_strings']}: literal hits {d['surface_literal_hits']}, "
+        f"name hits {d['surface_name_hits']}, "
+        f"max bge cosine vs probe {d['surface_max_bge_cosine']:.4f}, "
+        f"max token jaccard {d['surface_max_jaccard']:.3f}, "
+        f"relation alpha {d['surface_alpha']}."
     )
     lines.append(
         f"Embedder: {e['model']} rev {e['revision']} CLS L2 maxlen {e['maxlen']}, "
@@ -868,7 +969,7 @@ def format_heldout(report: Dict[str, Any]) -> str:
             )
     if report["examples"]:
         lines.append("")
-        lines.append("First head miss in each answerable category:")
+        lines.append("First ask miss in each answerable category:")
         for ex in report["examples"]:
             lines.append(
                 f"- {ex['category']} ({ex['rel']}): {ex['question']} "
