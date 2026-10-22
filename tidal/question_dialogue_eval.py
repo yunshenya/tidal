@@ -322,7 +322,11 @@ def format_report(rows: Sequence[Episode], disjoint: dict, scored: Optional[dict
             "",
             "## Ask",
             "",
-            "| kind | n | with state | empty state |",
+            "A count is episodes whose label for that pass was met. A typo hit",
+            "is correct with the log when it answers, and correct with an empty",
+            "log when it abstains `absent_person`.",
+            "",
+            "| kind | n | state correct | empty correct |",
             "|---|---:|---:|---:|",
         ])
         state_n = empty_n = total = 0

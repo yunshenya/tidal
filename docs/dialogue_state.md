@@ -47,3 +47,5 @@ A fact write does not put the person on the active list. The frozen near-duplica
 Deixis and a four-person chat use the same record and are not implemented.
 
 `you` / `你` already rank the store, and an indirect hearer description still resolves only to the unique first-person fact. Speaker and hearer are stored so a later change can read them: `you` would be the hearer when one was set, and a third-person pronoun would be the most recent active person who is neither speaker nor hearer. With four people in the window the list is already those four, in recency order. The fact store would still be what `ask` reads, scoped to the one person that rule picked. Nothing here ranks a pronoun, tracks turn-taking, or invents a hearer the caller did not pass.
+
+The dev bank, the with-log versus empty-log ask, and the single-turn floors are in `reports/dialogue_state.md`.

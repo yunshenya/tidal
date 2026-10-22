@@ -19,7 +19,7 @@ from tidal.question_dialogue_dev_data import (
     kind_counts,
     questions_sha256,
 )
-from tidal.question_dialogue_eval import jaccard_report, prior_corpora
+from tidal.question_dialogue_eval import CACHE, jaccard_report, load_table, prior_corpora
 from tidal.question_name_align import dialogue_licensed_edit
 from tidal.question_surface import (
     ABSTAIN_MARGIN,
@@ -34,6 +34,7 @@ from tidal.question_surface import (
 
 QUESTIONS_SHA = "11bc041256941969c1055bb5bfc3cd491407718131689aa2f253a2d38e669f2a"
 BANK_SHA = "69bd3ed6327625afc07cd06a46cbe771d998e806f4a430b3da2aeba014f3ec98"
+CACHE_SHA = "959b03d0e963007359b49ae863a2bed7ddbddc057dc1f8e1b7b07a57aed53634"
 
 # Question lists of the banks this split has to stay off. A wording change
 # there moves the sha; this file does not edit those strings.
@@ -236,6 +237,16 @@ def test_matcher_does_not_import_the_dev_bank():
     for blob in (surface, (root / "continuum.py").read_text(encoding="utf-8")):
         assert "enable_abstain" not in blob and "use_abstain" not in blob
         assert "enable_dialogue" not in blob
+
+
+def test_embedding_cache_matches_the_bank():
+    rows = build_rows()
+    table = load_table()
+    texts = bank_strings(rows)
+    assert list(table) == list(texts)
+    assert hashlib.sha256(CACHE.read_bytes()).hexdigest() == CACHE_SHA
+    norms = np.linalg.norm(np.stack([table[text] for text in texts]), axis=1)
+    assert float(np.max(np.abs(norms - 1.0))) < 1e-3
 
 
 def test_surface_margin_is_unchanged():
