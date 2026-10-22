@@ -15,8 +15,10 @@ The decode is the same top-1 byte code either way.
 
 This probe does not refit that head. It asks Chinese and English surface
 questions (``question_heldout_data``), embeds each string with frozen
-bge-small-zh-v1.5 (CLS, L2, 64 tokens, no retrieval instruction — the same
-contract as ``tidal.embed``), and runs the vector through ``embed_event``.
+``intfloat/multilingual-e5-small`` (mean pool, L2, 64 tokens, no query
+prefix — ``question_surface.embed_sentences``), and runs the vector through
+``embed_event``. The 384-d unit vector sits in the leading coordinates of
+the 512-d slot.
 Flat feature rows (this probe's 8-d hash) take that function's constant-offset
 correction; the training ``_feats`` rows do not. The cache
 ``question_heldout_emb.npz`` keeps the run offline. Feature rows are an 8-d
@@ -56,19 +58,24 @@ from tidal.question_heldout_data import (
 )
 from tidal.question_surface import (
     EXPECTED_BUNDLE_SHA256,
+    NATIVE_DIM,
+    SENTENCE_MAXLEN,
+    SENTENCE_MODEL,
+    SENTENCE_POOLING,
+    SENTENCE_REVISION,
+    STORED_DIM,
     bundle_sha256,
     corpus_errors,
     corpus_strings,
+    embed_sentences,
     load_corpus_table,
     load_weights,
     names_used,
 )
 
-BGE_MODEL = "BAAI/bge-small-zh-v1.5"
-BGE_MAXLEN = 64
 CACHE = Path(__file__).with_name("question_heldout_emb.npz")
 # Filled after the cache is written. Empty skips the lock; tests require it set.
-EXPECTED_CACHE_SHA256 = "8413bb1a4a964d26042ca61338745ccef1a2494643b54eafa074a5d5f7c20bb3"
+EXPECTED_CACHE_SHA256 = "bb994f4e85a3c06453d43af8c59eb3e6b352035bef14f2f208e5140b6b553f8b"
 
 _THRESHOLDS = (0.01, 0.02, 0.05, 0.1, 0.2, 0.5)
 _TALLY_FIELDS = (
@@ -197,11 +204,24 @@ def load_text_table(path: Path = CACHE) -> Tuple[Dict[str, np.ndarray], dict]:
             "model": str(blob["model"].item()),
             "revision": str(blob["revision"].item()),
             "maxlen": int(blob["maxlen"]),
+            "pooling": str(blob["pooling"].item()),
+            "native_dim": int(blob["native_dim"]),
+            "stored_dim": int(blob["stored_dim"]),
         }
-    if emb.ndim != 2 or emb.shape[1] != 512 or emb.shape[0] != len(texts):
+    if emb.ndim != 2 or emb.shape[1] != STORED_DIM or emb.shape[0] != len(texts):
         raise RuntimeError(f"embedding cache shape {emb.shape} does not match {len(texts)} texts")
-    if meta["model"] != BGE_MODEL or meta["maxlen"] != BGE_MAXLEN:
-        raise RuntimeError(f"embedding cache contract {meta} != {BGE_MODEL} maxlen {BGE_MAXLEN}")
+    if (
+        meta["model"] != SENTENCE_MODEL
+        or meta["maxlen"] != SENTENCE_MAXLEN
+        or meta["pooling"] != SENTENCE_POOLING
+        or meta["revision"] != SENTENCE_REVISION
+        or meta["native_dim"] != NATIVE_DIM
+        or meta["stored_dim"] != STORED_DIM
+    ):
+        raise RuntimeError(
+            f"embedding cache contract {meta} != {SENTENCE_MODEL} "
+            f"{SENTENCE_POOLING} maxlen {SENTENCE_MAXLEN}"
+        )
     table = {text: emb[i] for i, text in enumerate(texts)}
     return table, meta
 
@@ -211,37 +231,27 @@ def cache_sha256(path: Path = CACHE) -> str:
 
 
 def build_embedding_cache(path: Path = CACHE) -> dict:
-    """Encode ``probe_strings()`` with bge-small-zh-v1.5. Not called by tests."""
-    import torch
-    from huggingface_hub import model_info
-    from transformers import AutoModel, AutoTokenizer
-
+    """Encode ``probe_strings()`` with the sentence embedder. Not called by tests."""
     texts = list(probe_strings())
-    tokenizer = AutoTokenizer.from_pretrained(BGE_MODEL)
-    model = AutoModel.from_pretrained(BGE_MODEL)
-    model.eval()
-    rows = []
-    for start in range(0, len(texts), 32):
-        chunk = texts[start:start + 32]
-        batch = tokenizer(
-            chunk, padding=True, truncation=True, max_length=BGE_MAXLEN, return_tensors="pt",
-        )
-        with torch.no_grad():
-            hidden = model(**batch).last_hidden_state[:, 0]
-            hidden = torch.nn.functional.normalize(hidden, p=2, dim=-1)
-        rows.append(hidden.cpu().numpy().astype(np.float32))
-    emb = np.concatenate(rows, 0)
-    revision = model_info(BGE_MODEL).sha
+    emb = embed_sentences(texts)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         path,
         emb=emb,
         texts=np.asarray(json.dumps(texts)),
-        model=np.asarray(BGE_MODEL),
-        revision=np.asarray(revision),
-        maxlen=np.int64(BGE_MAXLEN),
+        model=np.asarray(SENTENCE_MODEL),
+        revision=np.asarray(SENTENCE_REVISION),
+        maxlen=np.int64(SENTENCE_MAXLEN),
+        pooling=np.asarray(SENTENCE_POOLING),
+        native_dim=np.int64(NATIVE_DIM),
+        stored_dim=np.int64(STORED_DIM),
     )
-    return {"n": len(texts), "revision": revision, "sha256": cache_sha256(path), "path": str(path)}
+    return {
+        "n": len(texts),
+        "revision": SENTENCE_REVISION,
+        "sha256": cache_sha256(path),
+        "path": str(path),
+    }
 
 
 def _stored_values(slots) -> List[Any]:
@@ -364,7 +374,7 @@ def eval_heldout(check) -> Dict[str, Any]:
     if missing:
         raise RuntimeError(f"embedding cache is missing {len(missing)} probe strings")
     norms = np.linalg.norm(np.stack([table[t] for t in probe_strings(cases)]), axis=1)
-    check("heldout", float(np.max(np.abs(norms - 1.0))) < 1e-3, "bge rows are not unit length")
+    check("heldout", float(np.max(np.abs(norms - 1.0))) < 1e-3, "sentence rows are not unit length")
     sha = cache_sha256()
     if EXPECTED_CACHE_SHA256:
         check("heldout", sha == EXPECTED_CACHE_SHA256, f"cache sha {sha}")
@@ -427,7 +437,7 @@ def eval_heldout(check) -> Dict[str, Any]:
                     break
         check("heldout", feat_hit == 0, f"feature rows match training _feats ({feat_hit})")
         check("heldout", state_hit == 0, f"encoder states match build_facts ({state_hit})")
-        check("heldout", max_text_cos < 0.5, f"bge cosine vs training text {max_text_cos:.4f}")
+        check("heldout", max_text_cos < 0.5, f"sentence cosine vs training text {max_text_cos:.4f}")
         check("heldout", literal_hits == 0, f"question strings collide with question_head literals ({literal_hits})")
         surf_err = corpus_errors()
         check("heldout", not surf_err, "; ".join(surf_err[:4]) or "surface corpus")
@@ -465,7 +475,7 @@ def eval_heldout(check) -> Dict[str, Any]:
         )
         check("heldout", surf_literal == 0, f"surface strings copy the probe ({surf_literal})")
         check("heldout", surf_name_hits == 0, f"surface names collide with the probe ({surf_name_hits})")
-        check("heldout", max_surf_cos < 0.98, f"surface bge cosine vs probe {max_surf_cos:.4f}")
+        check("heldout", max_surf_cos < 0.98, f"surface sentence cosine vs probe {max_surf_cos:.4f}")
         check("heldout", max_jaccard < 0.65, f"surface/probe token jaccard {max_jaccard:.3f}")
         check(
             "heldout",
@@ -752,7 +762,9 @@ def eval_heldout(check) -> Dict[str, Any]:
                 "model": emb_meta["model"],
                 "revision": emb_meta["revision"],
                 "maxlen": emb_meta["maxlen"],
-                "pooling": "cls",
+                "pooling": emb_meta["pooling"],
+                "native_dim": emb_meta["native_dim"],
+                "stored_dim": emb_meta["stored_dim"],
                 "normalized": True,
                 "query_instruction": False,
                 "cache_sha256": sha,
@@ -903,17 +915,19 @@ def format_heldout(report: Dict[str, Any]) -> str:
     lines.append(
         f"Disjoint from training: feature collisions {d['feature_collisions']}, "
         f"encoder-state collisions {d['state_collisions']}, "
-        f"max cosine of bge rows vs training text vectors {d['max_text_cosine_vs_training']:.4f}, "
+        f"max cosine of sentence rows vs training text vectors {d['max_text_cosine_vs_training']:.4f}, "
         f"literal hits {d['literal_hits']}. "
         f"Surface-training strings {d['surface_n_strings']}: literal hits {d['surface_literal_hits']}, "
         f"name hits {d['surface_name_hits']}, "
-        f"max bge cosine vs probe {d['surface_max_bge_cosine']:.4f}, "
+        f"max sentence cosine vs probe {d['surface_max_bge_cosine']:.4f}, "
         f"max token jaccard {d['surface_max_jaccard']:.3f}, "
         f"relation alpha {d['surface_alpha']}."
     )
     lines.append(
-        f"Embedder: {e['model']} rev {e['revision']} CLS L2 maxlen {e['maxlen']}, "
-        f"no query instruction. Cache sha256 {e['cache_sha256']}."
+        f"Embedder: {e['model']} rev {e['revision']} {e['pooling']} L2 maxlen {e['maxlen']}, "
+        f"native {e['native_dim']} stored in {e['stored_dim']} "
+        f"(leading coordinates, tail zero), no query instruction. "
+        f"Cache sha256 {e['cache_sha256']}."
     )
     r = report["residual"]
     lines.append(

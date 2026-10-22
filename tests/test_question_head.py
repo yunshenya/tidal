@@ -310,4 +310,4 @@ def test_surface_alpha_is_the_dev_rule_and_the_bundle_is_locked():
     with np.load(BUNDLE, allow_pickle=False) as blob:
         stored = json.loads(str(blob["dev"].item()))
     parsed = {float(key): row for key, row in stored.items()}
-    assert _choose_alpha(parsed) == float(weights["alpha"]) == 0.5
+    assert _choose_alpha(parsed) == float(weights["alpha"]) == 0.3

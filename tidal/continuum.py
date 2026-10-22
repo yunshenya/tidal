@@ -173,8 +173,10 @@ class Continuum:
 
         ``feats`` is one event-feature row (``features.py`` / ``features_g.py``,
         including emotion columns when the model was built with them).
-        ``text_emb`` is a 512-d bge vector (``tidal.embed`` / ``TextFrontEnd``)
-        and is added through ``model.tproj`` when that projection exists.
+        ``text_emb`` is a 512-d sentence vector from
+        ``question_surface.embed_sentences`` and is added through ``model.tproj``
+        when that projection exists. The VAP frontend ``tidal.embed`` is a
+        different model and is not this slot.
         A feature row whose energy is mostly constant is not added as that
         constant: the offset would otherwise pin every sentence to one cosine.
         Sparse rows are left on ``fproj + tproj``. No switch.
@@ -196,13 +198,13 @@ class Continuum:
                 else:
                     if not hasattr(m, "tproj"):
                         raise ValueError(
-                            "text_emb is a 512-d bge vector and needs the frozen model's tproj "
+                            "text_emb is a 512-d sentence vector and needs the frozen model's tproj "
                             "(the in-repo text pathway). This model has no text projection; "
-                            "put bge into the event features upstream, or pass encoder state h to remember()."
+                            "put the sentence vector into the event features upstream, or pass encoder state h to remember()."
                         )
                     te = torch.as_tensor(np.asarray(text_emb, dtype=np.float32)).reshape(1, -1)
                     if te.shape[-1] != 512:
-                        raise ValueError(f"bge text embedding must be 512-d, got {te.shape[-1]}")
+                        raise ValueError(f"sentence embedding must be 512-d, got {te.shape[-1]}")
                     # Flat rows keep the sentence vector for ask. Sparse rows do not:
                     # those are the synthetic name/relation codes, ranked by the contrastive head.
                     note = np.asarray(text_emb, dtype=np.float64).reshape(-1) if row_has_no_contrast(x) else None
@@ -239,7 +241,7 @@ class Continuum:
         if k.size != self.d or v.size != self.d:
             raise ValueError(
                 f"episodic key/value must be encoder states of dim {self.d} (got {k.size}, {v.size}). "
-                "Use embed_event on event features and, when the model has tproj, a 512-d bge vector. "
+                "Use embed_event on event features and, when the model has tproj, a 512-d sentence vector. "
                 "Pass a string or a list of strings for a phone, date, or multi-token span. "
                 "Episodic memory does not load another language model."
             )
@@ -248,7 +250,7 @@ class Continuum:
         )
     def remember_event(self, key_feats, value_feats, name=None, rel=None, *, key_text=None, value_text=None,
                        kind="fact", surprise=None, group=None):
-        """Encode two feature rows (optional bge vectors) and write the resulting states."""
+        """Encode two feature rows (optional sentence vectors) and write the resulting states."""
         k = self.embed_event(key_feats, key_text); v = self.embed_event(value_feats, value_text)
         return self.remember(k, v, name, rel, kind=kind, surprise=surprise, group=group)
     def _recall_query(self, query, group):

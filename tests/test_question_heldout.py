@@ -64,7 +64,7 @@ def test_heldout_eval_measures_and_keeps_invariants():
     assert report["disjoint"]["surface_name_hits"] == 0
     assert report["disjoint"]["surface_max_bge_cosine"] < 0.98
     assert report["disjoint"]["surface_max_jaccard"] < 0.65
-    assert report["disjoint"]["surface_alpha"] == 0.5
+    assert report["disjoint"]["surface_alpha"] == 0.3
     for cat in CATEGORIES:
         row = report["categories"][cat]
         assert row["n"] >= 24
