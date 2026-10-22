@@ -36,10 +36,14 @@ person. A following verb or time word is still that person (``唐宁选的``,
 ``王伟平时``). One extra syllable that continues a personal name is not
 (``王伟强的``). An unmatched name in the cue's name slot is an absent
 person. The asked relation is a lexical cue when that cue is unambiguous,
-unless the abstain ridge disagrees by a wide gap. Otherwise it is the abstain
-ridge (not the ranking ridge). Thresholds are chosen on the generated dev
-pools. There is no enable flag. A question with no recorded surface string
-is not abstained, and ``recall`` never is.
+unless the abstain ridge disagrees by a wide gap, or every span of that cue
+sits in a dismissed clause and a later clause is the ask. A dismissed cue
+does not win. When the abstain ridge's top label is that cue, the next
+label is used and its gap is against the remaining label, then the ordinary
+margin. Otherwise the asked relation is the abstain ridge (not the ranking
+ridge). Thresholds are chosen on the generated dev pools. There is no
+enable flag. A question with no recorded surface string is not abstained,
+and ``recall`` never is.
 """
 from __future__ import annotations
 
@@ -409,7 +413,10 @@ ABSTAIN_MARGIN = 0.1
 # question the ridge misreads (gap about 0.12, "What places did Ravi store?")
 # and above the one surface-dev cue it misreads (gap about 0.02). On the
 # abstain dev split, misleading sentences with a confident disagreeing ridge
-# then follow the ridge. The adversarial test is not an input.
+# then follow the ridge. A cue inside a dismissed clause is not this yield:
+# the cue is dropped and the margin applies to the label that remains.
+# Do not lower this gap to catch a cue the ridge still agrees with.
+# The adversarial test is not an input.
 LEX_RIDGE_GAP = 0.15
 
 _WEIGHTS: Optional[dict] = None
@@ -767,6 +774,92 @@ def lex_labels(text: str) -> Tuple[str, ...]:
     return tuple(lab for lab in LABELS if _LEX_PATTERNS[lab].search(text))
 
 
+# A dismissed clause is a closed class, not a list of sentences. The operator
+# opens it. It ends at the next clause break, and only when another clause
+# still carries the ask. A cue after that break stays ("ignore the side
+# topics and read the birthday", "别管旁边的话题，把电话读出来").
+# English verbs take a following complement. "aside", a decoy noun, and the
+# Chinese marks take the whole clause, so the cue may sit before the mark
+# ("set the birthday aside", "生日先放一边").
+_DISMISS_HEAD = re.compile(
+    r"\b(?:ignore|ignoring|skip|skipping|forget|forgetting|exclude|excluding)\b",
+    re.I,
+)
+_DISMISS_ASIDE = re.compile(r"\baside\b", re.I)
+_DISMISS_DECOY = re.compile(r"\b(?:distraction|wrong\s+drawer)\b", re.I)
+_DISMISS_ZH = re.compile(
+    r"别(?:管|提|看|查)|先别|先不|跳过|放一边|一边去|以后再|先合上|先放下|先收"
+)
+_CLAUSE_BREAK = re.compile(r"\band\b|并且|然后|[，,;；:：.。]", re.I)
+# A period after a title or a single initial is not a clause break (Mr. / A.).
+_TITLE_PERIOD = re.compile(r"(?i)(?:\b(?:mr|mrs|ms|dr|st|jr|sr|etc)|(?:^|\s)[A-Za-z])$")
+
+
+def _clause_breaks(text: str) -> List[Tuple[int, int]]:
+    breaks = []
+    for match in _CLAUSE_BREAK.finditer(text):
+        if match.group(0) == "." and _TITLE_PERIOD.search(text[:match.start()]):
+            continue
+        breaks.append((match.start(), match.end()))
+    return breaks
+
+
+def _prev_break_end(breaks: Sequence[Tuple[int, int]], pos: int) -> int:
+    prev = 0
+    for start, end in breaks:
+        if end <= pos:
+            prev = end
+        else:
+            break
+    return prev
+
+
+def _next_break_start(text: str, breaks: Sequence[Tuple[int, int]], pos: int) -> Optional[int]:
+    """Start of the next break at or after ``pos``, when text follows it."""
+    for start, end in breaks:
+        if start >= pos and text[end:].strip():
+            return start
+    return None
+
+
+def _dismissed_regions(text: str) -> List[Tuple[int, int]]:
+    breaks = _clause_breaks(text)
+    regions: List[Tuple[int, int]] = []
+    for match in _DISMISS_HEAD.finditer(text):
+        end = _next_break_start(text, breaks, match.end())
+        if end is not None:
+            regions.append((match.start(), end))
+    for pattern in (_DISMISS_ASIDE, _DISMISS_DECOY, _DISMISS_ZH):
+        for match in pattern.finditer(text):
+            end = _next_break_start(text, breaks, match.end())
+            if end is None:
+                continue
+            regions.append((_prev_break_end(breaks, match.start()), end))
+    return regions
+
+
+def cue_set_aside(text: str, rel: str) -> bool:
+    """True when every cue span of ``rel`` is inside a dismissed clause.
+
+    One span that survives the clause break keeps the cue. ``lex_labels``
+    is unchanged: a two-name question still focuses the name nearest the
+    cue. Only a unique cue is dropped, and only from the abstain decision.
+    """
+    if rel not in _LEX_PATTERNS or not isinstance(text, str) or text == "":
+        return False
+    spans = _cue_spans(text, rel)
+    if not spans:
+        return False
+    regions = _dismissed_regions(text)
+    if not regions:
+        return False
+
+    def inside(span: Tuple[int, int]) -> bool:
+        return any(start <= span[0] and span[1] <= end for start, end in regions)
+
+    return all(inside(span) for span in spans)
+
+
 def iter_corpus() -> Iterable[Tuple[str, str, str, str, str, str]]:
     """``(split, lang, name, rel, role, text)`` in a fixed order."""
     for split, names, qbank, sbank in (
@@ -913,6 +1006,22 @@ def _abstain_pred(query_emb: np.ndarray, Wa: np.ndarray) -> Tuple[str, float]:
     return LABELS[int(order[0])], gap
 
 
+def _abstain_pred_dropping(query_emb: np.ndarray, Wa: np.ndarray, dropped: str) -> Tuple[str, float]:
+    """Abstain-ridge call after a dismissed cue is removed.
+
+    When the top label is that cue, the next label is the call and its gap
+    is against the remaining label, not against the cue it just replaced.
+    A wide cue-versus-ridge gap must not become a confident wrong abstain.
+    """
+    logits = _abstain_logits(query_emb, Wa)
+    order = [int(i) for i in np.argsort(-logits)]
+    if LABELS[order[0]] == dropped:
+        gap = float(logits[order[1]] - logits[order[2]])
+        return LABELS[order[1]], gap
+    gap = float(logits[order[0]] - logits[order[1]])
+    return LABELS[order[0]], gap
+
+
 def _matched_names(text: str, names: Sequence[Optional[str]]) -> List[str]:
     """Stored people the question is about.
 
@@ -1034,13 +1143,17 @@ def surface_abstain(
     name, such as a following verb or a title, is not a second person.
 
     A stored name: the asked relation is the unique lexical cue when there is
-    one, unless the abstain ridge disagrees by at least ``LEX_RIDGE_GAP``.
-    Otherwise it is the argmax of the abstain ridge. Abstain ``missing_rel``
-    when none of the matched people store that relation. A lexical cue that
-    the ridge does not overrule does not consult the margin. A ridge call
-    does, and the gap must be at least ``margin`` (the shipped value when
-    omitted). The ranking ridge is not this map. No enable flag. Returns
-    None when the bundle is missing.
+    one, unless the abstain ridge disagrees by at least ``LEX_RIDGE_GAP``,
+    or ``cue_set_aside`` says that cue was dismissed. A dismissed cue is
+    dropped. If the abstain ridge's top label is that cue, the next label
+    is used and its gap is against the remaining label. The margin then
+    applies, including when the ridge already preferred a different label.
+    Otherwise the asked relation is the argmax of the abstain ridge.
+    Abstain ``missing_rel`` when none of the matched people store that
+    relation. A lexical cue that the ridge does not overrule does not
+    consult the margin. A ridge call does, and the gap must be at least
+    ``margin`` (the shipped value when omitted). The ranking ridge is not
+    this map. No enable flag. Returns None when the bundle is missing.
     """
     if query_text is None or query_text == "":
         return None
@@ -1067,12 +1180,19 @@ def surface_abstain(
             return None
         return "absent_person"
     lex = lex_labels(query_text)
+    set_aside = ""
+    if len(lex) == 1 and cue_set_aside(query_text, lex[0]):
+        set_aside = lex[0]
+        lex = ()
     have = {rels[i] for i in rows}
     Wa = weights.get("Wa")
     pred = ""
     gap = 0.0
     if Wa is not None:
-        pred, gap = _abstain_pred(query_emb, Wa)
+        if set_aside:
+            pred, gap = _abstain_pred_dropping(query_emb, Wa, set_aside)
+        else:
+            pred, gap = _abstain_pred(query_emb, Wa)
     if len(lex) == 1 and not (pred and pred != lex[0] and gap >= LEX_RIDGE_GAP):
         if lex[0] not in have:
             return "missing_rel"
@@ -1082,8 +1202,9 @@ def surface_abstain(
     use_margin = ABSTAIN_MARGIN if margin is None else float(margin)
     if "abstain_margin" in weights and margin is None:
         use_margin = float(weights["abstain_margin"])
-    # A cue the ridge overruled still needs a confident ridge label. A question
-    # with no unique cue is the same call.
+    # A cue the ridge overruled still needs a confident ridge label, and that
+    # gap is already at least LEX_RIDGE_GAP. A dismissed cue was cleared above
+    # and uses the margin below. A question with no unique cue is the same call.
     if len(lex) == 1:
         if pred not in have:
             return "missing_rel"
