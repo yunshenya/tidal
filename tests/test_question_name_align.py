@@ -28,7 +28,11 @@ def test_bundle_is_the_dev_fit_and_is_tiny():
     assert len(FEATURES) <= 12
     blob = np.load(Path("tidal/question_name_align.npz"), allow_pickle=False)
     assert str(blob["dev_sha256"].item()) == DEV_SHA
-    assert int(blob["dev_points"]) > int(blob["baseline_points"])
+    assert int(blob["dev_n"]) == 143
+    assert int(blob["baseline_points"]) == 78
+    # Score of these weights on the shipped proposer. The dev grid picked the
+    # threshold; this number is that score, not a test-set tune.
+    assert int(blob["dev_points"]) == 126
     # Shipped decision. A two-letter prefix is not a nickname: Immy and a stub
     # of Imogen are the same feature on the dev bank.
     assert float(blob["threshold"]) == 0.8
@@ -52,8 +56,12 @@ def test_dev_nicknames_pinyin_and_titles_align():
     assert best_name("悦", ZH) == "孙悦"
     assert best_name("孙女士", ZH) == "孙悦"
     assert best_name("Sun Yue", ZH) == "孙悦"
+    assert best_name("Hu Bin", ZH) == "胡斌"
+    assert best_name("zheng kai", ZH) == "郑凯"
     assert best_name("gaoyuan", ZH) == "高远"
     assert best_name("阿斌", ZH) == "胡斌"
+    assert matched_people("值班簿写着Hu Bin时，生日该念哪一条？", ZH) == ["胡斌"]
+    assert matched_people("值班簿写着zheng kai时，地方该念哪一条？", ZH) == ["郑凯"]
 
 
 def test_edit1_and_extensions_do_not_align():
@@ -71,6 +79,15 @@ def test_edit1_and_extensions_do_not_align():
     assert best_name("老孙悦", ZH) is None
     assert best_name("小胡斌", ZH) is None
     assert best_name("孙小悦", ZH) is None
+
+
+def test_a_leading_adverb_and_a_possessive_stay_on_the_stored_name():
+    assert matched_people(
+        "Roughly which birthday does the file keep for Harold?",
+        ["Harold", "Imogen", "Judith"],
+    ) == ["Harold"]
+    assert best_name("Harold's", EN) is None
+    assert matched_people("Harold's telephone is which?", EN) == ["Harold"]
 
 
 def test_surface_absent_names_and_the_word_one_do_not_match():

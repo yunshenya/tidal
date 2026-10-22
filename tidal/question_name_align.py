@@ -303,6 +303,10 @@ def _cheap(span: str, name: str) -> Dict[str, float]:
         prefix = 0
         substr = 0
         token = 0.0
+    # A nickname is shorter than the stored name. An equal or longer span
+    # (Margaret, Margaret's) must not prefix-match a different person (Mary).
+    if len(span_c) >= len(name_c):
+        prefix = 0
     # A prefix of three or more is a nickname (Harry / Harold). A prefix of
     # two is the same feature for Immy / Imogen and for a two-letter stub, so
     # it is its own bit and the dev stubs keep it from being a match.
@@ -351,11 +355,26 @@ def _latin_spans(text: str) -> List[Tuple[int, int, str]]:
         if stem in stop:
             i += 1
             continue
+        # Group a run of the same case: title with title (Hu Bin, Mary Jane)
+        # and lower with lower (zheng kai). Do not glue a lowercase word onto
+        # a capitalized name (Margaret mark).
+        def _case(token: str) -> str:
+            bare = token.split("'", 1)[0]
+            if re.fullmatch(r"[A-Z][a-z]+", bare):
+                return "title"
+            if re.fullmatch(r"[a-z]+", bare):
+                return "lower"
+            return ""
+
+        start_case = _case(tok)
         j = i + 1
-        while j < len(tokens):
-            nxt_stem = tokens[j][2].split("'", 1)[0].lower()
+        while start_case and j < len(tokens):
+            nxt_tok = tokens[j][2]
+            nxt_stem = nxt_tok.split("'", 1)[0].lower()
             gap = text[tokens[j - 1][1]:tokens[j][0]]
-            if nxt_stem in stop or nxt_stem in _HONOR or not re.fullmatch(r"[\s\-]*", gap):
+            if nxt_stem in stop or nxt_stem in _HONOR or _case(nxt_tok) != start_case:
+                break
+            if not re.fullmatch(r"[\s\-]*", gap):
                 break
             j += 1
         spans.append((start, tokens[j - 1][1], text[start:tokens[j - 1][1]]))
@@ -518,7 +537,27 @@ def _overlaps(left: Tuple[int, int], right: Tuple[int, int]) -> bool:
     return left[0] < right[1] and right[0] < left[1]
 
 
-def _unknown_person(span: str, roster: Sequence[str]) -> bool:
+def _sentence_initial(text: str, start: int) -> bool:
+    i = start - 1
+    while i >= 0 and text[i] in " \t":
+        i -= 1
+    return i < 0 or text[i] in ".!?"
+
+
+def _next_latin(text: str, end: int) -> str:
+    matched = re.match(r"[\s,;:]*([A-Za-z]+)", text[end:])
+    if matched is None:
+        return ""
+    return matched.group(1).split("'", 1)[0].lower()
+
+
+def _unknown_person(
+    span: str,
+    roster: Sequence[str],
+    text: str = "",
+    start: int = 0,
+    end: int = 0,
+) -> bool:
     """A span that names someone and is not a stored person.
 
     Latin: one or two title-case tokens (``Bianca``, ``Mary Jane``). A
@@ -540,7 +579,14 @@ def _unknown_person(span: str, roster: Sequence[str]) -> bool:
     if not all(re.fullmatch(r"[A-Z][a-z]{2,14}", tok) for tok in latin):
         return False
     stop = _stopwords()
-    return not any(tok.lower() in stop for tok in latin)
+    if any(tok.lower() in stop for tok in latin):
+        return False
+    # A sentence-initial capital is usually an adverb (Roughly which…).
+    # Bianca is distinct from Lorraine: the next word is a copula.
+    if len(latin) == 1 and text and _sentence_initial(text, start):
+        if _next_latin(text, end) not in {"is", "was", "were", "has", "had"}:
+            return False
+    return True
 
 
 def _unknown_is_focus(
@@ -598,7 +644,7 @@ def diagnose(text: str, names: Sequence[Optional[str]]) -> dict:
                 if choice not in lexical and choice not in added:
                     added.append(choice)
                 continue
-            if not _unknown_person(span, roster):
+            if not _unknown_person(span, roster, text, start, end):
                 continue
             if any(_overlaps((start, end), box) for name in lexical for box in name_spans(name, text)):
                 continue
