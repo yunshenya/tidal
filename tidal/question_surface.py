@@ -40,8 +40,11 @@ unless the abstain ridge disagrees by a wide gap, or every span of that cue
 sits in a dismissed clause and a later clause is the ask. A dismissed cue
 does not win. When the abstain ridge's top label is that cue, the next
 label is used and its gap is against the remaining label, then the ordinary
-margin. Otherwise the asked relation is the abstain ridge (not the ranking
-ridge). Thresholds are chosen on the generated dev pools. There is no
+margin. A question with no unique cue that is only a bare locative (the
+verb ``place`` / ``placed``, or ``放在哪里`` / ``往哪里`` / ``朝哪里`` /
+``位置先``) drops a ``places`` label the same way. ``where`` alone,
+``place list``, ``在哪里``, and ``位置是哪些`` do not. Otherwise the asked
+relation is the abstain ridge (not the ranking ridge). Thresholds are chosen on the generated dev pools. There is no
 enable flag. A question with no recorded surface string is not abstained,
 and ``recall`` never is.
 """
@@ -860,6 +863,42 @@ def cue_set_aside(text: str, rel: str) -> bool:
     return all(inside(span) for span in spans)
 
 
+# A placement verb, or a Chinese where-slot that is not the places ask.
+# "place list" is the noun. "where" / "在哪里" / "位置是哪些" / "哪边" are
+# not this pattern: those questions are places, and the places label stays.
+# "位置先后" is an order of places, not a deferred slot.
+_PLACE_VERB = re.compile(r"\b(?:place|placed|placing)\b", re.I)
+_BARE_ZH = re.compile(r"放在哪里|往哪里|朝哪里|位置先(?!后)")
+
+
+def bare_locative(text: str) -> bool:
+    """True when the surface is a placement slot rather than a places ask.
+
+    Bare ``place`` / ``where`` / ``哪里`` / ``位置`` are not lexical cues, so
+    ``place a call`` keeps its phone cue and ``place list`` is not a cue.
+    The abstain ridge still reads a placement verb as places. When the
+    question has no unique cue, ``surface_abstain`` drops that places label
+    the way a dismissed cue is dropped: the next label's gap is against the
+    remaining label, then the margin. A unique cue is not dropped, which
+    keeps ``place a call`` on phone and a places cue such as ``交接放在哪里``
+    on places.
+
+    English matches ``place`` / ``placed`` / ``placing`` except the noun
+    ``place list``. Chinese matches ``放在哪里``, ``往哪里``, ``朝哪里``,
+    and ``位置先`` (not ``位置先后``). ``where`` without that verb,
+    ``在哪里``, ``是哪里``, ``哪边``, and ``位置是哪些`` do not match.
+    """
+    if not isinstance(text, str) or text == "":
+        return False
+    if _BARE_ZH.search(text):
+        return True
+    for match in _PLACE_VERB.finditer(text):
+        if re.match(r"\s+lists?\b", text[match.end():], re.I):
+            continue
+        return True
+    return False
+
+
 def iter_corpus() -> Iterable[Tuple[str, str, str, str, str, str]]:
     """``(split, lang, name, rel, role, text)`` in a fixed order."""
     for split, names, qbank, sbank in (
@@ -1149,8 +1188,11 @@ def surface_abstain(
     is used and its gap is against the remaining label. The margin then
     applies, including when the ridge already preferred a different label.
     Otherwise the asked relation is the argmax of the abstain ridge.
-    Abstain ``missing_rel`` when none of the matched people store that
-    relation. A lexical cue that the ridge does not overrule does not
+    A question with no unique cue that ``bare_locative`` matches drops
+    ``places`` by that same next-label call, then the margin. ``where``
+    alone does not. A unique cue is not dropped, so ``place a call`` stays
+    phone. Abstain ``missing_rel`` when none of the matched people store
+    that relation. A lexical cue that the ridge does not overrule does not
     consult the margin. A ridge call does, and the gap must be at least
     ``margin`` (the shipped value when omitted). The ranking ridge is not
     this map. No enable flag. Returns None when the bundle is missing.
@@ -1184,6 +1226,10 @@ def surface_abstain(
     if len(lex) == 1 and cue_set_aside(query_text, lex[0]):
         set_aside = lex[0]
         lex = ()
+    # No unique cue, and the only places-like words are a placement slot.
+    # Drop places the way a dismissed cue is dropped. A unique cue, including
+    # "place a call" and "What places did Ravi store?", does not take this path.
+    drop_places = not lex and not set_aside and bare_locative(query_text)
     have = {rels[i] for i in rows}
     Wa = weights.get("Wa")
     pred = ""
@@ -1191,6 +1237,8 @@ def surface_abstain(
     if Wa is not None:
         if set_aside:
             pred, gap = _abstain_pred_dropping(query_emb, Wa, set_aside)
+        elif drop_places:
+            pred, gap = _abstain_pred_dropping(query_emb, Wa, "places")
         else:
             pred, gap = _abstain_pred(query_emb, Wa)
     if len(lex) == 1 and not (pred and pred != lex[0] and gap >= LEX_RIDGE_GAP):
@@ -1204,7 +1252,8 @@ def surface_abstain(
         use_margin = float(weights["abstain_margin"])
     # A cue the ridge overruled still needs a confident ridge label, and that
     # gap is already at least LEX_RIDGE_GAP. A dismissed cue was cleared above
-    # and uses the margin below. A question with no unique cue is the same call.
+    # and uses the margin below. A bare locative with no unique cue dropped
+    # places the same way, and it uses this margin too.
     if len(lex) == 1:
         if pred not in have:
             return "missing_rel"
