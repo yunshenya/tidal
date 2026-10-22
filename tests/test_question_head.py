@@ -439,10 +439,11 @@ def test_selected_person_limits_ranking_and_missing_rel():
     Maggie selects only Margaret. Mary Jane's birthday sentence can be closer
     and still must not win. Ms. Jane selects Mary Jane through the substring
     head, and a closer Margaret sentence must not take that fact. A two-name
-    question keeps every matched person in the ranker: cue-nearest still
-    decides ``missing_rel``, and it does not drop the other name from the
-    scores. A third person outside that set cannot win. Another person's
-    exact sentence does not cancel a missing relation.
+    question keeps both people unless one sits only in a dismissed clause.
+    That person leaves the ranker and ``missing_rel``.
+    Cue-nearest still applies only among the names that remain. A third
+    person outside the ask target cannot win. Another person's exact
+    sentence does not cancel a missing relation.
     """
     from tidal.question_surface import limit_scores, matched_fact_rows, selected_fact_rows
 
@@ -495,17 +496,26 @@ def test_selected_person_limits_ranking_and_missing_rel():
     assert cont.ask(q, group=None) == "william-day"
 
     aside = "Leave William aside. The birthday to read belongs with Mary Jane."
-    # William is closer to the cue, so missing_rel looks only at him.
-    # Both names stay in the ranker. Mary Jane's sentence is closer, and a
-    # third person's exact copy still loses.
-    assert selected_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [0]
-    assert matched_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [0, 1]
+    # William is nearer the cue and inside the dismissed clause. The ask
+    # target is Mary Jane, so both the ranker and missing_rel use only her.
+    assert selected_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [1]
+    assert matched_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [1]
     cont.episodic.clear()
-    store("William", "birthday", "william-day", far)
-    store("Mary Jane", "birthday", "mary-day", unit(1, tilt=0.35, tilt_at=2))
+    store("William", "birthday", "william-day", close)
+    store("Mary Jane", "birthday", "mary-day", far)
     store("Ann", "birthday", "ann-day", close)
     q = cont.embed_event(flat(), close.copy(), surface=aside)
     assert cont.ask(q, group=None) == "mary-day"
+    # Mary Jane does not store a birthday. William's closer fact, and Ann's
+    # exact copy of the question, must not answer or cancel the abstain.
+    cont.episodic.clear()
+    store("William", "birthday", "william-day", close)
+    store("Mary Jane", "places", "mary-places", far)
+    store("Ann", "birthday", "ann-day", close)
+    q = cont.embed_event(flat(), close.copy(), surface=aside)
+    assert cont.ask(q, group=None) is None
+    _value, info = cont.query(q, group=None, mode="top1")
+    assert info["abstain"] == "missing_rel"
 
     phone = "Which telephone belongs with Ingrid?"
     cont.episodic.clear()

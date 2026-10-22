@@ -316,8 +316,10 @@ class Continuum:
 
         Flat-row slots carry the sentence vector and are ranked by sentence
         cosine plus the relation logit. People the surface string selected
-        limit those scores to their facts; other slots stay in the vector
-        and cannot win. The cue-nearest subset is not applied here.
+        as the ask target limit those scores to their facts; other slots
+        stay in the vector and cannot win. A dismissed name, or a name that
+        does not possess the live cue when the other name does, is not a
+        target. Cue-nearest is not applied here.
         Anything else, including the synthetic name/relation codes, is ranked
         by the contrastive head. ``recall`` does not call this. Abstention is
         applied in ``query``, not here, so a caller can still read the scores
@@ -346,11 +348,12 @@ class Continuum:
         """Soft top-k value for a question encoder-state, or ``(None, info)``.
 
         Flat-row questions rank by sentence cosine plus a relation logit,
-        limited to the people the surface string selected. A stored name,
-        including a nickname or pinyin, selects those people. An indirect
-        hearer description selects the unique first-person person when the
-        store has exactly one. A two-name match keeps both in the ranker;
-        the cue-nearest rule stays on abstain.
+        limited to the ask targets. A stored name, including a nickname or
+        pinyin, selects those people. An indirect hearer description selects
+        the unique first-person person when the store has exactly one. Two
+        stored names both stay unless one is only in a dismissed clause, or
+        only one possessively governs the live cue. Cue-nearest stays on
+        abstain, and only among the names that remain.
         Sparse name/relation questions rank by the contrastive question head
         and are not limited.
         Either way the value mix is ``EpisodicStore.read`` when a fact is
@@ -412,7 +415,7 @@ class Continuum:
         blend). Same group scope as ``recall``. The stored-key path stays
         ``recall``, which is raw cosine and does not abstain. A flat-row
         question is ranked in sentence space, and only among the matched
-        people's facts when the surface string selected someone. A sparse
+        people's facts when the surface string selected an ask target. A sparse
         name/relation question is ranked by the contrastive head and does
         not abstain.
         """
