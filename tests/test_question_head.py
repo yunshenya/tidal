@@ -1,5 +1,6 @@
 """Question head stays off the Continuum cosine path. CPU only."""
 import ast
+import hashlib
 import inspect
 
 import numpy as np
@@ -210,6 +211,7 @@ def test_flat_row_ask_ignores_a_scrambled_head():
     assert cont.ask(hq, group=None) == "phone-zero"
     _value, info = cont.query(hq, group=None, mode="top1")
     assert info["rank"] == "sentence"
+    assert info["abstain"] is None
     assert cont.recall(h0) == "phone-zero"
     assert cont.recall(h1) == "phone-one"
 
@@ -257,6 +259,7 @@ def test_tied_sentences_follow_the_relation_logit():
     assert cont.ask(hq, group=None) == "better"
     _value, info = cont.query(hq, group=None, mode="top1")
     assert info["rank"] == "sentence"
+    assert info["abstain"] is None
 
 
 def test_sparse_rows_keep_the_contrastive_head():
@@ -278,6 +281,7 @@ def test_sparse_rows_keep_the_contrastive_head():
     assert cont.episodic.slots[0].sentence is None
     _value, info = cont.query(q)
     assert info["rank"] == "question"
+    assert info["abstain"] is None
 
 
 def test_surface_alpha_is_the_dev_rule_and_the_bundle_is_locked():
@@ -311,3 +315,149 @@ def test_surface_alpha_is_the_dev_rule_and_the_bundle_is_locked():
         stored = json.loads(str(blob["dev"].item()))
     parsed = {float(key): row for key, row in stored.items()}
     assert _choose_alpha(parsed) == float(weights["alpha"]) == 0.3
+    digest = hashlib.sha256(np.ascontiguousarray(weights["W"], dtype=np.float64).tobytes()).hexdigest()
+    assert digest == "7e3444ea198f27ce996bc1c5e10d1ef0baaaa820166eabd7219e0fb5294cdfee"
+
+
+def _flat_model():
+    from tidal.continuum import Continuum, _cfg
+    from tidal.vap import VAPModel
+
+    torch.manual_seed(4)
+    model = VAPModel(8, d=16, hidden=16, layers=1, dropout=0).eval()
+    model.tproj = torch.nn.Sequential(torch.nn.Dropout(0.0), torch.nn.Linear(512, 16))
+    model.tproj.eval()
+    cont = Continuum(model, _cfg(dict(levels=(), episodic_cfg={"overwrite_cos": 1.0})))
+    rng = np.random.default_rng(4)
+
+    def flat():
+        return rng.choice([0.2, 0.4, 0.6, 0.8], size=8).astype(np.float32)
+
+    return cont, flat
+
+
+def _axis(i: int) -> np.ndarray:
+    vec = np.zeros(512, np.float32)
+    vec[i] = 1.0
+    return vec
+
+
+def test_flat_row_abstain_returns_none_and_recall_does_not():
+    from tidal.question_surface import is_deictic, lex_labels
+
+    cont, flat = _flat_model()
+    empty_q = cont.embed_event(flat(), _axis(0), surface="Which telephone belongs with Ingrid?")
+    value, info = cont.query(empty_q, group=None, mode="top1")
+    assert value is None and info["n"] == 0 and info["abstain"] is None
+    assert cont.ask(empty_q, group=None) is None
+
+    places = cont.embed_event(flat(), _axis(1), surface="Ingrid keeps a places roster.")
+    phone = cont.embed_event(flat(), _axis(2), surface="Jasper keeps a telephone.")
+    assert cont.remember(places, "places-value", name="Ingrid", rel="places")
+    assert cont.remember(phone, "phone-value", name="Jasper", rel="phone")
+
+    near_places = _axis(1).copy()
+    near_places[20] = 0.05
+    near_places /= np.linalg.norm(near_places)
+    places_q = cont.embed_event(
+        flat(), near_places, surface="Which places does Ingrid keep for the handoff roster?",
+    )
+    assert cont.ask(places_q, group=None) == "places-value"
+    _value, info = cont.query(places_q, group=None, mode="top1")
+    assert info["abstain"] is None and info["rank"] == "sentence"
+
+    missing_q = cont.embed_event(
+        flat(), _axis(4), surface="Which telephone belongs with Ingrid?",
+    )
+    assert lex_labels(cont._surface_lookup(missing_q)) == ("phone",)
+    assert cont.ask(missing_q, group=None) is None
+    assert cont.ask_tokens(missing_q, group=None) is None
+    value, info = cont.query(missing_q, group=None, mode="top1")
+    assert value is None and info["abstain"] == "missing_rel" and info["top"] is None
+    assert info["weights"] is None and info["rank"] == "sentence"
+    assert cont.rank_question_scores(missing_q, group=None) is not None
+    assert cont.recall(missing_q, group=None) in ("places-value", "phone-value")
+
+    absent_q = cont.embed_event(
+        flat(), _axis(5), surface="Has the yard ever filed a telephone for Quentin?",
+    )
+    assert cont.ask(absent_q, group=None) is None
+    _value, info = cont.query(absent_q, group=None, mode="top1")
+    assert info["abstain"] == "absent_person"
+
+    near_phone = _axis(2).copy()
+    near_phone[21] = 0.05
+    near_phone /= np.linalg.norm(near_phone)
+    deictic_q = cont.embed_event(
+        flat(), near_phone, surface="How should I reach you by voice tonight?",
+    )
+    assert cont.ask(deictic_q, group=None) == "phone-value"
+    _value, info = cont.query(deictic_q, group=None, mode="top1")
+    assert info["abstain"] is None
+
+    exact = _axis(7)
+    stored = cont.embed_event(flat(), exact, surface="Ingrid's places card.")
+    assert cont.remember(stored, "exact-places", name="Ingrid", rel="places")
+    copied = cont.embed_event(flat(), exact.copy(), surface="Which telephone belongs with Ingrid?")
+    assert cont.ask(copied, group=None) == "exact-places"
+    _value, info = cont.query(copied, group=None, mode="top1")
+    assert info["abstain"] is None
+
+    bare = cont.embed_event(flat(), _axis(8))
+    assert cont._surface_lookup(bare) is None
+    assert cont.ask(bare, group=None) is not None
+    _value, info = cont.query(bare, group=None, mode="top1")
+    assert info["abstain"] is None
+
+    zh_missing = cont.embed_event(flat(), _axis(9), surface="港务台在问姜北对应的是哪一部电话。")
+    assert cont.remember(
+        cont.embed_event(flat(), _axis(10), surface="姜北的生日卡。"),
+        "zh-day", name="姜北", rel="birthday",
+    )
+    assert cont.ask(zh_missing, group=None) is None
+    _value, info = cont.query(zh_missing, group=None, mode="top1")
+    assert info["abstain"] == "missing_rel"
+    zh_absent = cont.embed_event(flat(), _axis(11), surface="场院有没有给方甯存过电话？")
+    assert cont.ask(zh_absent, group=None) is None
+    _value, info = cont.query(zh_absent, group=None, mode="top1")
+    assert info["abstain"] == "absent_person"
+    near_day = _axis(10).copy()
+    near_day[22] = 0.05
+    near_day /= np.linalg.norm(near_day)
+    zh_you = cont.embed_event(flat(), near_day, surface="你的生辰要记在哪个清晨？")
+    assert cont.ask(zh_you, group=None) == "zh-day"
+    assert is_deictic("我们有没有写下姜北的电话？") is False
+    assert lex_labels("To place a call through to Ingrid, what digits leave the booth?") == ("phone",)
+
+
+def test_abstain_margin_is_the_dev_rule():
+    from tidal.question_surface import (
+        ABSTAIN_MARGIN,
+        ABSTAIN_RIDGE,
+        abstain_dev_curve,
+        choose_abstain_margin,
+        choose_abstain_ridge,
+        load_corpus_table,
+        load_weights,
+    )
+
+    weights = load_weights()
+    table = load_corpus_table()
+    ridge, Wa, errors = choose_abstain_ridge(table)
+    assert ridge == ABSTAIN_RIDGE == float(weights["abstain_ridge"]) == 1.0
+    assert errors == 2
+    assert np.allclose(Wa, weights["Wa"])
+    curve = abstain_dev_curve(weights, table)
+    assert choose_abstain_margin(curve) == ABSTAIN_MARGIN == float(weights["abstain_margin"]) == 0.1
+    by_margin = {row["margin"]: row for row in curve}
+    shipped = by_margin[0.1]
+    assert shipped["false_abstain"] == {"en": 0, "zh": 0}
+    assert shipped["false_n"] == {"en": 192, "zh": 192}
+    assert shipped["missing"] == {"en": 188, "zh": 189}
+    assert shipped["missing_n"] == {"en": 192, "zh": 192}
+    assert shipped["absent"] == {"en": 36, "zh": 36}
+    assert shipped["absent_n"] == {"en": 36, "zh": 36}
+    assert shipped["deictic_false"] == {"en": 0, "zh": 0}
+    assert shipped["deictic_n"] == {"en": 6, "zh": 6}
+    assert by_margin[0.0]["false_abstain"]["en"] == 1
+    assert by_margin[0.05]["false_abstain"]["en"] == 1

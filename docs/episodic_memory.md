@@ -15,11 +15,11 @@ h' = h_adapt + soft_topk(h_adapt)
 
 空库时 `soft_topk` 是全零。连续体那层适配器也还是零的时候（刚构造，或 `levels=()`），回放就和静态模型一样。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。调用方如果仍传入这类键，读出照样加上。`heads` / `replay` / `recall` 的排序是原始余弦，分母是 `kn*qn + 1e-12`。
 
-问句走另一条路，也没有开关。平坦特征行在 `embed_event` 时记下 512 维句向量，`ask` / `query` 用句向量余弦加上关系 logit 打分。稀疏的名字/关系行不记句向量，仍用对比 q/k 头。两条都再走同一套 soft top-k 和字节码解码。头和关系图都不进 `heads`，replay 也不调用它们。编码器对不上随包问句头权重时，头的末层仍是零，残差是 0，直到 `fit_question_head(..., install=True)` 把对该编码器的拟合装上。关系图文件不在时，平坦行只剩句向量余弦。`recall` 仍是编码器状态上的原始余弦，不是这套分数。
+问句走另一条路，也没有开关。平坦特征行在 `embed_event` 时记下 512 维句向量，`ask` / `query` 用句向量余弦加上关系 logit 打分。同一条平坦行可以带上表面字符串（`embed_event(..., surface=文本)`）。有这串文本时，`ask` 在两种情况下返回 None：文本点名的人没有被问的那条关系（`query` 的 `info["abstain"]` 为 `missing_rel`），或文本里没有库存人名且不是第二人称（`absent_person`）。没有表面字符串就不弃权。稀疏的名字/关系行不记句向量，仍用对比 q/k 头，也不弃权。两条都再走同一套 soft top-k 和字节码解码。头和关系图都不进 `heads`，replay 也不调用它们。编码器对不上随包问句头权重时，头的末层仍是零，残差是 0，直到 `fit_question_head(..., install=True)` 把对该编码器的拟合装上。关系图文件不在时，平坦行只剩句向量余弦，也不走模型那条弃权。`recall` 仍是编码器状态上的原始余弦，不弃权。
 
 An empty store adds zeros. With zero continuum adapters (a fresh model, or `levels=()`), replay matches the static model. `heads`, `replay`, and `recall` rank by raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
 
-Questions use the other path, also with no switch. A flat feature row keeps the 512-d sentence vector from `embed_event`, and `ask` / `query` score those slots by sentence cosine plus a relation logit. A sparse name/relation row keeps no sentence vector and still uses the contrastive query/key head. Either score then uses the same soft top-k and byte-code decode. The head and the relation map are not added into `heads`, and replay does not call them. When the encoder hash does not match the shipped question-head weights, the head's last layer is still zero, so the residual is 0, until `fit_question_head(..., install=True)` copies a fit for that encoder. A checkout without the relation file ranks flat rows by sentence cosine alone. `recall` stays raw cosine on the encoder state.
+Questions use the other path, also with no switch. A flat feature row keeps the 512-d sentence vector from `embed_event`, and `ask` / `query` score those slots by sentence cosine plus a relation logit. The same flat row can record the surface string (`embed_event(..., surface=text)`). With that string, `ask` returns None in two cases: the named person does not store the asked relation (`query` sets `info["abstain"]` to `missing_rel`), or the string names nobody in the store and is not second person (`absent_person`). No surface string means no abstention. A sparse name/relation row keeps no sentence vector, still uses the contrastive query/key head, and does not abstain. Either score then uses the same soft top-k and byte-code decode. The head and the relation map are not added into `heads`, and replay does not call them. When the encoder hash does not match the shipped question-head weights, the head's last layer is still zero, so the residual is 0, until `fit_question_head(..., install=True)` copies a fit for that encoder. A checkout without the relation file ranks flat rows by sentence cosine alone and skips the model path of abstention. `recall` stays raw cosine on the encoder state and does not abstain.
 
 一条事实是一个槽 `(k, v, name, rel, group)`。
 
@@ -126,13 +126,36 @@ The contrastive maps used to sit on `read`. Question retrieval rose, and recall 
 | zh_after_update | 36 | 2/36 | 36/36 |
 | 可答合计 | 370 | 84/370 | 360/370 |
 
-可答的电话 / 生日 / 多 token：编码器余弦 23/124、29/124、32/122；`ask` 121/124、122/124、117/122。英文 `ask` 182/185，中文 `ask` 178/185。更新后的旧值 0/72。不可答仍是 72/72 返回了某条事实，这条不在这次改动里。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8927。
+可答的电话 / 生日 / 多 token：编码器余弦 23/124、29/124、32/122；`ask` 121/124、122/124、117/122。英文 `ask` 182/185，中文 `ask` 178/185。更新后的旧值 0/72。下面的表是 dev 上的弃权取舍，不是探针。探针上不可答 72 条里弃掉多少、可答 ret@1 掉多少，由 `python -m tidal.question_heldout` 打印。`overwrite_cos=0.9` 下金标丢失 0/370，同住键对 8390 里余弦大于 0.9 的是 0，最大 0.8927。
 
 句向量余弦本身（`alpha=0`）是 345/370（英 174/185，中 171/185）。关系项把它收到 360/370：电话 107→121，生日 117→122，地点 121→117；`en_indirect` 34→39，`zh_indirect` 34→38，`zh_after_distractors` 33→35。没有按探针再调 `alpha`。`en_after_distractors` 在两项下都是 34/36。
 
 探针里 18 个英文名字都不是单个 `[UNK]`（`Ada` 是 `▁Ada`，`Priya` 是 `▁Pri/ya`，`Noah` 是 `▁No/ah`）。中文名字按字切开，也没有 `[UNK]`。同一句模板只换名字时，英文 18/18、中文 18/18 能对上本人。`bge-small-zh-v1.5` 把每个英文名字切成一个 `[UNK]`，同模板的句向量余弦是 1，对不上人。
 
-和探针的不相交：表面训练集 384 句，字面重合 0，名字重合 0，对探针句向量最大余弦 0.9414，token Jaccard 最大 0.500。对合成训练文本的最大余弦是 0.1573，特征行和编码器状态碰撞仍是 0。
+和探针的不相交：表面训练集在原来的 384 句上加了弃权用的释义（字面、人名、句向量余弦、token Jaccard 的门槛不变：0、0、< 0.98、< 0.65）。对合成训练文本的最大余弦仍要低于 0.5，特征行和编码器状态碰撞仍是 0。`python -m tidal.question_heldout` 打印当次的最大余弦和 Jaccard。
+
+平坦行的弃权不改上面的排序。排序仍是句向量余弦加 `alpha=0.3` 的关系 logit，排序岭回归的字节不变。弃权用的是另一张岭回归 `Wa`（同样是 513×3），只在生成的 fit 问句上拟合，不参与打分。`lambda` 在 `1e-3, 1e-2, 0.1, 1.0` 里选，标准是具名 dev 问句错得最少，平手取更大的 `lambda`。随包是 `1.0`，错 2 条。
+
+被问的关系：文本里恰好一类关系词时用这个词，不看间隔；否则用 `Wa` 的 argmax，并且第一名和第二名的 logit 差至少要到间隔。关系词不含单独的 `place`（`place a call` 是电话），也不含 `where` / `哪里` / `位置`。人在不在：库存里的人名按拉丁文整词、中文子串去对文本。一个都对不上，而且不是第二人称（`you` / `your` / `yours` 或 `你`，`我们` 不算），就是 `absent_person`。第二人称没有人名时不弃权，交给排序。对上了人名，被问的关系不在这些人存的关系里，就是 `missing_rel`。问句和某条已存句向量余弦 ≥ 0.999 时不弃权，避免把同一条句子当成未知。没有记下表面字符串时不弃权。空库的 `info["abstain"]` 是 None。没有开关。
+
+间隔只在 dev 上选，探针不参与。可答题按「这个人只存被问的那一条关系」来计误弃权，这就是地点被判成电话/生日时会误伤的存法。第二人称另有一组。只保留两种语言误弃权都是 0、第二人称误弃权也是 0 的间隔；在这些点里先最大化抓住的 `missing_rel`，再最大化 `absent_person`，再取更大的间隔。随包间隔是 0.1。
+
+| 间隔 | 误弃权 英 | 误弃权 中 | 缺关系 英 | 缺关系 中 | 人不在 英 | 人不在 中 | 第二人称误弃权 英 | 第二人称误弃权 中 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.00 | 1/192 | 0/192 | 191/192 | 192/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.05 | 1/192 | 0/192 | 191/192 | 192/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.10 | 0/192 | 0/192 | 188/192 | 189/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.15 | 0/192 | 0/192 | 186/192 | 183/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.20 | 0/192 | 0/192 | 182/192 | 179/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.30 | 0/192 | 0/192 | 172/192 | 178/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.40 | 0/192 | 0/192 | 159/192 | 174/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.50 | 0/192 | 0/192 | 144/192 | 169/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.80 | 0/192 | 0/192 | 110/192 | 139/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 1.10 | 0/192 | 0/192 | 104/192 | 128/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+
+`absent_person` 不看间隔，所以每一行都是 36/36。0.00 和 0.05 因为英文有 1 条误弃权，不能用。
+
+探针上的语言 × 子类型计数、可答 ret@1 和误弃权条数由同一次 `python -m tidal.question_heldout` 打印。阈值在那之前已经固定。
 
 Flat-row `ask` does not score the encoder state. That state folds the sentence into a `d=32` GRU output. On this embedder, held-out surface questions sit at encoder cosine ret@1 84/370. On the previous embedder that column was 87/370 and the contrastive head was 95/370. Another head on that state does not put the sentence back. `embed_event` stores the unit 512-d sentence vector on the slot. The key stays the encoder state, so overwrite, `recall`, and the synthetic 47/48 stay put.
 
@@ -156,13 +179,36 @@ The probe is `python -m tidal.question_heldout` (also printed by `python -m tida
 | zh_after_update | 36 | 2/36 | 36/36 |
 | answerable | 370 | 84/370 | 360/370 |
 
-Answerable phone / birthday / multi-token: encoder cosine 23/124, 29/124, 32/122; `ask` 121/124, 122/124, 117/122. English `ask` is 182/185. Chinese `ask` is 178/185. Stale values after an update: 0/72. Unanswerable asks still return some fact on 72/72; that is not part of this change. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8927.
+Answerable phone / birthday / multi-token: encoder cosine 23/124, 29/124, 32/122; `ask` 121/124, 122/124, 117/122. English `ask` is 182/185. Chinese `ask` is 178/185. Stale values after an update: 0/72. The table below is the dev abstain trade-off, not the probe. How many of the 72 unanswerable asks abstain, and whether answerable ret@1 moves, is what `python -m tidal.question_heldout` prints. At `overwrite_cos=0.9`, gold lost is 0/370. Of 8390 co-resident key pairs, none exceed cosine 0.9; the max is 0.8927.
 
 Sentence cosine alone (`alpha=0`) is 345/370 (en 174/185, zh 171/185). The relation term moves that to 360/370: phone 107→121, birthday 117→122, places 121→117, `en_indirect` 34→39, `zh_indirect` 34→38, `zh_after_distractors` 33→35. `alpha` was not retuned on the probe. `en_after_distractors` is 34/36 at both.
 
 None of the 18 English names in the probe is a single `[UNK]` (`Ada` is `▁Ada`, `Priya` is `▁Pri/ya`, `Noah` is `▁No/ah`). Chinese names are characters and are not `[UNK]` either. On one template with only the name changed, English is 18/18 and Chinese is 18/18. `bge-small-zh-v1.5` tokenized every English name as one `[UNK]`, so same-template sentence vectors had cosine 1 and could not tell the people apart.
 
-Disjoint from the probe: 384 surface-training strings, 0 literal hits, 0 name hits, max sentence cosine 0.9414, max token Jaccard 0.500. Max cosine against the synthetic training text is 0.1573. Feature-row and encoder-state collisions stay 0.
+Disjoint from the probe: the surface corpus is the original 384 ranking strings plus the abstain paraphrases. The gates are unchanged: 0 literal hits, 0 name hits, sentence cosine < 0.98, token Jaccard < 0.65. Max cosine against the synthetic training text stays under 0.5. Feature-row and encoder-state collisions stay 0. `python -m tidal.question_heldout` prints that run's max cosine and Jaccard.
+
+Abstention does not change the ranking above. Ranking is still sentence cosine plus the `alpha=0.3` relation logit, and the ranking ridge bytes are unchanged. Abstention uses a second ridge `Wa` (same 513×3 shape), fit only on the generated fit questions, and it is not added into the score. `lambda` is chosen from `1e-3, 1e-2, 0.1, 1.0` by the fewest errors on named dev questions; a tie keeps the larger `lambda`. The shipped value is `1.0`, with 2 errors.
+
+The asked relation is the lexical cue when exactly one relation class matches, and that path ignores the margin. Otherwise it is the argmax of `Wa`, and the top-2 logit gap must reach the margin. The cue list does not include bare `place` (`place a call` is a phone) and does not include `where` / `哪里` / `位置`. Person identity matches stored names as a whole Latin word or a CJK span. No stored name, and the string is not second person (`you` / `your` / `yours`, or `你`; `我们` is not), is `absent_person`. Second person with no stored name is not abstained; the ranker answers it. A matched name whose people do not store the asked relation is `missing_rel`. A question whose sentence cosine with a stored sentence is at least 0.999 is not abstained, so a copied sentence is not treated as unknown. No recorded surface string means no abstention. An empty store has `info["abstain"] is None`. There is no flag.
+
+The margin is chosen only on dev. The probe is not an input. Answerable questions are scored on a one-relation store, which is the store that turns a places→phone mistake into a false abstain. Second-person questions are a separate pool. A margin is kept only when false abstains are 0 in both languages and second-person false abstains are 0. Among those, missing-relation catches are maximized, then absent-person catches, then the larger margin. The shipped margin is 0.1.
+
+| margin | false en | false zh | missing en | missing zh | absent en | absent zh | deictic false en | deictic false zh |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.00 | 1/192 | 0/192 | 191/192 | 192/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.05 | 1/192 | 0/192 | 191/192 | 192/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.10 | 0/192 | 0/192 | 188/192 | 189/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.15 | 0/192 | 0/192 | 186/192 | 183/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.20 | 0/192 | 0/192 | 182/192 | 179/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.30 | 0/192 | 0/192 | 172/192 | 178/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.40 | 0/192 | 0/192 | 159/192 | 174/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.50 | 0/192 | 0/192 | 144/192 | 169/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 0.80 | 0/192 | 0/192 | 110/192 | 139/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+| 1.10 | 0/192 | 0/192 | 104/192 | 128/192 | 36/36 | 36/36 | 0/6 | 0/6 |
+
+`absent_person` does not read the margin, so every row is 36/36. Margins 0.00 and 0.05 are out because English has 1 false abstain.
+
+Per-language subtype counts, answerable ret@1, and the false-abstain count on the probe are printed by the same `python -m tidal.question_heldout` run. The thresholds were fixed before that run.
 
 ## 影子策略 / Shadow policy
 
@@ -179,14 +225,14 @@ from tidal.vap import VAPModel
 model = VAPModel(n_feat).eval()
 cont = Continuum(model, _cfg(dict(levels=("med",))))
 k = cont.embed_event(key_feats)                 # feature row -> encoder state
-v = cont.embed_event(value_feats, sentence)     # sentence vector only if model.tproj exists
+v = cont.embed_event(value_feats, sentence, surface=statement_text)
 cont.remember(k, v, name="ada", rel="city", group=group_id)
-k_phone = cont.embed_event(phone_key_feats)     # a different key; cos > 0.9 would overwrite
+k_phone = cont.embed_event(phone_key_feats, phone_sentence, surface=phone_text)
 cont.remember(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
-cont.recall(k_phone)                            # raw cosine, winning slot's string
-q = cont.embed_event(question_feats, question_sentence)
-cont.ask(q)                                     # flat row: sentence rank; sparse row: question head
-cont.query(q)                                   # same rank, soft top-k value; not added to heads
+cont.recall(k_phone)                            # raw cosine, winning slot's string; no abstain
+q = cont.embed_event(question_feats, question_sentence, surface=question_text)
+cont.ask(q)                                     # None on missing_rel or absent_person
+value, info = cont.query(q)                     # info["abstain"] is None or one of those reasons
 cont.ask_tokens(q)
 ```
 

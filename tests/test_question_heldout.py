@@ -39,6 +39,10 @@ def test_heldout_sources_have_no_enable_flag():
     assert "episodic_scale" not in blob
     assert "enable_surface" not in blob
     assert "use_surface" not in blob
+    assert "enable_abstain" not in blob
+    assert "use_abstain" not in blob
+    surface = (root / "question_surface.py").read_text(encoding="utf-8")
+    assert "question_heldout" not in surface
 
 
 def test_heldout_eval_measures_and_keeps_invariants():
@@ -71,6 +75,14 @@ def test_heldout_eval_measures_and_keeps_invariants():
         assert "cosine_hits" in row and "head_hits" in row
     un = report["rollups"]["unanswerable"]
     assert un["false_n"] == un["n"] > 0
+    assert un["false_head"] + un["abstain_head"] == un["false_n"]
+    assert un["false_cosine"] + un["abstain_cosine"] == un["false_n"]
+    abstain = report["abstain"]
+    assert abstain["margin"] == 0.1
+    assert abstain["ridge"] == 1.0
+    for key in ("en/missing_rel", "zh/missing_rel", "en/absent_person", "zh/absent_person", "answerable"):
+        assert abstain["slices"][key]["n"] > 0
+    assert abstain["dev_curve"]
     assert report["confidence"]["unanswerable_head_margin"]["50"] >= 0.0
     assert report["confidence"]["head_sweep"]
     # Accuracy is intentionally not asserted. A mediocre ret@1 must stay green.

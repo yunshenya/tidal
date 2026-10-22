@@ -19,12 +19,20 @@ The sentence vector is ``embed_sentences``: frozen ``intfloat/multilingual-e5-sm
 mean pool, L2, maxlen 64, no query prefix. The model is 384-d. The unit vector
 is copied into the leading coordinates of the 512-d slot the encoder already
 reads, and the tail is zero, so cosine matches the native model.
+
+Flat-row ``ask`` / ``query`` abstain when the recorded surface string names a
+person who does not store the asked relation, or names nobody and is not a
+second-person question. The asked relation is a lexical cue when that cue is
+unambiguous, otherwise the abstain ridge (not the ranking ridge). Thresholds
+are chosen on the generated dev pools. There is no enable flag. A question
+with no recorded surface string is not abstained, and ``recall`` never is.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -49,7 +57,7 @@ LABELS: Tuple[str, ...] = ("phone", "birthday", "places")
 # The probe is not an input to this choice.
 ALPHA_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5)
 # sha256 of question_surface.npz. Refit, then update this, if the corpus changes.
-EXPECTED_BUNDLE_SHA256 = "ff784aa1fda21189814352a8d7840c974a41f96377bdcd53afc6d02cc73e92d4"
+EXPECTED_BUNDLE_SHA256 = "820bea58901dc400b226b03292844a90967d56a38bf7db8ae8f88841e99216c9"
 RIDGE = 1e-2
 
 FIT_NAMES = {
@@ -166,15 +174,253 @@ DEV_S = {
     },
 }
 
+# People who are asked about and are not in the dev roster. Not probe names.
+ABSENT_NAMES = {
+    "en": ("Quentin", "Brigid", "Soren", "Yvette", "Malik", "Petra"),
+    "zh": ("方甯", "尹朔", "龚涟", "郝蔓", "邱原", "卞麦"),
+}
+
+# Lexical and indirect questions for the abstain ridge. Syntax is not the dev
+# bank below. The ranking ridge does not train on these.
+FIT_LEX = {
+    "en": {
+        "phone": (
+            "The night ledger wants the telephone kept for {name}.",
+            "Which handset string should the clerk read back for {name}?",
+            "If the annex must place a voice call to {name}, which digits are filed?",
+            "Where on the slate did we note {name}'s mobile?",
+            "{name} left an extension for the yard office. Which one?",
+            "Getting hold of {name} by voice means which digits?",
+            "The booth needs {name} on the line. What string do we send?",
+            "Reaching {name} after dusk uses the filed telephone. Which is it?",
+        ),
+        "birthday": (
+            "The natal day filed for {name} is the one the ledger wants.",
+            "Which morning was {name} born, according to the spare card?",
+            "Candles for {name} go on the cake on which date?",
+            "Ignore the feast and keep the birthday {name} claims.",
+            "What birth date did the registrar send for {name}?",
+            "The morning {name} came into the household is which date?",
+            "Cake and candles for {name} fall on which dawn?",
+        ),
+        "places": (
+            "Read the places {name} set down, earliest stop first.",
+            "Which locations does the roster keep for {name}?",
+            "The meeting spots {name} dictated should be repeated in order.",
+            "{name} named a sequence of handoff sites. What was it?",
+            "Waypoints on {name}'s card stay unsorted. Recite them.",
+            "A runner meeting {name} follows which ordered stands?",
+            "Show-up points for {name} stay in the spoken sequence. What are they?",
+            "Where does the night shift go for {name}, first halt to last?",
+        ),
+    },
+    "zh": {
+        "phone": (
+            "夜班账本要的是留给{name}的电话。",
+            "办事员该回读{name}的哪一串手机？",
+            "附楼如果要给{name}打语音，档案里是哪一串号码？",
+            "{name}的电话记在石板的哪一处？",
+            "{name}留给场院的分机是哪一部？",
+            "半夜要找到{name}本人，该用哪一串数字？",
+            "语音联络{name}时，柜面给出的号码是什么？",
+            "把{name}叫到线路上，用的是哪部电话？",
+        ),
+        "birthday": (
+            "账本要的是{name}的出生日。",
+            "备用卡片上{name}是哪个早晨出生的？",
+            "给{name}在蛋糕上插蜡烛是哪一天？",
+            "节庆不算，留下{name}认的生日。",
+            "登记处寄来的{name}的出生日期是哪一天？",
+            "{name}来到世上的那个早晨是哪一天？",
+            "给{name}庆生而不是宴客，订在哪一天？",
+        ),
+        "places": (
+            "把{name}记下的地方按先到后读出来。",
+            "名册里为{name}留的地点有哪些？",
+            "{name}口述的碰面站点要按顺序重复。",
+            "{name}报过一串交接位置，是哪些？",
+            "{name}卡片上的路点不许重排，请念出来。",
+            "跑腿去见{name}，按原顺序该站哪些点？",
+            "夜班找{name}，从第一处走到最后一处是哪里？",
+            "{name}让人照面的那些地点，按口头顺序是什么？",
+        ),
+    },
+}
+# Dev questions for the abstain margin. Includes direct relation words, indirect
+# paraphrases (reach / show up / born), and the single-relation store that makes
+# a wrong places→phone call a false abstain. The ranking alpha pools stay on DEV_Q.
+DEV_LEX = {
+    "en": {
+        "phone": (
+            "The harbor desk is asking which telephone belongs with {name}.",
+            "To place a call through to {name}, what digits leave the booth?",
+            "Where did the chalked note store {name}'s mobile?",
+            "Which extension raises {name} on the night line?",
+            "If the yard must reach {name} by voice, which string is filed?",
+            "Getting {name} on a handset tonight uses what?",
+        ),
+        "birthday": (
+            "The bakery wants the birthday {name} actually uses.",
+            "On which dawn was {name} born, per the second letter?",
+            "When are candles lit for {name} rather than the feast?",
+            "What date of birth is penciled for {name} on the orchard card?",
+            "The morning {name} entered the world is which calendar day?",
+            "Skip the party and say which day {name} was born.",
+        ),
+        "places": (
+            "Which places does {name} keep for the handoff roster?",
+            "List the locations {name} wanted, without sorting them.",
+            "Where should a runner show up for {name}, in the given order?",
+            "What meeting sequence did {name} leave on the inner card?",
+            "The spots for meeting {name} stay unsorted. What are they?",
+            "A courier finding {name} walks which ordered halts?",
+        ),
+    },
+    "zh": {
+        "phone": (
+            "港务台在问{name}对应的是哪一部电话。",
+            "要打通{name}，岗亭交出的号码是哪一串？",
+            "粉笔记下的{name}的手机放在哪一格？",
+            "夜线叫{name}该用哪一个分机？",
+            "语音找到{name}，该用档案里的哪一串？",
+            "把{name}叫起来通话，用哪部电话？",
+        ),
+        "birthday": (
+            "面包房要{name}真正使用的生日。",
+            "按第二封信，{name}是哪一天出生的？",
+            "给{name}点蜡烛而不是过节，是哪一天？",
+            "果园卡上给{name}写下的出生日期是什么？",
+            "{name}来到世上的早晨，是哪一天？",
+            "聚会不算，{name}出生的那一天是什么？",
+        ),
+        "places": (
+            "{name}的交接名册上留了哪些地方？",
+            "把{name}要的地点列出来，不要重排。",
+            "跑腿的人按原顺序该在哪里为{name}露面？",
+            "{name}留在内卡上的碰面顺序是什么？",
+            "去见{name}时要走的那些站点，按原话是哪些？",
+            "替{name}跑一趟，从第一处到最后一处该怎么走？",
+        ),
+    },
+}
+# No roster name. Second person. Abstain must not fire on these.
+DEV_DEICTIC = {
+    "en": {
+        "phone": (
+            "How should I reach you by voice tonight?",
+            "Which telephone of yours does the desk keep?",
+        ),
+        "birthday": (
+            "When is your natal morning?",
+            "Which day were you born, ignoring the party?",
+        ),
+        "places": (
+            "If I come over, which handoff places of yours stay in spoken order?",
+            "Read the meeting spots you wanted, first to last.",
+        ),
+    },
+    "zh": {
+        "phone": (
+            "今晚我该怎么用语音找到你？",
+            "台子留的你的电话是哪一部？",
+        ),
+        "birthday": (
+            "你的生辰要记在哪个清晨？",
+            "把蛋糕留到你的生日清晨。",
+        ),
+        "places": (
+            "我过去找你的话，交接点该按什么顺序？",
+            "把你要的碰面地点按原顺序读出来。",
+        ),
+    },
+}
+DEV_ABSENT_Q = {
+    "en": {
+        "phone": (
+            "Has the yard ever filed a telephone for {name}?",
+            "Which handset would raise {name} if one was stored?",
+        ),
+        "birthday": (
+            "Was a birthday ever written down for {name}?",
+            "Which natal day would belong to {name}?",
+        ),
+        "places": (
+            "Did {name} ever leave places for the roster?",
+            "Which locations would be {name}'s if we had heard them?",
+        ),
+    },
+    "zh": {
+        "phone": (
+            "场院有没有给{name}存过电话？",
+            "如果存过，哪一部手机会叫到{name}？",
+        ),
+        "birthday": (
+            "有没有人写下过{name}的生日？",
+            "哪一个出生日会是{name}的？",
+        ),
+        "places": (
+            "{name}有没有把地方留在名册上？",
+            "如果我们听过，{name}的地点会是哪些？",
+        ),
+    },
+}
+
+# Unambiguous relation words. A single class wins over the ridge. Bare "place"
+# is not a places cue ("place a call" is a phone). "where" / "哪里" / "位置"
+# are not cues. The probe is not an input to this list.
+_LEX_PATTERNS = {
+    "phone": re.compile(
+        r"phone|telephone|mobile|handset|extension|\bdial|\bdigits\b|\bcall\b|电话|手机|分机|号码",
+        re.I,
+    ),
+    "birthday": re.compile(r"birthday|\bborn\b|natal|candle|生日|出生|蜡烛", re.I),
+    "places": re.compile(
+        r"\bplaces\b|\blocations?\b|\bspots?\b|\bwaypoints?\b|\brendezvous\b|\bhandoffs?\b|"
+        r"地点|地方|站点|碰面|交接|路点|途经",
+        re.I,
+    ),
+}
+# A stored sentence copied as the question is not an abstention (cosine-1 tests).
+ABSTAIN_EXACT_COS = 0.999
+# Ridge values tried on the abstain-fit questions. The dev named-question error
+# count picks one. A tie keeps the larger ridge.
+ABSTAIN_RIDGE_GRID: Tuple[float, ...] = (1e-3, 1e-2, 0.1, 1.0)
+# Margin on the abstain ridge when no lexical cue is unique. Chosen on the dev
+# curve. The probe is not an input.
+ABSTAIN_MARGIN_GRID: Tuple[float, ...] = (0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.8, 1.1)
+ABSTAIN_RIDGE = 1.0
+ABSTAIN_MARGIN = 0.1
+
 _WEIGHTS: Optional[dict] = None
 
 
 def names_used() -> Tuple[str, ...]:
     out: List[str] = []
-    for bank in (FIT_NAMES, DEV_NAMES):
+    for bank in (FIT_NAMES, DEV_NAMES, ABSENT_NAMES):
         for lang in ("en", "zh"):
             out.extend(bank[lang])
     return tuple(out)
+
+
+def name_in_text(name: str, text: str) -> bool:
+    """Whole-name hit. Latin names are not prefixes. CJK names are exact spans."""
+    if not name:
+        return False
+    if any("\u4e00" <= ch <= "\u9fff" for ch in name):
+        return name in text
+    return re.search(rf"(?i)(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text) is not None
+
+
+def is_deictic(text: str) -> bool:
+    """Second person. ``我们`` contains ``我`` and is not this. ``你`` is."""
+    if re.search(r"\b(you|your|yours)\b", text, re.I):
+        return True
+    return "你" in text
+
+
+def lex_labels(text: str) -> Tuple[str, ...]:
+    """Relation classes whose cue words occur in ``text``, in label order."""
+    return tuple(lab for lab in LABELS if _LEX_PATTERNS[lab].search(text))
 
 
 def iter_corpus() -> Iterable[Tuple[str, str, str, str, str, str]]:
@@ -191,6 +437,19 @@ def iter_corpus() -> Iterable[Tuple[str, str, str, str, str, str]]:
                     if sbank is not None:
                         for tmpl in sbank[lang][rel]:
                             yield split, lang, name, rel, "statement", tmpl.format(name=name)
+    for lang in ("en", "zh"):
+        for rel in LABELS:
+            for name in FIT_NAMES[lang]:
+                for tmpl in FIT_LEX[lang][rel]:
+                    yield "abstain_fit", lang, name, rel, "question", tmpl.format(name=name)
+            for name in DEV_NAMES[lang]:
+                for tmpl in DEV_LEX[lang][rel]:
+                    yield "abstain_dev", lang, name, rel, "question", tmpl.format(name=name)
+            for tmpl in DEV_DEICTIC[lang][rel]:
+                yield "abstain_deic", lang, "", rel, "question", tmpl
+            for name in ABSENT_NAMES[lang]:
+                for tmpl in DEV_ABSENT_Q[lang][rel]:
+                    yield "abstain_absent", lang, name, rel, "question", tmpl.format(name=name)
 
 
 def corpus_strings() -> Tuple[str, ...]:
@@ -212,11 +471,22 @@ def corpus_errors() -> Tuple[str, ...]:
         errors.append("duplicate surface-training string")
     if len(set(names_used())) != len(names_used()):
         errors.append("duplicate surface-training name")
+    roster = [n for n in names_used() if n]
     for split, lang, name, rel, role, text in iter_corpus():
-        if name not in text:
+        if name and name not in text:
             errors.append(f"name missing from {split} {lang} {rel} {role}: {text}")
         if text.strip() != text or text == "":
             errors.append(f"blank surface string: {text!r}")
+        if split == "abstain_deic":
+            if not is_deictic(text):
+                errors.append(f"deictic dev question has no second person: {text}")
+            if any(name_in_text(other, text) for other in roster):
+                errors.append(f"deictic dev question names a roster person: {text}")
+        if split == "abstain_absent":
+            if is_deictic(text):
+                errors.append(f"absent dev question is second person: {text}")
+            if any(name_in_text(other, text) for other in roster if other != name):
+                errors.append(f"absent dev question names another roster person: {text}")
     return tuple(errors)
 
 
@@ -245,8 +515,14 @@ def load_weights(path: Path = BUNDLE) -> Optional[dict]:
             "alpha": float(blob["alpha"]),
             "labels": tuple(json.loads(str(blob["labels"].item()))),
         }
+        if "Wa" in blob.files:
+            weights["Wa"] = np.array(blob["Wa"], dtype=np.float64, copy=True)
+            weights["abstain_margin"] = float(blob["abstain_margin"])
+            weights["abstain_ridge"] = float(blob["abstain_ridge"])
     if weights["W"].shape != (STORED_DIM + 1, len(LABELS)) or weights["labels"] != LABELS:
         raise RuntimeError(f"surface bundle has shape {weights['W'].shape} labels {weights['labels']}")
+    if "Wa" in weights and weights["Wa"].shape != (STORED_DIM + 1, len(LABELS)):
+        raise RuntimeError(f"abstain ridge has shape {weights['Wa'].shape}")
     if path == BUNDLE:
         _WEIGHTS = weights
     return weights
@@ -281,11 +557,242 @@ def surface_scores(
     return scores + float(weights["alpha"]) * bonus
 
 
-def _fit_matrix(emb: np.ndarray, rels: Sequence[str]) -> np.ndarray:
+def _abstain_logits(query_emb: np.ndarray, Wa: np.ndarray) -> np.ndarray:
+    x = np.concatenate([_unit(query_emb), np.ones(1, dtype=np.float64)])
+    return x @ Wa
+
+
+def _abstain_pred(query_emb: np.ndarray, Wa: np.ndarray) -> Tuple[str, float]:
+    logits = _abstain_logits(query_emb, Wa)
+    order = np.argsort(-logits)
+    gap = float(logits[order[0]] - logits[order[1]]) if len(LABELS) > 1 else float(logits[order[0]])
+    return LABELS[int(order[0])], gap
+
+
+def _matched_names(text: str, names: Sequence[Optional[str]]) -> List[str]:
+    found: List[str] = []
+    seen = set()
+    ordered = sorted({n for n in names if isinstance(n, str) and n}, key=len, reverse=True)
+    for name in ordered:
+        if name not in seen and name_in_text(name, text):
+            seen.add(name)
+            found.append(name)
+    return found
+
+
+def surface_abstain(
+    query_emb: np.ndarray,
+    key_embs: np.ndarray,
+    rels: Sequence[Optional[str]],
+    names: Sequence[Optional[str]],
+    weights: Optional[dict] = None,
+    *,
+    query_text: Optional[str] = None,
+    margin: Optional[float] = None,
+) -> Optional[str]:
+    """``missing_rel`` or ``absent_person`` when a flat-row ask should return no fact.
+
+    ``query_text`` is the surface string recorded at ``embed_event``. Without
+    it there is no abstention: the call is not a flag, the string is the
+    evidence. A cosine of at least ``ABSTAIN_EXACT_COS`` against a stored
+    sentence is that sentence and is not an abstention.
+
+    No stored name in the string, and the string is not second person
+    (``you`` / ``your`` / ``你``): ``absent_person``. Second person with no
+    stored name is answered by the ranker.
+
+    A stored name: the asked relation is the unique lexical cue when there is
+    one, otherwise the argmax of the abstain ridge. Abstain ``missing_rel``
+    when none of the matched people store that relation. A lexical cue does
+    not consult the margin. A ridge call does, and the gap must be at least
+    ``margin`` (the shipped value when omitted). The ranking ridge is not
+    this map. No enable flag. Returns None when the bundle is missing.
+    """
+    if query_text is None or query_text == "":
+        return None
+    if not isinstance(query_text, str):
+        raise TypeError("query_text must be a str")
+    if len(rels) != len(key_embs) or len(names) != len(rels):
+        raise ValueError(
+            f"{len(names)} names and {len(rels)} relations for {len(key_embs)} sentence vectors"
+        )
+    if len(rels) == 0:
+        return None
+    if weights is None:
+        weights = load_weights()
+    if weights is None:
+        return None
+    cos = cosine_scores(np.asarray(key_embs, dtype=np.float64), _unit(query_emb))
+    if float(np.max(cos)) >= ABSTAIN_EXACT_COS:
+        return None
+    matched = _matched_names(query_text, names)
+    if not matched:
+        if is_deictic(query_text):
+            return None
+        return "absent_person"
+    have = {rels[i] for i, name in enumerate(names) if name in matched}
+    lex = lex_labels(query_text)
+    if len(lex) == 1:
+        if lex[0] not in have:
+            return "missing_rel"
+        return None
+    Wa = weights.get("Wa")
+    if Wa is None:
+        return None
+    use_margin = ABSTAIN_MARGIN if margin is None else float(margin)
+    if "abstain_margin" in weights and margin is None:
+        use_margin = float(weights["abstain_margin"])
+    pred, gap = _abstain_pred(query_emb, Wa)
+    if gap >= use_margin and pred not in have:
+        return "missing_rel"
+    return None
+
+
+def _fit_question_rows() -> List[tuple]:
+    return [
+        row for row in iter_corpus()
+        if row[0] in ("fit", "abstain_fit") and row[4] == "question"
+    ]
+
+
+def _named_dev_rows() -> List[tuple]:
+    """Answerable dev questions. The harsh store keeps only the asked relation."""
+    return [
+        row for row in iter_corpus()
+        if row[0] in ("dev", "abstain_dev") and row[4] == "question"
+    ]
+
+
+def _fit_matrix(emb: np.ndarray, rels: Sequence[str], ridge: float = RIDGE) -> np.ndarray:
     y = np.stack([(np.asarray(rels) == lab).astype(np.float64) for lab in LABELS], 1)
     x = np.concatenate([emb, np.ones((len(emb), 1), dtype=np.float64)], 1)
-    gram = x.T @ x + RIDGE * np.eye(x.shape[1])
+    gram = x.T @ x + float(ridge) * np.eye(x.shape[1])
     return np.linalg.solve(gram, x.T @ y)
+
+
+def abstain_ridge_errors(table: Dict[str, np.ndarray], Wa: np.ndarray) -> int:
+    """Named dev questions the abstain ridge labels wrong. Not the probe."""
+    errors = 0
+    for row in _named_dev_rows():
+        pred, _gap = _abstain_pred(table[row[-1]], Wa)
+        if pred != row[3]:
+            errors += 1
+    return errors
+
+
+def choose_abstain_ridge(table: Dict[str, np.ndarray]) -> Tuple[float, np.ndarray, int]:
+    """Fit ``Wa`` on fit questions. Fewest named-dev errors; a tie keeps the larger ridge."""
+    rows = _fit_question_rows()
+    emb = np.stack([_unit(table[row[-1]]) for row in rows])
+    rels = [row[3] for row in rows]
+    best = None
+    for ridge in ABSTAIN_RIDGE_GRID:
+        Wa = _fit_matrix(emb, rels, ridge)
+        errors = abstain_ridge_errors(table, Wa)
+        key = (errors, -float(ridge))
+        if best is None or key < best[0]:
+            best = (key, float(ridge), Wa, errors)
+    _key, ridge, Wa, errors = best
+    return ridge, Wa, errors
+
+
+def score_abstain_margin(table: Dict[str, np.ndarray], weights: dict, margin: float) -> dict:
+    """False abstains, missing-relation catches, and absent-person catches at one margin.
+
+    Answerable questions are scored on a one-relation store: the asked person
+    keeps only the asked relation. That is the places→phone failure mode. A
+    wrong confident label then abstains a question that had an answer.
+    """
+    fa = {"en": 0, "zh": 0}
+    fa_n = {"en": 0, "zh": 0}
+    miss = {"en": 0, "zh": 0}
+    miss_n = {"en": 0, "zh": 0}
+    absent = {"en": 0, "zh": 0}
+    absent_n = {"en": 0, "zh": 0}
+    deictic_false = {"en": 0, "zh": 0}
+    deictic_n = {"en": 0, "zh": 0}
+    fa_rel = {lang: {lab: 0 for lab in LABELS} for lang in ("en", "zh")}
+    miss_rel = {lang: {lab: 0 for lab in LABELS} for lang in ("en", "zh")}
+
+    def call(text: str, emb: np.ndarray, names: Sequence[str], rels: Sequence[str]) -> Optional[str]:
+        keys = np.zeros((len(names), STORED_DIM), dtype=np.float64)
+        return surface_abstain(
+            emb, keys, rels, names, weights, query_text=text, margin=float(margin),
+        )
+
+    for _split, lang, name, rel, _role, text in _named_dev_rows():
+        emb = np.asarray(table[text], dtype=np.float64)
+        fa_n[lang] += 1
+        if call(text, emb, [name], [rel]) is not None:
+            fa[lang] += 1
+            fa_rel[lang][rel] += 1
+        miss_n[lang] += 1
+        others = [lab for lab in LABELS if lab != rel]
+        if call(text, emb, [name, name], others) == "missing_rel":
+            miss[lang] += 1
+            miss_rel[lang][rel] += 1
+    for split, lang, name, rel, _role, text in iter_corpus():
+        emb = np.asarray(table[text], dtype=np.float64)
+        if split == "abstain_deic":
+            deictic_n[lang] += 1
+            who = DEV_NAMES[lang][0]
+            if call(text, emb, [who, who, who], list(LABELS)) is not None:
+                deictic_false[lang] += 1
+        elif split == "abstain_absent":
+            absent_n[lang] += 1
+            roster = list(DEV_NAMES[lang])
+            if call(text, emb, roster, [LABELS[0]] * len(roster)) == "absent_person":
+                absent[lang] += 1
+    return {
+        "margin": float(margin),
+        "false_abstain": fa,
+        "false_n": fa_n,
+        "missing": miss,
+        "missing_n": miss_n,
+        "absent": absent,
+        "absent_n": absent_n,
+        "deictic_false": deictic_false,
+        "deictic_n": deictic_n,
+        "false_by_rel": fa_rel,
+        "missing_by_rel": miss_rel,
+        "missing_caught": int(miss["en"] + miss["zh"]),
+        "absent_caught": int(absent["en"] + absent["zh"]),
+    }
+
+
+def abstain_dev_curve(
+    weights: Optional[dict] = None,
+    table: Optional[Dict[str, np.ndarray]] = None,
+) -> List[dict]:
+    """Every margin on the dev pools. Does not read the probe."""
+    if weights is None:
+        weights = load_weights()
+    if weights is None or weights.get("Wa") is None:
+        raise RuntimeError("abstain ridge is missing")
+    if table is None:
+        table = load_corpus_table()
+    return [score_abstain_margin(table, weights, margin) for margin in ABSTAIN_MARGIN_GRID]
+
+
+def choose_abstain_margin(curve: Optional[Sequence[dict]] = None) -> float:
+    """Largest catch among margins with no false abstain on either language.
+
+    A point is kept only when neither language false-abstains an answerable
+    dev question and neither language abstains a second-person question.
+    Among those, missing-relation catches are maximized, then absent-person
+    catches, then the larger margin.
+    """
+    if curve is None:
+        curve = abstain_dev_curve()
+    allowed = [
+        row for row in curve
+        if row["false_abstain"]["en"] == 0 and row["false_abstain"]["zh"] == 0
+        and row["deictic_false"]["en"] == 0 and row["deictic_false"]["zh"] == 0
+    ]
+    if not allowed:
+        raise RuntimeError("no abstain margin keeps both languages free of false abstains")
+    best = max(allowed, key=lambda row: (row["missing_caught"], row["absent_caught"], row["margin"]))
+    return float(best["margin"])
 
 
 def _dev_pools(table: Dict[str, np.ndarray]) -> List[dict]:
@@ -406,43 +913,70 @@ def _embed(texts: Sequence[str]) -> np.ndarray:
 
 
 def fit_bundle(path: Path = BUNDLE) -> dict:
-    """Fit the relation map and choose alpha on the dev pools. Not used by tests."""
+    """Embed new surface strings, fit the abstain ridge, keep the ranking ridge.
+
+    The ranking map ``W`` and ``alpha`` are copied from the bundle already on
+    disk. Re-embedding those old strings would move ``ask`` ret@1. New strings
+    are embedded and appended. Not used by tests.
+    """
     errors = corpus_errors()
     if errors:
         raise RuntimeError("; ".join(errors))
-    texts = corpus_strings()
-    emb = _embed(texts).astype(np.float64)
-    table = {text: emb[i] for i, text in enumerate(texts)}
-    fit_rows = [row for row in iter_corpus() if row[0] == "fit" and row[4] == "question"]
-    fit_emb = np.stack([table[row[-1]] for row in fit_rows])
-    fit_rels = [row[3] for row in fit_rows]
-    W = _fit_matrix(fit_emb, fit_rels)
-    pools = _dev_pools(table)
-    curve = {}
-    for alpha in ALPHA_GRID:
-        curve[float(alpha)] = _hits(pools, {"W": W, "alpha": alpha, "labels": LABELS}, alpha)
-    chosen = _choose_alpha(curve)
+    if not path.is_file():
+        raise RuntimeError(f"ranking bundle missing at {path}")
+    texts = list(corpus_strings())
+    with np.load(path, allow_pickle=False) as blob:
+        old_texts = json.loads(str(blob["texts"].item()))
+        old_emb = np.array(blob["emb"], dtype=np.float32, copy=True)
+        W = np.array(blob["W"], dtype=np.float64, copy=True)
+        alpha = np.float64(blob["alpha"])
+        dev_alpha = np.array(blob["dev"])
+        if W.shape != (STORED_DIM + 1, len(LABELS)):
+            raise RuntimeError(f"ranking ridge shape {W.shape}")
+    old_table = {text: old_emb[i] for i, text in enumerate(old_texts)}
+    missing = [text for text in texts if text not in old_table]
+    if missing:
+        fresh = _embed(missing).astype(np.float32)
+        for i, text in enumerate(missing):
+            old_table[text] = fresh[i]
+    absent_old = [text for text in old_texts if text not in texts]
+    if absent_old:
+        raise RuntimeError(f"surface corpus dropped {absent_old[:2]}")
+    emb = np.stack([old_table[text] for text in texts]).astype(np.float32)
+    table = {text: np.asarray(emb[i], dtype=np.float64) for i, text in enumerate(texts)}
+    ridge, Wa, n_errors = choose_abstain_ridge(table)
+    weights = {"W": W, "Wa": Wa, "alpha": float(alpha), "labels": LABELS}
+    abstain_curve = [score_abstain_margin(table, weights, margin) for margin in ABSTAIN_MARGIN_GRID]
+    margin = choose_abstain_margin(abstain_curve)
     payload = {
         "W": W.astype(np.float64),
-        "alpha": np.float64(chosen),
+        "alpha": alpha,
         "labels": np.asarray(json.dumps(list(LABELS))),
-        "texts": np.asarray(json.dumps(list(texts))),
+        "texts": np.asarray(json.dumps(texts)),
         "emb": emb.astype(np.float32),
         "model": np.asarray(SENTENCE_MODEL),
         "revision": np.asarray(SENTENCE_REVISION),
         "pooling": np.asarray(SENTENCE_POOLING),
         "native_dim": np.int64(NATIVE_DIM),
-        "dev": np.asarray(json.dumps({str(k): v for k, v in curve.items()})),
+        "dev": dev_alpha,
+        "Wa": Wa.astype(np.float64),
+        "abstain_ridge": np.float64(ridge),
+        "abstain_margin": np.float64(margin),
+        "abstain_dev": np.asarray(json.dumps(abstain_curve)),
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez(path, **payload)
     global _WEIGHTS
     _WEIGHTS = None
     return {
-        "alpha": chosen,
-        "n_fit": len(fit_rows),
-        "n_dev": len(pools),
-        "curve": {str(k): v for k, v in curve.items()},
+        "alpha": float(alpha),
+        "abstain_ridge": ridge,
+        "abstain_margin": margin,
+        "abstain_errors": n_errors,
+        "n_fit": len(_fit_question_rows()),
+        "n_texts": len(texts),
+        "n_new": len(missing),
+        "curve": abstain_curve,
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "path": str(path),
     }
@@ -463,18 +997,31 @@ def load_corpus_table(path: Path = BUNDLE) -> Dict[str, np.ndarray]:
 
 
 def main(argv: Optional[list] = None) -> None:
-    parser = argparse.ArgumentParser(description="Fit the surface relation logit")
+    parser = argparse.ArgumentParser(description="Fit the surface abstain ridge")
     parser.add_argument("--fit", action="store_true", help="rebuild question_surface.npz")
     args = parser.parse_args(argv)
     if not args.fit:
         weights = load_weights()
-        print("missing bundle" if weights is None else f"alpha {weights['alpha']}")
+        if weights is None:
+            print("missing bundle")
+            return
+        margin = weights.get("abstain_margin")
+        print(f"alpha {weights['alpha']} abstain_margin {margin}")
         return
     info = fit_bundle()
-    print(f"alpha {info['alpha']} fit {info['n_fit']} dev {info['n_dev']} sha256 {info['sha256']}")
-    for key, row in info["curve"].items():
-        hits, n = row["hits"], row["n"]
-        print(f"  a={key} {hits['all']}/{n['all']} en {hits['en']}/{n['en']} zh {hits['zh']}/{n['zh']}")
+    print(
+        f"alpha {info['alpha']} abstain_ridge {info['abstain_ridge']} "
+        f"margin {info['abstain_margin']} errors {info['abstain_errors']} "
+        f"texts {info['n_texts']} new {info['n_new']} sha256 {info['sha256']}"
+    )
+    for row in info["curve"]:
+        fa, miss, absent = row["false_abstain"], row["missing"], row["absent"]
+        print(
+            f"  m={row['margin']:.2f} fa {fa['en']}+{fa['zh']} "
+            f"miss {miss['en']}+{miss['zh']}={row['missing_caught']} "
+            f"abs {absent['en']}+{absent['zh']} "
+            f"deic {row['deictic_false']['en']}+{row['deictic_false']['zh']}"
+        )
 
 
 if __name__ == "__main__":
