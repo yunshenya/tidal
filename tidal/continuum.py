@@ -13,7 +13,7 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check, so a two-name question still ranks every matched person. That path returns no fact when the cue-nearest person lacks the asked relation, or the string names nobody and is not second person. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check, so a two-name question still ranks every matched person. That path returns no fact when the cue-nearest person lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
@@ -308,13 +308,16 @@ class Continuum:
     def _sentence_for(self, state):
         found = self._sentence_lookup(state)
         return None if found is None else found.copy()
+    def _slot_surfaces(self, visible):
+        """Surface text recorded for each visible slot, or None when the write had none."""
+        return [self._surface_lookup(slot.k) for _, slot in visible]
     def rank_question_scores(self, question, *, group=_GROUP_OMIT):
         """Scores ``ask`` / ``query`` use, one per visible slot, or None when empty.
 
         Flat-row slots carry the sentence vector and are ranked by sentence
-        cosine plus the relation logit. Matched people limit those scores to
-        their facts; other slots stay in the vector and cannot win. The
-        cue-nearest subset is not applied here.
+        cosine plus the relation logit. People the surface string selected
+        limit those scores to their facts; other slots stay in the vector
+        and cannot win. The cue-nearest subset is not applied here.
         Anything else, including the synthetic name/relation codes, is ranked
         by the contrastive head. ``recall`` does not call this. Abstention is
         applied in ``query``, not here, so a caller can still read the scores
@@ -331,7 +334,11 @@ class Continuum:
             stacked = np.stack([slot.sentence for _, slot in visible], 0)
             rels = [slot.rel for _, slot in visible]
             scores = surface_scores(sent_q, stacked, rels)
-            rows = matched_fact_rows(self._surface_lookup(q), [slot.name for _, slot in visible])
+            rows = matched_fact_rows(
+                self._surface_lookup(q),
+                [slot.name for _, slot in visible],
+                self._slot_surfaces(visible),
+            )
             return limit_scores(scores, rows), "sentence"
         # question_scores is the contrastive head. Sparse rows land here.
         return question_scores(self.question_head, q, keys), "question"
@@ -339,8 +346,11 @@ class Continuum:
         """Soft top-k value for a question encoder-state, or ``(None, info)``.
 
         Flat-row questions rank by sentence cosine plus a relation logit,
-        limited to the people ``matched_people`` returned. A two-name match
-        keeps both in the ranker; the cue-nearest rule stays on abstain.
+        limited to the people the surface string selected. A stored name,
+        including a nickname or pinyin, selects those people. An indirect
+        hearer description selects the unique first-person person when the
+        store has exactly one. A two-name match keeps both in the ranker;
+        the cue-nearest rule stays on abstain.
         Sparse name/relation questions rank by the contrastive question head
         and are not limited.
         Either way the value mix is ``EpisodicStore.read`` when a fact is
@@ -348,7 +358,8 @@ class Continuum:
         person without the asked relation returns ``(None, info)`` with
         ``info["abstain"] == "missing_rel"``. The relation check and the
         exact-sentence cosine use only the selected person's facts. A string
-        that names nobody and is not second person returns
+        that names nobody and is not second person, and is not an indirect
+        hearer description with exactly one first-person fact, returns
         ``info["abstain"] == "absent_person"``.
         ``info["top"]`` is None either way: no blend of other people's values.
         Sparse rows do not abstain (``info["abstain"] is None``). A question
@@ -373,6 +384,7 @@ class Continuum:
                 [slot.rel for _, slot in visible],
                 [slot.name for _, slot in visible],
                 query_text=self._surface_lookup(q),
+                surfaces=self._slot_surfaces(visible),
             )
         raw_max = float(np.max(cosine_scores(keys, q)))
         if abstain:

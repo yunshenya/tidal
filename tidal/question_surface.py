@@ -26,11 +26,16 @@ reads, and the tail is zero, so cosine matches the native model.
 Flat-row ``ask`` / ``query`` abstain when the recorded surface string names a
 person who does not store the asked relation, or names nobody and is not
 talking about a person already in the dialogue (second person, first person,
-or a pronoun). A nickname, a listed diminutive, pinyin, a dropped surname,
-or a short honorific is that stored person. A following verb or time word
-is still that person (``唐宁选的``, ``王伟平时``). One extra syllable that
-continues a personal name is not (``王伟强的``). An unmatched name in the
-cue's name slot is an absent person. The asked relation is a lexical cue when that cue is unambiguous,
+or a pronoun). An indirect hearer description (a hearer-role noun, a
+participial "person being spoken with", or a facing locative plus a person
+demonstrative) is not a name. It resolves only to the unique stored person
+who has a first-person surface, and only that person's facts are ranked.
+No self, or two selves, and that question abstains. A nickname, a listed
+diminutive, pinyin, a dropped surname, or a short honorific is that stored
+person. A following verb or time word is still that person (``唐宁选的``,
+``王伟平时``). One extra syllable that continues a personal name is not
+(``王伟强的``). An unmatched name in the cue's name slot is an absent
+person. The asked relation is a lexical cue when that cue is unambiguous,
 unless the abstain ridge disagrees by a wide gap. Otherwise it is the abstain
 ridge (not the ranking ridge). Thresholds are chosen on the generated dev
 pools. There is no enable flag. A question with no recorded surface string
@@ -595,6 +600,130 @@ def is_deictic(text: str) -> bool:
     return re.search(r"(?<!其)[他她]", text) is not None
 
 
+# Hearer-role nouns. The noun does not name the stored person. ``ask_people``
+# resolves it only when the store has exactly one first-person fact-holder.
+# ``hearer`` and ``listener`` are the dev checks. ``addressee`` and
+# ``interlocutor`` are the same closed class; the dev questions do not use them.
+_HEARER_EN_RE = re.compile(
+    r"\b(?:addressees?|interlocutors?|hearers?|listeners?)\b"
+    r"|"
+    r"\b(?:the\s+)?(?:person|one|party)\s+(?:being\s+|who\s+is\s+)?"
+    r"(?:addressed|spoken\s+to|spoken\s+with|talked\s+to|talked\s+with)\b"
+    r"|"
+    r"\b(?:the\s+)?(?:person|one|party)\s+"
+    r"(?:across\s+the\s+(?:table|desk)|opposite|in\s+front(?!\s+of\b)|facing)\b"
+    r"|"
+    r"\b(?:this|that)\s+person\s+"
+    r"(?:across\s+the\s+(?:table|desk)|opposite|in\s+front(?!\s+of\b)|facing)\b"
+    r"|"
+    r"\bsomeone\s+(?:sitting\s+|standing\s+)?"
+    r"(?:across\s+the\s+(?:table|desk)|opposite|in\s+front(?!\s+of\b)|facing)\b",
+    re.I,
+)
+# Facing locative plus a person demonstrative or 人. 跟前这位 and 对面那位
+# match. 隔壁那位 and a bare 那位 do not: 隔壁 / 那 are not this locative class.
+_HEARER_ZH_RE = re.compile(
+    r"(?:跟前|面前|眼前|对面|对过|身边|身旁)"
+    r"(?:的)?"
+    r"(?:这|那)?"
+    r"(?:一位|个人|位|人)"
+)
+_EN_SELF_RE = re.compile(r"\b(?:I|me|my|mine|myself)\b")
+_ZH_SELF_RE = re.compile(r"我(?!们)")
+
+
+def is_indirect_hearer(text: str) -> bool:
+    """An open hearer description, not a closed-class pronoun and not a name.
+
+    Role nouns, a participial hearer ("the person being spoken with"), or a
+    facing locative with a person demonstrative (``眼前这位``, ``跟前这位``).
+    ``you`` / ``你`` stay in ``is_deictic``. A neighbor, a bare ``this person``,
+    and ``隔壁那位`` do not match.
+    """
+    if not isinstance(text, str) or text == "":
+        return False
+    if _HEARER_EN_RE.search(text):
+        return True
+    return _HEARER_ZH_RE.search(text) is not None
+
+
+def _first_person_surface(text: str) -> bool:
+    """The stored utterance is the speaker's own fact (``I`` / ``my`` / ``我``)."""
+    if not isinstance(text, str) or text == "":
+        return False
+    if _EN_SELF_RE.search(text):
+        return True
+    return _ZH_SELF_RE.search(text) is not None
+
+
+def dialogue_selves(
+    names: Sequence[Optional[str]],
+    surfaces: Optional[Sequence[Optional[str]]],
+) -> Optional[Tuple[str, ...]]:
+    """Stored people whose surface is first person, or None if a surface is missing.
+
+    Continuum keeps no speaker and no addressee. The ask path's convention,
+    already used for ``you`` / ``你``, is that the participant's own fact is
+    written in the first person. Two such people, or a first-person fact with
+    no name, is not a unique self. ``None`` means the record is incomplete
+    and the caller must not guess.
+    """
+    if surfaces is None:
+        return None
+    if len(surfaces) != len(names):
+        raise ValueError(f"{len(surfaces)} surfaces for {len(names)} names")
+    found: List[str] = []
+    seen = set()
+    for name, surface in zip(names, surfaces):
+        if not isinstance(surface, str) or surface == "":
+            return None
+        if not _first_person_surface(surface):
+            continue
+        if not isinstance(name, str) or name == "":
+            return None
+        if name not in seen:
+            seen.add(name)
+            found.append(name)
+    return tuple(found)
+
+
+def _unmatched_person_mentioned(text: str, names: Sequence[Optional[str]]) -> bool:
+    """An unmatched name is in the question, so a hearer description is not the ask."""
+    from tidal.question_name_align import diagnose, load_aligner
+
+    if load_aligner() is None:
+        return True
+    info = diagnose(text, names)
+    return bool(info["unknown"]) or bool(info["force_absent"])
+
+
+def ask_people(
+    text: str,
+    names: Sequence[Optional[str]],
+    surfaces: Optional[Sequence[Optional[str]]] = None,
+) -> List[str]:
+    """Stored people this question is about.
+
+    Name matches stay, including a nickname, pinyin, or a short honorific.
+    An indirect hearer description resolves to the unique dialogue-self when
+    every stored surface is present. It does not resolve to the last write,
+    to the only person in the store, or to the only person who has the
+    relation. No surface, no self, or two selves, and the description
+    selects nobody. No enable flag.
+    """
+    matched = _matched_names(text, names)
+    if matched:
+        return list(matched)
+    if not is_indirect_hearer(text) or surfaces is None:
+        return []
+    if _unmatched_person_mentioned(text, names):
+        return []
+    selves = dialogue_selves(names, surfaces)
+    if not selves or len(selves) != 1:
+        return []
+    return [selves[0]]
+
+
 def _span_gap(left: Tuple[int, int], right: Tuple[int, int]) -> int:
     if left[1] <= right[0]:
         return right[0] - left[1]
@@ -810,17 +939,19 @@ def _rows_for(names: Sequence[Optional[str]], chosen: Sequence[str]) -> Optional
 def matched_fact_rows(
     text: Optional[str],
     names: Sequence[Optional[str]],
+    surfaces: Optional[Sequence[Optional[str]]] = None,
 ) -> Optional[List[int]]:
-    """Indices of ``names`` that ``matched_people`` returned, or None.
+    """Indices of the people ``ask_people`` returned, or None.
 
     None leaves every fact in the ranker: no surface string, or the string
     selected nobody (an absent person, or a deictic question). A list is the
     whole matched set, before the cue-nearest narrowing. Two stored names
-    in one question both stay. There is no extra threshold and no flag.
+    in one question both stay. A resolved hearer is that one person, so the
+    other people's facts cannot win. There is no extra threshold and no flag.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = _matched_names(text, names)
+    matched = ask_people(text, names, surfaces)
     if not matched:
         return None
     return _rows_for(names, matched)
@@ -829,17 +960,19 @@ def matched_fact_rows(
 def selected_fact_rows(
     text: Optional[str],
     names: Sequence[Optional[str]],
+    surfaces: Optional[Sequence[Optional[str]]] = None,
 ) -> Optional[List[int]]:
     """Indices abstain uses for ``missing_rel``.
 
     ``matched_fact_rows`` after the cue-nearest focus rule. A distance tie
     keeps every name at that distance. The ranker does not call this: a
-    two-name question still ranks every matched person. None means nobody
-    was selected.
+    two-name question still ranks every matched person. A resolved hearer
+    is one person, including when that name is not written in the question.
+    None means nobody was selected.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = _matched_names(text, names)
+    matched = ask_people(text, names, surfaces)
     if not matched:
         return None
     matched = _focus_names(text, matched, lex_labels(text))
@@ -878,6 +1011,7 @@ def surface_abstain(
     *,
     query_text: Optional[str] = None,
     margin: Optional[float] = None,
+    surfaces: Optional[Sequence[Optional[str]]] = None,
 ) -> Optional[str]:
     """``missing_rel`` or ``absent_person`` when a flat-row ask should return no fact.
 
@@ -889,8 +1023,10 @@ def surface_abstain(
     sentences, so another person's copy does not cancel ``missing_rel``.
 
     No stored name in the string, and the string is not deictic
-    (``is_deictic``): ``absent_person``. A deictic question with no stored
-    name is answered by the ranker.
+    (``is_deictic``) and not a hearer description that resolves
+    (``ask_people``): ``absent_person``. A deictic question with no stored
+    name is answered by the ranker. A hearer description with exactly one
+    first-person person is that person; the relation check then applies.
 
     Several stored names and one lexical cue: only the names nearest that cue
     count. An unmatched name in that cue's name slot clears the match, so the
@@ -920,7 +1056,7 @@ def surface_abstain(
         weights = load_weights()
     if weights is None:
         return None
-    rows = selected_fact_rows(query_text, names)
+    rows = selected_fact_rows(query_text, names, surfaces)
     cos_embs = np.asarray(key_embs, dtype=np.float64)
     if rows is not None:
         cos_embs = cos_embs[rows]

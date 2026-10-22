@@ -88,8 +88,9 @@ _SURNAMES = frozenset(
 # demonstrative in 那天 / 那个; treating it as a surname clears a real person
 # whenever a question says "that day".
 _SURNAME_SKIP = frozenset("那和于从向")
-# Closed class. A span of these is not a person mention. Indirect descriptions
-# (对面那位, the addressee) are not in here: those stay out of scope.
+# Closed class. A span of these is not a person mention. Indirect hearer
+# descriptions are not name spans. ``question_surface.ask_people`` resolves
+# them from a unique first-person fact, not from this list.
 _CJK_SPLIT = frozenset("的了着过吗呢吧啊时是不没把给让与跟和就被从到往对为以而或及也很都还又才再就在向把将")
 _CJK_FUNCTION = frozenset({
     "什么", "怎么", "如何", "哪里", "哪些", "哪个", "哪天", "那儿", "那里", "这里",
