@@ -507,6 +507,84 @@ def test_group_scopes_spans():
     assert "+1-415-555-0199" not in {decode_span(s.v) for _, s in S._visible("a")}
 
 
+def _uncorrected_text_state(cont, feats, text):
+    """``fproj + tproj`` then the same norm and GRU ``embed_event`` uses."""
+    m = cont.m
+    x = torch.as_tensor(np.asarray(feats, dtype=np.float32)).reshape(1, -1)
+    te = torch.as_tensor(np.asarray(text, dtype=np.float32)).reshape(1, -1)
+    training = m.training
+    m.eval()
+    try:
+        with torch.no_grad():
+            tok = m.inorm(m.fproj(x) + m.tproj(te))
+            y, _ = m.body(tok.unsqueeze(1))
+            return y[0, 0].detach().cpu().numpy().astype(np.float64)
+    finally:
+        m.train(training)
+
+
+def _cos(a, b):
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+
+def test_flat_feature_rows_do_not_share_one_cosine():
+    """A constant-heavy feature row must not pin unrelated sentences together.
+
+    Sparse name/relation rows stay on the uncorrected projection, so the
+    question head's encoder states do not move. Flat rows drop that offset.
+    Same-identity overwrite still replaces the slot. Two different identities
+    whose uncorrected states sit above 0.9 both remain at the live threshold.
+    """
+    torch.backends.mkldnn.enabled = False
+    from tidal.question_head import _feats, load_reference
+
+    cont = load_reference(overwrite_cos=0.9)
+    rng = np.random.default_rng(1)
+    for name in range(4):
+        for rel in range(4):
+            for query in (False, True):
+                feats = _feats(name, rel, query)
+                text = rng.normal(size=512).astype(np.float32)
+                got = cont.embed_event(feats, text)
+                raw = _uncorrected_text_state(cont, feats, text)
+                assert np.array_equal(got, raw)
+
+    # Sentence vectors share a cone (real bge rows do). Isotropic noise does not
+    # reproduce the overwrite the flat feature offset causes.
+    cone = rng.normal(size=512).astype(np.float64)
+    cone /= np.linalg.norm(cone)
+    flat, texts = [], []
+    for i in range(8):
+        flat.append(rng.choice([0.2, 0.4, 0.6, 0.8], size=8).astype(np.float32))
+        text = 3.0 * cone + rng.normal(size=512)
+        text /= np.linalg.norm(text)
+        texts.append(text.astype(np.float32))
+    raw = np.stack([_uncorrected_text_state(cont, flat[i], texts[i]) for i in range(8)])
+    got = np.stack([cont.embed_event(flat[i], texts[i]) for i in range(8)])
+
+    def off_cos(rows):
+        nrm = np.linalg.norm(rows, axis=1, keepdims=True)
+        sim = (rows / nrm) @ (rows / nrm).T
+        iu = np.triu_indices(len(rows), 1)
+        return sim[iu]
+
+    raw_c, got_c = off_cos(raw), off_cos(got)
+    assert float(raw_c.max()) > 0.9
+    assert int(np.sum(raw_c > 0.9)) > len(raw_c) // 2
+    assert float(got_c.max()) < 0.9
+    assert not np.allclose(got, raw)
+
+    cont.episodic.clear()
+    assert cont.remember(got[0], "+1-415-555-0100", name="ada", rel="phone")
+    assert cont.remember(got[1], "+1-415-555-0199", name="ada", rel="phone")
+    assert len(cont.episodic) == 1
+    assert cont.recall(got[1]) == "+1-415-555-0199"
+    assert cont.remember(got[2], "+1-202-555-0148", name="bea", rel="phone")
+    assert len(cont.episodic) == 2
+    assert cont.recall(got[2]) == "+1-202-555-0148"
+    assert cont.recall(got[1]) == "+1-415-555-0199"
+
+
 def test_episodic_eval_is_larger_than_n96_and_exact():
     from tidal.episodic_eval import run
     report = run()
