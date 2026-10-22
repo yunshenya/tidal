@@ -9,12 +9,13 @@ lost many more. See ``docs/llm_memory.md``.
 
 The value is an answer-span pool of that layer's hidden state. It is not
 L2-normalized: magnitude is what the identity copy-through needs. A phone-like
-answer (at least seven digits) pools only the last four answer tokens, which
-are the variable digits. A birthday in the generator spelling
-(``March 4, 1991``) is not averaged: the value concatenates the leading
-coordinates of the month token, the day-tens token (zeros for a one-digit
-day), the day-ones token, and each of the four year-digit tokens. Every other
-answer pools the whole span. The key is
+answer (at least seven digits) is not averaged: the value concatenates the
+leading coordinates of the last four answer tokens, which are the variable
+digits. A birthday in the generator spelling (``March 4, 1991``) is not
+averaged either: the value concatenates the leading coordinates of the month
+token, the day-tens token (zeros for a one-digit day), the day-ones token,
+and each of the four year-digit tokens. Every other answer pools the whole
+span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
@@ -68,8 +69,11 @@ _KEY_CENTER_FILE = "llm_key_center.npz"
 # 1500-step inject trained after the key-center fix. ``save_inject`` dict.
 _INJECT_FILE = "llm_inject_smollm2_135m.pt"
 # Phone answers in ``llm_memory_data`` are ``+1-415-555-`` plus four digits.
-# Seven digits leaves ``111`` on the full-span mean. Birthdays are detected
-# by spelling, not by digit count, and use the date slice pool.
+# Seven digits leaves ``111`` and birthdays (at most six digits) on the
+# full-span mean. Birthdays are detected by spelling, not by digit count,
+# and use the date slice pool. Phones use four leading slices of the last
+# four answer tokens. Their mean is not the value: the ones token in that
+# mean is large enough to flip the tens digit.
 PHONE_DIGIT_MIN = 7
 PHONE_TAIL = "+1-415-555-"
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -220,6 +224,42 @@ def date_like(answer: str) -> bool:
     return parse_date(answer) is not None
 
 
+def phone_block_sizes(hidden: int) -> list:
+    """Widths of the four phone digit blocks. They sum to ``hidden``.
+
+    Order is thousands, hundreds, tens, ones: the last four answer tokens.
+    Extra coordinates go to the later digits. On the shipped 576-d SmolLM2
+    value this is 144, 144, 144, 144.
+    """
+    hidden = int(hidden)
+    if hidden < 4:
+        raise ValueError(f"phone pool needs at least 4 coordinates, got {hidden}")
+    base, extra = divmod(hidden, 4)
+    return [base + (1 if i >= 4 - extra else 0) for i in range(4)]
+
+
+def assemble_phone_value(digit_rows: Sequence[torch.Tensor]) -> torch.Tensor:
+    """Concatenate leading coordinates of the four phone digit tokens.
+
+    ``digit_rows`` is thousands, hundreds, tens, ones. Averaging them is what
+    flips the tens digit: on Ada's ``+1-415-555-2060`` at layer 15 the tens
+    token moves L2 58.05 when 6 becomes 7, and the mean of the four tokens
+    moves L2 16.63. Changing only the ones digit (2060→2061) leaves the tens
+    token at L2 0 and moves that mean by L2 15.61, across the tens head
+    (margin +0.057 on 2060, -0.029 on 2061). A test name moves the same mean
+    by about L2 11 and is the Brigid ``2060`` → ``2070`` miss.
+    """
+    if len(digit_rows) != 4:
+        raise ValueError("phone pool expects 4 digit tokens")
+    rows = [row.reshape(-1) for row in digit_rows]
+    hidden = int(rows[0].numel())
+    sizes = phone_block_sizes(hidden)
+    for vec in rows:
+        if int(vec.numel()) != hidden:
+            raise ValueError(f"phone token dim {int(vec.numel())} != {hidden}")
+    return torch.cat([vec[:width] for vec, width in zip(rows, sizes)], dim=0).to(dtype=torch.float32)
+
+
 def date_block_sizes(hidden: int) -> list:
     """Widths of the seven date blocks. They sum to ``hidden``.
 
@@ -306,14 +346,15 @@ def _date_components(hidden: torch.Tensor, offsets: Sequence[tuple], text: str, 
 def pool_answer(hidden: torch.Tensor, mask: Sequence[bool], answer: str) -> torch.Tensor:
     """Value pool at the inject layer. Not L2-normalized.
 
-    Phone-like answers use the mean of the last four answer tokens. On
-    SmolLM2 those tokens are the four variable digits; a mean of the whole
-    ``+1-415-555-dddd`` span moves only L2 3.93 when the last digit changes
-    (norm 147.66), and the last token alone is a weaker linear code for
-    the first of those digits than the four-token mean. Date answers are
-    not pooled here; :meth:`LLMMemory.encode_value` concatenates field
-    tokens instead. Every other answer uses :func:`pool_masked`. A one-token
-    span is the same vector either way.
+    Phone-like answers concatenate leading coordinates of the last four
+    answer tokens (:func:`assemble_phone_value`). On SmolLM2 those tokens
+    are the four variable digits. A mean of the whole ``+1-415-555-dddd``
+    span moves only L2 3.93 when the last digit changes (norm 147.66). The
+    mean of the last four still mixes the ones token into the tens digit;
+    the slice does not. Fewer than four answer tokens falls back to their
+    mean. Date answers are not pooled here; :meth:`LLMMemory.encode_value`
+    concatenates field tokens instead. Every other answer uses
+    :func:`pool_masked`. A one-token span is that token either way.
     """
     if hidden.dim() != 2:
         raise ValueError(f"pool expected [tokens, hidden], got {tuple(hidden.shape)}")
@@ -321,7 +362,10 @@ def pool_answer(hidden: torch.Tensor, mask: Sequence[bool], answer: str) -> torc
     if not idx:
         raise ValueError("answer span produced no tokens to pool")
     if phone_like(answer):
-        return hidden[idx[-4:]].mean(dim=0)
+        taken = idx[-4:]
+        if len(taken) < 4:
+            return hidden[taken].mean(dim=0)
+        return assemble_phone_value([hidden[i] for i in taken])
     return pool_masked(hidden, mask)
 
 
@@ -996,10 +1040,12 @@ class LLMMemory:
     def encode_value(self, text: str, answer: str) -> np.ndarray:
         """Answer-span pool at the inject layer. Not L2-normalized.
 
-        Phone-like answers pool the last four answer tokens. Date answers
-        concatenate field-token slices (:func:`assemble_date_value`). Other
-        answers pool the whole span. A date whose tokenizer does not yield
-        1–2 day tokens and 4 year tokens falls back to the whole-span mean.
+        Phone-like answers concatenate leading slices of the last four answer
+        tokens (:func:`assemble_phone_value`). Date answers concatenate
+        field-token slices (:func:`assemble_date_value`). Other answers pool
+        the whole span. A date whose tokenizer does not yield 1–2 day tokens
+        and 4 year tokens falls back to the whole-span mean. A phone with
+        fewer than four answer tokens falls back to the mean of those tokens.
         """
         hidden, enc = self._run_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])

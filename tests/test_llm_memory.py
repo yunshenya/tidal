@@ -670,12 +670,70 @@ def test_load_inject_custom_path(tmp_path):
 def test_phone_pool_is_the_last_four_digit_tokens():
     mem = _byte_memory()
     try:
+        from tidal.llm_memory import phone_block_sizes
+
         answer = "+1-415-555-1111"
         pooled = mem.encode_value(f"Ada's phone number is {answer}", answer)
-        # Last four characters are '1'. EyeLM's hidden state is that token.
-        assert np.allclose(pooled, mem.model.embed.weight[ord("1")].detach().numpy())
+        # Four identical digit tokens. Each block is that token's leading slice.
+        emb = mem.model.embed.weight[ord("1")].detach().numpy()
+        sizes = phone_block_sizes(mem.hidden)
+        assert np.allclose(pooled, np.concatenate([emb[: width] for width in sizes]))
+        assert not np.allclose(pooled, emb)
         city = mem.encode_value("Ada lives in Oslo", "Oslo")
         assert not np.allclose(city, mem.model.embed.weight[ord("o")].detach().numpy())
+    finally:
+        mem.close()
+
+
+def test_phone_block_sizes_are_four_equal_parts():
+    from tidal.llm_memory import phone_block_sizes
+
+    assert phone_block_sizes(576) == [144, 144, 144, 144]
+    assert phone_block_sizes(32) == [8, 8, 8, 8]
+    assert phone_block_sizes(260) == [65, 65, 65, 65]
+    assert sum(phone_block_sizes(7)) == 7
+    assert phone_block_sizes(7) == [1, 2, 2, 2]
+
+
+def test_phone_pool_puts_each_digit_in_its_own_block():
+    """A ones-digit edit must not move the tens block. The mean does."""
+    from tidal.llm_memory import assemble_phone_value, phone_block_sizes, pool_answer
+
+    hidden = torch.arange(8 * 32, dtype=torch.float32).reshape(8, 32)
+    mask = [False, False, False, False, True, True, True, True]
+    answer = "1234567"
+    pooled = pool_answer(hidden, mask, answer)
+    sizes = phone_block_sizes(32)
+    rows = hidden[-4:]
+    expect = assemble_phone_value([rows[i] for i in range(4)])
+    assert torch.equal(pooled, expect)
+    edited = hidden.clone()
+    edited[-1] = edited[-1] + 1
+    pooled_ones = pool_answer(edited, mask, answer)
+    tens_at = sizes[0] + sizes[1]
+    assert torch.equal(pooled_ones[: tens_at + sizes[2]], pooled[: tens_at + sizes[2]])
+    assert not torch.equal(pooled_ones[tens_at + sizes[2] :], pooled[tens_at + sizes[2] :])
+    mean = rows.mean(dim=0)
+    assert not torch.allclose(pooled, mean)
+
+    mem = _byte_memory()
+    try:
+        sizes = phone_block_sizes(mem.hidden)
+        emb = mem.model.embed.weight.detach().numpy()
+        answer = "+1-415-555-2060"
+        pooled = mem.encode_value(f"Ada's phone number is {answer}", answer)
+        parts = [emb[ord(ch)][: sizes[i]] for i, ch in enumerate("2060")]
+        assert np.allclose(pooled, np.concatenate(parts))
+        ones = mem.encode_value("Ada's phone number is +1-415-555-2061", "+1-415-555-2061")
+        cut = sum(sizes[:3])
+        assert np.array_equal(pooled[:cut], ones[:cut])
+        assert not np.array_equal(pooled[cut:], ones[cut:])
+        tens = mem.encode_value("Ada's phone number is +1-415-555-2070", "+1-415-555-2070")
+        assert np.array_equal(pooled[: sizes[0] + sizes[1]], tens[: sizes[0] + sizes[1]])
+        assert not np.array_equal(
+            pooled[sizes[0] + sizes[1] : cut],
+            tens[sizes[0] + sizes[1] : cut],
+        )
     finally:
         mem.close()
 
