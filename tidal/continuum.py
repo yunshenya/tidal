@@ -13,15 +13,16 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check. Two matched names both stay unless one is only in a dismissed clause, only one possessively governs the live cue, or a focus restrictor governs a proper subset. That path returns no fact when the person who remains lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check. Two matched names both stay unless one is only in a dismissed clause, only one possessively governs the live cue, or a focus restrictor governs a proper subset. That path returns no fact when the person who remains lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A same-script edit of one character is that stored person only when the dialogue log names them and nobody else at that distance (tidal/dialogue_state.py). A fact write is logged and does not license the edit. An empty log leaves name resolution unchanged. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
 import heapq, json, math, os, sys, time, numpy as np, pandas as pd, torch, torch.nn.functional as F
 from tidal import vap_targets as VT
+from tidal.dialogue_state import DialogueState
 from tidal.episodic import EpisodicStore, cosine_scores, decode_span, decode_tokens, is_structured_value
 from tidal.question_head import QuestionHead, install_matching, question_scores
-from tidal.question_surface import limit_scores, matched_fact_rows, surface_abstain, surface_scores
+from tidal.question_surface import ask_people, limit_scores, matched_fact_rows, surface_abstain, surface_scores
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 _GROUP_OMIT = object()
 
@@ -149,6 +150,15 @@ class Continuum:
         self._sentence_by_state = {}
         self._surface_by_state = {}
         self._sentence_conflicts = 0
+        # Per-group dialogue log. Facts stay in the store. clear() drops both.
+        self._dialogues = {}
+        _store_clear = self.episodic.clear
+
+        def _clear_store_and_dialogue():
+            _store_clear()
+            self._dialogues.clear()
+
+        self.episodic.clear = _clear_store_and_dialogue
         for p in model.parameters(): p.requires_grad_(False)
     def active(self, group):
         lv = []
@@ -160,8 +170,10 @@ class Continuum:
         return lv
     def new_session(self, group=None):
         # medium adapter resets; episodic facts stay until overwrite, eviction, or clear()
+        # Mentions for this group drop. Facts stay.
         self.med = self.mk("med", 1)
         if group is not None: self.med_by_group[group] = self.med
+        self._dialogues.pop(group, None)
     def _mix(self, h, lv):
         """Adapter residual plus episodic readout. Empty store adds exact zeros."""
         hp = h + sum(l.delta(h) for l in lv) if lv else h
@@ -238,20 +250,24 @@ class Continuum:
                     f"episodic key must be an encoder state of dim {self.d} (got {k.size}). "
                     "Episodic memory does not load another language model."
                 )
-            return self.episodic.write(
+            kept = self.episodic.write(
                 k, value, name, rel, kind=kind, surprise=surprise, group=group, sentence=self._sentence_for(k),
             )
-        v = np.asarray(value, np.float64).reshape(-1)
-        if k.size != self.d or v.size != self.d:
-            raise ValueError(
-                f"episodic key/value must be encoder states of dim {self.d} (got {k.size}, {v.size}). "
-                "Use embed_event on event features and, when the model has tproj, a 512-d sentence vector. "
-                "Pass a string or a list of strings for a phone, date, or multi-token span. "
-                "Episodic memory does not load another language model."
+        else:
+            v = np.asarray(value, np.float64).reshape(-1)
+            if k.size != self.d or v.size != self.d:
+                raise ValueError(
+                    f"episodic key/value must be encoder states of dim {self.d} (got {k.size}, {v.size}). "
+                    "Use embed_event on event features and, when the model has tproj, a 512-d sentence vector. "
+                    "Pass a string or a list of strings for a phone, date, or multi-token span. "
+                    "Episodic memory does not load another language model."
+                )
+            kept = self.episodic.write(
+                k, v, name, rel, kind=kind, surprise=surprise, group=group, sentence=self._sentence_for(k),
             )
-        return self.episodic.write(
-            k, v, name, rel, kind=kind, surprise=surprise, group=group, sentence=self._sentence_for(k),
-        )
+        if kept and isinstance(name, str) and name:
+            self._dialogue_for(group).note_write(name)
+        return kept
     def remember_event(self, key_feats, value_feats, name=None, rel=None, *, key_text=None, value_text=None,
                        kind="fact", surprise=None, group=None):
         """Encode two feature rows (optional sentence vectors) and write the resulting states."""
@@ -311,6 +327,50 @@ class Continuum:
     def _slot_surfaces(self, visible):
         """Surface text recorded for each visible slot, or None when the write had none."""
         return [self._surface_lookup(slot.k) for _, slot in visible]
+    def _dialogue_key(self, group):
+        return self._mem_group if group is _GROUP_OMIT else group
+    def _dialogue_for(self, group) -> DialogueState:
+        key = self._dialogue_key(group)
+        state = self._dialogues.get(key)
+        if state is None:
+            state = DialogueState()
+            self._dialogues[key] = state
+        return state
+    def _active_names(self, group, surface):
+        """Conversational names, excluding an ask recorded from this same string.
+
+        No recorded surface means no license. A missing log is the empty list.
+        """
+        if not isinstance(surface, str) or surface == "":
+            return ()
+        state = self._dialogues.get(self._dialogue_key(group))
+        if state is None:
+            return ()
+        return state.conversational(ignore_surface=surface)
+    def _record_ask(self, group, surface, names, surfaces) -> None:
+        if not isinstance(surface, str) or surface == "":
+            return
+        state = self._dialogue_for(group)
+        active = state.conversational(ignore_surface=surface)
+        mentioned = ask_people(surface, names, surfaces, active)
+        state.note_ask(mentioned, surface)
+    def note_turn(self, text, *, speaker=None, hearer=None, group=_GROUP_OMIT):
+        """Record one utterance. Returns the stored people it named.
+
+        Resolves names with the active list as it stands, then opens a turn.
+        Speaker and hearer are stored when passed. They are not inferred.
+        An empty string records nothing.
+        """
+        if not isinstance(text, str) or text == "":
+            return ()
+        g = self._dialogue_key(group)
+        visible = self.episodic._visible(g)
+        names = [slot.name for _, slot in visible]
+        surfaces = [self._surface_lookup(slot.k) for _, slot in visible]
+        state = self._dialogue_for(group)
+        mentioned = ask_people(text, names, surfaces, state.conversational())
+        state.note_utterance(mentioned, speaker=speaker, hearer=hearer, surface=text)
+        return tuple(mentioned)
     def rank_question_scores(self, question, *, group=_GROUP_OMIT):
         """Scores ``ask`` / ``query`` use, one per visible slot, or None when empty.
 
@@ -326,12 +386,13 @@ class Continuum:
         applied in ``query``, not here, so a caller can still read the scores
         of a question that returns no fact.
         """
-        q, _g, visible, keys = self._question_visible(question, group)
+        q, g, visible, keys = self._question_visible(question, group)
         if keys is None:
             return None
-        scores, _rank = self._scores_for(q, keys, visible)
+        active = self._active_names(g, self._surface_lookup(q))
+        scores, _rank = self._scores_for(q, keys, visible, active)
         return scores
-    def _scores_for(self, q, keys, visible):
+    def _scores_for(self, q, keys, visible, active=()):
         sent_q = self._sentence_lookup(q)
         if sent_q is not None and all(slot.sentence is not None for _, slot in visible):
             stacked = np.stack([slot.sentence for _, slot in visible], 0)
@@ -341,6 +402,7 @@ class Continuum:
                 self._surface_lookup(q),
                 [slot.name for _, slot in visible],
                 self._slot_surfaces(visible),
+                active,
             )
             return limit_scores(scores, rows), "sentence"
         # question_scores is the contrastive head. Sparse rows land here.
@@ -358,6 +420,10 @@ class Continuum:
         among the names that remain.
         Sparse name/relation questions rank by the contrastive question head
         and are not limited.
+        An edit of one character selects that stored person only when the
+        dialogue log names them and nobody else at that distance. The log
+        is empty unless ``note_turn`` or an earlier ask recorded them. A
+        fact write does not. This call then appends the people it resolved.
         Either way the value mix is ``EpisodicStore.read`` when a fact is
         returned. A flat-row question whose recorded surface string names a
         person without the asked relation returns ``(None, info)`` with
@@ -380,18 +446,25 @@ class Continuum:
                 "n": 0, "maxcos": -1.0, "top": None, "weights": None,
                 "rank": "question", "abstain": None,
             }
-        scores, rank = self._scores_for(q, keys, visible)
+        surface = self._surface_lookup(q)
+        names = [slot.name for _, slot in visible]
+        surfaces = self._slot_surfaces(visible)
+        active = self._active_names(g, surface)
+        scores, rank = self._scores_for(q, keys, visible, active)
         abstain = None
         if rank == "sentence":
             abstain = surface_abstain(
                 self._sentence_lookup(q),
                 np.stack([slot.sentence for _, slot in visible], 0),
                 [slot.rel for _, slot in visible],
-                [slot.name for _, slot in visible],
-                query_text=self._surface_lookup(q),
-                surfaces=self._slot_surfaces(visible),
+                names,
+                query_text=surface,
+                surfaces=surfaces,
+                active=active,
             )
         raw_max = float(np.max(cosine_scores(keys, q)))
+        if rank == "sentence":
+            self._record_ask(g, surface, names, surfaces)
         if abstain:
             return None, {
                 "n": len(visible),
@@ -417,9 +490,10 @@ class Continuum:
         blend). Same group scope as ``recall``. The stored-key path stays
         ``recall``, which is raw cosine and does not abstain. A flat-row
         question is ranked in sentence space, and only among the matched
-        people's facts when the surface string selected an ask target. A sparse
-        name/relation question is ranked by the contrastive head and does
-        not abstain.
+        people's facts when the surface string selected an ask target. A
+        same-script edit is included only when the dialogue log licenses it,
+        the same rule as ``query``. A sparse name/relation question is
+        ranked by the contrastive head and does not abstain.
         """
         value, _info = self.query(question, group=group, mode="top1")
         if value is None:

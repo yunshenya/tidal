@@ -36,8 +36,10 @@ No self, or two selves, and that question abstains. A nickname, a listed
 diminutive, pinyin, a dropped surname, or a short honorific is that stored
 person. A following verb or time word is still that person (``唐宁选的``,
 ``王伟平时``). One extra syllable that continues a personal name is not
-(``王伟强的``). An unmatched name in the cue's name slot is an absent
-person. The asked relation is a lexical cue when that cue is unambiguous,
+(``王伟强的``). One same-script edit of a stored name is that person only
+when ``active`` names exactly that person and the span is not a longer
+name. An empty ``active`` leaves the edit unmatched. An unmatched name in
+the cue's name slot is an absent person. The asked relation is a lexical cue when that cue is unambiguous,
 unless the abstain ridge disagrees by a wide gap, or every span of that cue
 sits in a dismissed clause and a later clause is the ask. A dismissed cue
 does not win. When the abstain ridge's top label is that cue, the next
@@ -701,13 +703,17 @@ def dialogue_selves(
     return tuple(found)
 
 
-def _unmatched_person_mentioned(text: str, names: Sequence[Optional[str]]) -> bool:
+def _unmatched_person_mentioned(
+    text: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str] = (),
+) -> bool:
     """An unmatched name is in the question, so a hearer description is not the ask."""
     from tidal.question_name_align import diagnose, load_aligner
 
     if load_aligner() is None:
         return True
-    info = diagnose(text, names)
+    info = diagnose(text, names, active)
     return bool(info["unknown"]) or bool(info["force_absent"])
 
 
@@ -715,22 +721,24 @@ def ask_people(
     text: str,
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
+    active: Sequence[str] = (),
 ) -> List[str]:
     """Stored people this question is about.
 
     Name matches stay, including a nickname, pinyin, or a short honorific.
-    An indirect hearer description resolves to the unique dialogue-self when
-    every stored surface is present. It does not resolve to the last write,
-    to the only person in the store, or to the only person who has the
-    relation. No surface, no self, or two selves, and the description
-    selects nobody. No enable flag.
+    ``active`` adds one non-extension edit of a recently mentioned person
+    and nothing else. An indirect hearer description resolves to the unique
+    dialogue-self when every stored surface is present. It does not resolve
+    to the last write, to the only person in the store, or to the only
+    person who has the relation. No surface, no self, or two selves, and
+    the description selects nobody. No enable flag.
     """
-    matched = _matched_names(text, names)
+    matched = _matched_names(text, names, active)
     if matched:
         return list(matched)
     if not is_indirect_hearer(text) or surfaces is None:
         return []
-    if _unmatched_person_mentioned(text, names):
+    if _unmatched_person_mentioned(text, names, active):
         return []
     selves = dialogue_selves(names, surfaces)
     if not selves or len(selves) != 1:
@@ -979,6 +987,7 @@ def ask_targets(
     text: str,
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
+    active: Sequence[str] = (),
 ) -> List[str]:
     """Stored people the ask is about, after a two-name question is narrowed.
 
@@ -989,7 +998,7 @@ def ask_targets(
     every remaining match stays. Cue-nearest is not applied here. No enable
     flag.
     """
-    matched = ask_people(text, names, surfaces)
+    matched = ask_people(text, names, surfaces, active)
     if len(matched) < 2:
         return list(matched)
     kept = _without_dismissed(text, matched)
@@ -1356,19 +1365,23 @@ def _abstain_pred_dropping(query_emb: np.ndarray, Wa: np.ndarray, dropped: str) 
     return LABELS[order[0]], gap
 
 
-def _matched_names(text: str, names: Sequence[Optional[str]]) -> List[str]:
+def _matched_names(
+    text: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str] = (),
+) -> List[str]:
     """Stored people the question is about.
 
     Lexical hits stay. A small logistic head adds a nickname, pinyin, a
     dropped surname, or a short honorific. A closed diminutive list adds a
-    suppletive nickname when the head abstains. An unmatched name in the cue's
-    name slot clears the list. No enable flag. The head is
-    ``question_name_align`` and is loaded here so this module does not import
-    it at startup.
+    suppletive nickname when the head abstains. ``active`` adds one
+    non-extension edit. An unmatched name in the cue's name slot clears the
+    list. No enable flag. The head is ``question_name_align`` and is loaded
+    here so this module does not import it at startup.
     """
     from tidal.question_name_align import matched_people
 
-    return matched_people(text, names)
+    return matched_people(text, names, active)
 
 
 def _rows_for(names: Sequence[Optional[str]], chosen: Sequence[str]) -> Optional[List[int]]:
@@ -1383,6 +1396,7 @@ def matched_fact_rows(
     text: Optional[str],
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
+    active: Sequence[str] = (),
 ) -> Optional[List[int]]:
     """Indices of the people ``ask_targets`` returned, or None.
 
@@ -1396,7 +1410,7 @@ def matched_fact_rows(
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = ask_targets(text, names, surfaces)
+    matched = ask_targets(text, names, surfaces, active)
     if not matched:
         return None
     return _rows_for(names, matched)
@@ -1406,6 +1420,7 @@ def selected_fact_rows(
     text: Optional[str],
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
+    active: Sequence[str] = (),
 ) -> Optional[List[int]]:
     """Indices abstain uses for ``missing_rel``.
 
@@ -1417,7 +1432,7 @@ def selected_fact_rows(
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = ask_targets(text, names, surfaces)
+    matched = ask_targets(text, names, surfaces, active)
     if not matched:
         return None
     matched = _focus_names(text, matched, lex_labels(text))
@@ -1457,6 +1472,7 @@ def surface_abstain(
     query_text: Optional[str] = None,
     margin: Optional[float] = None,
     surfaces: Optional[Sequence[Optional[str]]] = None,
+    active: Sequence[str] = (),
 ) -> Optional[str]:
     """``missing_rel`` or ``absent_person`` when a flat-row ask should return no fact.
 
@@ -1516,7 +1532,7 @@ def surface_abstain(
         weights = load_weights()
     if weights is None:
         return None
-    rows = selected_fact_rows(query_text, names, surfaces)
+    rows = selected_fact_rows(query_text, names, surfaces, active)
     cos_embs = np.asarray(key_embs, dtype=np.float64)
     if rows is not None:
         cos_embs = cos_embs[rows]

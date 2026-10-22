@@ -20,7 +20,10 @@ cast a separate vote, and scoring it would load the encoder on ordinary asks.
 
 A one-edit same-script pair is not a match: the dev bank labels that edit
 both ways. A longer span that still contains the stored name in order is not
-a new match either (``Harrold``, ``老孙悦``, ``孙悦然``).
+a new match either (``Harrold``, ``老孙悦``, ``孙悦然``). The one exception
+is an active dialogue name: when ``active`` holds exactly one stored person
+at edit distance 1, and the span is not that longer form, the span is that
+person. An empty ``active`` leaves the edit unmatched.
 
 A closed alias list maps a suppletive diminutive to its full given name and
 the full name back to the diminutive. It is not a feature and it does not
@@ -326,6 +329,37 @@ def _ambiguous_edit(span: str, name: str) -> bool:
         return False
     dist = _lev(span_c, name_c)
     return dist == 1
+
+
+def dialogue_licensed_edit(
+    span: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str] = (),
+) -> Optional[str]:
+    """The one active stored name at edit distance 1, or None.
+
+    Extensions stay rejected: a longer span that still contains the stored
+    name is a different person even when the shorter name was just mentioned.
+    Zero active names, or two at distance 1, leave the span unmatched. An
+    empty ``active`` is that zero.
+    """
+    if not active:
+        return None
+    live = {name for name in active if isinstance(name, str) and name}
+    hits: List[str] = []
+    seen = set()
+    for name in names:
+        if not isinstance(name, str) or name == "" or name not in live or name in seen:
+            continue
+        if _extension(span, name) or _extension(_core(span), name):
+            continue
+        if not _ambiguous_edit(span, name):
+            continue
+        seen.add(name)
+        hits.append(name)
+    if len(hits) != 1:
+        return None
+    return hits[0]
 
 
 def _substr_len(span: str, name: str) -> int:
@@ -736,12 +770,21 @@ def _unknown_is_focus(
     return best is not None and best[1] == "u"
 
 
-def diagnose(text: str, names: Sequence[Optional[str]]) -> dict:
-    """Why a question matched the names it did. Used by the fit report."""
+def diagnose(
+    text: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str] = (),
+) -> dict:
+    """Why a question matched the names it did. Used by the fit report.
+
+    ``active`` is the conversational name list. It licenses one non-extension
+    edit and nothing else. Empty leaves the head's decision unchanged.
+    """
     roster = [n for n in names if isinstance(n, str) and n]
     weights = load_aligner()
     lexical = _lexical(text, roster)
     added: List[str] = []
+    dialogue: List[str] = []
     aligned_at: Dict[str, List[Tuple[int, int]]] = {name: [] for name in roster}
     from tidal.question_surface import name_spans
 
@@ -753,10 +796,16 @@ def diagnose(text: str, names: Sequence[Optional[str]]) -> dict:
             if span in _CJK_FUNCTION:
                 continue
             choice = best_name(span, roster, weights)
+            via_dialogue = False
+            if choice is None:
+                choice = dialogue_licensed_edit(span, roster, active)
+                via_dialogue = choice is not None
             if choice is not None:
                 aligned_at.setdefault(choice, []).append((start, end))
                 if choice not in lexical and choice not in added:
                     added.append(choice)
+                if via_dialogue and choice not in dialogue:
+                    dialogue.append(choice)
                 continue
             if not _unknown_person(span, roster, text, start, end):
                 continue
@@ -782,25 +831,31 @@ def diagnose(text: str, names: Sequence[Optional[str]]) -> dict:
     return {
         "lexical": lexical,
         "added": added,
+        "dialogue": dialogue,
         "unknown": [(start, end, span) for start, end, span in unknown],
         "matched": [] if force else matched,
         "force_absent": force,
     }
 
 
-def matched_people(text: str, names: Sequence[Optional[str]]) -> List[str]:
+def matched_people(
+    text: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str] = (),
+) -> List[str]:
     """Stored people the question is about.
 
     Lexical hits stay. The head adds a nickname, a short honorific, a dropped
     surname, or pinyin. The alias list adds a suppletive diminutive when the
-    head abstains. An unmatched name in the cue's name slot clears the
-    list: the asked person is not stored.
+    head abstains. An active dialogue name adds one non-extension edit when
+    that is the only such name. An unmatched name in the cue's name slot
+    clears the list: the asked person is not stored.
     """
     if not text or not any(isinstance(n, str) and n for n in names):
         return []
     if not BUNDLE.is_file() and _WEIGHTS is None:
         return _lexical(text, [n for n in names if isinstance(n, str) and n])
-    return diagnose(text, names)["matched"]
+    return diagnose(text, names, active)["matched"]
 
 
 def _pairs_from_dev() -> List[Tuple[str, str, int]]:
