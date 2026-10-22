@@ -10,7 +10,11 @@ lost many more. See ``docs/llm_memory.md``.
 The value is an answer-span pool of that layer's hidden state. It is not
 L2-normalized: magnitude is what the identity copy-through needs. A phone-like
 answer (at least seven digits) pools only the last four answer tokens, which
-are the variable digits; every other answer pools the whole span. The key is
+are the variable digits. A birthday in the generator spelling
+(``March 4, 1991``) is not averaged: the value concatenates the leading
+coordinates of the month token, the day-tens token (zeros for a one-digit
+day), the day-ones token, and each of the four year-digit tokens. Every other
+answer pools the whole span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
@@ -21,8 +25,9 @@ estimated once from a calibration set and stored with the module. The add is
 with ``scale`` fixed at 1 and the MLP's last layer initialized to zeros, so an
 untrained module copies ``v`` through. When this wrapper loads the default
 SmolLM2-135M checkpoint at the default layer, that MLP is replaced by the
-shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP, plus a
-linear readout that spells ``+1-415-555-dddd`` from a phone value). A
+shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP, plus
+linear readouts that spell ``+1-415-555-dddd`` from a phone value and
+``Month D, YYYY`` from a birthday value). A
 caller-supplied model, another checkpoint, or another layer keeps the zero
 last layer until :meth:`LLMMemory.load_inject`. There is no switch. This is
 the A2s inject from
@@ -47,6 +52,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tidal.episodic import EpisodicStore
+from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
+from tidal.llm_memory_data import parse_date
 
 DEFAULT_MODEL = "HuggingFaceTB/SmolLM2-135M"
 DEFAULT_CAPACITY = 256
@@ -61,10 +68,27 @@ _KEY_CENTER_FILE = "llm_key_center.npz"
 # 1500-step inject trained after the key-center fix. ``save_inject`` dict.
 _INJECT_FILE = "llm_inject_smollm2_135m.pt"
 # Phone answers in ``llm_memory_data`` are ``+1-415-555-`` plus four digits.
-# Seven digits leaves ``111`` and birthdays on the full-span mean.
+# Seven digits leaves ``111`` on the full-span mean. Birthdays are detected
+# by spelling, not by digit count, and use the date slice pool.
 PHONE_DIGIT_MIN = 7
 PHONE_TAIL = "+1-415-555-"
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
+# Month, day-tens, day-ones, then four year digits. Absent from a checkpoint
+# that was saved before the date readout; those buffers stay at init.
+_DATE_KEYS = (
+    "date_on",
+    "date_mu",
+    "date_sd",
+    "date_month_w",
+    "date_month_b",
+    "date_digit_w",
+    "date_digit_b",
+)
+_READOUT_KEYS = _PHONE_KEYS + _DATE_KEYS
+# Shares of the value vector. Day-tens is the small block: it is a zero vector
+# for days 1–9, and only digits 0–2 occur for days 1–27. The rest is split
+# evenly across the month token, the day-ones token, and the four year digits.
+_DATE_BLOCK_PARTS = (2, 1, 2, 2, 2, 2, 2)
 
 # Held-out of the eval names in ``tidal.llm_memory_data``. One fact prefix and
 # one question per name and relation. Answers are stripped from the key, so
@@ -191,6 +215,94 @@ def phone_like(answer: str) -> bool:
     return sum(ch.isdigit() for ch in str(answer)) >= PHONE_DIGIT_MIN
 
 
+def date_like(answer: str) -> bool:
+    """True for the generator spelling ``Month D, YYYY`` (day 1–27, year 1970–2019)."""
+    return parse_date(answer) is not None
+
+
+def date_block_sizes(hidden: int) -> list:
+    """Widths of the seven date blocks. They sum to ``hidden``.
+
+    Order is month, day-tens, day-ones, year thousands, hundreds, tens, ones.
+    On the shipped 576-d SmolLM2 value this is 88, 44, 88, 89, 89, 89, 89.
+    """
+    hidden = int(hidden)
+    parts = _DATE_BLOCK_PARTS
+    if hidden < len(parts):
+        raise ValueError(f"date pool needs at least {len(parts)} coordinates, got {hidden}")
+    total = sum(parts)
+    sizes = [hidden * part // total for part in parts]
+    remainder = hidden - sum(sizes)
+    for i in range(remainder):
+        sizes[3 + (i % 4)] += 1
+    if sum(sizes) != hidden or any(size < 1 for size in sizes):
+        raise RuntimeError(f"date block sizes {sizes} do not cover hidden {hidden}")
+    return sizes
+
+
+def assemble_date_value(
+    month: torch.Tensor,
+    day_rows: Sequence[torch.Tensor],
+    year_rows: Sequence[torch.Tensor],
+) -> torch.Tensor:
+    """Concatenate leading coordinates of the month, day, and year tokens.
+
+    ``day_rows`` is one token (days 1–9) or two (the tens digit, then the ones
+    digit). A one-digit day stores zeros in the tens block. ``year_rows`` is
+    the four digit tokens, thousands first. Averaging those tokens is what
+    makes a linear readout miss the day: the year tokens move by L2 4 when
+    the day changes, and the day token moves by L2 82.
+    """
+    if len(year_rows) != 4 or len(day_rows) not in (1, 2):
+        raise ValueError("date pool expects 1 or 2 day tokens and 4 year tokens")
+    month = month.reshape(-1)
+    hidden = int(month.numel())
+    sizes = date_block_sizes(hidden)
+    zeros = torch.zeros(hidden, dtype=month.dtype, device=month.device)
+    day_tens = day_rows[0].reshape(-1) if len(day_rows) == 2 else zeros
+    day_ones = day_rows[-1].reshape(-1)
+    vectors = [month, day_tens, day_ones, *(row.reshape(-1) for row in year_rows)]
+    for vec in vectors:
+        if int(vec.numel()) != hidden:
+            raise ValueError(f"date token dim {int(vec.numel())} != {hidden}")
+    return torch.cat([vec[:width] for vec, width in zip(vectors, sizes)], dim=0).to(dtype=torch.float32)
+
+
+def _date_components(hidden: torch.Tensor, offsets: Sequence[tuple], text: str, answer: str):
+    """Month vector and day/year token rows, or None when the tokens do not line up.
+
+    SmolLM2 splits ``March 4, 1991`` into one month token, one or two day
+    digit tokens, and four year digit tokens. A tokenizer that merges the
+    year returns None so the caller keeps the whole-span mean.
+    """
+    parsed = parse_date(answer)
+    if parsed is None:
+        return None
+    _month_i, _day, _year, spans = parsed
+    start = text.rfind(answer)
+    if start < 0 or len(offsets) != hidden.shape[0]:
+        return None
+    groups = {"month": [], "day": [], "year": []}
+    end = start + len(answer)
+    for i, (a, b) in enumerate(offsets):
+        a, b = int(a), int(b)
+        if not (b > start and a < end and a != b):
+            continue
+        rel_a, rel_b = a - start, b - start
+        best = None
+        best_n = 0
+        for name, (left, right) in spans.items():
+            overlap = max(0, min(rel_b, right) - max(rel_a, left))
+            if overlap > best_n:
+                best, best_n = name, overlap
+        if best is not None:
+            groups[best].append(hidden[i])
+    if not groups["month"] or len(groups["year"]) != 4 or len(groups["day"]) not in (1, 2):
+        return None
+    month = torch.stack(groups["month"]).mean(dim=0)
+    return month, groups["day"], groups["year"]
+
+
 def pool_answer(hidden: torch.Tensor, mask: Sequence[bool], answer: str) -> torch.Tensor:
     """Value pool at the inject layer. Not L2-normalized.
 
@@ -198,8 +310,10 @@ def pool_answer(hidden: torch.Tensor, mask: Sequence[bool], answer: str) -> torc
     SmolLM2 those tokens are the four variable digits; a mean of the whole
     ``+1-415-555-dddd`` span moves only L2 3.93 when the last digit changes
     (norm 147.66), and the last token alone is a weaker linear code for
-    the first of those digits than the four-token mean. Every other answer
-    uses :func:`pool_masked`. A one-token span is the same vector either way.
+    the first of those digits than the four-token mean. Date answers are
+    not pooled here; :meth:`LLMMemory.encode_value` concatenates field
+    tokens instead. Every other answer uses :func:`pool_masked`. A one-token
+    span is the same vector either way.
     """
     if hidden.dim() != 2:
         raise ValueError(f"pool expected [tokens, hidden], got {tuple(hidden.shape)}")
@@ -336,9 +450,9 @@ def _inject_state_fits(module: nn.Module, state) -> bool:
 
 
 def _inject_core_fits(module: nn.Module, state) -> bool:
-    """MLP tensors match. Phone-readout buffers may be absent.
+    """MLP tensors match. Phone and date readout buffers may be absent.
 
-    A checkpoint saved before the readout only has the MLP keys. Unknown keys
+    A checkpoint saved before a readout only has the MLP keys. Unknown keys
     and shape mismatches do not fit.
     """
     if not isinstance(state, dict):
@@ -346,7 +460,7 @@ def _inject_core_fits(module: nn.Module, state) -> bool:
     current = module.state_dict()
     if not set(state) <= set(current):
         return False
-    required = [key for key in current if key not in _PHONE_KEYS]
+    required = [key for key in current if key not in _READOUT_KEYS]
     if not set(required) <= set(state):
         return False
     for key, got in state.items():
@@ -358,7 +472,7 @@ def _inject_core_fits(module: nn.Module, state) -> bool:
 
 
 def _load_inject_tensors(module: nn.Module, state) -> None:
-    """Load ``state`` onto ``module``. Missing phone buffers stay at init."""
+    """Load ``state`` onto ``module``. Missing readout buffers stay at init."""
     if not _inject_core_fits(module, state):
         raise ValueError("inject tensors do not match this MLP")
     merged = {key: tensor.detach().cpu().clone() for key, tensor in module.state_dict().items()}
@@ -389,6 +503,18 @@ class InjectMLP(nn.Module):
         self.register_buffer("phone_sd", torch.ones(d, dtype=torch.float32))
         self.register_buffer("phone_w", torch.zeros(4, 10, d, dtype=torch.float32))
         self.register_buffer("phone_b", torch.zeros(4, 10, dtype=torch.float32))
+        # Linear birthday readout. ``date_on`` stays 0 until a fit writes it.
+        # ``date_month_w[m]`` is month 0–11 (January–December).
+        # ``date_digit_w`` is day-tens, day-ones, then the four year digits.
+        # ``date_digit_b`` is 0 for a digit the fit saw and a large negative
+        # for one it did not, same as ``phone_b``.
+        self.register_buffer("date_on", torch.zeros((), dtype=torch.float32))
+        self.register_buffer("date_mu", torch.zeros(d, dtype=torch.float32))
+        self.register_buffer("date_sd", torch.ones(d, dtype=torch.float32))
+        self.register_buffer("date_month_w", torch.zeros(12, d, dtype=torch.float32))
+        self.register_buffer("date_month_b", torch.zeros(12, dtype=torch.float32))
+        self.register_buffer("date_digit_w", torch.zeros(6, 10, d, dtype=torch.float32))
+        self.register_buffer("date_digit_b", torch.zeros(6, 10, dtype=torch.float32))
 
     def forward(self, value: torch.Tensor) -> torch.Tensor:
         scaled = value * self.scale
@@ -404,6 +530,31 @@ class InjectMLP(nn.Module):
         z = (v - self.phone_mu) / self.phone_sd
         logits = torch.einsum("d,pcd->pc", z, self.phone_w) + self.phone_b
         return [int(i) for i in torch.argmax(logits, dim=-1).tolist()]
+
+    def date_fields(self, value: torch.Tensor) -> Optional[tuple]:
+        """``(month_index, day, year)`` from a date value, or None when the readout is off."""
+        if float(self.date_on.detach().cpu()) == 0.0:
+            return None
+        v = value.detach().to(dtype=torch.float32, device=self.date_mu.device).reshape(-1)
+        if v.numel() != self.date_mu.numel():
+            raise ValueError(f"date value dim {v.numel()} != {self.date_mu.numel()}")
+        z = (v - self.date_mu) / self.date_sd
+        month = int(torch.argmax(self.date_month_w @ z + self.date_month_b).item())
+        logits = torch.einsum("d,pcd->pc", z, self.date_digit_w) + self.date_digit_b
+        digits = [int(i) for i in torch.argmax(logits, dim=-1).tolist()]
+        day = digits[0] * 10 + digits[1]
+        year = digits[2] * 1000 + digits[3] * 100 + digits[4] * 10 + digits[5]
+        return month, day, year
+
+    def date_spelling(self, value: torch.Tensor) -> Optional[str]:
+        """``Month D, YYYY`` from :meth:`date_fields`, or None when the readout is off."""
+        fields = self.date_fields(value)
+        if fields is None:
+            return None
+        month, day, year = fields
+        if not 0 <= int(month) < len(DATE_MONTHS):
+            return None
+        return f"{DATE_MONTHS[int(month)]} {int(day)}, {int(year)}"
 
 
 class ByteTokenizer:
@@ -845,11 +996,21 @@ class LLMMemory:
     def encode_value(self, text: str, answer: str) -> np.ndarray:
         """Answer-span pool at the inject layer. Not L2-normalized.
 
-        Phone-like answers pool the last four answer tokens. Other answers
-        pool the whole span. See :func:`pool_answer`.
+        Phone-like answers pool the last four answer tokens. Date answers
+        concatenate field-token slices (:func:`assemble_date_value`). Other
+        answers pool the whole span. A date whose tokenizer does not yield
+        1–2 day tokens and 4 year tokens falls back to the whole-span mean.
         """
         hidden, enc = self._run_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
+        if date_like(answer):
+            offsets = _offset_pairs(enc)
+            if offsets is not None:
+                parts = _date_components(hidden, offsets, text, answer)
+                if parts is not None:
+                    month, day_rows, year_rows = parts
+                    packed = assemble_date_value(month, day_rows, year_rows)
+                    return packed.detach().cpu().numpy().astype(np.float32, copy=False)
         return pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
 
     def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
@@ -1016,29 +1177,39 @@ class LLMMemory:
             self._delta = None
 
     def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
-        """Token ids spelled by the phone readout, or None to use the LM.
+        """Token ids spelled by a linear readout, or None to use the LM.
 
-        Hard top-1. When the winning slot is a phone and this module's phone
-        readout is on, the ids are ``+1-415-555-`` plus the four digits read
-        from that slot's value. An empty store, any other relation, or a
-        readout that is still zero returns None. ``max_new_tokens`` truncates
-        the id list.
+        Hard top-1. A winning phone slot with the phone readout on spells
+        ``+1-415-555-`` plus the four digits. A winning birthday slot with
+        the date readout on spells ``Month D, YYYY``. An empty store, any
+        other relation, or a readout that is still zero returns None.
+        ``max_new_tokens`` truncates the id list.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
         if int(max_new_tokens) < 0:
             raise ValueError("max_new_tokens must be >= 0")
-        if len(self.store) == 0 or float(self.inject.phone_on.detach().cpu()) == 0.0:
+        phone_on = float(self.inject.phone_on.detach().cpu()) != 0.0
+        date_on = float(self.inject.date_on.detach().cpu()) != 0.0
+        if len(self.store) == 0 or not (phone_on or date_on):
             return None
         query = self._query_vector(prompt)
         value, info = self.store.read(query, mode="top1")
         top = info.get("top") if isinstance(info, dict) else None
-        if value is None or not top or top[1] != "phone":
+        if value is None or not top:
             return None
-        digits = self.inject.phone_digits(torch.as_tensor(np.asarray(value, dtype=np.float32)))
-        if digits is None:
+        rel = top[1]
+        value_t = torch.as_tensor(np.asarray(value, dtype=np.float32))
+        spelled = None
+        if rel == "phone" and phone_on:
+            digits = self.inject.phone_digits(value_t)
+            if digits is not None:
+                spelled = PHONE_TAIL + "".join(str(d) for d in digits)
+        elif rel == "birthday" and date_on:
+            spelled = self.inject.date_spelling(value_t)
+        if spelled is None:
             return None
-        ids = _id_list(self.tokenizer, PHONE_TAIL + "".join(str(d) for d in digits), add_special_tokens=False)
+        ids = _id_list(self.tokenizer, spelled, add_special_tokens=False)
         return ids[: int(max_new_tokens)]
 
     def continuation_ids(
@@ -1070,8 +1241,9 @@ class LLMMemory:
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        A phone slot with the shipped readout is spelled from that value
-        before the LM runs. Leading whitespace is skipped before the stop, so
+        A phone slot is spelled from the phone readout, and a birthday slot
+        from the date readout, before the LM runs. Leading whitespace is
+        skipped before the stop, so
         a natural question whose first token is a newline still yields the
         following line. The span then ends at the next newline or at
         sentence-ending punctuation.

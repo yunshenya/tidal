@@ -100,6 +100,36 @@ def names(split: str) -> tuple:
     raise ValueError(f"split must be 'train' or 'test', got {split!r}")
 
 
+_DATE_RE = re.compile(
+    r"^(" + "|".join(_MONTHS) + r") ([1-9]|1[0-9]|2[0-7]), (19[7-9][0-9]|20[0-1][0-9])$"
+)
+
+
+def parse_date(answer: str):
+    """``(month_index, day, year, spans)`` for this generator's spelling, else None.
+
+    The spelling is ``Month D, YYYY``: day 1–27 with no leading zero, year
+    1970–2019. Spans are character intervals of the month word, the day
+    digits, and the four year digits inside ``answer``. ``1991-03-03`` and
+    ``March 04, 1991`` do not parse. ``_answer('birthday', ...)`` only emits
+    strings that do.
+    """
+    if not isinstance(answer, str):
+        return None
+    found = _DATE_RE.fullmatch(answer)
+    if found is None:
+        return None
+    month, day_s, year_s = found.group(1), found.group(2), found.group(3)
+    day_at = len(month) + 1
+    year_at = len(answer) - 4
+    spans = {
+        "month": (0, len(month)),
+        "day": (day_at, day_at + len(day_s)),
+        "year": (year_at, year_at + 4),
+    }
+    return _MONTHS.index(month), int(day_s), int(year_s), spans
+
+
 def norm(text: str) -> str:
     """Lowercase letters and digits only, for containment checks."""
     return re.sub(r"[^a-z0-9]+", "", str(text).lower())

@@ -582,6 +582,10 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
     assert float(ckpt["inject"]["phone_on"]) == 1.0
     assert tuple(ckpt["inject"]["phone_w"].shape) == (4, 10, 576)
     assert tuple(ckpt["inject"]["phone_b"].shape) == (4, 10)
+    assert float(ckpt["inject"]["date_on"]) == 1.0
+    assert tuple(ckpt["inject"]["date_month_w"].shape) == (12, 576)
+    assert tuple(ckpt["inject"]["date_digit_w"].shape) == (6, 10, 576)
+    assert tuple(ckpt["inject"]["date_digit_b"].shape) == (6, 10)
 
     _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
     mem = LLMMemory()
@@ -597,6 +601,7 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
         assert torch.equal(blank(value), value)
         assert not torch.equal(mem.inject(value).cpu(), value)
         assert float(mem.inject.phone_on) == 1.0
+        assert float(mem.inject.date_on) == 1.0
     finally:
         mem.close()
 
@@ -671,6 +676,125 @@ def test_phone_pool_is_the_last_four_digit_tokens():
         assert np.allclose(pooled, mem.model.embed.weight[ord("1")].detach().numpy())
         city = mem.encode_value("Ada lives in Oslo", "Oslo")
         assert not np.allclose(city, mem.model.embed.weight[ord("o")].detach().numpy())
+    finally:
+        mem.close()
+
+
+def test_parse_date_is_the_generator_spelling():
+    from tidal.llm_memory_data import parse_date
+
+    assert parse_date("March 4, 1991")[:3] == (2, 4, 1991)
+    assert parse_date("September 27, 2019")[:3] == (8, 27, 2019)
+    assert parse_date("May 1, 1970")[:3] == (4, 1, 1970)
+    for text in ("March 28, 1991", "March 04, 1991", "1991-03-04", "March 4 1991", "3 March 1991", "Oslo"):
+        assert parse_date(text) is None
+
+
+def test_date_block_sizes_match_the_measured_split():
+    from tidal.llm_memory import date_block_sizes
+
+    assert date_block_sizes(576) == [88, 44, 88, 89, 89, 89, 89]
+    assert sum(date_block_sizes(260)) == 260
+    assert sum(date_block_sizes(32)) == 32
+    assert min(date_block_sizes(32)) >= 1
+
+
+def test_date_pool_slices_month_day_and_year_tokens():
+    from tidal.llm_memory import assemble_date_value, date_block_sizes
+
+    mem = _byte_memory()
+    try:
+        sizes = date_block_sizes(mem.hidden)
+        single = "March 4, 1991"
+        pooled = mem.encode_value(f"Ada's birthday is {single}", single)
+        emb = mem.model.embed.weight.detach().numpy()
+        month = emb[[ord(ch) for ch in "March"]].mean(axis=0)
+        parts = [month[: sizes[0]], np.zeros(sizes[1], dtype=np.float32), emb[ord("4")][: sizes[2]]]
+        for i, ch in enumerate("1991"):
+            parts.append(emb[ord(ch)][: sizes[3 + i]])
+        assert np.allclose(pooled, np.concatenate(parts))
+        span = emb[[ord(ch) for ch in single]].mean(axis=0)
+        assert not np.allclose(pooled, span)
+
+        double = "March 14, 1991"
+        pooled = mem.encode_value(f"Ada's birthday is {double}", double)
+        parts = [
+            month[: sizes[0]],
+            emb[ord("1")][: sizes[1]],
+            emb[ord("4")][: sizes[2]],
+        ]
+        for i, ch in enumerate("1991"):
+            parts.append(emb[ord(ch)][: sizes[3 + i]])
+        assert np.allclose(pooled, np.concatenate(parts))
+
+        hidden = mem.hidden
+        month_v = torch.arange(hidden, dtype=torch.float32)
+        day_v = torch.arange(hidden, dtype=torch.float32) + 100
+        year_vs = [torch.arange(hidden, dtype=torch.float32) + 200 + 10 * i for i in range(4)]
+        packed = assemble_date_value(month_v, [day_v], year_vs)
+        assert int(packed.numel()) == hidden
+        assert torch.equal(packed[: sizes[0]], month_v[: sizes[0]])
+        assert torch.equal(packed[sizes[0] : sizes[0] + sizes[1]], torch.zeros(sizes[1]))
+        city = mem.encode_value("Ada lives in Oslo", "Oslo")
+        assert not np.allclose(city, pooled)
+    finally:
+        mem.close()
+
+
+def test_date_readout_spells_birthday_and_skips_other_relations():
+    mem = _byte_memory()
+    try:
+        mem.inject.date_on.fill_(1.0)
+        mem.inject.date_sd.fill_(1.0)
+        mem.inject.phone_on.fill_(1.0)
+        mem.inject.phone_sd.fill_(1.0)
+        # March is index 2. Day 04, year 1991.
+        mem.inject.date_month_w[2, 0] = 1.0
+        for pos, digit in enumerate((0, 4, 1, 9, 9, 1)):
+            mem.inject.date_digit_w[pos, digit, 0] = 1.0
+        for pos, digit in enumerate((2, 4, 9, 9)):
+            mem.inject.phone_w[pos, digit, 0] = 1.0
+        value = np.zeros(mem.hidden, dtype=np.float32)
+        value[0] = 1.0
+        key = np.ones(mem.hidden, dtype=np.float32)
+        assert mem.store.write(key, value, name="ada", rel="birthday")
+        assert mem.generate("When is Ada's birthday?") == "March 4, 1991"
+        assert len(mem.continuation_ids("When is Ada's birthday?", max_new_tokens=4)) == 4
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="phone")
+        assert mem.generate("What is Ada's phone number?") == "+1-415-555-2499"
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="city")
+        assert mem.scripted_continuation("Which city does Ada live in?") is None
+        mem.inject.date_on.fill_(0.0)
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="birthday")
+        assert mem.scripted_continuation("When is Ada's birthday?") is None
+    finally:
+        mem.close()
+
+
+def test_load_inject_without_date_keys_leaves_the_readout_off(tmp_path):
+    mem = _byte_memory()
+    try:
+        with torch.no_grad():
+            mem.inject.net[-1].bias.fill_(0.5)
+        state = {
+            key: tensor.detach().cpu().clone()
+            for key, tensor in mem.inject.state_dict().items()
+            if not key.startswith("date_")
+        }
+        path = tmp_path / "mlp.pt"
+        torch.save({"inject": state, "layer": mem.layer, "hidden": mem.hidden}, path)
+        fresh = _byte_memory()
+        try:
+            assert float(fresh.inject.date_on) == 0.0
+            fresh.load_inject(path)
+            assert float(fresh.inject.date_on) == 0.0
+            assert torch.equal(fresh.inject.net[-1].bias.detach().cpu(), mem.inject.net[-1].bias.detach().cpu())
+            assert fresh.inject.date_fields(torch.zeros(fresh.hidden)) is None
+        finally:
+            fresh.close()
     finally:
         mem.close()
 
