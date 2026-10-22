@@ -433,6 +433,110 @@ def test_flat_row_abstain_returns_none_and_recall_does_not():
     assert lex_labels("To place a call through to Ingrid, what digits leave the booth?") == ("phone",)
 
 
+def test_selected_person_limits_ranking_and_missing_rel():
+    """A confident person match does not rank the rest of the store.
+
+    Maggie selects only Margaret. Mary Jane's birthday sentence can be closer
+    and still must not win. Ms. Jane selects Mary Jane through the substring
+    head, and a closer Margaret sentence must not take that fact. A two-name
+    question keeps every matched person in the ranker: cue-nearest still
+    decides ``missing_rel``, and it does not drop the other name from the
+    scores. A third person outside that set cannot win. Another person's
+    exact sentence does not cancel a missing relation.
+    """
+    from tidal.question_surface import limit_scores, matched_fact_rows, selected_fact_rows
+
+    cont, flat = _flat_model()
+
+    def unit(i, tilt=0.0, tilt_at=1):
+        vec = _axis(i).astype(np.float64)
+        if tilt:
+            vec[tilt_at] = tilt
+            vec /= np.linalg.norm(vec)
+        return vec.astype(np.float32)
+
+    def store(name, rel, value, emb):
+        assert cont.remember(
+            cont.embed_event(flat(), emb, surface=f"{name} {rel} card."),
+            value, name=name, rel=rel, group=None,
+        )
+
+    # Axis 1 is a birthday ridge call under LEX_RIDGE_GAP, so the cue stands.
+    # Axis 0 is a confident places call and would abstain these birthday asks.
+    close = unit(1)
+    far = unit(2, tilt=0.8, tilt_at=3)
+    maggie = "Under Maggie, which birthday is on file?"
+    assert matched_fact_rows(maggie, ["Margaret", "Mary Jane"]) == [0]
+    assert selected_fact_rows(maggie, ["Margaret", "Mary Jane"]) == [0]
+    store("Margaret", "birthday", "margaret-day", far)
+    store("Mary Jane", "birthday", "mary-day", close)
+    q = cont.embed_event(flat(), close, surface=maggie)
+    assert cont.ask(q, group=None) == "margaret-day"
+    scores = cont.rank_question_scores(q, group=None)
+    assert int(np.argmax(scores)) == 0
+    assert scores[0] > scores[1]
+
+    jane = "Under Ms. Jane, which birthday is on file?"
+    assert selected_fact_rows(jane, ["Margaret", "Mary Jane"]) == [1]
+    cont.episodic.clear()
+    store("Margaret", "birthday", "margaret-day", close)
+    store("Mary Jane", "birthday", "mary-day", far)
+    q = cont.embed_event(flat(), close.copy(), surface=jane)
+    assert cont.ask(q, group=None) == "mary-day"
+    assert int(np.argmax(cont.rank_question_scores(q, group=None))) == 1
+
+    both = "William birthday Mary Jane"
+    assert selected_fact_rows(both, ["William", "Mary Jane", "Ann"]) == [0, 1]
+    cont.episodic.clear()
+    store("William", "birthday", "william-day", unit(1, tilt=0.35, tilt_at=2))
+    store("Mary Jane", "birthday", "mary-day", unit(6))
+    store("Ann", "birthday", "ann-day", close)
+    q = cont.embed_event(flat(), close.copy(), surface=both)
+    assert cont.ask(q, group=None) == "william-day"
+
+    aside = "Leave William aside. The birthday to read belongs with Mary Jane."
+    # William is closer to the cue, so missing_rel looks only at him.
+    # Both names stay in the ranker. Mary Jane's sentence is closer, and a
+    # third person's exact copy still loses.
+    assert selected_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [0]
+    assert matched_fact_rows(aside, ["William", "Mary Jane", "Ann"]) == [0, 1]
+    cont.episodic.clear()
+    store("William", "birthday", "william-day", far)
+    store("Mary Jane", "birthday", "mary-day", unit(1, tilt=0.35, tilt_at=2))
+    store("Ann", "birthday", "ann-day", close)
+    q = cont.embed_event(flat(), close.copy(), surface=aside)
+    assert cont.ask(q, group=None) == "mary-day"
+
+    phone = "Which telephone belongs with Ingrid?"
+    cont.episodic.clear()
+    copied = unit(4)
+    store("Ingrid", "places", "ingrid-places", unit(1))
+    store("Jasper", "phone", "jasper-phone", copied)
+    q = cont.embed_event(flat(), copied.copy(), surface=phone)
+    assert cont.ask(q, group=None) is None
+    assert cont.ask_tokens(q, group=None) is None
+    _value, info = cont.query(q, group=None, mode="top1")
+    assert info["abstain"] == "missing_rel" and info["top"] is None
+    # The exact copy is Jasper's. Ranking still cannot pick him.
+    assert int(np.argmax(cont.rank_question_scores(q, group=None))) == 0
+
+    deictic = "When is your birthday?"
+    assert selected_fact_rows(deictic, ["Margaret", "Mary Jane"]) is None
+    cont.episodic.clear()
+    store("Margaret", "birthday", "margaret-day", far)
+    store("Mary Jane", "birthday", "mary-day", close)
+    q = cont.embed_event(flat(), close.copy(), surface=deictic)
+    assert cont.ask(q, group=None) == "mary-day"
+
+    raw = np.array([0.2, 0.9, 0.4], dtype=np.float64)
+    limited = limit_scores(raw, [0, 2])
+    assert limited[0] == raw[0] and limited[2] == raw[2]
+    assert limited[1] < min(raw[0], raw[2])
+    assert int(np.argmax(limited)) == 2
+    assert limit_scores(raw, None) is raw
+    assert np.array_equal(limit_scores(raw, [0, 1, 2]), raw)
+
+
 def test_abstain_margin_is_the_dev_rule():
     from tidal.question_surface import (
         ABSTAIN_MARGIN,

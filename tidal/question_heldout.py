@@ -10,8 +10,9 @@ and the stored key is the same name unit plus the forward relation unit plus
 ``heads`` / ``recall`` / replay stay on raw cosine. On these flat rows
 ``ask`` / ``query`` rank by sentence cosine plus the relation logit from
 ``question_surface`` (the sentence vector is the one passed into
-``embed_event``). The same call records the surface string, and ``ask``
-abstains when that string names a person who lacks the asked relation or
+``embed_event``). When the surface string has selected people, only their
+facts are ranked. The same call records the surface string, and ``ask``
+abstains when the cue-nearest person lacks the asked relation or the string
 names nobody and is not second person. Sparse name/relation rows still use
 the contrastive head and do not abstain.
 The decode is the same top-1 byte code either way.
