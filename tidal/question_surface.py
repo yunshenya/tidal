@@ -752,11 +752,167 @@ def _nearest_gap(spans: Sequence[Tuple[int, int]], cues: Sequence[Tuple[int, int
     return min(_span_gap(span, cue) for span in spans for cue in cues)
 
 
+def _span_inside(span: Tuple[int, int], regions: Sequence[Tuple[int, int]]) -> bool:
+    start, end = span
+    return any(left <= start and end <= right for left, right in regions)
+
+
+def _clause_bounds(text: str, pos: int) -> Tuple[int, int]:
+    """Half-open clause that contains ``pos``. Breaks are ``_clause_breaks``."""
+    start, end = 0, len(text)
+    for left, right in _clause_breaks(text):
+        if right <= pos:
+            start = right
+        elif left >= pos:
+            end = left
+            break
+    return start, end
+
+
+# Possessive marker after a name span. ``'s`` / ``'`` and ``的``.
+_EN_POSS_MARK = re.compile(r"\s*(?:'s|')(?![A-Za-z])", re.I)
+_ZH_POSS_MARK = re.compile(r"\s*的")
+# ``X and Y's`` / ``X和Y的`` share the cue. Both stay targets.
+_COORD_BEFORE = re.compile(r"(?:和|与|跟|\band\b)\s*$", re.I)
+_CLAUSE_TAIL = re.compile(r"^[\s。．.！!？?，,;；:：、]*$")
+
+
+def _poss_mark(text: str, end: int) -> Optional[int]:
+    """Index just after a possessive marker glued to a name, or None."""
+    matched = _EN_POSS_MARK.match(text[end:]) or _ZH_POSS_MARK.match(text[end:])
+    if matched is None:
+        return None
+    return end + matched.end()
+
+
+def _other_name_between(text: str, matched: Sequence[str], name: str, left: int, right: int) -> bool:
+    if right <= left:
+        return False
+    chunk = text[left:right]
+    for other in matched:
+        if other != name and name_spans(other, chunk):
+            return True
+    return False
+
+
+def _coord_partner(text: str, span_start: int, matched: Sequence[str], name: str) -> Optional[str]:
+    """The matched name joined to this span by ``and`` / ``和`` / ``与`` / ``跟``."""
+    before = text[:span_start]
+    coord = _COORD_BEFORE.search(before)
+    if coord is None:
+        return None
+    for other in matched:
+        if other == name:
+            continue
+        for start, end in name_spans(other, text):
+            if end <= coord.start() and before[end:coord.start()].strip() == "":
+                return other
+    return None
+
+
+def _without_dismissed(text: str, matched: Sequence[str]) -> List[str]:
+    """Drop a matched name that occurs only inside a dismissed clause.
+
+    The clause is the same closed class as ``cue_set_aside``. A name that
+    also occurs outside the clause stays. If every matched name is inside,
+    the list stays: a question about one dismissed person is still about
+    that person. A name with no lexical span stays (a nickname or pinyin
+    the string does not spell).
+    """
+    if len(matched) < 2:
+        return list(matched)
+    regions = _dismissed_regions(text)
+    if not regions:
+        return list(matched)
+    outside: List[str] = []
+    for name in matched:
+        spans = name_spans(name, text)
+        if not spans or any(not _span_inside(span, regions) for span in spans):
+            outside.append(name)
+    return outside or list(matched)
+
+
+def _cue_possessors(text: str, matched: Sequence[str]) -> List[str]:
+    """Matched names that possessively govern the unique live cue.
+
+    ``Name's cue`` / ``Name的cue`` (the cue follows the marker in the same
+    clause, and no other matched name sits between) or a possessive that
+    closes the cue's clause (``is Name's`` / ``是Name的``). A coordinated
+    partner (``X and Y's cue``, ``X和Y的cue``) is included, so the pair is
+    not narrowed to the second name. No unique live cue means nobody.
+    """
+    lex = lex_labels(text)
+    if len(lex) == 1 and cue_set_aside(text, lex[0]):
+        lex = ()
+    if len(lex) != 1 or len(matched) < 2:
+        return []
+    cues = _cue_spans(text, lex[0])
+    if not cues:
+        return []
+    found: List[str] = []
+
+    def _add(name: str) -> None:
+        if name not in found:
+            found.append(name)
+
+    for name in matched:
+        for start, end in name_spans(name, text):
+            poss_end = _poss_mark(text, end)
+            if poss_end is None:
+                continue
+            clause_start, clause_end = _clause_bounds(text, end)
+            governs = False
+            for cue_start, _cue_end in cues:
+                if poss_end <= cue_start < clause_end and not _other_name_between(
+                    text, matched, name, poss_end, cue_start,
+                ):
+                    governs = True
+                    break
+            if not governs and _CLAUSE_TAIL.match(text[poss_end:clause_end]):
+                for cue_start, cue_end in cues:
+                    if clause_start <= cue_start and cue_end <= start:
+                        governs = True
+                        break
+            if not governs:
+                continue
+            _add(name)
+            partner = _coord_partner(text, start, matched, name)
+            if partner is not None:
+                _add(partner)
+    return found
+
+
+def ask_targets(
+    text: str,
+    names: Sequence[Optional[str]],
+    surfaces: Optional[Sequence[Optional[str]]] = None,
+) -> List[str]:
+    """Stored people the ask is about, after a two-name question is narrowed.
+
+    ``ask_people`` is the match, including a resolved hearer. One match is
+    that person. Two matches drop a name that sits only in a dismissed
+    clause when the other remains, then keep a unique possessor of the live
+    cue. Otherwise every remaining match stays. Cue-nearest is not applied
+    here. No enable flag.
+    """
+    matched = ask_people(text, names, surfaces)
+    if len(matched) < 2:
+        return list(matched)
+    kept = _without_dismissed(text, matched)
+    if len(kept) >= 2:
+        possessors = _cue_possessors(text, kept)
+        if len(possessors) == 1:
+            kept = possessors
+    order = {name: i for i, name in enumerate(matched)}
+    return sorted(kept, key=lambda name: order.get(name, len(matched)))
+
+
 def _focus_names(text: str, matched: Sequence[str], lex: Sequence[str]) -> List[str]:
     """When several stored names match, keep those nearest a unique cue.
 
     Two stored names and no unique cue stay as the union. One matched name
-    is unchanged.
+    is unchanged. Dismissed names and a unique cue possessor are already
+    gone: ``ask_targets`` runs before this.
     """
     if len(matched) < 2 or len(lex) != 1:
         return list(matched)
@@ -1130,17 +1286,19 @@ def matched_fact_rows(
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
 ) -> Optional[List[int]]:
-    """Indices of the people ``ask_people`` returned, or None.
+    """Indices of the people ``ask_targets`` returned, or None.
 
     None leaves every fact in the ranker: no surface string, or the string
     selected nobody (an absent person, or a deictic question). A list is the
-    whole matched set, before the cue-nearest narrowing. Two stored names
-    in one question both stay. A resolved hearer is that one person, so the
-    other people's facts cannot win. There is no extra threshold and no flag.
+    ask-target set, before the cue-nearest narrowing. Two stored names both
+    stay unless one sits only in a dismissed clause or only one of them
+    possessively governs the live cue. A resolved hearer is that one person,
+    so the other people's facts cannot win. There is no extra threshold and
+    no flag.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = ask_people(text, names, surfaces)
+    matched = ask_targets(text, names, surfaces)
     if not matched:
         return None
     return _rows_for(names, matched)
@@ -1153,15 +1311,15 @@ def selected_fact_rows(
 ) -> Optional[List[int]]:
     """Indices abstain uses for ``missing_rel``.
 
-    ``matched_fact_rows`` after the cue-nearest focus rule. A distance tie
-    keeps every name at that distance. The ranker does not call this: a
-    two-name question still ranks every matched person. A resolved hearer
-    is one person, including when that name is not written in the question.
-    None means nobody was selected.
+    ``ask_targets`` after the cue-nearest focus rule. A distance tie keeps
+    every name at that distance. The ranker uses ``ask_targets`` without
+    that narrowing, so two names that are both still targets both stay in
+    the scores. A resolved hearer is one person, including when that name
+    is not written in the question. None means nobody was selected.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
-    matched = ask_people(text, names, surfaces)
+    matched = ask_targets(text, names, surfaces)
     if not matched:
         return None
     matched = _focus_names(text, matched, lex_labels(text))
@@ -1217,10 +1375,13 @@ def surface_abstain(
     name is answered by the ranker. A hearer description with exactly one
     first-person person is that person; the relation check then applies.
 
-    Several stored names and one lexical cue: only the names nearest that cue
-    count. An unmatched name in that cue's name slot clears the match, so the
-    asked person is not stored. A longer string that still contains a stored
-    name, such as a following verb or a title, is not a second person.
+    Two stored names: a name that occurs only inside a dismissed clause is
+    not the ask target when the other name remains, and a unique possessor
+    of the live cue is the ask target. Among whoever remains, one lexical
+    cue keeps the names nearest that cue. An unmatched name in that cue's
+    name slot clears the match, so the asked person is not stored. A longer
+    string that still contains a stored name, such as a following verb or a
+    title, is not a second person.
 
     A stored name: the asked relation is the unique lexical cue when there is
     one, unless the abstain ridge disagrees by at least ``LEX_RIDGE_GAP``,
