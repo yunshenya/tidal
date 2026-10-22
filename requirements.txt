@@ -13,4 +13,5 @@ onnxruntime>=1.18
 tokenizers>=0.19
 torch>=2.3          # training / export only; shadow inference needs only onnxruntime
 httpx>=0.27         # optional: synthetic-dialogue generator (tidal/synth.py)
+pypinyin>=0.50      # cross-script name alignment (pinyin of a stored Chinese name)
 pytest>=8           # tests
