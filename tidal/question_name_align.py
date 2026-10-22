@@ -22,6 +22,20 @@ A one-edit same-script pair is not a match: the dev bank labels that edit
 both ways. A longer span that still contains the stored name in order is not
 a new match either (``Harrold``, ``老孙悦``, ``孙悦然``).
 
+A closed alias list maps a suppletive diminutive to its full given name and
+the full name back to the diminutive. It is not a feature and it does not
+refit the head. The head's own decision stands when a span clears the
+threshold; the list is consulted only when the head abstains. The whole
+stored name has to be the member, so a diminutive of Dorothy does not attach
+to Dorothy Quinn. A diminutive shared by two full names matches only when
+exactly one of those names is stored. The surface form is title case, or an
+honorific plus title case. A lowercase word is not a name. Forms shorter
+than three letters, forms that are some other bank's person, and one edit of
+the full name are not on the list (``Ed``, ``Greta``, ``Anne``). Which forms
+survive is the nickname dev split. The adversarial test is not an input.
+Chinese given-name nicknames stay on the head (``小悦``, ``燕燕``). A surname
+diminutive is not on the list.
+
 An unmatched name in the cue's name slot is ``absent_person`` even when
 another stored name is in the string. The slot is the nearest person after
 the cue when there is one, otherwise the nearest person. A person here is a
@@ -104,6 +118,43 @@ _STOP_EXTRA = frozenset({
     "read", "reads", "reading", "keep", "keeps", "held", "hold", "holds",
     "one",
 })
+# Suppletive diminutives. Each item is (full given names, diminutives).
+# A surface form matches a stored form only when one side is a full name and
+# the other is a diminutive in the same item. Prefix nicknames of length 3
+# or more already clear the head (Liz, Cathy, Patty, Harry) and are not
+# repeated here. The nickname dev split drops a form that is shorter than
+# three letters, a form that names a person in another bank, or one edit of
+# its own full name. This tuple is that filter's output. No enable flag.
+ALIAS_GROUPS: Tuple[Tuple[Tuple[str, ...], Tuple[str, ...]], ...] = (
+    (("robert",), ("bob", "bobby")),
+    (("william",), ("bill", "billy", "liam")),
+    (("margaret",), ("maggie", "meg", "peggy")),
+    (("richard",), ("dick", "rick")),
+    (("james",), ("jim", "jimmy")),
+    (("john",), ("jack",)),
+    (("edward",), ("ted", "teddy", "ned")),
+    (("theodore",), ("ted", "teddy")),
+    (("charles",), ("chuck", "charlie")),
+    (("anthony",), ("tony",)),
+    (("michael",), ("mike",)),
+    (("joseph",), ("joe",)),
+    (("catherine", "katherine"), ("kate", "katie", "kathy")),
+    (("elizabeth",), ("beth", "betty")),
+    (("rebecca",), ("becky",)),
+    (("abigail",), ("abby",)),
+    (("dorothy",), ("dolly", "dot")),
+    (("virginia",), ("ginny",)),
+    (("barbara",), ("babs",)),
+    (("patricia",), ("tricia",)),
+    (("andrew",), ("drew",)),
+    (("susan",), ("susie",)),
+)
+for _cans, _dims in ALIAS_GROUPS:
+    if not isinstance(_cans, tuple) or not isinstance(_dims, tuple):
+        raise RuntimeError(f"alias group is not a pair of tuples: {_cans!r} {_dims!r}")
+    if any(len(form) < 3 for form in _dims):
+        raise RuntimeError(f"alias diminutive shorter than 3: {_dims!r}")
+del _cans, _dims
 
 _WEIGHTS: Optional[dict] = None
 _PY_CACHE: Dict[str, str] = {}
@@ -477,27 +528,87 @@ def rank_span(span: str, names: Sequence[str], weights: dict) -> List[Tuple[str,
     return scored
 
 
+def _alias_key(span: str) -> str:
+    """Title-case given name, or the same after a possessive. Empty otherwise.
+
+    ``Mr. Bob`` strips to ``Bob``. ``Becky's`` strips to ``Becky``. A lowercase
+    word (``ted``, ``will``, ``drew breath``) is not a name, and neither is a
+    two-letter token (``Ed``, ``Al``).
+    """
+    core = _core(span).strip()
+    matched = re.fullmatch(r"([A-Z][a-z]{2,14})(?:'s)?", core)
+    if matched is None:
+        return ""
+    key = matched.group(1).lower()
+    if key in _stopwords():
+        return ""
+    return key
+
+
+def _alias_fold(name: str) -> str:
+    """Single Latin token, lowercased. A multi-token name is not a member."""
+    parts = re.findall(r"[A-Za-z]+", name)
+    if len(parts) != 1:
+        return ""
+    return parts[0].lower()
+
+
+def _alias_name(span: str, names: Sequence[str]) -> Optional[str]:
+    """Stored name ``span`` aliases, or None.
+
+    One side is the full given name and the other is its diminutive. Two
+    stored hits, or a stored name that already is the surface form, abstain.
+    """
+    key = _alias_key(span)
+    if not key:
+        return None
+    groups = [group for group in ALIAS_GROUPS if key in group[0] or key in group[1]]
+    if not groups:
+        return None
+    hits: List[str] = []
+    for name in names:
+        if not name:
+            continue
+        folded = _alias_fold(name)
+        if not folded:
+            continue
+        if folded == key:
+            return None
+        if any(
+            (key in cans and folded in dims) or (key in dims and folded in cans)
+            for cans, dims in groups
+        ):
+            hits.append(name)
+    if len(hits) != 1:
+        return None
+    # Exact membership. The head's extension and one-edit gates stay on the
+    # logistic path. Reapplying them here drops a full name whose letters
+    # happen to cover a diminutive (William / Liam).
+    return hits[0]
+
+
 def best_name(span: str, names: Sequence[str], weights: Optional[dict] = None) -> Optional[str]:
     """The stored name ``span`` aligns to, or None.
 
     The probability has to clear the threshold. When two stored names both
     score, the logit gap has to clear the margin: a sigmoid saturates, and
     the gap between a real nickname and a prefix of the wrong name lives in
-    the logit.
+    the logit. A suppletive diminutive on the alias list is used only when
+    that decision abstains.
     """
     if weights is None:
         weights = load_aligner()
     if weights is None:
         return None
     ranked = rank_span(span, [n for n in names if n], weights)
-    if not ranked:
-        return None
-    best_p = ranked[0][1]
-    if best_p < float(weights["threshold"]):
-        return None
-    if len(ranked) > 1 and ranked[0][2] - ranked[1][2] < float(weights["margin"]):
-        return None
-    return ranked[0][0]
+    if ranked:
+        best_p = ranked[0][1]
+        margin_ok = not (
+            len(ranked) > 1 and ranked[0][2] - ranked[1][2] < float(weights["margin"])
+        )
+        if best_p >= float(weights["threshold"]) and margin_ok:
+            return ranked[0][0]
+    return _alias_name(span, names)
 
 
 def _lexical(text: str, names: Sequence[str]) -> List[str]:
@@ -680,7 +791,8 @@ def matched_people(text: str, names: Sequence[Optional[str]]) -> List[str]:
     """Stored people the question is about.
 
     Lexical hits stay. The head adds a nickname, a short honorific, a dropped
-    surname, or pinyin. An unmatched name in the cue's name slot clears the
+    surname, or pinyin. The alias list adds a suppletive diminutive when the
+    head abstains. An unmatched name in the cue's name slot clears the
     list: the asked person is not stored.
     """
     if not text or not any(isinstance(n, str) and n for n in names):

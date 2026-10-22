@@ -23,11 +23,11 @@ reads, and the tail is zero, so cosine matches the native model.
 Flat-row ``ask`` / ``query`` abstain when the recorded surface string names a
 person who does not store the asked relation, or names nobody and is not
 talking about a person already in the dialogue (second person, first person,
-or a pronoun). A nickname, pinyin, a dropped surname, or a short honorific
-is that stored person. A following verb or time word is still that person
-(``唐宁选的``, ``王伟平时``). One extra syllable that continues a personal
-name is not (``王伟强的``). An unmatched name in the cue's name slot is an
-absent person. The asked relation is a lexical cue when that cue is unambiguous,
+or a pronoun). A nickname, a listed diminutive, pinyin, a dropped surname,
+or a short honorific is that stored person. A following verb or time word
+is still that person (``唐宁选的``, ``王伟平时``). One extra syllable that
+continues a personal name is not (``王伟强的``). An unmatched name in the
+cue's name slot is an absent person. The asked relation is a lexical cue when that cue is unambiguous,
 unless the abstain ridge disagrees by a wide gap. Otherwise it is the abstain
 ridge (not the ranking ridge). Thresholds are chosen on the generated dev
 pools. There is no enable flag. A question with no recorded surface string
@@ -785,7 +785,8 @@ def _matched_names(text: str, names: Sequence[Optional[str]]) -> List[str]:
     """Stored people the question is about.
 
     Lexical hits stay. A small logistic head adds a nickname, pinyin, a
-    dropped surname, or a short honorific. An unmatched name in the cue's
+    dropped surname, or a short honorific. A closed diminutive list adds a
+    suppletive nickname when the head abstains. An unmatched name in the cue's
     name slot clears the list. No enable flag. The head is
     ``question_name_align`` and is loaded here so this module does not import
     it at startup.
