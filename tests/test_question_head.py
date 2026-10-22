@@ -491,8 +491,10 @@ def test_name_spans_keep_verbs_and_reject_closed_extensions():
     assert not name_in_text("王伟", "老王伟，")
     assert not name_in_text("Nellie", "Nellie-Jane")
     assert not name_in_text("Nellie", "Nellie Jane")
-    # 王伟强的 is the same shape as 唐宁选的, so the stored name still matches.
-    assert name_in_text("王伟", "名下是王伟强的话，电话存了没有？")
+    # One content syllable then 的. A predicate keeps the name; a name-final
+    # syllable does not. 的话 is not a special case of this.
+    assert not name_in_text("王伟", "名下是王伟强的话，电话存了没有？")
+    assert name_in_text("王伟", "王伟平时窝在哪一带？")
 
     assert is_deictic("For yourself, which telephone is kept?")
     assert is_deictic("您那边的电话")

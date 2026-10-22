@@ -564,7 +564,9 @@ def _unknown_person(
     lowercase word glued on (``Green-diary birthday``) is not a name, and
     neither is a closed-class word. Chinese: two characters whose first is a
     surname. ``添岁`` and ``哪一条`` are not. A span that still contains a
-    stored name (``王伟强``, ``Nellie Jane``) is that shape, not a second person.
+    stored name (``王伟强``, ``Nellie Jane``) is that shape, not a second
+    person. The lexical matcher already drops a short name inside a longer
+    personal name (``王伟`` inside ``王伟强的``); this head does not put it back.
     """
     if span in _CJK_FUNCTION or _covers_stored(span, roster):
         return False
