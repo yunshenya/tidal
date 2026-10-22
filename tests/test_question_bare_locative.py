@@ -2,9 +2,11 @@
 
 ``place`` / ``placed`` / ``placing`` (not ``place list``), ``放在哪里``,
 ``往哪里``, ``朝哪里``, and ``位置先`` drop a places label when the question
-has no unique cue. ``where`` alone, ``在哪里``, ``位置是哪些``, and
-``place a call`` do not take that path. The margin stays 0.1. The frozen
-adversarial scores are not a gate.
+has no unique cue and the object is a record. ``where`` alone, ``在哪里``,
+``位置是哪些``, ``place a call``, and a person as the object
+(``place Sibyl``, ``where was Leander placed``, ``把卞珩放在哪里``) do not
+take that path. ``put`` / ``file`` / ``deposit`` / ``搁在`` are not the
+pattern. The margin stays 0.1. The frozen adversarial scores are not a gate.
 """
 import ast
 from pathlib import Path
@@ -12,6 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from tidal.question_abstain_dev_data import BANK as DEV_BANK
+from tidal.question_adversarial import load_table
 from tidal.question_adversarial_data import BANK as TEST_BANK
 from tidal.question_bare_dev_data import NAMES, build_rows, kind_counts, questions_sha256
 from tidal.question_cjk_dev_data import NAMES as CJK_NAMES
@@ -35,6 +38,7 @@ from tidal.question_surface import (
     LEX_RIDGE_GAP,
     STORED_DIM,
     _abstain_pred,
+    _placement_object_is_person,
     bare_locative,
     corpus_strings,
     cue_set_aside,
@@ -46,7 +50,20 @@ from tidal.question_surface import (
 )
 
 # sha256 of the question list only. A wording change moves this.
-BARE_DEV_SHA = "e24bda9007a41912ce6bdcd5213baf088447437568b7ffa6b7b6a291bff4bfd6"
+BARE_DEV_SHA = "a0d7309555ecb504c1f44bc382786c0ccff35f9a339d95b685b7a148cb465d23"
+
+# Record slots the shipped pattern matches. Wider verbs stay out.
+_SLOT_FAMILIES = frozenset({
+    "placed", "placing", "place_verb", "be_placed", "place_chit",
+    "fang", "wang", "chao", "weizhi_xian",
+})
+_OUTSIDE_FAMILIES = frozenset({
+    "put", "lodged", "tucked", "slots", "pinned", "file", "stow", "deposit",
+    "jot", "entered", "putting", "lay", "situate", "deposited", "no_verb", "lodge",
+    "tuck", "park", "slide", "stick", "drawer", "folio",
+    "ge", "bai", "tian", "ji", "xie", "sai", "luo", "anfang", "zhiyu",
+    "ding", "jia", "cun",
+})
 
 
 def _typo_questions():
@@ -63,23 +80,42 @@ def _typo_questions():
 def test_bare_dev_sha_and_labels():
     rows = build_rows()
     assert questions_sha256(rows) == BARE_DEV_SHA
-    assert len(rows) == 25
-    assert kind_counts(rows) == {"locative": 10, "guarded": 5, "keep": 10}
+    assert len(rows) == 100
+    assert sum(row.lang == "en" for row in rows) == 50
+    assert sum(row.lang == "zh" for row in rows) == 50
+    assert kind_counts(rows) == {
+        "answerable": 32,
+        "missing_rel": 28,
+        "keep_places": 28,
+        "guarded": 12,
+    }
+    families = {row.family for row in rows}
+    assert _SLOT_FAMILIES <= families
+    assert _OUTSIDE_FAMILIES <= families
     for row in rows:
         assert row.lang in ("en", "zh")
         assert row.rel in LABELS
         lex = lex_labels(row.question)
         bare = bare_locative(row.question)
-        if row.kind == "locative":
-            assert bare is True, row.question
+        if row.kind in ("answerable", "missing_rel"):
             assert lex == (), row.question
-        elif row.kind == "guarded":
+            if row.family in _SLOT_FAMILIES:
+                assert bare is True, row.question
+            else:
+                assert row.family in _OUTSIDE_FAMILIES, row.family
+                assert bare is False, row.question
+        elif row.kind == "keep_places":
+            assert lex in ((), ("places",)), (row.question, lex)
+            if row.family in ("person_place", "person_placed", "person_fang", "person_wang"):
+                assert bare is True, row.question
+                assert lex == (), row.question
+            else:
+                assert bare is False, row.question
+        else:
+            assert row.kind == "guarded"
             assert bare is True, row.question
             assert lex == (row.rel,), row.question
             assert cue_set_aside(row.question, row.rel) is False, row.question
-        else:
-            assert row.kind == "keep"
-            assert bare is False, row.question
 
 
 def _jaccard(a: str, b: str) -> float:
@@ -148,10 +184,11 @@ def _ask(text, rels, names, weights):
     return surface_abstain(query, keys, rels, names, weights, query_text=text)
 
 
-def test_a_bare_locative_drops_places_and_keeps_the_margin():
-    text = "Sibyl's year-mark sits where the vestry has it placed, brontide pschent."
+def test_a_record_slot_drops_places_and_keeps_the_margin():
+    text = "Sibyl's added-year tick stays where the clerk has it placed, quillon bascinet."
     assert bare_locative(text) is True
     assert lex_labels(text) == ()
+    assert _placement_object_is_person(text, ["Sibyl"]) is False
     # Places leads birthday by 0.13. Birthday then leads phone by 0.19.
     weights = _weights(0.16, 0.35, 0.48)
     assert _ask(text, ["birthday"], ["Sibyl"], weights) is None
@@ -164,21 +201,51 @@ def test_a_bare_locative_drops_places_and_keeps_the_margin():
     phone = _weights(0.70, 0.05, 0.20)
     assert _ask(text, ["phone"], ["Sibyl"], phone) is None
     assert _ask(text, ["birthday", "places"], ["Sibyl", "Sibyl"], phone) == "missing_rel"
+    # Possessive: the object is the tick, not Quince.
+    owned = "I place Quince's added-year tick on which square of the slate, pauldron vambrace."
+    assert bare_locative(owned) is True
+    assert _placement_object_is_person(owned, ["Quince"]) is False
+    assert _ask(owned, ["birthday"], ["Quince"], weights) is None
 
-    zh = "晏书又长一岁，柜侧执事该把那道印放在哪里，鼗鼙镛钲。"
+    zh = "柜吏问，卞珩多一岁的朱印该放在哪里，鼉鼜鼥。"
     assert bare_locative(zh) is True
-    assert _ask(zh, ["birthday"], ["晏书"], weights) is None
-    slot = "夜里先找郗宁的声音条，位置先搁下，柜侧翻哪一页，鼗镛。"
+    assert _placement_object_is_person(zh, ["卞珩"]) is False
+    assert _ask(zh, ["birthday"], ["卞珩"], weights) is None
+    slot = "夜里先翻晏书的嗓音条，位置先搁下，柜侧看哪一页，鼣鼤鼥。"
     # Places leads phone by 0.004. Phone then leads birthday by 0.438.
     torn = _weights(0.477, 0.039, 0.481)
-    assert _ask(slot, ["birthday", "places"], ["郗宁", "郗宁"], torn) == "missing_rel"
-    assert _ask(slot, ["phone"], ["郗宁"], torn) is None
+    assert _ask(slot, ["birthday", "places"], ["晏书", "晏书"], torn) == "missing_rel"
+    assert _ask(slot, ["phone"], ["晏书"], torn) is None
+
+
+def test_a_person_object_keeps_the_places_label():
+    weights = _weights(0.06, 0.31, 0.62)
+    rows = (
+        ("Where does the parish place Sibyl for the evening halt, kereru pukeko.", "Sibyl"),
+        ("Where was Leander placed for the evening halt, kokako kea.", "Leander"),
+        ("Where was she placed beside Sibyl, kereru pukeko.", "Sibyl"),
+    )
+    for text, person in rows:
+        assert bare_locative(text) is True, text
+        assert lex_labels(text) == ()
+        assert _placement_object_is_person(text, [person]) is True, text
+        assert _ask(text, ["places"], [person], weights) is None
+        assert _ask(text, ["phone", "birthday"], [person, person], weights) == "missing_rel"
+    zh = "夜巡要把卞珩放在哪里，鼧鼫鼳。"
+    assert bare_locative(zh) is True
+    assert _placement_object_is_person(zh, ["卞珩"]) is True
+    assert _ask(zh, ["places"], ["卞珩"], weights) is None
+    assert _ask(zh, ["phone", "birthday"], ["卞珩", "卞珩"], weights) == "missing_rel"
+    # 把它放在哪里 is the record, not the person named earlier in the sentence.
+    record = "卞珩那枚岁印，册吏该把它放在哪里，鼉鼐鼒。"
+    assert _placement_object_is_person(record, ["卞珩"]) is False
+    assert _ask(record, ["birthday"], ["卞珩"], _weights(0.16, 0.35, 0.48)) is None
 
 
 def test_place_a_call_and_a_places_cue_are_not_dropped():
     assert LEX_RIDGE_GAP == 0.15
     assert ABSTAIN_MARGIN == 0.1
-    call = "Place a call for Sibyl and read those digits aloud, was-sceptre scarab."
+    call = "Place a call for Sibyl and read the filed string aloud, oryx gerenuk."
     assert bare_locative(call) is True
     assert lex_labels(call) == ("phone",)
     assert cue_set_aside(call, "phone") is False
@@ -208,7 +275,7 @@ def test_place_a_call_and_a_places_cue_are_not_dropped():
     assert _ask(text, ["places"], ["Ravi"], narrow) is None
     assert _ask(text, ["phone"], ["Ravi"], narrow) == "missing_rel"
 
-    handoff = "卞珩的交接要放在哪里，执事照着念，鼗鼙镛。"
+    handoff = "卞珩的交接要放在哪里，册吏照着念，鼮鼲鼉。"
     assert bare_locative(handoff) is True
     assert lex_labels(handoff) == ("places",)
     # The places cue agrees with a confident places ridge, so the slot is not dropped.
@@ -218,17 +285,39 @@ def test_place_a_call_and_a_places_cue_are_not_dropped():
 
 
 def test_a_places_question_worded_with_where_or_position_keeps_places():
-    where = "Where ought Quince's courier to stand, earliest halt before the later one, clinquant pschent."
-    listed = "Leander left a place list on the inner card, uraeus sistrum."
-    which = "汲棠按先后点过的位置是哪些，钟楼侧柜里那本蓝册子鼗鼙镛钲。"
-    appear = "替卞珩露面的那一站，按先来后到该在哪里，鼗鼙镛钲。"
-    side = "郗宁平时窝在哪一带，口述次序不要换，鼗钲。"
+    where = "Where does Sibyl dwell when the parish asks, scramasax langseax."
+    listed = "Leander left a place list inside the tin, numbat bilby."
+    which = "汲棠，册页里点过的位置是哪些，口述次序照旧，鼞鼤鼫。"
+    appear = "替郗宁出面的人该在哪里停，先来后到不要换，鼝鼣鼪。"
+    side = "巷子深处，晏书偏向哪一带，鼟鼥鼭。"
     for text in (where, listed, which, appear, side):
         assert bare_locative(text) is False, text
     weights = _weights(0.10, 0.00, 0.80)
-    for text, name in ((where, "Quince"), (listed, "Leander"), (which, "汲棠"), (appear, "卞珩")):
+    for text, name in ((where, "Sibyl"), (listed, "Leander"), (which, "汲棠"), (appear, "郗宁"), (side, "晏书")):
         assert _ask(text, ["places"], [name], weights) is None
         assert _ask(text, ["phone"], [name], weights) == "missing_rel"
+
+
+def test_wider_placement_verbs_are_not_the_drop():
+    """``file`` / ``deposit`` / ``put`` / ``搁在`` were measured and not taken.
+
+    ``on file`` is a noun. Treating it as a slot false-abstains a places
+    paraphrase whose places lead is wide. ``deposited where`` would catch
+    one dev missing-relation row and is still not the pattern.
+    """
+    on_file = "Read the ordered haunts on file for Mary Jane."
+    deposited = "The added-year seal for Romilda is deposited where, coif haubergeon."
+    put = "Romilda's added-year tick, where ought the clerk put it, rerebrace cuisse."
+    ge = "卞珩的岁印该搁在哪一格，鼦鼧鼨。"
+    for text in (on_file, deposited, put, ge):
+        assert bare_locative(text) is False, text
+    # Places leads birthday by 0.30. Birthday then leads phone by 0.15.
+    places = _weights(0.05, 0.20, 0.50)
+    assert _ask(on_file, ["places"], ["Mary Jane"], places) is None
+    assert _ask(on_file, ["phone", "birthday"], ["Mary Jane", "Mary Jane"], places) == "missing_rel"
+    # Places is stored, so a missing birthday does not abstain without the drop.
+    seal = _weights(0.195, 0.326, 0.470)
+    assert _ask(deposited, ["phone", "places"], ["Romilda", "Romilda"], seal) is None
 
 
 def test_live_places_asks_are_not_bare_locatives():
@@ -283,7 +372,7 @@ def test_live_places_asks_are_not_bare_locatives():
     assert free
 
 
-def test_frozen_slices_outside_bare_cue_do_not_take_the_drop():
+def test_frozen_record_slots_still_drop_and_other_slices_do_not():
     for case in build_stress(TEST_BANK):
         if case.slice == "bare_cue":
             continue
@@ -291,12 +380,33 @@ def test_frozen_slices_outside_bare_cue_do_not_take_the_drop():
             assert len(lex_labels(case.question)) == 1, case.question
     # The places phantom on the frozen bare rows is this pattern. A deferred
     # 位置 that is not 位置先, and that has no other slot, stays on the ridge.
-    assert bare_locative("Where should the year-older mark for Mary Jane be placed?")
-    assert bare_locative("陈静长一岁的标记该放在哪里？")
-    assert bare_locative("想用声音找到赵敏，位置先别查，该看哪一条记录？")
+    mark = "Where should the year-older mark for Mary Jane be placed?"
+    stamp = "陈静长一岁的标记该放在哪里？"
+    deferred_slot = "想用声音找到赵敏，位置先别查，该看哪一条记录？"
+    assert bare_locative(mark)
+    assert bare_locative(stamp)
+    assert bare_locative(deferred_slot)
+    assert _placement_object_is_person(mark, ["Mary Jane"]) is False
+    assert _placement_object_is_person(stamp, ["陈静"]) is False
     deferred = "先别标张强的位置，满岁在哪一天？"
     assert bare_locative(deferred) is False
     assert lex_labels(deferred) == ()
+
+    table = load_table()
+    weights = load_weights()
+
+    def ask(text, rels, names):
+        keys = np.zeros((len(names), STORED_DIM))
+        return surface_abstain(table[text], keys, rels, names, weights, query_text=text)
+
+    assert ask(mark, ["birthday"], ["Mary Jane"]) is None
+    assert ask(stamp, ["birthday"], ["陈静"]) is None
+    assert ask(deferred_slot, ["birthday", "places"], ["赵敏", "赵敏"]) == "missing_rel"
+    missed = "赵敏长一岁的标记该放在哪里？"
+    assert ask(missed, ["phone", "places"], ["赵敏", "赵敏"]) == "missing_rel"
+    # Next-label lead stays under 0.1. Do not lower the margin to catch it.
+    ann = "Where should the year-older mark for Ann be placed?"
+    assert ask(ann, ["phone", "places"], ["Ann", "Ann"]) is None
 
 
 def test_surface_dev_curve_at_the_shipped_margin_is_unchanged():

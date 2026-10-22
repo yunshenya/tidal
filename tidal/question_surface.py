@@ -42,10 +42,12 @@ does not win. When the abstain ridge's top label is that cue, the next
 label is used and its gap is against the remaining label, then the ordinary
 margin. A question with no unique cue that is only a bare locative (the
 verb ``place`` / ``placed``, or ``放在哪里`` / ``往哪里`` / ``朝哪里`` /
-``位置先``) drops a ``places`` label the same way. ``where`` alone,
-``place list``, ``在哪里``, and ``位置是哪些`` do not. Otherwise the asked
-relation is the abstain ridge (not the ranking ridge). Thresholds are chosen on the generated dev pools. There is no
-enable flag. A question with no recorded surface string is not abstained,
+``位置先``) drops a ``places`` label the same way, unless the object of
+that placement is a person (``place Sibyl``, ``where was Leander placed``,
+``把卞珩放在哪里``). ``where`` alone, ``place list``, ``在哪里``, and
+``位置是哪些`` do not drop. Otherwise the asked relation is the abstain
+ridge (not the ranking ridge). Thresholds are chosen on the generated dev
+pools. There is no enable flag. A question with no recorded surface string is not abstained,
 and ``recall`` never is.
 """
 from __future__ import annotations
@@ -867,8 +869,14 @@ def cue_set_aside(text: str, rel: str) -> bool:
 # "place list" is the noun. "where" / "在哪里" / "位置是哪些" / "哪边" are
 # not this pattern: those questions are places, and the places label stays.
 # "位置先后" is an order of places, not a deferred slot.
+# Other placement verbs (put, file, deposit, 搁在, 摆在) are not this class.
+# "on file" is a noun, and widening the verb list false-abstains a places
+# paraphrase. A person as the object is also not this class: see
+# ``_placement_object_is_person``.
 _PLACE_VERB = re.compile(r"\b(?:place|placed|placing)\b", re.I)
 _BARE_ZH = re.compile(r"放在哪里|往哪里|朝哪里|位置先(?!后)")
+_PLACE_PRONOUN = re.compile(r"\b(?:place|placed|placing)\s+(?:him|her|them)\b", re.I)
+_WHERE_PRONOUN_PLACED = re.compile(r"\bwhere was (?:he|she|they) placed\b", re.I)
 
 
 def bare_locative(text: str) -> bool:
@@ -881,12 +889,15 @@ def bare_locative(text: str) -> bool:
     the way a dismissed cue is dropped: the next label's gap is against the
     remaining label, then the margin. A unique cue is not dropped, which
     keeps ``place a call`` on phone and a places cue such as ``交接放在哪里``
-    on places.
+    on places. A person as the object (``_placement_object_is_person``) is
+    not dropped: ``place Sibyl`` and ``where was Leander placed`` are places
+    asks.
 
     English matches ``place`` / ``placed`` / ``placing`` except the noun
     ``place list``. Chinese matches ``放在哪里``, ``往哪里``, ``朝哪里``,
     and ``位置先`` (not ``位置先后``). ``where`` without that verb,
     ``在哪里``, ``是哪里``, ``哪边``, and ``位置是哪些`` do not match.
+    ``put``, ``file``, ``deposit``, ``搁在``, and ``摆在`` do not match.
     """
     if not isinstance(text, str) or text == "":
         return False
@@ -896,6 +907,36 @@ def bare_locative(text: str) -> bool:
         if re.match(r"\s+lists?\b", text[match.end():], re.I):
             continue
         return True
+    return False
+
+
+def _placement_object_is_person(text: str, names: Sequence[Optional[str]]) -> bool:
+    """True when a placement slot locates a person, not a record.
+
+    ``place Sibyl`` and ``where was Leander placed`` ask where that person
+    is. ``place Sibyl's tick`` and ``place the chit`` do not: the object is
+    the record, and a possessive does not count. ``把卞珩放在哪里`` is the
+    person. ``把它放在哪里`` and ``标记该放在哪里`` are not. A pronoun
+    (``him`` / ``where was she placed`` / ``这个人该往哪里``) counts with
+    no roster hit. ``{name}该往哪里`` alone does not: that is the phone
+    slot ``该往哪里去做语音联络``.
+    """
+    if _PLACE_PRONOUN.search(text) or _WHERE_PRONOUN_PLACED.search(text):
+        return True
+    if "这个人该往哪里" in text or "人放在哪里" in text:
+        return True
+    seen = sorted({name for name in names if name}, key=len, reverse=True)
+    for name in seen:
+        if re.search(rf"\bwhere was {re.escape(name)} placed\b", text, re.I):
+            return True
+        if re.search(
+            rf"\b(?:place|placed|placing)\s+{re.escape(name)}\b(?!'s)",
+            text,
+            re.I,
+        ):
+            return True
+        if f"把{name}放在哪里" in text:
+            return True
     return False
 
 
@@ -1189,7 +1230,8 @@ def surface_abstain(
     applies, including when the ridge already preferred a different label.
     Otherwise the asked relation is the argmax of the abstain ridge.
     A question with no unique cue that ``bare_locative`` matches drops
-    ``places`` by that same next-label call, then the margin. ``where``
+    ``places`` by that same next-label call, then the margin, unless
+    ``_placement_object_is_person`` says the object is a person. ``where``
     alone does not. A unique cue is not dropped, so ``place a call`` stays
     phone. Abstain ``missing_rel`` when none of the matched people store
     that relation. A lexical cue that the ridge does not overrule does not
@@ -1226,10 +1268,17 @@ def surface_abstain(
     if len(lex) == 1 and cue_set_aside(query_text, lex[0]):
         set_aside = lex[0]
         lex = ()
-    # No unique cue, and the only places-like words are a placement slot.
-    # Drop places the way a dismissed cue is dropped. A unique cue, including
-    # "place a call" and "What places did Ravi store?", does not take this path.
-    drop_places = not lex and not set_aside and bare_locative(query_text)
+    # No unique cue, and the only places-like words are a placement slot
+    # whose object is a record, not a person. Drop places the way a
+    # dismissed cue is dropped. A unique cue, including "place a call" and
+    # "What places did Ravi store?", does not take this path. "place Sibyl"
+    # and "where was Leander placed" do not either.
+    drop_places = (
+        not lex
+        and not set_aside
+        and bare_locative(query_text)
+        and not _placement_object_is_person(query_text, names)
+    )
     have = {rels[i] for i in rows}
     Wa = weights.get("Wa")
     pred = ""
