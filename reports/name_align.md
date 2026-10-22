@@ -62,7 +62,7 @@ On these three slices together: answerable false abstain 51 → 21 (of 87), ask 
 | two_names | en | absent_mentioned_with_stored | 6 | 0 → 6 abstained | 0 → 0 |
 | two_names | zh | absent_mentioned_with_stored | 6 | 0 → 6 abstained | 0 → 0 |
 
-English case, internal space, possessive, and a full honorific (`Mr. Robert`) were already hits and stay hits. English near-duplicates stay 16/16 abstained (edit distance 1, hyphen, extra letter, `Ann Marie`). Chinese edit-1 and middle-character near-duplicates stay abstained. Prefixes `老` / `小` / `大` stay abstained (`老王伟`, `小李娜`, `大张强`, `老赵敏`).
+English case, internal space, possessive, and a full honorific (`Mr. Robert`) were already hits and stay hits. English near-duplicates stay 16/16 abstained (edit distance 1, hyphen, extra letter, `Ann Marie`). Chinese edit-1 and middle-character near-duplicates stay abstained. Prefixes `老` / `小` / `大` stay abstained (`老王伟`, `小李娜`, `大张强`, `老赵敏`). The `cjk_superstring` row is this head on the previous string matcher. Current ask numbers are in `reports/name_superstring.md` (8/8 abstained).
 
 ## (b) Frozen test, full set
 
@@ -97,7 +97,7 @@ The surface dev curve at margin 0.1 is unchanged: false abstain 0/192 per langua
 
 **English nicknames that are not a prefix of length 3 or more.** `Bob` / `Robert`, `Bill` / `William`, and `Maggie` / `Margaret` still false-abstain. `Maggie` shares only `Ma` with `Margaret`. `Liz` / `Elizabeth`, `Cathy` / `Catherine`, and `Patty` / `Patricia` match. `Mr. Bob` and `Mr. Bill` miss with the nickname; `Ms. Jane` matches `Mary Jane`.
 
-**Chinese superstring closed by `的话`, 4/8 still answered.** `名下是王伟强的话` matches `王伟`, and the same shape matches `李娜儿`, `张强生`, `刘洋子`. The probe attaches a verb the same way (`唐宁选的`). Clearing that hit would abstain those probe questions. The head does not add the longer name; the string matcher still accepts the stored name inside it.
+**Chinese longer name before a particle.** On this head, `名下是王伟强的话` matched `王伟`, and the same shape matched `李娜儿`, `张强生`, and `刘洋子` (4/8 still answered). `reports/name_superstring.md` changes the string matcher on a separate dev bank: those four abstain as `absent_person`, the four prefixes stay abstained, and `唐宁选的` still matches. The subtype row above is this head on the previous matcher.
 
 **Pinyin matches, and three asks return the other person's fact.** All eight pinyin strings match the stored person (`Wang Wei`, `Li Na`, `Zhang Qiang`, `liuyang`, `Chen Jing`, `zhao min`, `Huang Lei`, `Zhou Tao`). Ask hits are 5/8. The three misses are a different stored value for the same relation. Ranking weights were left as they are: the probe is 360/370, and this gap is not a reason to change `W`.
 

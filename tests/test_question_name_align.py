@@ -98,16 +98,17 @@ def test_surface_absent_names_and_the_word_one_do_not_match():
     assert matched_people("如果我们听过，方甯的地点会是哪些？", DEV_NAMES["zh"]) == []
 
 
-def test_lexical_verb_and_superstring_stay_the_stored_name():
-    """The head does not undo a lexical hit the probe relies on.
+def test_lexical_verb_stays_and_a_longer_name_does_not():
+    """A verb glued on with 的 still matches. A longer personal name does not.
 
-    王伟强的 is the same shape as 唐宁选的, so 王伟 still matches. That
-    superstring remains an answered near-duplicate.
+    The head does not put 王伟 back inside 王伟强. The CJK split dev bank is
+    what separates those shapes; this is the generalization.
     """
     assert name_in_text("唐宁", "唐宁选的碰面点是哪里？")
     assert matched_people("唐宁选的碰面点是哪里？", ["唐宁", "姜北"]) == ["唐宁"]
-    assert name_in_text("王伟", "名下是王伟强的话，电话存了没有？")
-    assert matched_people("名下是王伟强的话，电话存了没有？", ["王伟", "李娜"]) == ["王伟"]
+    assert not name_in_text("王伟", "名下是王伟强的话，电话存了没有？")
+    assert matched_people("名下是王伟强的话，电话存了没有？", ["王伟", "李娜"]) == []
+    assert name_in_text("王伟", "王伟平时窝在哪一带？")
     assert matched_people("老王伟，电话是哪一部？", ["王伟"]) == []
 
 

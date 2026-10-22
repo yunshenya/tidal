@@ -24,8 +24,10 @@ Flat-row ``ask`` / ``query`` abstain when the recorded surface string names a
 person who does not store the asked relation, or names nobody and is not
 talking about a person already in the dialogue (second person, first person,
 or a pronoun). A nickname, pinyin, a dropped surname, or a short honorific
-is that stored person. An unmatched name in the cue's name slot is an absent
-person. The asked relation is a lexical cue when that cue is unambiguous,
+is that stored person. A following verb or time word is still that person
+(``唐宁选的``, ``王伟平时``). One extra syllable that continues a personal
+name is not (``王伟强的``). An unmatched name in the cue's name slot is an
+absent person. The asked relation is a lexical cue when that cue is unambiguous,
 unless the abstain ridge disagrees by a wide gap. Otherwise it is the abstain
 ridge (not the ranking ridge). Thresholds are chosen on the generated dev
 pools. There is no enable flag. A question with no recorded surface string
@@ -414,10 +416,28 @@ def names_used() -> Tuple[str, ...]:
 
 
 # A CJK name plus one more character, then punctuation, is a different name
-# (孙悦然，). The same shape before 的/过/了 is a verb (唐宁选的, 祁安报过) and
-# is still the stored name. These particles are that second case, including
-# 时 in 写着孙悦时.
+# (孙悦然，). These particles include 时 in 写着孙悦时. One content character
+# and then a particle is a verb when that character is a predicate
+# (唐宁选的, 祁安报过), a time word when the two characters are one
+# (王伟平时), and a longer personal name otherwise (王伟强的, 李娜儿呢).
+# 的话 is not special: 的 is this particle and 话 is the next syllable.
 _CJK_PARTICLE = frozenset("的了着过吗呢吧啊时")
+# One-character predicates. After a personal name they take 的 / 过 / 了 / 着
+# and the name is still the subject. Chosen so the CJK split dev bank keeps
+# every verb row and every name-like verb row (定的, 记过, 通过). Name-final
+# syllables are not in this set. The frozen adversarial test is not an input.
+_CJK_PREDICATE = frozenset(
+    "写做列去发存定开念想成打找报拿换提改明来正清用留看立给要认记说选通问"
+)
+# A name-final syllable that is also a one-character predicate. Aspect
+# (过 / 了 / 着) keeps the short name (姚岑生过, 孟峤强了). A nominal closer
+# (的 / 呢 / 吧 / 吗 / 啊 / 时) is the longer name (姚岑生的话, 孟峤强呢),
+# unless the two characters are a time word below.
+_CJK_AMBIVALENT = frozenset("生强")
+_CJK_ASPECT = frozenset("过了着")
+# The second character is 时, which is otherwise a name closer. The bigram is
+# a time word (田栖平时), not the last syllable of a personal name (田栖平的).
+_CJK_TIME_WORD = frozenset({"平时", "当时", "临时", "有时", "准时", "这时", "那时"})
 # Closed prefixes that build a different person (老孙悦, 小胡斌). They do not
 # occur immediately before a roster name in the probe or the surface corpus.
 _CJK_PREFIX_BLOCK = frozenset("老小大阿")
@@ -446,14 +466,21 @@ def _is_cjk_name(name: str) -> bool:
 
 
 def _cjk_span_ok(text: str, start: int, end: int) -> bool:
-    """Reject a one-character name extension, not a following verb phrase.
+    """Reject a longer personal name, not a following verb or time word.
 
     ``老`` / ``小`` / ``大`` / ``阿`` glued on the front is a different person.
     One CJK character glued on the end, and then punctuation or the end of the
-    string, is a different person (``孙悦然，``). One CJK character and then
-    ``的`` / ``过`` / ``了`` is the probe's verb pattern (``唐宁选的``) and
-    still matches, as does a title (``孙悦女士``) or a verb phrase
-    (``孙悦添岁``).
+    string, is a different person (``孙悦然，``). A title (``刘洋先生``) or a
+    two-character verb (``孙悦添岁``, ``姜北对应``, ``唐宁列出的``) still
+    matches, because the character after the extra syllable is not a particle.
+
+    One content syllable and then a particle is the ambiguous shape.
+    A predicate keeps the stored name (``唐宁选的``, ``祁安报过``). A time
+    word keeps it (``王伟平时``). Aspect on an ambivalent syllable keeps it
+    (``生过``, ``强了``). Any other syllable is the rest of a longer personal
+    name (``王伟强的``, ``李娜儿呢``, ``张强生的话``, ``刘洋子吗``) and the
+    short name does not match. ``的话`` is not its own case: the particle is
+    ``的``.
     """
     if start > 0 and text[start - 1] in _CJK_PREFIX_BLOCK:
         return False
@@ -463,7 +490,15 @@ def _cjk_span_ok(text: str, start: int, end: int) -> bool:
     if extra in _CJK_PARTICLE:
         return True
     nxt = text[end + 1] if end + 1 < len(text) else ""
-    if nxt and _is_cjk_char(nxt):
+    if not nxt or not _is_cjk_char(nxt):
+        return False
+    if nxt not in _CJK_PARTICLE:
+        return True
+    if extra + nxt in _CJK_TIME_WORD:
+        return True
+    if extra in _CJK_PREDICATE:
+        return True
+    if extra in _CJK_AMBIVALENT and nxt in _CJK_ASPECT:
         return True
     return False
 
@@ -490,8 +525,9 @@ def name_spans(name: str, text: str) -> List[Tuple[int, int]]:
 
     CJK names may contain whitespace between characters (``王 伟``). A closed
     prefix (``老王伟``) does not match. One extra CJK character closed off by
-    punctuation does not match (``孙悦然，``). A following verb or title does
-    (``孙悦添岁``, ``刘洋先生``, ``姜北对应``).
+    punctuation does not match (``孙悦然，``). A following verb, time word, or
+    title does (``孙悦添岁``, ``唐宁选的``, ``王伟平时``, ``刘洋先生``). One
+    extra syllable that continues a personal name does not (``王伟强的``).
     """
     if not name or not text:
         return []
