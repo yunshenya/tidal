@@ -167,4 +167,4 @@ Phone 122/124, birthday 122/124, places 121/122. Gold lost at overwrite 0.9 is 0
 
 `tests/test_question_typo_edit.py` locks the dev sha, the kind and label counts, that each collision's accepting gate returns one stored name for both labels, that the deletion's `prefix_ge3` still featurizes to nothing, that ties and extensions are not a unique edit, literal disjointness, and token Jaccard under 0.50. The lastname bank strings are embedded because that module is not on main. Frozen numeric scores are not a pytest gate.
 
-`python3 -m pytest -q`: count filled after the suite run.
+`python3 -m pytest -q`: 285 passed, 1 skipped, in 110.53s. The skip is `tests/test_llm_memory.py` (`transformers` is not installed). The new file is the five tests in `tests/test_question_typo_edit.py`.
