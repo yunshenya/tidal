@@ -95,8 +95,41 @@ Re-run because the ask path changed.
 | deixis held-out, with the log | 128/136 (the miss is `addressee_extra` 0/8) |
 | deixis held-out, empty log | 136/136 |
 
-`python3 -m pytest -q`: 315 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`.
+The ask path was not edited for the expansion. The same floors were run again afterwards and did not move. `python3 -m pytest -q`: 319 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. Four of the passing tests are the expansion bank.
+
+## Expanded held-out
+
+Pre-registration, written before this score: `reports/dialogue_keepalive_expand_prereg.md`. The rule was not edited. The 42-ask bank above is unchanged (questions `092252c7…`, bank `694fed5e…`).
+
+`tidal/question_keepalive_expand_data.py`. 54 episodes, 94 asks. English 47, Chinese 47. Questions `9af36973b625ce4ae30f516fafdc3a4aec5c37fbfcaf2a8fc31ec423025ee19c`. Bank `30af4bb72c1fbe346dd6b5572ebb60d811b860b71ad060385654f3a7d35f1604` (1176 strings). People: Phelan, Idony, Hawise, Thurstan, Rohese, Osbern; 庞荞, 倪蒲, 滕岚, 邹蒲, 雷桐, 傅苔. The stamp is `marl docket`.
+
+72 asks are listener abstentions. 22 are listener hits: 8 pronoun chains, 8 leading vocatives, and 6 explicit roster hearers that override a different leading name. The other 4 explicit rows pass a hearer that is not on the roster and abstain.
+
+The replay matched the pre-registered listener label on every row (0 gaps). State and empty then matched that rule. False accepts 0.
+
+| kind | n | state rule | empty rule | state human | state FA | empty FA |
+|---|---:|---:|---:|---:|---:|---:|
+| `neg_subject` | 12 | 12/12 | 12/12 | 12/12 | 0 | 0 |
+| `neg_object` | 12 | 12/12 | 12/12 | 12/12 | 0 | 0 |
+| `neg_quote` | 12 | 12/12 | 12/12 | 12/12 | 0 | 0 |
+| `neg_ambig` | 12 | 12/12 | 12/12 | 12/12 | 0 | 0 |
+| `neg_unknown` | 8 | 8/8 | 8/8 | 8/8 | 0 | 0 |
+| `neg_explicit` | 10 | 10/10 | 10/10 | 10/10 | 0 | 0 |
+| `neg_age` | 12 | 12/12 | 12/12 | 12/12 | 0 | 0 |
+| `pos_keep` | 8 | 8/8 | 8/8 | 8/8 | 0 | 0 |
+| `pos_voc` | 8 | 8/8 | 8/8 | 8/8 | 0 | 0 |
+| total | 94 | 94/94 | 94/94 | 94/94 | 0 | 0 |
+
+`neg_subject` and `neg_object` ask `you` / `你` about a name that is not a leading vocative. `neg_quote` puts the name in quotation or after a reporting verb. `neg_ambig` is two people on the newest turn (`he` / `she` / `他` / `她` do not pick a gender), two leading names, and an ambiguous pronoun followed by three quiet turns (a restamp of either person would still have been inside the window). `neg_unknown` is `Sigrid` / `Phelam` / `沈禾` / `牟芷`. `neg_explicit` keeps the caller hearer. `neg_age` is four acknowledgements, four `them` or `你们` turns, or four `it` / `它` turns, then the pronoun. `pos_keep` and `pos_voc` are the controls.
+
+Literal overlap with every earlier bank, including the 42-ask bank and the #35 bank, is 0. Max token Jaccard is 0.394, against the 42-ask bank:
+
+`他朝榫钉外侧的窗台扬了扬手，桦皮条还靠在那儿。 marl docket 188`
+
+`他朝夜闩对面的窗台扬了扬手，青苔板还靠在那儿。 bracken scrip 022`
+
+Union with the frozen 42: 136 scored asks. State rule 136/136, empty rule 136/136, listener 136/136, false accepts 0. No miss to leave unfixed.
 
 ## Recommendation
 
-Keep both updates. Do not widen them on this bank. A pronoun chain keeps a person alive only while some mention is still inside the window, and it does not write the pronoun out as a name. A leading exact name is the only vocative. Four quiet turns with no pronoun still age a name out. Gender, open addressee forms, insertions, swaps, `老` plus the full name, the speaker read as `he`, and `你们` stay as they are.
+Keep both updates. The expanded held-out did not disagree with them, and it did not justify a wider rule. A pronoun chain keeps a person alive only while some mention is still inside the window, and it does not write the pronoun out as a name. A leading exact name is the only vocative. Four quiet turns with no pronoun still age a name out. A name in subject, object, or quotation position does not become the hearer. Two candidates, an unknown vocative, and an explicit hearer stay as the frozen rule reads them. Gender, open addressee forms, insertions, swaps, `老` plus the full name, the speaker read as `he`, and `你们` stay as they are.
