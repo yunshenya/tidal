@@ -6,7 +6,8 @@ tokens. Birthday answers concatenate field-token slices. Other answers
 pool the whole span.
 ``fit_phone_readout`` and ``fit_date_readout`` fit the linear spellings
 and do not touch the MLP.
-``add = scale(v) + MLP(scale(v))`` with the MLP's last layer starting at zero.
+``add = gain * (scale(v) + MLP(scale(v)))`` with the MLP's last layer starting at
+zero. ``gain`` is 1 unless ``fit_polarity`` has trained the polarity vector.
 Teacher-forced next-token cross-entropy on the answer, given the prompt only
 (the fact text is not in the prompt). A fraction of steps adds the v21 hinge
 on a wrong value.
@@ -85,6 +86,253 @@ def _cache(mem, facts: list) -> list:
     return rows
 
 
+def _decision_cache(mem, facts: list) -> list:
+    """Encode decision rows. A row may already carry ``value`` and ``key``."""
+    cache = []
+    for fact in facts:
+        if "value" in fact and "key" in fact:
+            value = fact["value"]
+            key = fact["key"]
+        else:
+            answer = fact["a"] if "a" in fact else fact["answer"]
+            value = mem.encode_value(fact["text"], answer)
+            key = mem.encode_key(fact["text"], answer)
+        prompt = fact["q"] if "q" in fact else fact["prompt"]
+        cache.append(
+            {
+                "value": value,
+                "key": key,
+                "prompt": prompt,
+                "good": fact["good"],
+                "bad": fact["bad"],
+                "family": fact.get("family", "prefer"),
+            }
+        )
+    return cache
+
+
+def _cache_empty_ce(mem, cache: list) -> None:
+    """Empty-store cross-entropy of each continuation. Not a function of the inject."""
+    import torch
+
+    mem.inject.eval()
+    with torch.no_grad():
+        for ex in cache:
+            ex["ce_good0"] = float(
+                mem.teacher_force_loss(ex["prompt"], ex["good"], ex["value"], ex["key"], armed=False)
+            )
+            ex["ce_bad0"] = float(
+                mem.teacher_force_loss(ex["prompt"], ex["bad"], ex["value"], ex["key"], armed=False)
+            )
+    mem._delta = None
+
+
+def _hinge_loss(loss_good, loss_bad, ce_good0: float, ce_bad0: float, margin: float):
+    """Beat the empty-store CE by ``margin`` nats on the good token and the bad token."""
+    import torch
+
+    base_good = loss_good.new_tensor(float(ce_good0))
+    base_bad = loss_bad.new_tensor(float(ce_bad0))
+    better_good = torch.relu(loss_good - base_good + float(margin))
+    worse_bad = torch.relu(base_bad + float(margin) - loss_bad)
+    return loss_good + better_good + worse_bad
+
+
+def _gain_term(inject, key, target: float, weight: float, side: str):
+    """Squared distance of the polarity gain from ``target``.
+
+    ``side="below"`` penalizes only a gain under the target, so a prefer key
+    may amplify and must not flip. ``side="both"`` penalizes either way.
+    """
+    import torch
+
+    if float(weight) == 0.0 or key is None:
+        return None
+    key_t = torch.tensor(np.asarray(key, dtype=np.float32), device=inject.polarity.device)
+    gain = inject.polarity_gain(key_t)
+    gap = gain - float(target)
+    if side == "below":
+        gap = torch.relu(-gap)
+    elif side == "above":
+        gap = torch.relu(gap)
+    elif side != "both":
+        raise ValueError("side must be 'below', 'above', or 'both'")
+    return float(weight) * gap.square()
+
+
+def fit_polarity(
+    mem,
+    facts: list,
+    incidental_keys: list,
+    *,
+    steps: int = 400,
+    bs: int = 4,
+    lr: float = 1e-2,
+    margin: float = 1.0,
+    seed: int = 0,
+    prefer_weight: float = 0.2,
+    avoid_weight: float = 0.2,
+    incidental_weight: float = 1.0,
+    on_step=None,
+) -> list:
+    """Train only the polarity vector. The MLP and the readouts stay frozen.
+
+    ``facts`` items have a prefer or avoid ``family``, a stored ``value``,
+    the fact ``key``, a decision ``prompt``, and ``good`` / ``bad``
+    continuations. The hinge is against the empty-store cross-entropy.
+    Prefer keys are kept from flipping (gain may stay above 1). Avoid keys
+    are pulled toward gain -1. Incidental keys are pulled toward gain 1 so a
+    neutral fact does not reverse the residual.
+    """
+    import torch
+
+    if steps < 1:
+        raise ValueError("steps must be >= 1")
+    if bs < 1:
+        raise ValueError("bs must be >= 1")
+    if not facts:
+        raise ValueError("facts is empty")
+    if float(margin) < 0:
+        raise ValueError("margin must be >= 0")
+    random.seed(int(seed))
+    torch.manual_seed(int(seed))
+    cache = _decision_cache(mem, facts)
+    _cache_empty_ce(mem, cache)
+    incidental = [np.asarray(key, dtype=np.float32) for key in incidental_keys]
+    net_params = []
+    for name, param in mem.inject.named_parameters():
+        if name == "polarity":
+            param.requires_grad_(True)
+        else:
+            param.requires_grad_(False)
+            net_params.append(param.detach().clone())
+    opt = torch.optim.AdamW([mem.inject.polarity], lr=float(lr), weight_decay=0.0)
+    mem.inject.train()
+    log = []
+    try:
+        for step in range(1, int(steps) + 1):
+            opt.zero_grad()
+            total = 0.0
+            for _ in range(int(bs)):
+                ex = cache[random.randrange(len(cache))]
+                loss_good = mem.teacher_force_loss(ex["prompt"], ex["good"], ex["value"], ex["key"])
+                loss_bad = mem.teacher_force_loss(ex["prompt"], ex["bad"], ex["value"], ex["key"])
+                loss = _hinge_loss(loss_good, loss_bad, ex["ce_good0"], ex["ce_bad0"], margin)
+                if ex["family"] == "avoid":
+                    pen = _gain_term(mem.inject, ex["key"], -1.0, avoid_weight, "both")
+                else:
+                    pen = _gain_term(mem.inject, ex["key"], 1.0, prefer_weight, "below")
+                if pen is not None:
+                    loss = loss + pen
+                if incidental and float(incidental_weight) != 0.0:
+                    inc = incidental[random.randrange(len(incidental))]
+                    pen_i = _gain_term(mem.inject, inc, 1.0, incidental_weight, "both")
+                    loss = loss + pen_i
+                (loss / float(bs)).backward()
+                total += float(loss.detach()) / float(bs)
+                mem._delta = None
+            opt.step()
+            mem._delta = None
+            row = {"step": step, "loss": total}
+            if on_step is not None and (step == 1 or step % 50 == 0 or step == int(steps)):
+                mem.inject.eval()
+                try:
+                    extra = on_step(step)
+                finally:
+                    mem.inject.train()
+                    mem._delta = None
+                if isinstance(extra, dict):
+                    row.update(extra)
+            if step == 1 or step % 50 == 0 or step == int(steps):
+                log.append(row)
+                print(row, flush=True)
+    finally:
+        for param in mem.inject.parameters():
+            param.requires_grad_(True)
+        mem.inject.eval()
+        mem._delta = None
+    for name, param in mem.inject.named_parameters():
+        if name == "polarity":
+            continue
+        before = net_params.pop(0)
+        if not torch.equal(param.detach().cpu(), before.cpu()):
+            raise RuntimeError(f"polarity fit changed {name}")
+    return log
+
+
+def fit_decision_value(
+    mem,
+    facts: list,
+    *,
+    steps: int = 400,
+    bs: int = 4,
+    lr: float = 3e-4,
+    margin: float = 1.0,
+    seed: int = 0,
+    on_step=None,
+) -> list:
+    """No-key ablation. Train the MLP on the decision hinge. Polarity stays frozen.
+
+    The same stored word is a favorite in one row and forbidden in another, so
+    a function of the value alone has no polarity signal. ``key`` is not passed
+    into the MLP.
+    """
+    import torch
+
+    if steps < 1:
+        raise ValueError("steps must be >= 1")
+    if bs < 1:
+        raise ValueError("bs must be >= 1")
+    if not facts:
+        raise ValueError("facts is empty")
+    if float(margin) < 0:
+        raise ValueError("margin must be >= 0")
+    random.seed(int(seed))
+    torch.manual_seed(int(seed))
+    cache = _decision_cache(mem, facts)
+    _cache_empty_ce(mem, cache)
+    polarity_before = mem.inject.polarity.detach().clone()
+    mem.inject.polarity.requires_grad_(False)
+    params = [param for name, param in mem.inject.named_parameters() if name != "polarity"]
+    opt = torch.optim.AdamW(params, lr=float(lr), weight_decay=0.0)
+    mem.inject.train()
+    log = []
+    try:
+        for step in range(1, int(steps) + 1):
+            opt.zero_grad()
+            total = 0.0
+            for _ in range(int(bs)):
+                ex = cache[random.randrange(len(cache))]
+                loss_good = mem.teacher_force_loss(ex["prompt"], ex["good"], ex["value"])
+                loss_bad = mem.teacher_force_loss(ex["prompt"], ex["bad"], ex["value"])
+                loss = _hinge_loss(loss_good, loss_bad, ex["ce_good0"], ex["ce_bad0"], margin)
+                (loss / float(bs)).backward()
+                total += float(loss.detach()) / float(bs)
+                mem._delta = None
+            opt.step()
+            mem._delta = None
+            row = {"step": step, "loss": total}
+            if on_step is not None and (step == 1 or step % 50 == 0 or step == int(steps)):
+                mem.inject.eval()
+                try:
+                    extra = on_step(step)
+                finally:
+                    mem.inject.train()
+                    mem._delta = None
+                if isinstance(extra, dict):
+                    row.update(extra)
+            if step == 1 or step % 50 == 0 or step == int(steps):
+                log.append(row)
+                print(row, flush=True)
+    finally:
+        mem.inject.polarity.requires_grad_(True)
+        mem.inject.eval()
+        mem._delta = None
+    if not torch.equal(mem.inject.polarity.detach(), polarity_before):
+        raise RuntimeError("no-key fit changed polarity")
+    return log
+
+
 def fit_inject(
     mem,
     facts: list,
@@ -112,7 +360,10 @@ def fit_inject(
     random.seed(int(seed))
     torch.manual_seed(int(seed))
     cache = _cache(mem, facts)
-    opt = torch.optim.AdamW(mem.inject.parameters(), lr=float(lr), weight_decay=float(weight_decay))
+    # Polarity is not a function of the prefix loss (no key is passed). Leave
+    # it out of AdamW so weight decay cannot shrink a direction vector.
+    params = [param for name, param in mem.inject.named_parameters() if name != "polarity"]
+    opt = torch.optim.AdamW(params, lr=float(lr), weight_decay=float(weight_decay))
     mem.inject.train()
     log = []
     try:
