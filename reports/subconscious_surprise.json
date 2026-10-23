@@ -1,0 +1,732 @@
+{
+  "cost": {
+    "above_threshold_forwards": 2,
+    "above_threshold_surprise": 17.315771102905273,
+    "above_threshold_written": true,
+    "answer_surprise_median_s": 7.004699909884948e-05,
+    "answer_surprise_rows": 1,
+    "below_threshold_forwards": 2,
+    "below_threshold_surprise": 7.690174102783203,
+    "below_threshold_written": true,
+    "buffers": 66931,
+    "chat_forwards": 0,
+    "chat_written": false,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576
+  },
+  "gap_tau": 0.8,
+  "held": {
+    "avoid": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 0.7543954849243164,
+          "family": "avoid",
+          "id": "sur-held-avoid-0",
+          "inject_margin": 1.9314985275268555,
+          "nomem_choose": 1,
+          "nomem_margin": 1.177103042602539,
+          "stored_lift": -1.3814449310302734,
+          "surprise": 12.255186080932617,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": -1.0038881301879883,
+          "family": "avoid",
+          "id": "sur-held-avoid-1",
+          "inject_margin": 0.8371620178222656,
+          "nomem_choose": 1,
+          "nomem_margin": 1.841050148010254,
+          "stored_lift": -1.7284955978393555,
+          "surprise": 13.340827941894531,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 2.7393226623535156,
+          "family": "avoid",
+          "id": "sur-held-avoid-2",
+          "inject_margin": -0.1931304931640625,
+          "nomem_choose": 0,
+          "nomem_margin": -2.932453155517578,
+          "stored_lift": -2.289242744445801,
+          "surprise": 12.72072696685791,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 1.6854915618896484,
+          "family": "avoid",
+          "id": "sur-held-avoid-3",
+          "inject_margin": -2.0943288803100586,
+          "nomem_choose": 0,
+          "nomem_margin": -3.779820442199707,
+          "stored_lift": -1.8208141326904297,
+          "surprise": 12.69527530670166,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 4.043092727661133,
+          "family": "avoid",
+          "id": "sur-held-avoid-4",
+          "inject_margin": -0.035358428955078125,
+          "nomem_choose": 0,
+          "nomem_margin": -4.078451156616211,
+          "stored_lift": -5.284996032714844,
+          "surprise": 11.485754013061523,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 0.42120933532714844,
+          "family": "avoid",
+          "id": "sur-held-avoid-5",
+          "inject_margin": 0.29183197021484375,
+          "nomem_choose": 0,
+          "nomem_margin": -0.1293773651123047,
+          "stored_lift": -0.8549165725708008,
+          "surprise": 16.085966110229492,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 1.403712272644043,
+          "family": "avoid",
+          "id": "sur-held-avoid-6",
+          "inject_margin": -0.1216268539428711,
+          "nomem_choose": 0,
+          "nomem_margin": -1.525339126586914,
+          "stored_lift": -3.193070411682129,
+          "surprise": 13.686071395874023,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 1.5048198699951172,
+          "family": "avoid",
+          "id": "sur-held-avoid-7",
+          "inject_margin": -0.2715740203857422,
+          "nomem_choose": 0,
+          "nomem_margin": -1.7763938903808594,
+          "stored_lift": -1.514688491821289,
+          "surprise": 15.106675148010254,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 16.085966110229492,
+        "mean_delta": 1.4435194730758667,
+        "mean_surprise": 13.422060370445251,
+        "min_surprise": 11.485754013061523,
+        "n": 8,
+        "n_delta_pos": 7,
+        "written": 8
+      }
+    },
+    "bank_kind": "held",
+    "bank_sha256": "41ca5f243131f13deefe85800a775e8378bdeb233954a0b51119d66d93d180f1",
+    "forbidden_down": 8,
+    "forbidden_lift": -2.2584586143493652,
+    "gap_tau": 0.8,
+    "hidden": 576,
+    "high": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 5.866922378540039,
+          "family": "high",
+          "id": "sur-held-high-0",
+          "inject_margin": 2.794269561767578,
+          "nomem_choose": 0,
+          "nomem_margin": -3.072652816772461,
+          "stored_lift": 4.088750839233398,
+          "surprise": 17.315771102905273,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 21.042555570602417,
+          "family": "high",
+          "id": "sur-held-high-1",
+          "inject_margin": 22.051701307296753,
+          "nomem_choose": 1,
+          "nomem_margin": 1.009145736694336,
+          "stored_lift": 12.42625117301941,
+          "surprise": 12.558563232421875,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 19.344318822026253,
+          "family": "high",
+          "id": "sur-held-high-2",
+          "inject_margin": 22.519463017582893,
+          "nomem_choose": 1,
+          "nomem_margin": 3.1751441955566406,
+          "stored_lift": 11.53053803741932,
+          "surprise": 11.620015144348145,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 20.193577364087105,
+          "family": "high",
+          "id": "sur-held-high-3",
+          "inject_margin": 22.876555040478706,
+          "nomem_choose": 1,
+          "nomem_margin": 2.6829776763916016,
+          "stored_lift": 13.250106409192085,
+          "surprise": 13.28647518157959,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 4.113640785217285,
+          "family": "high",
+          "id": "sur-held-high-4",
+          "inject_margin": 2.191007614135742,
+          "nomem_choose": 0,
+          "nomem_margin": -1.922633171081543,
+          "stored_lift": 3.991244316101074,
+          "surprise": 11.835305213928223,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 15.614680528640747,
+          "family": "high",
+          "id": "sur-held-high-5",
+          "inject_margin": 14.1012442111969,
+          "nomem_choose": 0,
+          "nomem_margin": -1.5134363174438477,
+          "stored_lift": 12.456715822219849,
+          "surprise": 15.867409706115723,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 22.695481568574905,
+          "family": "high",
+          "id": "sur-held-high-6",
+          "inject_margin": 24.906402856111526,
+          "nomem_choose": 1,
+          "nomem_margin": 2.210921287536621,
+          "stored_lift": 11.683234483003616,
+          "surprise": 11.998913764953613,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 12.248774766921997,
+          "family": "high",
+          "id": "sur-held-high-7",
+          "inject_margin": 14.064906358718872,
+          "nomem_choose": 1,
+          "nomem_margin": 1.816131591796875,
+          "stored_lift": 10.764817476272583,
+          "surprise": 13.10690689086914,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 17.315771102905273,
+        "mean_delta": 15.139993973076344,
+        "mean_surprise": 13.448670029640198,
+        "min_surprise": 11.620015144348145,
+        "n": 8,
+        "n_delta_pos": 8,
+        "written": 8
+      }
+    },
+    "layer": 15,
+    "low": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 14.881229609251022,
+          "family": "low",
+          "id": "sur-held-low-0",
+          "inject_margin": 23.301046580076218,
+          "nomem_choose": 1,
+          "nomem_margin": 8.419816970825195,
+          "stored_lift": 7.36087629199028,
+          "surprise": 7.690174102783203,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 6.228324890136719,
+          "family": "low",
+          "id": "sur-held-low-1",
+          "inject_margin": 22.707183361053467,
+          "nomem_choose": 1,
+          "nomem_margin": 16.478858470916748,
+          "stored_lift": 0.8594760894775391,
+          "surprise": 2.390812397003174,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-held-low-2",
+          "inject_margin": 14.471542716026306,
+          "nomem_choose": 1,
+          "nomem_margin": 14.471542716026306,
+          "stored_lift": 0.0,
+          "surprise": 1.7675377130508423,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 14.7664180919528,
+          "family": "low",
+          "id": "sur-held-low-3",
+          "inject_margin": 22.880167596042156,
+          "nomem_choose": 1,
+          "nomem_margin": 8.113749504089355,
+          "stored_lift": 6.301371209323406,
+          "surprise": 6.423441410064697,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 2.3553924560546875,
+          "family": "low",
+          "id": "sur-held-low-4",
+          "inject_margin": 10.06881046295166,
+          "nomem_choose": 1,
+          "nomem_margin": 7.713418006896973,
+          "stored_lift": 0.40059661865234375,
+          "surprise": 4.698589324951172,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-held-low-5",
+          "inject_margin": 19.42919397354126,
+          "nomem_choose": 1,
+          "nomem_margin": 19.42919397354126,
+          "stored_lift": 0.0,
+          "surprise": 0.36991071701049805,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 6.250929117202759,
+          "family": "low",
+          "id": "sur-held-low-6",
+          "inject_margin": 15.62792420387268,
+          "nomem_choose": 1,
+          "nomem_margin": 9.376995086669922,
+          "stored_lift": 1.596625566482544,
+          "surprise": 4.463000297546387,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 5.544899076223373,
+          "family": "low",
+          "id": "sur-held-low-7",
+          "inject_margin": 14.593427270650864,
+          "nomem_choose": 1,
+          "nomem_margin": 9.04852819442749,
+          "stored_lift": 3.0261937081813812,
+          "surprise": 3.4977707862854004,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 7.690174102783203,
+        "mean_delta": 6.25339915510267,
+        "mean_surprise": 3.9126545935869217,
+        "min_surprise": 0.36991071701049805,
+        "n": 8,
+        "n_delta_pos": 6,
+        "written": 6
+      }
+    },
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": 0.002620697021484375,
+            "flip": 0,
+            "id": "sur-held-ch-0",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.029884815216064453,
+            "flip": 0,
+            "id": "sur-held-ch-1",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0022764205932617188,
+            "flip": 0,
+            "id": "sur-held-ch-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.003116607666015625,
+            "flip": 0,
+            "id": "sur-held-ch-3",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.01215982437133789,
+            "flip": 0,
+            "id": "sur-held-ch-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0014543533325195312,
+            "flip": 0,
+            "id": "sur-held-ch-5",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.008450984954833984,
+            "flip": 0,
+            "id": "sur-held-ch-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.000759124755859375,
+            "flip": 0,
+            "id": "sur-held-ch-7",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          }
+        ]
+      },
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_surprise_min": 23.940773010253906,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Outline one windy escarpment.\nDone:",
+            "text": "100%"
+          },
+          {
+            "hits": [],
+            "prompt": "How is tin poured into a mold?\nDone:",
+            "text": "1."
+          },
+          {
+            "hits": [],
+            "prompt": "Where do martins nest in spring?\nDone:",
+            "text": "10/10/2012"
+          },
+          {
+            "hits": [],
+            "prompt": "Recommend a shaded towpath.\nDone:",
+            "text": "100%"
+          },
+          {
+            "hits": [],
+            "prompt": "What rests above a bellows?\nDone:",
+            "text": "1000"
+          },
+          {
+            "hits": [],
+            "prompt": "How does dry sage smell?\nDone:",
+            "text": "The smell of dry sage is a combination of the"
+          },
+          {
+            "hits": [],
+            "prompt": "Recount one viaduct crossing.\nDone:",
+            "text": "1999-01-01"
+          },
+          {
+            "hits": [],
+            "prompt": "Count pylons along a ridge.\nDone:",
+            "text": "10000000000"
+          }
+        ]
+      },
+      "leak_written": 8,
+      "nll": {
+        "mean_delta": -0.0030459165573120117,
+        "n_bad": 0,
+        "rows": [
+          {
+            "delta": -0.004227638244628906,
+            "id": "sur-held-nll-0",
+            "nll_inject": 8.260454177856445,
+            "nll_nomem": 8.264681816101074
+          },
+          {
+            "delta": 0.00018024444580078125,
+            "id": "sur-held-nll-1",
+            "nll_inject": 10.829771995544434,
+            "nll_nomem": 10.829591751098633
+          },
+          {
+            "delta": -0.0027523040771484375,
+            "id": "sur-held-nll-2",
+            "nll_inject": 12.3292818069458,
+            "nll_nomem": 12.33203411102295
+          },
+          {
+            "delta": 0.05462455749511719,
+            "id": "sur-held-nll-3",
+            "nll_inject": 12.261098861694336,
+            "nll_nomem": 12.206474304199219
+          },
+          {
+            "delta": -0.040309906005859375,
+            "id": "sur-held-nll-4",
+            "nll_inject": 11.6366548538208,
+            "nll_nomem": 11.67696475982666
+          },
+          {
+            "delta": -0.03549957275390625,
+            "id": "sur-held-nll-5",
+            "nll_inject": 16.190967559814453,
+            "nll_nomem": 16.22646713256836
+          },
+          {
+            "delta": -0.0019063949584960938,
+            "id": "sur-held-nll-6",
+            "nll_inject": 10.411595344543457,
+            "nll_nomem": 10.413501739501953
+          },
+          {
+            "delta": 0.005523681640625,
+            "id": "sur-held-nll-7",
+            "nll_inject": 10.203133583068848,
+            "nll_nomem": 10.197609901428223
+          }
+        ]
+      }
+    },
+    "phases_s": {
+      "influence": 6.308587784000338,
+      "leak": 3.342698004998965,
+      "neutral": 4.0369089970008645,
+      "scripted": 9.622477163999065
+    },
+    "prefer": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 12.848602771759033,
+          "family": "prefer",
+          "id": "sur-held-prefer-0",
+          "inject_margin": 11.671499729156494,
+          "nomem_choose": 0,
+          "nomem_margin": -1.177103042602539,
+          "stored_lift": 12.679003238677979,
+          "surprise": 14.861702919006348,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 7.031416893005371,
+          "family": "prefer",
+          "id": "sur-held-prefer-1",
+          "inject_margin": 5.190366744995117,
+          "nomem_choose": 0,
+          "nomem_margin": -1.841050148010254,
+          "stored_lift": 3.8567800521850586,
+          "surprise": 15.405363082885742,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 4.315556526184082,
+          "family": "prefer",
+          "id": "sur-held-prefer-2",
+          "inject_margin": 7.24800968170166,
+          "nomem_choose": 1,
+          "nomem_margin": 2.932453155517578,
+          "stored_lift": 4.540445327758789,
+          "surprise": 13.708917617797852,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 14.490311861038208,
+          "family": "prefer",
+          "id": "sur-held-prefer-3",
+          "inject_margin": 18.270132303237915,
+          "nomem_choose": 1,
+          "nomem_margin": 3.779820442199707,
+          "stored_lift": 10.621035814285278,
+          "surprise": 13.86851978302002,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 2.002056121826172,
+          "family": "prefer",
+          "id": "sur-held-prefer-4",
+          "inject_margin": 6.080507278442383,
+          "nomem_choose": 1,
+          "nomem_margin": 4.078451156616211,
+          "stored_lift": 1.9464702606201172,
+          "surprise": 12.412102699279785,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 8.222851753234863,
+          "family": "prefer",
+          "id": "sur-held-prefer-5",
+          "inject_margin": 8.352229118347168,
+          "nomem_choose": 1,
+          "nomem_margin": 0.1293773651123047,
+          "stored_lift": 7.3170166015625,
+          "surprise": 15.905003547668457,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 6.980926036834717,
+          "family": "prefer",
+          "id": "sur-held-prefer-6",
+          "inject_margin": 8.50626516342163,
+          "nomem_choose": 1,
+          "nomem_margin": 1.525339126586914,
+          "stored_lift": 4.500224590301514,
+          "surprise": 15.978546142578125,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 14.84127676486969,
+          "family": "prefer",
+          "id": "sur-held-prefer-7",
+          "inject_margin": 16.61767065525055,
+          "nomem_choose": 1,
+          "nomem_margin": 1.7763938903808594,
+          "stored_lift": 10.68606436252594,
+          "surprise": 15.935199737548828,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 15.978546142578125,
+        "mean_delta": 8.841624841094017,
+        "mean_surprise": 14.759419441223145,
+        "min_surprise": 12.412102699279785,
+        "n": 8,
+        "n_delta_pos": 8,
+        "written": 8
+      }
+    },
+    "prefer_lift": 7.018380030989647,
+    "protocol": "subconscious-surprise-v1",
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Outline one windy escarpment.\nDone:",
+          "takeover": 0,
+          "text": "v, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,"
+        },
+        {
+          "prompt": "How is tin poured into a mold?\nDone:",
+          "takeover": 0,
+          "text": "min 4 t u shc z m 4 t u shc z m 4 t x l v x z m 4 t x z run"
+        },
+        {
+          "prompt": "Where do martins nest in spring?\nDone:",
+          "takeover": 0,
+          "text": "4 crews,0 4 crews, 4 crew, 4 crew, 4, 4 crew, 0, 4,"
+        },
+        {
+          "prompt": "Recommend a shaded towpath.\nDone:",
+          "takeover": 0,
+          "text": "min run run run run run run run run run run run run run run run run run run run run run run run run run run run run run run run"
+        },
+        {
+          "prompt": "What stored phone lists Ismere?",
+          "takeover": 0,
+          "text": ", , , , , , , , , , , , , , , , , , , , , , , , , , , , , , , ,"
+        },
+        {
+          "prompt": "Read back the birthday Ismere recorded.",
+          "takeover": 1,
+          "text": "July 16, 1994"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_surprise": 16.57139015197754,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Outline one windy escarpment.\nDone:",
+          "takeover": 0,
+          "text": "The escarpment one windy escarpment."
+        },
+        {
+          "prompt": "How is tin poured into a mold?\nDone:",
+          "takeover": 0,
+          "text": "Tin is poured into a mold, and then cooled, then"
+        },
+        {
+          "prompt": "Where do martins nest in spring?\nDone:",
+          "takeover": 0,
+          "text": "PORTLAND, Texas, March 22, 1973,"
+        },
+        {
+          "prompt": "Recommend a shaded towpath.\nDone:",
+          "takeover": 0,
+          "text": "Shade the towpath, then walk the path, then walk the path, then park the car, then park the car, then park the car, then"
+        },
+        {
+          "prompt": "What stored phone lists Ismere?",
+          "takeover": 1,
+          "text": "+1-415-555-1173"
+        },
+        {
+          "prompt": "Read back the birthday Ismere recorded.",
+          "takeover": 0,
+          "text": "Ismere recorded."
+        }
+      ],
+      "phone_question": 1,
+      "phone_surprise": 34.74029541015625,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    },
+    "tau": 2.0,
+    "wall_s": 23.310671949999232
+  },
+  "rss_kb": {
+    "after": {
+      "VmHWM": 1273280,
+      "VmPeak": 3312232,
+      "VmRSS": 1066380
+    },
+    "before": {
+      "VmHWM": 226984,
+      "VmPeak": 757768,
+      "VmRSS": 226984
+    }
+  },
+  "tau": 2.0
+}
