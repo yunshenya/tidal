@@ -196,13 +196,10 @@ def cached_greedy(mem, prompt: str, max_new_tokens: int) -> list:
 def generate_ids(mem, prompt: str, spec, max_new: int, use_cache: bool) -> list:
     """Greedy ids with ``spec`` armed. Empty store adds nothing.
 
-    A phone slot is spelled by the phone readout, and a birthday slot by the
-    date readout, both from hard top-1, before any soft mix. That is the same
-    id list ``continuation_ids`` returns.
+    Hard top-1 uses ``continuation_ids`` (one query, relation-gated spelling,
+    gap scale). A soft mix still spells from hard top-1 first, then arms the
+    mix once. That mix is the ablation, not the main path.
     """
-    scripted = mem.scripted_continuation(prompt, max_new)
-    if scripted is not None:
-        return scripted
     real = mem._arm
 
     def arm(text, _spec=spec):
@@ -212,12 +209,29 @@ def generate_ids(mem, prompt: str, spec, max_new: int, use_cache: bool) -> list:
         query = mem._query_vector(text)
         mem._delta = mem._compose(mix_value(mem.store, query, _spec), grad=False)
 
+    main = spec.get("mode") == "top1" and spec.get("margin") is None
     mem._arm = arm
     try:
-        if not use_cache:
+        if main:
+            if use_cache:
+                rank = mem._rank(prompt)
+                spelled = mem._spell_ids(prompt, rank, max_new)
+                if spelled is not None:
+                    return spelled
+                mem._set_delta(rank)
+                try:
+                    with torch.no_grad():
+                        return cached_greedy(mem, prompt, max_new)
+                finally:
+                    mem._delta = None
             return mem.continuation_ids(prompt, max_new_tokens=max_new)
+        scripted = mem.scripted_continuation(prompt, max_new)
+        if scripted is not None:
+            return scripted
         mem._arm(prompt)
         try:
+            if not use_cache:
+                return mem.continuation_ids(prompt, max_new_tokens=max_new, arm=False)
             with torch.no_grad():
                 return cached_greedy(mem, prompt, max_new)
         finally:
