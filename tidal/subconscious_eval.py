@@ -1,7 +1,8 @@
 """Subconscious-style metrics for the shipped ``LLMMemory`` inject path.
 
 Log-prob scoring arms the prompt once and compares two continuations under
-that vector. The residual is scaled by the top-1 gap. ``generate`` encodes
+that vector. The residual is scaled by the top-1 gap and by polarity gain.
+``generate`` encodes
 the query once: spelling replaces the token loop only when the prompt is
 completing the winning relation. This module does not import ``transformers``.
 """
@@ -383,7 +384,12 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
             warmup,
         )
     value = torch.tensor(np.asarray(normal["value"], dtype=np.float32))
-    mlp_bench = _bench(lambda: mem.inject(value), repeats, warmup)
+    key_np = normal.get("key")
+    if key_np is None:
+        mlp_bench = _bench(lambda: mem.inject(value), repeats, warmup)
+    else:
+        key_t = torch.tensor(np.asarray(key_np, dtype=np.float32))
+        mlp_bench = _bench(lambda: mem.inject(value, key_t), repeats, warmup)
 
     delta = mem._compose(normal["value"], grad=False).detach()
     forwards = {}
@@ -1074,7 +1080,8 @@ def render_report(result: dict) -> str:
         "",
         "- **nomem**: empty store, prompt only.",
         "- **inject**: facts in `EpisodicStore`, prompt only, hard top-1 residual "
-        "(`c * (scale(v) + MLP(scale(v)))`, `c` from the top-1 gap) at every position.",
+        "(`c * gain * (scale(v) + MLP(scale(v)))`, `c` from the top-1 gap, "
+        "`gain = 1 + 2 tanh(w · normalize(k))`) at every position.",
         "- **context**: empty store, the fact line (or the whole transcript under load) prepended.",
         "- **rag**: empty store, `BAAI/bge-small-en-v1.5` CLS top-1 line prepended. No query-instruction prefix, matching `scripts/eval_llm_memory.py`.",
         "",

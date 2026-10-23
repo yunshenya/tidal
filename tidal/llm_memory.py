@@ -21,13 +21,16 @@ hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
 estimated once from a calibration set and stored with the module. The add is
 
-    c * (scale(v) + MLP(scale(v)))
+    c * gain * (scale(v) + MLP(scale(v)))
 
-with ``scale`` fixed at 1. ``c`` is 1 when the store has one slot. Otherwise
-``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
-0.80. A tie adds nothing. The MLP weights are the shipped checkpoint; the
-scale does not replace them. The last layer of an untrained module is still
-zeros, so that module copies ``v`` through when ``c`` is 1. Phone and birthday
+with ``scale`` fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))``. ``w`` is a
+polarity vector and ``k`` is the winning slot's key. ``w = 0`` leaves
+``gain = 1``, so the add matches the unscaled residual. ``c`` is 1 when the
+store has one slot. Otherwise ``c = clip((top1 cosine - top2 cosine) /
+gap_tau, 0, 1)`` and ``gap_tau`` is 0.80. A tie adds nothing. The MLP weights
+are the shipped checkpoint; polarity does not replace them. The last layer of
+an untrained module is still zeros, so that module copies ``v`` through when
+``c`` is 1 and ``w`` is 0. Phone and birthday
 spelling runs only when the winning relation is the one the prompt is
 completing. A continuation encodes the query once. When this wrapper loads
 the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
@@ -87,6 +90,10 @@ PHONE_TAIL = "+1-415-555-"
 # bound on fit bank 20b7cb3f9742709d320dc5913cf62675316673d7b457c55b6c78cf4de587e5ce
 # at N=8 and N=32. Not retuned on the frozen bank or on this PR's held-out.
 DEFAULT_GAP_TAU = 0.80
+# gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
+# integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
+# w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
+POLARITY_SPAN = 2.0
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -102,6 +109,9 @@ _DATE_KEYS = (
     "date_digit_b",
 )
 _READOUT_KEYS = _PHONE_KEYS + _DATE_KEYS
+# Absent from a checkpoint saved before polarity. Loading those tensors leaves
+# ``w`` at zero, which is gain 1.
+_OPTIONAL_INJECT_KEYS = ("polarity",)
 # Shares of the value vector. Day-tens is the small block: it is a zero vector
 # for days 1–9, and only digits 0–2 occur for days 1–27. The rest is split
 # evenly across the month token, the day-ones token, and the four year digits.
@@ -507,17 +517,19 @@ def _inject_state_fits(module: nn.Module, state) -> bool:
 
 
 def _inject_core_fits(module: nn.Module, state) -> bool:
-    """MLP tensors match. Phone and date readout buffers may be absent.
+    """MLP tensors match. Phone, date, and polarity may be absent.
 
-    A checkpoint saved before a readout only has the MLP keys. Unknown keys
-    and shape mismatches do not fit.
+    A checkpoint saved before a readout only has the MLP keys. Polarity is
+    optional: a file from before that vector still fits, and the load leaves
+    ``w`` at zero. Unknown keys and shape mismatches do not fit.
     """
     if not isinstance(state, dict):
         return False
     current = module.state_dict()
     if not set(state) <= set(current):
         return False
-    required = [key for key in current if key not in _READOUT_KEYS]
+    optional = set(_READOUT_KEYS) | set(_OPTIONAL_INJECT_KEYS)
+    required = [key for key in current if key not in optional]
     if not set(required) <= set(state):
         return False
     for key, got in state.items():
@@ -529,17 +541,29 @@ def _inject_core_fits(module: nn.Module, state) -> bool:
 
 
 def _load_inject_tensors(module: nn.Module, state) -> None:
-    """Load ``state`` onto ``module``. Missing readout buffers stay at init."""
+    """Load ``state`` onto ``module``. Missing readout buffers stay at init.
+
+    A missing polarity vector is set to zero so an older checkpoint keeps
+    gain 1 even if this module had a nonzero ``w``.
+    """
     if not _inject_core_fits(module, state):
         raise ValueError("inject tensors do not match this MLP")
     merged = {key: tensor.detach().cpu().clone() for key, tensor in module.state_dict().items()}
     for key, tensor in state.items():
         merged[key] = tensor.detach().cpu()
+    for key in _OPTIONAL_INJECT_KEYS:
+        if key not in state and key in merged:
+            merged[key] = torch.zeros_like(merged[key])
     module.load_state_dict(merged)
 
 
 class InjectMLP(nn.Module):
-    """``scaled + MLP(scaled)``. Last layer is exact zeros, so the add starts as ``scaled``."""
+    """``gain * (scaled + MLP(scaled))``. Last layer is exact zeros.
+
+    Without a key, or with the polarity vector at zero, gain is 1 and the
+    add starts as ``scaled``. A key multiplies that residual by
+    ``1 + POLARITY_SPAN * tanh(w · normalize(k))``.
+    """
 
     def __init__(self, d: int, hid: Optional[int] = None):
         super().__init__()
@@ -572,10 +596,31 @@ class InjectMLP(nn.Module):
         self.register_buffer("date_month_b", torch.zeros(12, dtype=torch.float32))
         self.register_buffer("date_digit_w", torch.zeros(6, 10, d, dtype=torch.float32))
         self.register_buffer("date_digit_b", torch.zeros(6, 10, dtype=torch.float32))
+        # Zero so a fresh module, and any checkpoint saved before this vector,
+        # copies the residual through. Trained only by ``fit_polarity``.
+        self.polarity = nn.Parameter(torch.zeros(d, dtype=torch.float32))
 
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
+    def polarity_gain(self, key: torch.Tensor) -> torch.Tensor:
+        """Scalar ``1 + POLARITY_SPAN * tanh(w · normalize(key))``."""
+        k = key.to(dtype=self.polarity.dtype, device=self.polarity.device).reshape(-1)
+        if k.numel() != self.polarity.numel():
+            raise ValueError(f"key dim {k.numel()} != polarity {self.polarity.numel()}")
+        unit = k / k.norm().clamp_min(1e-6)
+        raw = torch.dot(self.polarity, unit)
+        return 1.0 + float(POLARITY_SPAN) * torch.tanh(raw)
+
+    def forward(self, value: torch.Tensor, key: Optional[torch.Tensor] = None) -> torch.Tensor:
         scaled = value * self.scale
-        return scaled + self.net(scaled)
+        residual = scaled + self.net(scaled)
+        if key is None:
+            return residual
+        # w = 0 is exactly the residual. Skip the multiply on the inference
+        # path so a zero vector stays bitwise identical. Training keeps the
+        # graph, including at the zero initialization.
+        inactive = (not torch.is_grad_enabled()) or (not self.polarity.requires_grad)
+        if inactive and float(self.polarity.detach().abs().sum()) == 0.0:
+            return residual
+        return self.polarity_gain(key) * residual
 
     def phone_digits(self, value: torch.Tensor) -> Optional[list]:
         """Four digits read from a phone value, or None when the readout is off."""
@@ -921,11 +966,13 @@ class LLMMemory:
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. The armed value is the top slot
     (hard top-1 on raw cosine), not a soft mixture, multiplied by
-    :func:`retrieval_confidence`. ``soft_k`` and ``soft_temp`` are kept on
+    :func:`retrieval_confidence` and by the polarity gain of that slot's key.
+    ``soft_k`` and ``soft_temp`` are kept on
     the episodic store; ``generate`` does not read them. An empty store
     leaves the residual untouched, so greedy tokens match the same model
     with the hook removed. Phone and birthday spelling runs only when the
-    prompt is completing that relation.
+    prompt is completing that relation. A zero polarity vector leaves the
+    gain at 1.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -1230,21 +1277,28 @@ class LLMMemory:
         raw = self._raw_key_pool(prompt)
         return (raw - self.query_mean).astype(np.float64, copy=False)
 
-    def _compose(self, value, *, grad: bool) -> torch.Tensor:
+    def _compose(self, value, *, grad: bool, key=None) -> torch.Tensor:
         arr = np.asarray(value, dtype=np.float32).reshape(-1)
         if arr.shape != (self.hidden,):
             raise ValueError(f"value dim {arr.shape[0]} != hidden {self.hidden}")
         v = torch.tensor(arr, dtype=torch.float32, device=self._device)
+        key_t = None
+        if key is not None:
+            arr_k = np.asarray(key, dtype=np.float32).reshape(-1)
+            if arr_k.shape != (self.hidden,):
+                raise ValueError(f"key dim {arr_k.shape[0]} != hidden {self.hidden}")
+            key_t = torch.tensor(arr_k, dtype=torch.float32, device=self._device)
         if grad:
-            return self.inject(v)
+            return self.inject(v, key_t)
         with torch.no_grad():
-            return self.inject(v).detach()
+            return self.inject(v, key_t).detach()
 
     def _rank(self, prompt: str) -> dict:
         """One query. Hard top-1, plus the gap to the runner-up."""
         info = {
             "n": len(self.store),
             "value": None,
+            "key": None,
             "top": None,
             "maxcos": None,
             "gap": None,
@@ -1267,10 +1321,12 @@ class LLMMemory:
             gap = float(scores[top_i] - rest)
         top = read_info.get("top") if isinstance(read_info, dict) else None
         n = len(slots)
+        winner = int(read_info.get("top_i", top_i)) if isinstance(read_info, dict) else top_i
         info.update(
             {
                 "n": n,
                 "value": value,
+                "key": np.asarray(slots[winner].k, dtype=np.float32).copy(),
                 "top": top,
                 "maxcos": float(scores[top_i]),
                 "gap": gap,
@@ -1285,7 +1341,7 @@ class LLMMemory:
         if value is None or conf <= 0.0:
             self._delta = None
             return
-        composed = self._compose(value, grad=False)
+        composed = self._compose(value, key=rank.get("key"), grad=False)
         if conf >= 1.0:
             self._delta = composed
             return
@@ -1398,12 +1454,13 @@ class LLMMemory:
         ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done)
         return decode_answer(self.tokenizer, ids)
 
-    def teacher_force_loss(self, prompt: str, answer: str, value) -> torch.Tensor:
+    def teacher_force_loss(self, prompt: str, answer: str, value, key=None, *, armed: bool = True) -> torch.Tensor:
         """Next-token cross-entropy on ``answer`` with ``value`` injected.
 
         ``prompt + answer`` is the teacher-forced string. ``prompt`` alone is
         the generation prefix, so the fact text is not required in it. Used by
-        ``tidal.llm_memory_train``.
+        ``tidal.llm_memory_train``. ``key`` is the fact key for polarity.
+        ``armed=False`` scores the empty-store baseline and does not inject.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -1422,7 +1479,10 @@ class LLMMemory:
         idxs = [i for i, flag in enumerate(mask) if flag]
         if not idxs or min(idxs) < 1:
             raise ValueError("answer span produced no token the model can predict")
-        self._delta = self._compose(value, grad=True)
+        if armed:
+            self._delta = self._compose(value, key=key, grad=True)
+        else:
+            self._delta = None
         try:
             attn = _batch_mask(enc, self._device)
             kwargs = {"input_ids": ids, "use_cache": False}

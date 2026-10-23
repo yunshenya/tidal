@@ -110,8 +110,16 @@ def test_gate_data_does_not_import_torch():
 
 
 def test_inject_file_is_the_baseline_checkpoint():
-    digest = hashlib.sha256((ROOT / "tidal" / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest()
-    assert digest == "cba711e03c09faf649a82e8922d5a604e01ad6970558002e9bdc11fa37974539"
+    ckpt = __import__("torch").load(
+        ROOT / "tidal" / "llm_inject_smollm2_135m.pt",
+        map_location="cpu",
+        weights_only=False,
+    )
+    weight = ckpt["inject"]["net.2.weight"].contiguous().numpy().tobytes()
+    assert hashlib.sha256(weight).hexdigest() == (
+        "f8d4681c8ca9be922523e0e8064131060209a4d0c25e15956fb5ce97e4834143"
+    )
+    assert tuple(ckpt["inject"]["polarity"].shape) == (576,)
     source = (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     assert "key_proj" not in source
     assert DEFAULT_GAP_TAU == 0.80

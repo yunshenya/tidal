@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 
 from tidal.llm_memory import LLMMemory, answer_span, decode_answer, greedy_continuation, span_complete
-from tidal.llm_memory_train import fit_inject
+from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -361,6 +361,107 @@ def test_untrained_inject_is_identity_copy():
         value = torch.arange(mem.hidden, dtype=torch.float32)
         got = mem.inject(value)
         assert torch.equal(got, value)
+        key = torch.randn(mem.hidden)
+        assert torch.equal(mem.inject(value, key), value)
+    finally:
+        mem.close()
+
+
+def test_polarity_flips_the_same_value():
+    mem = _byte_memory()
+    try:
+        value = torch.arange(mem.hidden, dtype=torch.float32)
+        direction = torch.zeros(mem.hidden)
+        direction[0] = 1.0
+        with torch.no_grad():
+            mem.inject.polarity.copy_(direction * 20)
+        boosted = mem.inject(value, direction)
+        flipped = mem.inject(value, -direction)
+        assert torch.allclose(boosted, value * 3)
+        assert torch.allclose(flipped, -value)
+        key_pos = direction.numpy().astype(np.float32)
+        mem.store.write(key_pos, value.numpy(), name="a", rel="p")
+        assert np.allclose(mem.injection("Ask:"), value.numpy() * 3)
+        mem.store.clear()
+        mem.store.write(-key_pos, value.numpy(), name="a", rel="p")
+        assert np.allclose(mem.injection("Ask:"), -value.numpy())
+    finally:
+        mem.close()
+
+
+def test_missing_polarity_loads_as_zero(tmp_path):
+    mem = _byte_memory()
+    try:
+        with torch.no_grad():
+            mem.inject.polarity.fill_(4.0)
+            mem.inject.net[-1].bias.fill_(0.2)
+        state = {
+            key: tensor.detach().cpu().clone()
+            for key, tensor in mem.inject.state_dict().items()
+            if key != "polarity"
+        }
+        path = tmp_path / "old.pt"
+        torch.save({"inject": state, "layer": mem.layer, "hidden": mem.hidden}, path)
+        fresh = _byte_memory()
+        try:
+            with torch.no_grad():
+                fresh.inject.polarity.fill_(5.0)
+            fresh.load_inject(path)
+            assert torch.count_nonzero(fresh.inject.polarity) == 0
+            assert torch.equal(fresh.inject.net[-1].bias.detach().cpu(), mem.inject.net[-1].bias.detach().cpu())
+        finally:
+            fresh.close()
+    finally:
+        mem.close()
+
+
+def test_fit_polarity_trains_only_the_direction():
+    mem = _byte_memory()
+    try:
+        net0 = mem.inject.net[-1].weight.detach().clone()
+        pol0 = mem.inject.polarity.detach().clone()
+        facts = [
+            {"text": "Ada favors Y", "a": "Y", "q": "Pick:", "good": "Y", "bad": "Z", "family": "prefer"},
+            {"text": "Bea refuses Y", "a": "Y", "q": "Pick:", "good": "Z", "bad": "Y", "family": "avoid"},
+        ]
+        incidental = [np.ones(mem.hidden, dtype=np.float32)]
+        log = fit_polarity(mem, facts, incidental, steps=1, bs=1, lr=0.5, margin=0.0, seed=0)
+        assert np.isfinite(log[0]["loss"])
+        assert not torch.equal(mem.inject.polarity.detach(), pol0)
+        assert torch.equal(mem.inject.net[-1].weight.detach(), net0)
+    finally:
+        mem.close()
+
+
+def test_fit_inject_leaves_polarity_alone():
+    mem = _byte_memory()
+    try:
+        with torch.no_grad():
+            mem.inject.polarity.fill_(0.3)
+        before = mem.inject.polarity.detach().clone()
+        facts = [
+            {"text": "Ada's phone is 111", "a": "111", "q": "Ada's phone is "},
+            {"text": "Bea's city is Oslo", "a": "Oslo", "q": "Bea's city is "},
+        ]
+        fit_inject(mem, facts, steps=1, bs=1, lr=1e-2, neg_p=0.0, seed=0, weight_decay=1e-2)
+        assert torch.equal(mem.inject.polarity.detach(), before)
+    finally:
+        mem.close()
+
+
+def test_no_key_fit_leaves_polarity_alone():
+    mem = _byte_memory()
+    try:
+        with torch.no_grad():
+            mem.inject.polarity.fill_(0.4)
+        before = mem.inject.polarity.detach().clone()
+        facts = [
+            {"text": "Ada favors Y", "a": "Y", "q": "Pick:", "good": "Y", "bad": "Z", "family": "prefer"},
+            {"text": "Bea refuses Y", "a": "Y", "q": "Pick:", "good": "Z", "bad": "Y", "family": "avoid"},
+        ]
+        log = fit_decision_value(mem, facts, steps=1, bs=1, lr=1e-2, margin=0.0, seed=0)
+        assert np.isfinite(log[0]["loss"])
+        assert torch.equal(mem.inject.polarity.detach(), before)
     finally:
         mem.close()
 
@@ -604,6 +705,10 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
         value = torch.arange(576, dtype=torch.float32)
         assert torch.equal(blank(value), value)
         assert not torch.equal(mem.inject(value).cpu(), value)
+        if "polarity" in ckpt["inject"]:
+            assert torch.equal(mem.inject.polarity.detach().cpu(), ckpt["inject"]["polarity"])
+        else:
+            assert torch.count_nonzero(mem.inject.polarity) == 0
         assert float(mem.inject.phone_on) == 1.0
         assert float(mem.inject.date_on) == 1.0
     finally:
