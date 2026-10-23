@@ -32,7 +32,12 @@ or a pronoun). An indirect hearer description (a hearer-role noun, a
 participial "person being spoken with", or a facing locative plus a person
 demonstrative) is not a name. It resolves only to the unique stored person
 who has a first-person surface, and only that person's facts are ranked.
-No self, or two selves, and that question abstains. A nickname, a listed
+No self, or two selves, and that question abstains. Once an utterance has
+been noted, ``you`` / ``你`` / ``您`` and a hearer-role cue name the hearer
+``note_turn`` stored, and ``he`` / ``she`` / ``they`` / ``他`` / ``她`` /
+``ta`` name the one person on the newest conversational turn who is neither
+speaker nor hearer. No utterance and no hearer leaves that question on the
+ranker. A stored name in the string still wins. A nickname, a listed
 diminutive, pinyin, a dropped surname, or a short honorific is that stored
 person. A following verb or time word is still that person (``唐宁选的``,
 ``王伟平时``). One extra syllable that continues a personal name is not
@@ -646,6 +651,40 @@ _HEARER_ZH_RE = re.compile(
 )
 _EN_SELF_RE = re.compile(r"\b(?:I|me|my|mine|myself)\b")
 _ZH_SELF_RE = re.compile(r"我(?!们)")
+
+
+# Second person, not ``你们``. ``is_deictic`` is wider (it includes ``I`` and
+# ``he``) and is not this cue. Longer English forms are listed first.
+_SECOND_EN_RE = re.compile(
+    r"\b(?:yourselves|yourself|yours|your|you)\b",
+    re.I,
+)
+_SECOND_ZH_RE = re.compile(r"你(?!们)|您(?!们)")
+# Third person. ``them`` stays out: absent-person questions use it for a fact.
+# ``ta`` is the Latin pinyin pronoun, not a substring of a longer word.
+_THIRD_EN_RE = re.compile(
+    r"\b(?:himself|herself|theirs|their|they|hers|her|his|him|she|he)\b",
+    re.I,
+)
+_THIRD_ZH_RE = re.compile(r"(?<!其)[他她]")
+_THIRD_TA_RE = re.compile(r"(?<![A-Za-z])ta(?![A-Za-z])", re.I)
+
+
+def _second_person(text: str) -> bool:
+    """``you`` / ``your`` / ``你`` / ``您``. ``你们`` is not a singular hearer."""
+    return _SECOND_EN_RE.search(text) is not None or _SECOND_ZH_RE.search(text) is not None
+
+
+def _third_person(text: str) -> bool:
+    """``he`` / ``she`` / ``they`` / ``他`` / ``她`` / ``ta``."""
+    if _THIRD_EN_RE.search(text) is not None or _THIRD_ZH_RE.search(text) is not None:
+        return True
+    return _THIRD_TA_RE.search(text) is not None
+
+
+def _hearer_cue(text: str) -> bool:
+    """Second person, or an indirect hearer description (``listener``, ``跟前这位``)."""
+    return _second_person(text) or is_indirect_hearer(text)
 
 
 def is_indirect_hearer(text: str) -> bool:
@@ -1392,11 +1431,83 @@ def _rows_for(names: Sequence[Optional[str]], chosen: Sequence[str]) -> Optional
     return rows
 
 
+def resolve_deixis(
+    text: str,
+    names: Sequence[Optional[str]],
+    dialogue,
+    active: Sequence[str] = (),
+) -> Optional[Tuple[str, ...]]:
+    """The one person a pronoun or hearer cue names, or a signal to abstain.
+
+    ``None`` leaves the existing ask path in place. That is an empty log:
+    no utterance has been noted and no hearer was stored. It is also a
+    question that already names a stored person, and a hearer-role noun
+    whose hearer was never stored (the unique first-person fact still
+    applies). An empty tuple abstains ``absent_person``. A one-name tuple
+    is the person whose facts are ranked.
+
+    ``you`` / ``你`` / ``您`` and a hearer-role cue are the stored hearer
+    when ``note_turn`` set one roster name. Unset after an utterance, or a
+    hearer who is not on the roster, abstains. ``he`` / ``she`` / ``they``
+    / ``他`` / ``她`` / ``ta`` are ``eligible_latest`` when that tuple has
+    one name. Zero names (nobody said, only a write, aged out of
+    ``TURN_WINDOW``, or only the speaker and the hearer) and two names on
+    that same turn abstain. A second-person cue together with a third-person
+    pronoun abstains. No enable flag. ``dialogue`` is a ``DialogueState``.
+    """
+    if dialogue is None or not isinstance(text, str) or text == "":
+        return None
+    started = int(getattr(dialogue, "utterances", 0) or 0) > 0
+    raw_hearer = getattr(dialogue, "hearer", None)
+    hearer = raw_hearer if isinstance(raw_hearer, str) and raw_hearer else None
+    if not started and hearer is None:
+        return None
+    if not _hearer_cue(text) and not _third_person(text):
+        return None
+    if _matched_names(text, names, active):
+        return None
+    cue = _hearer_cue(text)
+    third = _third_person(text)
+    if cue and third:
+        return ()
+    if cue:
+        if hearer is not None:
+            roster = {name for name in names if isinstance(name, str) and name}
+            if hearer in roster:
+                return (hearer,)
+            return ()
+        if _second_person(text) and started:
+            return ()
+        return None
+    if not started:
+        return None
+    latest = dialogue.eligible_latest(ignore_surface=text)
+    if len(latest) == 1:
+        return latest
+    return ()
+
+
+def _deixis_rows(
+    text: str,
+    names: Sequence[Optional[str]],
+    active: Sequence[str],
+    dialogue,
+) -> Optional[List[int]]:
+    """``None`` if deixis does not apply. ``[]`` abstains. Otherwise that person."""
+    pointed = resolve_deixis(text, names, dialogue, active)
+    if pointed is None:
+        return None
+    if len(pointed) != 1:
+        return []
+    return _rows_for(names, pointed) or []
+
+
 def matched_fact_rows(
     text: Optional[str],
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
     active: Sequence[str] = (),
+    dialogue=None,
 ) -> Optional[List[int]]:
     """Indices of the people ``ask_targets`` returned, or None.
 
@@ -1407,9 +1518,18 @@ def matched_fact_rows(
     possessively governs the live cue, or a focus restrictor governs a
     proper subset. A resolved hearer is that one person, so the other
     people's facts cannot win. There is no extra threshold and no flag.
+
+    ``dialogue`` adds one case. After an utterance, a second-person or
+    hearer cue with a stored hearer, or one third person on the newest
+    turn, is that person's rows. A failed resolution is an empty list,
+    which abstains, and is not the open ranker. No utterance and no hearer
+    leaves ``dialogue`` unread.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
+    pointed = _deixis_rows(text, names, active, dialogue)
+    if pointed is not None:
+        return pointed
     matched = ask_targets(text, names, surfaces, active)
     if not matched:
         return None
@@ -1421,6 +1541,7 @@ def selected_fact_rows(
     names: Sequence[Optional[str]],
     surfaces: Optional[Sequence[Optional[str]]] = None,
     active: Sequence[str] = (),
+    dialogue=None,
 ) -> Optional[List[int]]:
     """Indices abstain uses for ``missing_rel``.
 
@@ -1428,10 +1549,15 @@ def selected_fact_rows(
     every name at that distance. The ranker uses ``ask_targets`` without
     that narrowing, so two names that are both still targets both stay in
     the scores. A resolved hearer is one person, including when that name
-    is not written in the question. None means nobody was selected.
+    is not written in the question. None means nobody was selected. An
+    empty list is a deixis resolution that failed, and the ask abstains
+    ``absent_person`` instead of ranking the store.
     """
     if not isinstance(text, str) or text == "" or not names:
         return None
+    pointed = _deixis_rows(text, names, active, dialogue)
+    if pointed is not None:
+        return pointed
     matched = ask_targets(text, names, surfaces, active)
     if not matched:
         return None
@@ -1473,6 +1599,7 @@ def surface_abstain(
     margin: Optional[float] = None,
     surfaces: Optional[Sequence[Optional[str]]] = None,
     active: Sequence[str] = (),
+    dialogue=None,
 ) -> Optional[str]:
     """``missing_rel`` or ``absent_person`` when a flat-row ask should return no fact.
 
@@ -1488,6 +1615,10 @@ def surface_abstain(
     (``ask_people``): ``absent_person``. A deictic question with no stored
     name is answered by the ranker. A hearer description with exactly one
     first-person person is that person; the relation check then applies.
+    After an utterance, ``resolve_deixis`` can select the stored hearer or
+    one third person, and the relation check then applies to that person.
+    A failed resolution is ``absent_person`` even though the string is
+    deictic. No utterance and no hearer does not take that branch.
 
     Two stored names: a name that occurs only inside a dismissed clause is
     not the ask target when the other name remains, a unique possessor of
@@ -1532,7 +1663,9 @@ def surface_abstain(
         weights = load_weights()
     if weights is None:
         return None
-    rows = selected_fact_rows(query_text, names, surfaces, active)
+    rows = selected_fact_rows(query_text, names, surfaces, active, dialogue)
+    if rows == []:
+        return "absent_person"
     cos_embs = np.asarray(key_embs, dtype=np.float64)
     if rows is not None:
         cos_embs = cos_embs[rows]
