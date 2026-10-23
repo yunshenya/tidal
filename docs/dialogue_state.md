@@ -60,4 +60,4 @@ Otherwise:
 
 The rule does not invent a hearer the caller did not pass, and it does not read a fact write as a mention. It does not track turn-taking beyond the speaker and hearer strings, and it does not chain a pronoun to a previous pronoun. With four people in the window the list is already those four, in recency order; the third-person read keeps only the newest turn's eligible names.
 
-The edit-1 dev bank, the with-log versus empty-log ask, and the single-turn floors for that rule are in `reports/dialogue_state.md`.
+The edit-1 dev bank, the with-log versus empty-log ask, and the single-turn floors for that rule are in `reports/dialogue_state.md`. A natural multi-turn measurement, with the rule left as it is, is in `reports/dialogue_real.md`.
