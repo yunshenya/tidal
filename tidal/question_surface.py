@@ -37,7 +37,10 @@ been noted, ``you`` / ``你`` / ``您`` and a hearer-role cue name the hearer
 ``note_turn`` stored, and ``he`` / ``she`` / ``they`` / ``他`` / ``她`` /
 ``ta`` name the one person on the newest conversational turn who is neither
 speaker nor hearer. A hearer the caller did not pass is filled only by a
-leading exact roster name plus address punctuation. When that resolution is
+leading vocative of one roster person: the name, an English courtesy title
+plus that name, ``老`` / ``小`` / ``大`` / ``阿`` plus the surname or the
+full name, or ``老师`` after the surname or the full name, then address
+punctuation, ``啊`` / ``呀`` / ``呢``, or ``you`` / ``你`` / ``您``. When that resolution is
 one person, their latest in-window conversational mention is restamped onto
 the current turn; the pronoun is not stored, and a mention outside the
 window is not pulled back. No utterance and no hearer leaves that question
@@ -1491,9 +1494,17 @@ def resolve_deixis(
     return ()
 
 
-# Address punctuation after a leading name. A period, a question mark, and
+# Address punctuation after a leading head. A period, a question mark, and
 # a space are not this class. ``Hey Name`` is not initial, so it is not either.
 _ADDRESS_PUNCT = frozenset(",，、:：!！")
+# Courtesy titles. Longer forms are first so ``Mrs`` is not read as ``Mr``.
+_EN_TITLE = re.compile(r"(?i)^(miss|mrs|ms|mr|dr)\.?\s+")
+# Closed prefixes. They are a different person on the ask path (``name_spans``).
+# Here they address the unique roster person when an address mark follows.
+_CJK_ADDRESS_PREFIX = frozenset("老小大阿")
+# One particle after the head. ``呀`` is not a name-span particle; the vocative
+# scanner matches the roster name itself and then this mark.
+_VOCATIVE_PARTICLE = frozenset("啊呀呢")
 
 
 def _name_roster(names: Sequence[Optional[str]]) -> Tuple[str, ...]:
@@ -1504,50 +1515,178 @@ def _name_roster(names: Sequence[Optional[str]]) -> Tuple[str, ...]:
     return tuple(seen)
 
 
-def _leading_vocative(text: str, roster: Sequence[str]) -> Optional[Tuple[str, str]]:
-    """One exact roster name at position 0, plus the text after the punctuation.
+def _latin_word_char(ch: str) -> bool:
+    return ch.isascii() and (ch.isalnum() or ch == "-")
 
-    The longest span wins. Two different names that end at that same index
-    are not unique. The next character has to be address punctuation, with
-    no space between the name and the mark.
+
+def _cjk_key(name: str) -> str:
+    return "".join(ch for ch in name if not ch.isspace())
+
+
+def _exact_end(text: str, index: int, name: str) -> Optional[int]:
+    """End index of ``name`` at ``index``, or None.
+
+    CJK characters are contiguous. Latin matches ignoring case and is not a
+    prefix of a longer letter, digit, or hyphen. This is not ``name_spans``:
+    a ``老`` prefix and a following ``呀`` stay outside that function.
     """
-    if not text or not roster:
+    if index < 0 or not name:
         return None
+    if _is_cjk_name(name):
+        key = _cjk_key(name)
+        if not key:
+            return None
+        end = index + len(key)
+        if text[index:end] == key:
+            return end
+        return None
+    if index > 0 and _latin_word_char(text[index - 1]):
+        return None
+    end = index + len(name)
+    if end > len(text) or text[index:end].casefold() != name.casefold():
+        return None
+    if end < len(text) and _latin_word_char(text[end]):
+        return None
+    return end
+
+
+def _longest_name(text: str, index: int, roster: Sequence[str]) -> Optional[Tuple[str, int]]:
+    """The one longest roster name at ``index``. A tie is not unique."""
     best_end = -1
     best: List[str] = []
     for name in roster:
-        for start, end in name_spans(name, text):
-            if start != 0:
-                continue
-            if end > best_end:
-                best_end = end
-                best = [name]
-            elif end == best_end and name not in best:
-                best.append(name)
-    if best_end < 0 or len(best) != 1:
+        end = _exact_end(text, index, name)
+        if end is None:
+            continue
+        if end > best_end:
+            best_end = end
+            best = [name]
+        elif end == best_end and name not in best:
+            best.append(name)
+    if len(best) != 1:
         return None
-    if best_end >= len(text) or text[best_end] not in _ADDRESS_PUNCT:
+    return best[0], best_end
+
+
+def _mark_end(text: str, index: int) -> Optional[int]:
+    """Index after an address mark at ``index``, or None.
+
+    Punctuation, one of ``啊`` / ``呀`` / ``呢`` plus an optional punctuation
+    mark, ``你`` / ``您`` not followed by ``们``, or ``you`` as a whole word.
+    ``your`` does not match.
+    """
+    if index >= len(text):
         return None
-    return best[0], text[best_end + 1:].lstrip()
+    ch = text[index]
+    if ch in _ADDRESS_PUNCT:
+        return index + 1
+    if ch in _VOCATIVE_PARTICLE:
+        nxt = index + 1
+        if nxt < len(text) and text[nxt] in _ADDRESS_PUNCT:
+            return nxt + 1
+        return nxt
+    if ch in "你您":
+        if index + 1 < len(text) and text[index + 1] == "们":
+            return None
+        return index + 1
+    matched = re.match(r"\s+you\b", text[index:], re.I)
+    if matched is None:
+        return None
+    return index + matched.end()
+
+
+def _surname_owners(ch: str, roster: Sequence[str]) -> List[str]:
+    owners: List[str] = []
+    for name in roster:
+        if not isinstance(name, str) or not _is_cjk_name(name):
+            continue
+        key = _cjk_key(name)
+        if key and key[0] == ch and name not in owners:
+            owners.append(name)
+    return owners
+
+
+def _with_mark(name: str, text: str, end: int) -> Optional[Tuple[str, str]]:
+    mark = _mark_end(text, end)
+    if mark is None:
+        return None
+    return name, text[mark:].lstrip()
+
+
+def _prefixed_address(text: str, roster: Sequence[str]) -> Optional[Tuple[str, str]]:
+    """``老`` / ``小`` / ``大`` / ``阿`` plus the full name, or a unique surname.
+
+    The prefix is consumed either way. No address mark means no hearer, and
+    the bare-name scan does not run.
+    """
+    found = _longest_name(text, 1, roster)
+    if found is not None:
+        return _with_mark(found[0], text, found[1])
+    if len(text) < 2:
+        return None
+    owners = _surname_owners(text[1], roster)
+    if len(owners) != 1:
+        return None
+    return _with_mark(owners[0], text, 2)
+
+
+def _bare_address(text: str, roster: Sequence[str]) -> Optional[Tuple[str, str]]:
+    """The exact name, that name plus ``老师``, or a unique surname plus ``老师``."""
+    found = _longest_name(text, 0, roster)
+    if found is not None:
+        name, end = found
+        if text.startswith("老师", end):
+            end += 2
+        return _with_mark(name, text, end)
+    if len(text) >= 3 and text[1:3] == "老师":
+        owners = _surname_owners(text[0], roster)
+        if len(owners) == 1:
+            return _with_mark(owners[0], text, 3)
+    return None
+
+
+def _leading_vocative(text: str, roster: Sequence[str]) -> Optional[Tuple[str, str]]:
+    """One roster head at the start, plus the text after the address mark.
+
+    An English title that does not address one roster person does not fall
+    through. A ``老`` / ``小`` / ``大`` / ``阿`` prefix does not either.
+    Two names that end at the same index are not unique.
+    """
+    if not text or not roster:
+        return None
+    title = _EN_TITLE.match(text)
+    if title is not None:
+        found = _longest_name(text, title.end(), roster)
+        if found is None:
+            return None
+        return _with_mark(found[0], text, found[1])
+    if text[0] in _CJK_ADDRESS_PREFIX:
+        return _prefixed_address(text, roster)
+    return _bare_address(text, roster)
 
 
 def vocative_hearer(text: str, names: Sequence[Optional[str]]) -> Optional[str]:
     """The hearer a leading vocative names, or None.
 
-    The utterance, after a left strip, starts with exactly one exact roster
-    name and address punctuation (``,`` ``，`` ``、`` ``:`` ``：`` ``!`` ``！``).
-    A second name in that same position after the punctuation is not unique.
-    A name used as subject or object, a name later in the sentence, an edit,
-    a nickname, or a pinyin form does not qualify. This does not read a
-    hearer the caller already passed.
+    After a left strip, the utterance addresses exactly one roster person.
+    The head is the exact name, ``Dr`` / ``Mr`` / ``Mrs`` / ``Ms`` / ``Miss``
+    plus that name, ``老`` / ``小`` / ``大`` / ``阿`` plus a unique surname
+    or the full name, or ``老师`` after a unique surname or the full name.
+    The mark is address punctuation, ``啊`` / ``呀`` / ``呢``, ``you`` as a
+    whole word, or ``你`` / ``您``. A second head after that mark is not
+    unique. A subject or object, a name later in the sentence, a quotation,
+    an edit, a nickname, ``Hey``, a period, ``your``, or ``你们`` does not
+    qualify. ``name_spans`` is not this scan. This does not read a hearer
+    the caller already passed.
     """
     if not isinstance(text, str) or text == "":
         return None
-    found = _leading_vocative(text.lstrip(), _name_roster(names))
+    roster = _name_roster(names)
+    found = _leading_vocative(text.lstrip(), roster)
     if found is None:
         return None
     name, rest = found
-    if _leading_vocative(rest, _name_roster(names)) is not None:
+    if _leading_vocative(rest, roster) is not None:
         return None
     return name
 
