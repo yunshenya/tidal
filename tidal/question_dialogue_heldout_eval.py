@@ -143,12 +143,19 @@ def score_pass(cont, table: Dict[str, np.ndarray], rows: Sequence, *, with_state
     return out
 
 
-def _cell(rows: Sequence[dict], pred) -> str:
+def _count(rows: Sequence[dict], pred, good) -> str:
     chosen = [row for row in rows if pred(row)]
     if not chosen:
         return "—"
-    good = sum(1 for row in chosen if row["ok"])
-    return f"{good}/{len(chosen)}"
+    return f"{sum(1 for row in chosen if good(row))}/{len(chosen)}"
+
+
+def _label_met(rows: Sequence[dict], pred) -> str:
+    return _count(rows, pred, lambda row: row["ok"])
+
+
+def _gold_returned(rows: Sequence[dict], pred) -> str:
+    return _count(rows, pred, lambda row: row["answered"] and row["gold_answer"])
 
 
 def summarize(scored: Sequence[dict]) -> dict:
@@ -161,13 +168,13 @@ def summarize(scored: Sequence[dict]) -> dict:
     return {
         "n": len(scored),
         "gated": len(gated),
-        "typo_hit": _cell(gated, lambda row: row["role"] == "hit"),
-        "aged": _cell(gated, lambda row: row["role"] == "aged"),
-        "tie": _cell(gated, lambda row: row["role"] == "tie"),
-        "silent": _cell(gated, lambda row: row["role"] == "silent"),
-        "other": _cell(gated, lambda row: row["role"] == "other"),
-        "pos": _cell(gated, lambda row: row["role"] == "pos"),
-        "neg": _cell(gated, lambda row: row["role"] == "neg"),
+        "typo_hit": _gold_returned(gated, lambda row: row["role"] == "hit"),
+        "aged": _label_met(gated, lambda row: row["role"] == "aged"),
+        "tie": _label_met(gated, lambda row: row["role"] == "tie"),
+        "silent": _label_met(gated, lambda row: row["role"] == "silent"),
+        "other": _label_met(gated, lambda row: row["role"] == "other"),
+        "pos": _label_met(gated, lambda row: row["role"] == "pos"),
+        "neg": _label_met(gated, lambda row: row["role"] == "neg"),
         "false_accept": len(false),
         "gated_correct": sum(1 for row in gated if row["ok"]),
         "false_rows": [
@@ -286,15 +293,16 @@ def format_sweep(name: str, passes: dict) -> str:
     lines = [
         f"## Window sweep: {name}",
         "",
-        "Typo hit counts episodes that returned the stored value. Aged, tie,",
-        "silent, and other count abstentions. Positive controls are exact",
+        "Typo answers are stored values returned for a recent mention.",
+        "An empty log is correct when that count is 0. Aged, tie, silent,",
+        "and other count abstentions that held. Positive controls are exact",
         "spelling, nickname, focus, dismiss, open two-name, and a resolved",
         "hearer. Negative controls are extensions, a CJK prefix, a hearer",
         "with no first person, and a hearer whose relation is missing.",
         "False accepts are abstentions that returned a value. Lag rows are",
         "not in these columns.",
         "",
-        "| setting | typo hits | aged abstain | tie abstain | silent abstain | other abstain | positive controls | negative controls | false accepts | gated correct |",
+        "| setting | typo answers | aged abstain | tie abstain | silent abstain | other abstain | positive controls | negative controls | false accepts | gated correct |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     order = ["empty", *(str(window) for window in WINDOWS)]

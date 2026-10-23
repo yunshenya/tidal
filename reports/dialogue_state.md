@@ -1,6 +1,6 @@
 # Dialogue state
 
-**Shipped.** Flat-row `ask` can accept one same-script edit of a stored name when that person is on the recent dialogue log, and it abstains when the log does not name them. An empty log leaves name resolution where `main` left it.
+**Shipped.** Flat-row `ask` can accept one same-script edit of a stored name when that person is on the recent dialogue log, and it abstains when the log does not name them. An empty log leaves name resolution where `main` left it. A second multi-turn bank, written on different names, agrees at the shipped window of 4. That window stays.
 
 `ABSTAIN_MARGIN` stays 0.1. `LEX_RIDGE_GAP` stays 0.15. There is no enable flag. `LLMMemory` is untouched. The rule was fixed on the dev bank below. The frozen adversarial questions were scored after that, and they were not an input to the wording.
 
@@ -133,10 +133,109 @@ Ask abstain on that run: answerable 365/370 with false abstain 0/370 (en 183/185
 
 Surface dev at margin 0.1: false abstain 0/192 English and 0/192 Chinese, missing 188/192 and 189/192, absent 36/36 both, deictic false 0/6 both.
 
+## Held-out bank
+
+`tidal/question_dialogue_heldout_data.py`. A second en+zh bank, on a new name list and a new carrier (`yelm stook … rickleNNN` / `㐂㐃`). The dialogue dev strings were not an input. Question sha256 `99acea85195eca1f0e680f287b040646c321853c7312168801c46d38175f8d5d`, n=118 (59 English, 59 Chinese). Bank sha256 `e09fbcc043fddd9f3da0c831f448834700bdfe654404331e52cea99914da1376`, 538 strings. Cache `tidal/question_dialogue_heldout_emb.npz` sha256 `fb640d22b6b5fa9636430ddc90566e9397e8b134f33e91e2fbe92e06f2078a9d`, same embedder as the dev cache.
+
+The gate, fixed before the sweep: a typo answers when the intended person was named in the last utterance or the one before it (filler count 0 or 1), or by an earlier ask. The same typo abstains on an empty log, when only someone else was named, when the fact was written and never said, when four later utterances have pushed the mention out, and when two stored names are both that edit. Filler counts 2, 3, 5, 6, and 7 are a boundary ladder. They are not the pass/fail that picks the window.
+
+Literal overlap with every earlier bank, including the dialogue dev questions `11bc0412…` and the dev bank `69bd3ed6…`, is 0. Max token Jaccard is 0.375, under the 0.50 cap. The closest pair is a frozen hearer question that uses the same closed class: "yelm stook 跟前这位 电话 rickle532 㐂㐃" ‖ "跟前这位的电话该回读哪一条？"
+
+| against | sha | n | literal | max token Jaccard |
+|---|---|---:|---:|---:|
+| probe | — | 744 | 0 | 0.267 |
+| surface cue corpus | — | 1124 | 0 | 0.214 |
+| abstain dev | `26889048…` | 381 | 0 | 0.273 |
+| frozen adversarial | `cce20b6b…` | 381 | 0 | 0.375 |
+| CJK dev | `5e8b86f6…` | 201 | 0 | 0.125 |
+| nickname dev | `a766f748…` | 43 | 0 | 0.143 |
+| typo dev | `68260c01…` | 68 | 0 | 0.071 |
+| indirect questions | `daf4619f…` | 50 | 0 | 0.200 |
+| indirect bank | `18b5e2d1…` | 72 | 0 | 0.278 |
+| misleading-cue dev | `ed3bd6aa…` | 44 | 0 | 0.200 |
+| bare-locative dev | `a0d73095…` | 100 | 0 | 0.167 |
+| residual misleading | `b35a4c42…` | 100 | 0 | 0.167 |
+| two-name dev | `9c72a8b3…` | 120 | 0 | 0.222 |
+| focus dev | `03dea71d…` | 132 | 0 | 0.200 |
+| typo-edit dev | `3447aaaa…` | 96 | 0 | 0.111 |
+| lastname questions | `064d7052…` | 101 | 0 | 0.214 |
+| lastname bank | `626514af…` | 309 | 0 | 0.214 |
+| dialogue dev questions | `11bc0412…` | 102 | 0 | 0.278 |
+| dialogue dev bank | `69bd3ed6…` | 340 | 0 | 0.278 |
+
+Shipped window 4, e5 ask. "Correct" is the label for that pass. "Answered" is a returned value. A typo hit is correct with the log when it returns the gold, and correct with an empty log when it abstains.
+
+| kind | n | with the log | empty log | answered, with the log |
+|---|---:|---:|---:|---:|
+| typo_hit | 24 | 24/24 | 24/24 | 24/24 |
+| typo_prior | 12 | 12/12 | 12/12 | 12/12 |
+| typo_silent | 12 | 12/12 | 12/12 | 0/12 |
+| typo_other | 12 | 12/12 | 12/12 | 0/12 |
+| typo_aged | 12 | 12/12 | 12/12 | 0/12 |
+| typo_tie | 2 | 2/2 | 2/2 | 0/2 |
+| spelling | 4 | 4/4 | 4/4 | 4/4 |
+| nickname | 6 | 6/6 | 6/6 | 6/6 |
+| latin_extension | 2 | 2/2 | 2/2 | 0/2 |
+| cjk_superstring | 2 | 2/2 | 2/2 | 0/2 |
+| cjk_prefix | 2 | 2/2 | 2/2 | 0/2 |
+| focus | 4 | 4/4 | 4/4 | 4/4 |
+| dismiss | 4 | 4/4 | 4/4 | 4/4 |
+| open_either | 4 | 4/4 | 4/4 | 4/4 |
+| indirect_hit | 2 | 2/2 | 2/2 | 2/2 |
+| indirect_noself | 2 | 2/2 | 2/2 | 0/2 |
+| indirect_missing | 2 | 2/2 | 2/2 | 0/2 |
+| lag_observe | 10 | boundary | 10/10 abstain | 4/10 |
+| gated total | 108 | 108/108 | 108/108 | — |
+
+Misses on the gated rows: 0 with the log, 0 with an empty log. The 36 answerable typos (24 after an utterance, 12 after an earlier ask) return the gold with the log and abstain `absent_person` when the log is empty. Silent writes, a different person, a mention with four later turns, and a two-name edit tie abstain with the log filled. Exact spelling, nicknames (Margaret/Maggie, Charles/Chuck, Michael/Mike, Andrew/Drew, 小珂, 阿琮), focus, dismiss, an open two-name question, and the indirect hearer (`interlocutor`, `跟前这位`) agree on both passes. A longer Latin name, a CJK superstring, and a CJK prefix abstain while the short name is active.
+
+The 4/10 answers on `lag_observe` are the two filler counts still inside a window of 4 (2 and 3). Counts 5, 6, and 7 abstain. That is the window, measured on these names, not a second copy of the dev bank.
+
+## Window sweep
+
+`TURN_WINDOW` was set to each candidate for one pass and restored. The empty log is the same facts with no turn. Typo answers are gold values returned for a row whose role is a recent mention. Aged, tie, silent, and other are abstentions that held. False accepts are abstentions that returned a value. The ladder rows are not in the gated total.
+
+Held-out, gated n=108:
+
+| setting | typo answers | aged abstain | tie abstain | silent abstain | other abstain | positive controls | negative controls | false accepts | gated correct |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| empty log | 0/36 | 12/12 | 2/2 | 12/12 | 12/12 | 24/24 | 10/10 | 0 | 108/108 |
+| W=2 | 36/36 | 12/12 | 2/2 | 12/12 | 12/12 | 24/24 | 10/10 | 0 | 108/108 |
+| W=4 | 36/36 | 12/12 | 2/2 | 12/12 | 12/12 | 24/24 | 10/10 | 0 | 108/108 |
+| W=6 | 36/36 | 0/12 | 2/2 | 12/12 | 12/12 | 24/24 | 10/10 | 12 | 96/108 |
+| W=8 | 36/36 | 0/12 | 2/2 | 12/12 | 12/12 | 24/24 | 10/10 | 12 | 96/108 |
+
+Dialogue dev, n=102. The dev has no ladder rows. Its stale kind is the aged column (one mention, then four later turns).
+
+| setting | typo answers | aged abstain | tie abstain | silent abstain | other abstain | positive controls | negative controls | false accepts | gated correct |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| empty log | 0/24 | 4/4 | 2/2 | 16/16 | 16/16 | 28/28 | 12/12 | 0 | 102/102 |
+| W=2 | 24/24 | 4/4 | 2/2 | 16/16 | 16/16 | 28/28 | 12/12 | 0 | 102/102 |
+| W=4 | 24/24 | 4/4 | 2/2 | 16/16 | 16/16 | 28/28 | 12/12 | 0 | 102/102 |
+| W=6 | 24/24 | 0/4 | 2/2 | 16/16 | 16/16 | 28/28 | 12/12 | 4 | 98/102 |
+| W=8 | 24/24 | 0/4 | 2/2 | 16/16 | 16/16 | 28/28 | 12/12 | 4 | 98/102 |
+
+Held-out utterance lag, answers / n. A mention followed by F later turns is answered when W > F, and not otherwise. Empty log answers none of them.
+
+| fillers after the mention | empty log | W=2 | W=4 | W=6 | W=8 |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 0/12 | 12/12 | 12/12 | 12/12 | 12/12 |
+| 1 | 0/12 | 12/12 | 12/12 | 12/12 | 12/12 |
+| 2 | 0/2 | 0/2 | 2/2 | 2/2 | 2/2 |
+| 3 | 0/2 | 0/2 | 2/2 | 2/2 | 2/2 |
+| 4 | 0/12 | 0/12 | 0/12 | 12/12 | 12/12 |
+| 5 | 0/2 | 0/2 | 0/2 | 2/2 | 2/2 |
+| 6 | 0/2 | 0/2 | 0/2 | 0/2 | 2/2 |
+| 7 | 0/2 | 0/2 | 0/2 | 0/2 | 2/2 |
+
+**Chosen window: 4.** On the held-out gate, W=2 and W=4 are tied: 108/108, false accepts 0. W=6 and W=8 each false-accept all 12 aged-out typos. The dialogue dev confirms the tie: 102/102 at W=2 and at W=4, and 4 false accepts at W=6 and at W=8, which are the four stale episodes. W=4 is not worse than any other candidate, and it is already the shipped default, so the default stays 4. The ladder is why a larger window loses, and it is not a reason to prefer 4 over 2: filler counts 2 and 3 were not required hits.
+
+The first dev score of 102/102 does not look like a memorized name list. These typos use different people and different sentences, and at window 4 they follow the same cut: recent mentions answer, writes and other people and aged mentions and ties abstain, longer names stay rejected. The empty-log single-turn floors were not re-run. `TURN_WINDOW` and the ask path are unchanged, so the earlier numbers still stand: probe 365/370, false abstain 0/370, unanswerable 72/72, frozen hits 188/216, false abstain 19/216, near_dup_absent 30/30.
+
 ## What stayed
 
 Lexical hits, the name head, the alias list, CJK verb attachment, and the longer-name rejection are unchanged when the log is empty. The indirect hearer still resolves only to the unique first-person fact. Focus, dismiss, and a unique possessor still narrow two names. The 16 frozen typo false abstains stay false abstains, because that file does not record a turn. `near_dup_absent` stays 30/30 for the same reason.
 
 ## Tests
 
-`python3 -m pytest -q`: 289 passed. The new file locks the dev sha, the Jaccard cap, literal disjointness, the cache sha, the edit rule (one active name, extensions rejected, a tie abstains), the four-turn window, and a tiny-encoder pass of all 102 episodes: a write leaves the typo abstaining, a turn or an earlier ask returns the gold, a repeat of the same question does not open another turn, and `new_session` drops the mention while the exact name still answers. Frozen numeric scores are not a pytest gate.
+`python3 -m pytest -q`: 295 passed. The held-out file locks that bank's sha, literal disjointness from the dev bank and the earlier splits, the Jaccard cap, the cache sha, and the name gate at windows 2, 4, and 6. The dev file locks the dev sha, the four-turn window, and a tiny-encoder pass of all 102 dev episodes. Frozen numeric scores are not a pytest gate.

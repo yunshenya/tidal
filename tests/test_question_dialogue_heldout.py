@@ -5,7 +5,10 @@ the shipped default; filler counts other than 0, 1, and 4 are a boundary
 ladder, not a reason to move that default.
 """
 import ast
+import hashlib
 from pathlib import Path
+
+import numpy as np
 
 import tidal.dialogue_state as dialogue_state
 from tidal.dialogue_state import TURN_WINDOW, DialogueState
@@ -16,13 +19,15 @@ from tidal.question_dialogue_heldout_data import (
     kind_counts,
     questions_sha256,
 )
-from tidal.question_dialogue_heldout_eval import heldout_corpora
+from tidal.question_dialogue_heldout_eval import CACHE, heldout_corpora
+from tidal.question_dialogue_eval import load_table
 from tidal.question_dialogue_eval import jaccard_report
 from tidal.question_name_align import dialogue_licensed_edit
 from tidal.question_surface import ask_people, ask_targets, lex_labels
 
 QUESTIONS_SHA = "99acea85195eca1f0e680f287b040646c321853c7312168801c46d38175f8d5d"
 BANK_SHA = "e09fbcc043fddd9f3da0c831f448834700bdfe654404331e52cea99914da1376"
+CACHE_SHA = "fb640d22b6b5fa9636430ddc90566e9397e8b134f33e91e2fbe92e06f2078a9d"
 
 KINDS = {
     "typo_hit": 24,
@@ -102,6 +107,16 @@ def test_bank_is_disjoint_from_earlier_splits_and_the_dev_bank():
         assert row["max_jaccard"] <= 0.50, (name, row["max_jaccard"], row["pair"])
         worst = max(worst, row["max_jaccard"])
     assert worst <= 0.50
+
+
+def test_embedding_cache_matches_the_bank():
+    rows = build_rows()
+    table = load_table(CACHE)
+    texts = bank_strings(rows)
+    assert list(table) == list(texts)
+    assert hashlib.sha256(CACHE.read_bytes()).hexdigest() == CACHE_SHA
+    norms = np.linalg.norm(np.stack([table[text] for text in texts]), axis=1)
+    assert float(np.max(np.abs(norms - 1.0))) < 1e-3
 
 
 def test_data_module_does_not_import_the_matcher():
