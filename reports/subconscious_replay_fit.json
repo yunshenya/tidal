@@ -1,0 +1,613 @@
+{
+  "chosen": {
+    "m": 1,
+    "n": 32
+  },
+  "grid": [
+    {
+      "m": 1,
+      "n": 32,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 2,
+      "n": 32,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 4,
+      "n": 32,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 8,
+      "n": 32,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 1,
+      "n": 16,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 2,
+      "n": 16,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 4,
+      "n": 16,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 8,
+      "n": 16,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 1,
+      "n": 8,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 2,
+      "n": 8,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 4,
+      "n": 8,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 8,
+      "n": 8,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 1,
+      "n": 4,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 2,
+      "n": 4,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 4,
+      "n": 4,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    },
+    {
+      "m": 8,
+      "n": 4,
+      "near_dup_drop": 2,
+      "ok": true,
+      "salient_gain": 0.5,
+      "slot_drop": 1
+    }
+  ],
+  "result": {
+    "bank_kind": "fit",
+    "bank_sha256": "35ae15cde3079cee5b034e2e019ef4a76324574507a8dbb58831bdb141b9f552",
+    "cost": {
+      "buffers": 66931,
+      "consolidate_forwards": 0,
+      "consolidate_median_s": 0.00301805900016916,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "query_forwards": 1,
+      "remember_forwards": 2,
+      "replay_m": 1
+    },
+    "direction": {
+      "avoid": {
+        "rows": [
+          {
+            "delta": 0.9710235595703125,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-0",
+            "margin": 0.409149169921875,
+            "nomem_margin": -0.5618743896484375,
+            "stored_lift": -1.182210922241211,
+            "strength": 1.0
+          },
+          {
+            "delta": 1.283249855041504,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-1",
+            "margin": 1.0623044967651367,
+            "nomem_margin": -0.2209453582763672,
+            "stored_lift": -0.9782924652099609,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.9926109313964844,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-2",
+            "margin": 0.5807819366455078,
+            "nomem_margin": -0.41182899475097656,
+            "stored_lift": -1.9477825164794922,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.26833152770996094,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-3",
+            "margin": 2.949708938598633,
+            "nomem_margin": 2.681377410888672,
+            "stored_lift": -0.29631996154785156,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.9891481399536133,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-4",
+            "margin": 1.4764184951782227,
+            "nomem_margin": 0.4872703552246094,
+            "stored_lift": -0.4843311309814453,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.9631309509277344,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-5",
+            "margin": 2.2982749938964844,
+            "nomem_margin": 1.33514404296875,
+            "stored_lift": -1.5636043548583984,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.6580886840820312,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-6",
+            "margin": 3.0838699340820312,
+            "nomem_margin": 2.42578125,
+            "stored_lift": -1.0247821807861328,
+            "strength": 1.0
+          },
+          {
+            "delta": 0.9584522247314453,
+            "family": "avoid",
+            "hit": 1,
+            "id": "replay-fit-avoid-7",
+            "margin": 0.3982124328613281,
+            "nomem_margin": -0.5602397918701172,
+            "stored_lift": -1.4902763366699219,
+            "strength": 1.0
+          }
+        ],
+        "summary": {
+          "mean_delta": 0.8855044841766357,
+          "mean_stored_lift": -1.1209499835968018,
+          "n": 8,
+          "n_delta_pos": 8,
+          "n_stored_down": 8
+        }
+      },
+      "prefer": {
+        "rows": [
+          {
+            "delta": 14.361404882278293,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-0",
+            "margin": 12.486732946243137,
+            "nomem_margin": -1.8746719360351562,
+            "stored_lift": 15.875511632766575,
+            "strength": 1.0
+          },
+          {
+            "delta": 23.48728227778338,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-1",
+            "margin": 26.935390950879082,
+            "nomem_margin": 3.448108673095703,
+            "stored_lift": 14.347185613354668,
+            "strength": 1.0
+          },
+          {
+            "delta": 20.578875213861465,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-2",
+            "margin": 20.434156090021133,
+            "nomem_margin": -0.14471912384033203,
+            "stored_lift": 13.483776718378067,
+            "strength": 1.0
+          },
+          {
+            "delta": 25.947976602008566,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-3",
+            "margin": 24.496414674213156,
+            "nomem_margin": -1.4515619277954102,
+            "stored_lift": 16.534340394428,
+            "strength": 1.0
+          },
+          {
+            "delta": 26.128129549324512,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-4",
+            "margin": 26.15309865027666,
+            "nomem_margin": 0.024969100952148438,
+            "stored_lift": 16.221211977303028,
+            "strength": 1.0
+          },
+          {
+            "delta": 18.308067709207535,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-5",
+            "margin": 18.31030884385109,
+            "nomem_margin": 0.0022411346435546875,
+            "stored_lift": 16.299049764871597,
+            "strength": 1.0
+          },
+          {
+            "delta": 19.241362983360887,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-6",
+            "margin": 21.699477607384324,
+            "nomem_margin": 2.4581146240234375,
+            "stored_lift": 12.47084372676909,
+            "strength": 1.0
+          },
+          {
+            "delta": 20.911799629218876,
+            "family": "prefer",
+            "hit": 1,
+            "id": "replay-fit-prefer-7",
+            "margin": 19.021016319282353,
+            "nomem_margin": -1.8907833099365234,
+            "stored_lift": 15.489611824043095,
+            "strength": 1.0
+          }
+        ],
+        "summary": {
+          "mean_delta": 21.12061235588044,
+          "mean_stored_lift": 15.090191456489265,
+          "n": 8,
+          "n_delta_pos": 8,
+          "n_stored_down": 0
+        }
+      }
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": -0.0177001953125,
+            "flip": 0,
+            "id": "replay-fit-choice-0",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0012989044189453125,
+            "flip": 0,
+            "id": "replay-fit-choice-1",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.003814697265625,
+            "flip": 0,
+            "id": "replay-fit-choice-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0002689361572265625,
+            "flip": 0,
+            "id": "replay-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0008258819580078125,
+            "flip": 0,
+            "id": "replay-fit-choice-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.10727691650390625,
+            "flip": 0,
+            "id": "replay-fit-choice-5",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.039633750915527344,
+            "flip": 0,
+            "id": "replay-fit-choice-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.005391120910644531,
+            "flip": 0,
+            "id": "replay-fit-choice-7",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8528782502810464,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Describe opposites outside parallel.\nMark:",
+            "text": "The opposite of the opposite of the opposite of the opposite of"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe petition plaques popularity.\nMark:",
+            "text": "I think that the most popular petition plaques are the ones that"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe prevents programmer protocol.\nMark:",
+            "text": "I think it's a good idea."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe reasoned reduction related.\nMark:",
+            "text": "I think that's a good point."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe resonate revising rushing.\nMark:",
+            "text": "I'm not sure I understand what you mean."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe semantic shields sincerely.\nMark:",
+            "text": "I'm not sure I understand what you mean."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe spirals staying stripping.\nMark:",
+            "text": "I'm not sure I understand what you're saying."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe surveying takeoff terrorist.\nMark:",
+            "text": "I'm not sure what you mean by that."
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.03524363040924072,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 0.03833113257439694,
+            "delta": -0.06389427185058594,
+            "id": "replay-fit-nll-0",
+            "nll_inject": 17.39081382751465,
+            "nll_nomem": 17.454708099365234
+          },
+          {
+            "confidence": 0.006508559674263878,
+            "delta": -0.006604194641113281,
+            "id": "replay-fit-nll-1",
+            "nll_inject": 12.487861633300781,
+            "nll_nomem": 12.494465827941895
+          },
+          {
+            "confidence": 0.010669313057023455,
+            "delta": -0.06534576416015625,
+            "id": "replay-fit-nll-2",
+            "nll_inject": 12.628223419189453,
+            "nll_nomem": 12.69356918334961
+          },
+          {
+            "confidence": 0.040596166202272674,
+            "delta": -0.004772186279296875,
+            "id": "replay-fit-nll-3",
+            "nll_inject": 15.044690132141113,
+            "nll_nomem": 15.04946231842041
+          },
+          {
+            "confidence": 0.012117960625310162,
+            "delta": -0.02013397216796875,
+            "id": "replay-fit-nll-4",
+            "nll_inject": 10.779706001281738,
+            "nll_nomem": 10.799839973449707
+          },
+          {
+            "confidence": 0.040152127904254584,
+            "delta": -0.10295677185058594,
+            "id": "replay-fit-nll-5",
+            "nll_inject": 13.56745433807373,
+            "nll_nomem": 13.670411109924316
+          },
+          {
+            "confidence": 0.009496315454369658,
+            "delta": -0.0004215240478515625,
+            "id": "replay-fit-nll-6",
+            "nll_inject": 11.64927864074707,
+            "nll_nomem": 11.649700164794922
+          },
+          {
+            "confidence": 0.026886371805997303,
+            "delta": -0.017820358276367188,
+            "id": "replay-fit-nll-7",
+            "nll_inject": 16.217567443847656,
+            "nll_nomem": 16.235387802124023
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Describe opposites outside parallel.\nMark:",
+            "takeover": 0,
+            "text": "the same movement the same object the same object the same object the same object the same object the same object the same object the same object the same object the same"
+          },
+          {
+            "prompt": "Describe petition plaques popularity.\nMark:",
+            "takeover": 0,
+            "text": "\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G\ufffd G"
+          },
+          {
+            "prompt": "Describe prevents programmer protocol.\nMark:",
+            "takeover": 0,
+            "text": "D-------------------------------"
+          },
+          {
+            "prompt": "Describe reasoned reduction related.\nMark:",
+            "takeover": 0,
+            "text": ":::::::::::::::::::::."
+          },
+          {
+            "prompt": "Which phone reaches Cucifoyo from the fisherman desk?",
+            "takeover": 0,
+            "text": "we love the same item with the same item with the same item with the same item with the item with the item with the item with the item with the item"
+          },
+          {
+            "prompt": "When is the birthday on file for Cucifoyo after frontiers?",
+            "takeover": 1,
+            "text": "February 8, 2003"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Describe opposites outside parallel.\nMark:",
+            "takeover": 0,
+            "text": "SMRTs and WMTRAsroughts MWRAsWAsWAsWAsWAsWAsWAsWAsWAsWAsWAs"
+          },
+          {
+            "prompt": "Describe petition plaques popularity.\nMark:",
+            "takeover": 0,
+            "text": "SPLJRAMAMPLEARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARD"
+          },
+          {
+            "prompt": "Describe prevents programmer protocol.\nMark:",
+            "takeover": 0,
+            "text": "SSPOSWAMMARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARDARD"
+          },
+          {
+            "prompt": "Describe reasoned reduction related.\nMark:",
+            "takeover": 0,
+            "text": "SMRTs areMPWRAMRsARWAMRAMRAMRAMRAMRAMRAMRAMRAMRAMRAM"
+          },
+          {
+            "prompt": "Which phone reaches Cucifoyo from the fisherman desk?",
+            "takeover": 1,
+            "text": "+1-415-555-1142"
+          },
+          {
+            "prompt": "When is the birthday on file for Cucifoyo after frontiers?",
+            "takeover": 0,
+            "text": "OIGHORSARAMASHARAMARAMARAMARAMARAMARAMARAMARAMARAMARAMARAMARAMARAM"
+          }
+        ],
+        "phone_question": 1,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "phases_s": {
+      "cost": 1.8468766579971998,
+      "direction": 3.471583479000401,
+      "neutral": 17.899357608999708,
+      "replay": 2.0380087019984785
+    },
+    "protocol": "subconscious-replay-fit-v1",
+    "replay": {
+      "accepted": 32,
+      "consolidate_s": 0.003621260999352671,
+      "control_n_slots": 31,
+      "control_near_dup_slots": 2,
+      "control_salient_mean": 0.5,
+      "decay": 0.5,
+      "every": 32,
+      "m": 1,
+      "merged": 1,
+      "near_dup_drop": 2,
+      "replay_n_slots": 30,
+      "replay_near_dup_slots": 0,
+      "replay_salient_mean": 1.0,
+      "salient_gain": 0.5,
+      "slot_drop": 1,
+      "slots": 30
+    },
+    "wall_s": 25.255826447995787
+  }
+}

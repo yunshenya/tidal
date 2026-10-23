@@ -12,7 +12,13 @@ import pytest
 import torch
 import torch.nn as nn
 
-from tidal.llm_memory import LLMMemory, answer_span, decode_answer, greedy_continuation, span_complete
+from tidal.llm_memory import (
+    LLMMemory,
+    answer_span,
+    decode_answer,
+    greedy_continuation,
+    span_complete,
+)
 from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -164,6 +170,42 @@ def test_same_identity_overwrite_returns_new_value():
         assert np.allclose(mem.injection(prompt), z)
         assert mem.generate(prompt, max_new_tokens=4) == "ZZZZ"
         assert torch.allclose(mem.last_added, torch.tensor(z))
+    finally:
+        mem.close()
+
+
+def test_replay_refreshes_the_top_slot_and_merges_the_near_duplicate(monkeypatch):
+    import tidal.llm_memory as mod
+
+    monkeypatch.setattr(mod, "REPLAY_EVERY", 4)
+    monkeypatch.setattr(mod, "REPLAY_M", 1)
+    monkeypatch.setattr(mod, "REPLAY_DECAY", 0.5)
+    from tidal.llm_memory import ByteTokenizer
+
+    mem = LLMMemory(EyeLM(), ByteTokenizer(), overwrite_cos=0.9)
+    try:
+        prompt = "Ask:"
+        assert mem.remember("code is Y", name="ada", rel="phone")
+        assert np.allclose(mem.injection(prompt), mem.encode_value("code is Y", "Y"))
+        assert mem.last_replay is None
+        assert mem.remember("town is Q", name="bea", rel="city")
+        assert mem.remember("team is M", name="cal", rel="team")
+        assert mem.last_replay is None
+        assert all(slot.strength == 1.0 for slot in mem.store.slots)
+        assert mem.remember("note is K", name="dee", rel="note", kind="chat") is False
+        assert mem.remember("code is Y", name="bea", rel="city")
+        report = mem.last_replay
+        assert report is not None
+        assert report["merged"] == 1
+        assert report["control_n_slots"] - report["replay_n_slots"] == 1
+        assert report["control_near_dup_slots"] > report["replay_near_dup_slots"]
+        assert report["salient_gain"] >= 0.25
+        assert report["replay_salient_mean"] == 1.0
+        assert len(mem.store) == 2
+        assert {slot.name for slot in mem.store.slots} == {"bea", "cal"}
+        refreshed = [slot for slot in mem.store.slots if slot.strength == 1.0]
+        decayed = [slot for slot in mem.store.slots if slot.strength == 0.5]
+        assert len(refreshed) == 1 and len(decayed) == 1
     finally:
         mem.close()
 

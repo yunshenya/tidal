@@ -21,16 +21,19 @@ hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
 estimated once from a calibration set and stored with the module. The add is
 
-    c * gain * (scale(v) + MLP(scale(v)))
+    c * s * gain * (scale(v) + MLP(scale(v)))
 
 with ``scale`` fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))``. ``w`` is a
 polarity vector and ``k`` is the winning slot's key. ``w = 0`` leaves
-``gain = 1``, so the add matches the unscaled residual. ``c`` is 1 when the
-store has one slot. Otherwise ``c = clip((top1 cosine - top2 cosine) /
-gap_tau, 0, 1)`` and ``gap_tau`` is 0.80. A tie adds nothing. The MLP weights
-are the shipped checkpoint; polarity does not replace them. The last layer of
-an untrained module is still zeros, so that module copies ``v`` through when
-``c`` is 1 and ``w`` is 0. Phone and birthday
+``gain = 1``, so the add matches the unscaled residual. ``s`` is the winning
+slot's strength. It stays 1 until a replay cycle recomputes decay, and a
+refresh sets it back to 1, so a store that has not replayed matches the
+previous add. ``c`` is 1 when the store has one slot. Otherwise
+``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
+0.80. A tie adds nothing. The MLP weights are the shipped checkpoint;
+polarity does not replace them. The last layer of an untrained module is
+still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
+and ``w`` is 0. Phone and birthday
 spelling runs only when the winning relation is the one the prompt is
 completing. A continuation encodes the query once. When this wrapper loads
 the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
@@ -94,6 +97,18 @@ DEFAULT_GAP_TAU = 0.80
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
 POLARITY_SPAN = 2.0
+# Fixed-budget replay. Every REPLAY_EVERY accepted writes, decay is
+# recomputed as REPLAY_DECAY ** age, the top REPLAY_M slots by salience are
+# refreshed to strength 1, and at most REPLAY_M same-group near-duplicates
+# (cosine strictly above the store overwrite cosine, 0.9) are merged.
+# Salience is |tanh(w · normalize(k))| on the polarity vector already in the
+# checkpoint. 0 new parameters and no extra forward. The grid is N in
+# {4, 8, 16, 32} and m in {1, 2, 4, 8}. 32 and 1 are the smallest budget on
+# that grid (largest N, then smallest m) that clears the fit replay floors.
+# Not retuned on the held-out bank. REPLAY_DECAY is not on the grid.
+REPLAY_EVERY = 32
+REPLAY_M = 1
+REPLAY_DECAY = 0.5
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -949,6 +964,12 @@ def completing_relation(prompt: str) -> Optional[str]:
     return None
 
 
+def _mean_float(values) -> Optional[float]:
+    if not values:
+        return None
+    return float(sum(float(value) for value in values) / len(values))
+
+
 def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     """Scale for the residual. One slot is unscaled. A tie adds nothing."""
     if int(n) < 2:
@@ -965,10 +986,14 @@ class LLMMemory:
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. The armed value is the top slot
-    (hard top-1 on raw cosine), not a soft mixture, multiplied by
-    :func:`retrieval_confidence` and by the polarity gain of that slot's key.
-    ``soft_k`` and ``soft_temp`` are kept on
-    the episodic store; ``generate`` does not read them. An empty store
+    (hard top-1 on raw cosine), not a soft mixture,     multiplied by
+    :func:`retrieval_confidence`, by the slot's strength, and by the polarity
+    gain of that slot's key. Strength stays 1 until replay. Every
+    :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
+    :data:`REPLAY_M` salient slots are refreshed, and at most that many
+    near-duplicate keys are merged. Salience reuses the polarity vector.
+    There is no extra forward and no switch. ``soft_k`` and ``soft_temp`` are
+    kept on the episodic store; ``generate`` does not read them. An empty store
     leaves the residual untouched, so greedy tokens match the same model
     with the hook removed. Phone and birthday spelling runs only when the
     prompt is completing that relation. A zero polarity vector leaves the
@@ -1036,6 +1061,8 @@ class LLMMemory:
         )
         self._delta: Optional[torch.Tensor] = None
         self.last_added: Optional[torch.Tensor] = None
+        self._accepted = 0
+        self.last_replay: Optional[dict] = None
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
@@ -1256,12 +1283,14 @@ class LLMMemory:
         )
         if not self.store.gate_write(kind, surprise):
             return False
+        if len(self.store) == 0:
+            self._accepted = 0
         value = self.encode_value(text, answer)
         if key is None:
             key_vec = self.encode_key(text, answer)
         else:
             key_vec = self.encode_key(key)
-        return bool(
+        wrote = bool(
             self.store.write(
                 key_vec,
                 value,
@@ -1272,6 +1301,89 @@ class LLMMemory:
                 group=group,
             )
         )
+        if not wrote:
+            return False
+        self._stamp_salience(name, rel, group, key_vec)
+        self._accepted += 1
+        if self._accepted % int(REPLAY_EVERY) == 0:
+            self._consolidate()
+        return True
+
+    def _salience(self, key_vec) -> float:
+        """``|tanh(w · normalize(k))|``. Zero when polarity is still zero.
+
+        This is the same ``w`` the gain uses. It does not add a parameter
+        and it does not run the language model.
+        """
+        weight = self.inject.polarity.detach().float().cpu().numpy().astype(np.float64, copy=False)
+        key = np.asarray(key_vec, dtype=np.float64).reshape(-1)
+        key_norm = float(np.linalg.norm(key))
+        weight_norm = float(np.linalg.norm(weight))
+        if key_norm < 1e-12 or weight_norm == 0.0:
+            return 0.0
+        raw = float(np.dot(weight, key / key_norm))
+        return float(abs(np.tanh(raw)))
+
+    def _stamp_salience(self, name, rel, group, key_vec) -> None:
+        for slot in self.store._slots:
+            if slot.group == group and slot.name == name and slot.rel == rel:
+                slot.salience = self._salience(key_vec)
+                slot.strength = 1.0
+                slot.age = 0
+                return
+        raise RuntimeError("accepted write did not leave a slot")
+
+    def _consolidate(self) -> None:
+        """Recompute decay, refresh the top-m salient slots, merge near-dups.
+
+        The no-replay control is the store after decay and before the refresh
+        and the merge. Production always continues into both. The competitive
+        set is at most :data:`REPLAY_M` slots, and the merge budget is the
+        same number. No language-model forward.
+        """
+        import time
+
+        started = time.perf_counter()
+        store = self.store
+        control_n = len(store)
+        control_dups = store.near_duplicate_slots()
+        store.recompute_decay(REPLAY_DECAY)
+        ranked = store.ranked_by_salience()
+        width = min(int(REPLAY_M), len(ranked))
+        chosen = list(ranked[:width])
+        control_strengths = [float(store._slots[index].strength) for index in chosen]
+        chosen_marks = [
+            (store._slots[index].name, store._slots[index].rel, int(store._slots[index].t))
+            for index in chosen
+        ]
+        if chosen:
+            store.refresh_strength(chosen)
+        merged = store.merge_near_duplicates(limit=width, protect=chosen) if width else 0
+        replay_strengths = []
+        for name, rel, step in chosen_marks:
+            for slot in store._slots:
+                if slot.name == name and slot.rel == rel and int(slot.t) == step:
+                    replay_strengths.append(float(slot.strength))
+                    break
+        control_mean = _mean_float(control_strengths)
+        replay_mean = _mean_float(replay_strengths)
+        gain = None
+        if control_mean is not None and replay_mean is not None:
+            gain = float(replay_mean - control_mean)
+        self.last_replay = {
+            "every": int(REPLAY_EVERY),
+            "m": int(REPLAY_M),
+            "decay": float(REPLAY_DECAY),
+            "control_n_slots": int(control_n),
+            "replay_n_slots": int(len(store)),
+            "control_near_dup_slots": int(control_dups),
+            "replay_near_dup_slots": int(store.near_duplicate_slots()),
+            "merged": int(merged),
+            "control_salient_mean": control_mean,
+            "replay_salient_mean": replay_mean,
+            "salient_gain": gain,
+            "consolidate_s": float(time.perf_counter() - started),
+        }
 
     def _query_vector(self, prompt: str) -> np.ndarray:
         raw = self._raw_key_pool(prompt)
@@ -1331,6 +1443,7 @@ class LLMMemory:
                 "maxcos": float(scores[top_i]),
                 "gap": gap,
                 "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
+                "strength": float(slots[winner].strength),
             }
         )
         return info
@@ -1338,14 +1451,18 @@ class LLMMemory:
     def _set_delta(self, rank: dict) -> None:
         value = rank.get("value")
         conf = float(rank.get("confidence") or 0.0)
-        if value is None or conf <= 0.0:
+        strength = float(rank.get("strength", 1.0))
+        if value is None or conf <= 0.0 or strength <= 0.0:
             self._delta = None
             return
         composed = self._compose(value, key=rank.get("key"), grad=False)
-        if conf >= 1.0:
+        scale = conf * strength
+        # Strength 1 and full confidence leave the composed residual
+        # unmultiplied, matching the pre-replay inject bit for bit.
+        if scale == 1.0:
             self._delta = composed
             return
-        self._delta = composed * conf
+        self._delta = composed * scale
 
     def _arm(self, prompt: str) -> None:
         self._set_delta(self._rank(prompt))

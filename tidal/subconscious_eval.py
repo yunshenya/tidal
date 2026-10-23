@@ -78,6 +78,12 @@ PATH_FLAGS = (
         "varies": "two full forwards (key, then value); chat and noise return before that",
         "retries": False,
     },
+    {
+        "path": "replay consolidation",
+        "when": "every N accepted writes",
+        "varies": "recomputes decay, refreshes the top-m salient slots, merges at most m near-duplicates; no extra forward",
+        "retries": False,
+    },
 )
 
 
