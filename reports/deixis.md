@@ -129,4 +129,4 @@ Lexical hits, the name head, the alias list, CJK verb attachment, and the longer
 
 ## Tests
 
-`tests/test_question_deixis.py` locks the sha, literal disjointness, the Jaccard cap, the resolver, and the 48/48 ask gate. Dialogue dev and held-out pytest still pass on the shipped window.
+`tests/test_question_deixis.py` locks the sha, literal disjointness, the Jaccard cap, the resolver, and the 48/48 ask gate. `python3 -m pytest -q`: 299 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. That package is not installed here. The other `LLMMemory` tests passed. `tidal/llm_memory.py` is unchanged.
