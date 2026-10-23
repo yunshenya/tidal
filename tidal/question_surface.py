@@ -36,8 +36,12 @@ No self, or two selves, and that question abstains. Once an utterance has
 been noted, ``you`` / ``你`` / ``您`` and a hearer-role cue name the hearer
 ``note_turn`` stored, and ``he`` / ``she`` / ``they`` / ``他`` / ``她`` /
 ``ta`` name the one person on the newest conversational turn who is neither
-speaker nor hearer. No utterance and no hearer leaves that question on the
-ranker. A stored name in the string still wins. A nickname, a listed
+speaker nor hearer. A hearer the caller did not pass is filled only by a
+leading exact roster name plus address punctuation. When that resolution is
+one person, their latest in-window conversational mention is restamped onto
+the current turn; the pronoun is not stored, and a mention outside the
+window is not pulled back. No utterance and no hearer leaves that question
+on the ranker. A stored name in the string still wins. A nickname, a listed
 diminutive, pinyin, a dropped surname, or a short honorific is that stored
 person. A following verb or time word is still that person (``唐宁选的``,
 ``王伟平时``). One extra syllable that continues a personal name is not
@@ -1485,6 +1489,110 @@ def resolve_deixis(
     if len(latest) == 1:
         return latest
     return ()
+
+
+# Address punctuation after a leading name. A period, a question mark, and
+# a space are not this class. ``Hey Name`` is not initial, so it is not either.
+_ADDRESS_PUNCT = frozenset(",，、:：!！")
+
+
+def _name_roster(names: Sequence[Optional[str]]) -> Tuple[str, ...]:
+    seen = []
+    for name in names:
+        if isinstance(name, str) and name and name not in seen:
+            seen.append(name)
+    return tuple(seen)
+
+
+def _leading_vocative(text: str, roster: Sequence[str]) -> Optional[Tuple[str, str]]:
+    """One exact roster name at position 0, plus the text after the punctuation.
+
+    The longest span wins. Two different names that end at that same index
+    are not unique. The next character has to be address punctuation, with
+    no space between the name and the mark.
+    """
+    if not text or not roster:
+        return None
+    best_end = -1
+    best: List[str] = []
+    for name in roster:
+        for start, end in name_spans(name, text):
+            if start != 0:
+                continue
+            if end > best_end:
+                best_end = end
+                best = [name]
+            elif end == best_end and name not in best:
+                best.append(name)
+    if best_end < 0 or len(best) != 1:
+        return None
+    if best_end >= len(text) or text[best_end] not in _ADDRESS_PUNCT:
+        return None
+    return best[0], text[best_end + 1:].lstrip()
+
+
+def vocative_hearer(text: str, names: Sequence[Optional[str]]) -> Optional[str]:
+    """The hearer a leading vocative names, or None.
+
+    The utterance, after a left strip, starts with exactly one exact roster
+    name and address punctuation (``,`` ``，`` ``、`` ``:`` ``：`` ``!`` ``！``).
+    A second name in that same position after the punctuation is not unique.
+    A name used as subject or object, a name later in the sentence, an edit,
+    a nickname, or a pinyin form does not qualify. This does not read a
+    hearer the caller already passed.
+    """
+    if not isinstance(text, str) or text == "":
+        return None
+    found = _leading_vocative(text.lstrip(), _name_roster(names))
+    if found is None:
+        return None
+    name, rest = found
+    if _leading_vocative(rest, _name_roster(names)) is not None:
+        return None
+    return name
+
+
+def refresh_resolved(state, text: str, names: Sequence[Optional[str]], surfaces=None) -> None:
+    """Restamp the one person ``resolve_deixis`` names, when the mention is live.
+
+    ``None`` and ``()`` do nothing. That is a stored name in the same string,
+    a tie, a mixed second-and-third person, ``them``, ``你们``, and a third
+    person already outside ``TURN_WINDOW``. The pronoun text is not written.
+    ``surfaces`` is unused; the ask path passes it so the call matches
+    ``ask_people``.
+    """
+    del surfaces
+    if state is None or not isinstance(text, str) or text == "":
+        return
+    active = state.conversational(ignore_surface=text)
+    pointed = resolve_deixis(text, names, state, active)
+    if pointed is not None and len(pointed) == 1:
+        state.refresh(pointed[0])
+
+
+def apply_utterance(
+    state,
+    text: str,
+    names: Sequence[Optional[str]],
+    surfaces=None,
+    *,
+    speaker=None,
+    hearer=None,
+) -> Tuple[str, ...]:
+    """Open one turn the way ``note_turn`` does, then keep a resolved person alive.
+
+    Names are ``ask_people`` on the list as it stands, before the turn opens.
+    A non-empty ``hearer`` is kept, including a string that is not on the
+    roster. Otherwise ``vocative_hearer`` may set one. The return value is
+    those names, not the person a pronoun pointed at.
+    """
+    passed = hearer if isinstance(hearer, str) and hearer else None
+    chosen = passed if passed is not None else vocative_hearer(text, names)
+    mentioned = ask_people(text, names, surfaces, state.conversational())
+    spoken = speaker if isinstance(speaker, str) and speaker else None
+    state.note_utterance(mentioned, speaker=spoken, hearer=chosen, surface=text)
+    refresh_resolved(state, text, names, surfaces)
+    return tuple(mentioned)
 
 
 def _deixis_rows(

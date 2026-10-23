@@ -320,17 +320,16 @@ def recommendation(scored: dict) -> str:
     any_miss = bool(scored["misses"])
     if gated_clean and total["state_fa"] == 0 and total["empty_fa"] == 0:
         return (
-            "Ship the caller contract, and do not widen the mechanism in this change. "
-            "Gated rows match the shipped rule on both passes, and a rule abstain never "
-            "returned a value. The experience gaps are the ones already outside the "
-            "contract: four quiet turns age a name out, a pronoun does not refresh the "
-            "log, a vocative is not a hearer unless the caller passes it, two people on "
-            "the newest turn abstain with no gender, an insertion or a swap or a 老/小 "
-            "prefix is not edit-1, and the speaker is not he. Open addressee forms stay "
-            "out of scope. The next product step is to call note_turn with the hearer "
-            "every time, and to treat the window and the closed class as the behavior, "
-            "not as a full coreference model. A richer dialogue state would be a new "
-            "mechanism, not a patch on this bank."
+            "Keep the two updates, and do not widen the mechanism further on this bank. "
+            "Gated rows match the rule on both passes, and a rule abstain never returned "
+            "a value. A resolved pronoun restamps that person's in-window mention, and a "
+            "leading exact name plus address punctuation is the hearer when the caller "
+            "did not pass one. The pronoun is not stored as a name, and a mention outside "
+            "the window is not pulled back. What still disagrees with the listener is "
+            "outside that contract: four quiet turns with no pronoun age a name out, two "
+            "people on the newest turn abstain with no gender, an insertion or a swap or "
+            "a 老/小 prefix is not edit-1, the speaker is not he, and 你们 is not a "
+            "singular hearer. Open addressee forms stay out of scope."
         )
     if not gated_clean:
         return (
@@ -367,6 +366,7 @@ def format_report(rows: Sequence[Episode], disjoint: dict, scored: Optional[dict
         total = _totals(scored["scope"])
         gated = scored["scope"].get("gated", _blank())
         gap = scored["scope"].get("gap", _blank())
+        dev = scored["scope"].get("dev", _blank())
         oos = scored["scope"].get("oos", _blank())
         control = scored["scope"].get("control", _blank())
         observe = scored["scope"].get("observe", _blank())
@@ -379,17 +379,19 @@ def format_report(rows: Sequence[Episode], disjoint: dict, scored: Optional[dict
             f"Gated rows, where the rule and the listener already agree: "
             f"{gated['state']}/{gated['n']} with the turns, {gated['empty']}/{gated['n']} on the empty log, "
             f"human {gated['human']}/{gated['n']}. Ordinary talk is {ordinary['state']}/{ordinary['n']}.",
+            f"Pronoun-chain and leading-vocative rows are {dev['human']}/{dev['n']} against the listener "
+            f"and {dev['state']}/{dev['n']} against the rule.",
             f"The listener's reading on the whole bank is {total['human']}/{total['n']}. "
-            f"Experience gaps are {gap['human']}/{gap['n']} against the listener and "
+            f"Experience gaps that remain are {gap['human']}/{gap['n']} against the listener and "
             f"{gap['state']}/{gap['n']} against the rule. "
             f"Open addressee forms are {oos['human']}/{oos['n']} against the listener. "
             f"Empty-log controls are {control['human']}/{control['n']} against the listener. "
             f"Name-head observations are {observe['human']}/{observe['n']} against the listener. "
-            "A miss in those four columns is not a regression.",
+            "A miss in the gap, open-addressee, empty-log, or name-head column is not a regression.",
             "",
         ])
     lines.extend([
-        "Rule labels are the replay of `DialogueState`, `ask_people`, and the deixis "
+        "Rule labels are the replay of `apply_utterance`, `refresh_resolved`, and the deixis "
         "row selectors. Human labels are the conversational reading written with the "
         "episode. State mode walks `note_turn` and `query` in order. Empty mode asks "
         "each question on a fresh store of the same facts. The encoder is the tied "
@@ -436,11 +438,24 @@ def format_report(rows: Sequence[Episode], disjoint: dict, scored: Optional[dict
     lines.append("")
     lines.extend(_table("Phenomenon", scored["kind"]))
     lines.append("")
+    lines.append("## Keep-alive and leading vocatives")
+    lines.append("")
+    lines.append(
+        "These rows were experience gaps before the two updates. A resolved pronoun "
+        "restamps the person, and a leading vocative is the hearer. They are scored "
+        "apart from the gated 106 and the ordinary 52."
+    )
+    lines.append("")
+    for item in scored["asks"]:
+        if item["scope"] == "dev":
+            lines.append(_show(item))
+    lines.append("")
     lines.append("## Where the listener and the rule disagree")
     lines.append("")
     lines.append(
         "These rows were marked gap before the score. A human miss with a rule hit "
-        "is the experience gap. It is not a regression."
+        "is the experience gap. It is not a regression. Four quiet turns with no "
+        "pronoun still age the name out."
     )
     lines.append("")
     gaps = [item for item in scored["asks"] if item["scope"] == "gap"]
@@ -512,13 +527,10 @@ def format_report(rows: Sequence[Episode], disjoint: dict, scored: Optional[dict
     lines.append("## Floors")
     lines.append("")
     lines.append(
-        "The ask path is unchanged, so the floors already recorded in `reports/deixis.md` "
-        "still stand. They were not re-run for this measurement. Probe answerable 365/370, "
-        "false abstain 0/370, unanswerable 72/72, gold lost at overwrite 0.9 is 0, "
-        "co-resident cosine above 0.9 is 0 (max 0.8927). Frozen hits 188/216, false abstain "
-        "19/216, near_dup_absent 30/30. Dialogue dev 102/102 and 102/102. Dialogue held-out "
-        "at window 4, gated 108/108 and 108/108. Deixis dev 48/48 and 48/48. Deixis held-out "
-        "128/136 with the turns (the miss is `addressee_extra` 0/8) and 136/136 on the empty log."
+        "The ask path now restamps a resolved pronoun and reads a leading vocative, so "
+        "the probe, frozen, dialogue, and deixis floors are re-run. This bank's own "
+        "development floor stays gated 106/106 and ordinary talk 52/52, listener labels, "
+        "false accepts 0. The re-run numbers are in `reports/dialogue_keepalive.md`."
     )
     lines.append("")
     lines.append("## Recommendation")

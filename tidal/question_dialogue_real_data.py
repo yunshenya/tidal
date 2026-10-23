@@ -2,10 +2,12 @@
 
 The synthetic dialogue and deixis banks are template grids. These episodes
 are short conversations: introductions, a hearer, a third person, a later
-question. Rule labels are not hand-fit. ``build_rows`` replays ``DialogueState``,
-``ask_people``, and the deixis row selectors, then checks the human reading
-against that replay. Gated rows already agree. Gap rows disagree on purpose.
-Open addressee forms from the deixis held-out stay out of the gate.
+question. Rule labels are not hand-fit. ``build_rows`` replays ``apply_utterance``
+and the deixis row selectors, then checks the human reading against that
+replay. Gated rows already agree. Dev rows are the pronoun chain and the
+leading vocative, and they agree once those two updates are on. Gap rows
+still disagree on purpose. Open addressee forms from the deixis held-out
+stay out of the gate.
 
 The frozen adversarial file is not an input. ``ABSTAIN_MARGIN`` and
 ``LEX_RIDGE_GAP`` are not read here. ``LLMMemory`` is not imported.
@@ -20,11 +22,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from tidal.dialogue_state import DialogueState
 from tidal.question_name_align import diagnose
 from tidal.question_surface import (
+    apply_utterance,
     ask_people,
     is_deictic,
     is_indirect_hearer,
     lex_labels,
     matched_fact_rows,
+    refresh_resolved,
     selected_fact_rows,
 )
 from tidal.question_surface import _second_person, _third_person
@@ -228,11 +232,9 @@ class _Scene:
                     raise RuntimeError(
                         f"{self.eid} mentions {got} != {mentions} in {text!r} unknown={info['unknown']}"
                     )
-                state.note_utterance(
-                    got,
-                    speaker=speaker or None,
-                    hearer=hearer or None,
-                    surface=text,
+                apply_utterance(
+                    state, text, names, surfaces,
+                    speaker=speaker or None, hearer=hearer or None,
                 )
                 events.append(Turn(text, speaker, hearer))
                 continue
@@ -244,11 +246,15 @@ class _Scene:
             rule, rule_golds, who = _predict(state, slots, question, rel)
             empty_rule, empty_golds, _empty_who = _predict(DialogueState(), slots, question, rel)
             human_label, human_golds, who_human = _human_outcome(human, slots, rel)
-            if scope == "gated" and (rule, rule_golds) != (human_label, human_golds):
+            if scope in ("gated", "dev") and (rule, rule_golds) != (human_label, human_golds):
                 raise RuntimeError(
                     f"{self.eid} {phenomenon} rule {rule}:{who} != human {human} "
                     f"q={question!r} unknown={info['unknown']} matched={info['matched']}"
                 )
+            if scope == "dev" and rule != "answerable":
+                raise RuntimeError(f"{self.eid} {phenomenon} dev ask abstains: {question!r}")
+            if scope == "dev" and not note:
+                raise RuntimeError(f"{self.eid} {phenomenon} dev has no note")
             if scope == "gap" and (rule, rule_golds) == (human_label, human_golds):
                 raise RuntimeError(f"{self.eid} {phenomenon} was marked gap but agrees: {question!r}")
             if scope == "gated" and band == "ordinary" and rule != "answerable":
@@ -260,7 +266,7 @@ class _Scene:
                     raise RuntimeError(f"{self.eid} oos form is inside the closed class: {question!r}")
                 if not note:
                     raise RuntimeError(f"{self.eid} oos has no note")
-            if scope not in ("gated", "gap", "oos", "control", "observe"):
+            if scope not in ("gated", "gap", "oos", "control", "observe", "dev"):
                 raise RuntimeError(f"{self.eid} scope {scope}")
             if family not in ("you", "third", "name", "edit", "abstain", "indirect", "window", "oos", "empty"):
                 raise RuntimeError(f"{self.eid} family {family}")
@@ -271,6 +277,7 @@ class _Scene:
             ))
             mentioned = ask_people(question, names, surfaces, state.conversational(ignore_surface=question))
             state.note_ask(mentioned, question)
+            refresh_resolved(state, question, names, surfaces)
         self.bank.episodes.append(Episode(
             self.eid, self.lang, self.title, tuple(slots), tuple(events),
         ))
@@ -1243,6 +1250,8 @@ def _load(bank: Bank) -> None:
     )
     s.finish()
 
+    # Dev rows for the two updates. Same episodes as the old gaps, same order.
+    # The rule now agrees with the listener. A miss against the rule is not expected.
     s = bank.scene("en-chain", "en", "Kept saying he", "horn cup after dusk", "Sable")
     s.person("Briony", ("phone",), self_rel="phone")
     s.person("Torven", ("phone", "birthday"))
@@ -1253,10 +1262,10 @@ def _load(bank: Bank) -> None:
     s.turn("Pellam", "Briony", "He waved from the door.", ())
     s.turn("Pellam", "Briony", "He kept the card in his coat.", ())
     s.ask(
-        "pronoun_chain_age", "gap", "gap", "window", "phone",
+        "pronoun_chain_age", "dev", "dev", "window", "phone",
         "Which telephone did he leave with the horn cup after dusk?",
         "Torven",
-        "Later turns only say he, and a pronoun is not written back onto the log, so the name ages out.",
+        "Later turns only say he. That pronoun restamps Torven onto the current turn, so the name stays inside TURN_WINDOW.",
     )
     s.finish()
 
@@ -1270,10 +1279,10 @@ def _load(bank: Bank) -> None:
     s.turn("阮澄", "闵昭", "他在门口挥了下手。", ())
     s.turn("阮澄", "闵昭", "他把卡片放在外套里。", ())
     s.ask(
-        "pronoun_chain_age", "gap", "gap", "window", "phone",
+        "pronoun_chain_age", "dev", "dev", "window", "phone",
         "他留在黄昏后那只角杯上的电话是哪一页？",
         "喻棠",
-        "后面几轮只说他。代词不会写回人名，名字就滑出了窗口。",
+        "后面几轮只说他。这个代词把喻棠重新盖到当前轮上，名字还在窗口里。",
     )
     s.finish()
 
@@ -1282,10 +1291,10 @@ def _load(bank: Bank) -> None:
     s.person("Pellam", ("phone", "places"))
     s.turn("Pellam", "", "Briony, I put the green tin by your elbow.", ("Briony",))
     s.ask(
-        "vocative_unpassed", "gap", "gap", "you", "phone",
+        "vocative_unpassed", "dev", "dev", "you", "phone",
         "Which telephone should the closer read for you off the green tin by the elbow?",
         "Briony",
-        "The line addresses Briony, but note_turn was not given a hearer. you does not recover a vocative.",
+        "The line starts with Briony and a comma, and note_turn was not given a hearer. That leading vocative is the hearer, so you is Briony.",
     )
     s.finish()
 
@@ -1294,10 +1303,10 @@ def _load(bank: Bank) -> None:
     s.person("阮澄", ("phone", "places"))
     s.turn("阮澄", "", "闵昭，青瓷放在你手边了。", ("闵昭",))
     s.ask(
-        "vocative_unpassed", "gap", "gap", "you", "phone",
+        "vocative_unpassed", "dev", "dev", "you", "phone",
         "值夜要回读给你的电话，看手边青瓷上的哪一页？",
         "闵昭",
-        "这句话点了闵昭，但 note_turn 没有传入听者。你不会从呼语里补出来。",
+        "这句话以闵昭加逗号开头，note_turn 没有传入听者。这个句首呼语就是听者，所以你是闵昭。",
     )
     s.finish()
 

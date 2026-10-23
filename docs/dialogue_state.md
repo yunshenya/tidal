@@ -16,7 +16,7 @@ Each mention is `(name, turn, source, seq, surface)`:
 | `utterance` | `note_turn` | yes | yes, inside the window |
 | `ask` | `query`, after the decision | yes, unless this exact string is already the open ask | yes, inside the window, except when the question being answered is that same string |
 
-The log is capped at 32 events. Speaker and hearer are two optional strings set only when `note_turn` is given them. The edit rule does not read them. Deixis does. `utterances` counts `note_turn` calls. A fact write and an ask do not increment it.
+The log is capped at 32 events. Speaker is an optional string set only when `note_turn` is given one. Hearer is the string `note_turn` was given when that argument is non-empty, including a string that is not on the roster. When the argument is empty, a leading exact roster name plus address punctuation (`,` `，` `、` `:` `：` `!` `！`) is the hearer. A second name in that same position after the punctuation leaves the hearer unset. A subject, an object, a name later in the sentence, an edit, a nickname, or a pinyin form does not qualify. The edit rule does not read speaker or hearer. Deixis does. `utterances` counts `note_turn` calls. A fact write and an ask do not increment it.
 
 `conversational()` is the active list: utterance and ask mentions whose turn is inside the last `TURN_WINDOW` (4) turns, most recent first, one entry per person. `recent()` is the same log including writes, for inspection. The window is a constant, not a fit, and not chosen on the frozen file.
 
@@ -25,8 +25,8 @@ A question does not count as its own prior mention. `query` passes `ignore_surfa
 ## Update rules
 
 1. `remember` appends a `write` for the slot name when the write is kept. Chat and noise writes are still dropped by the store and are not logged. A write does not open a turn.
-2. `note_turn(text, speaker=, hearer=)` resolves stored people in `text` with the same `ask_people` the next question will use, including an edit the current active list already licenses, then appends those people as an `utterance`. Speaker and hearer are stored when passed. They are not inferred.
-3. `query` decides with the active list as it stands, then appends the people `ask_people` returned for that question as an `ask`. An abstention that matched nobody appends nobody, and the turn still opens. A second `query` of the same string does not open another turn.
+2. `note_turn(text, speaker=, hearer=)` resolves stored people in `text` with the same `ask_people` the next question will use, including an edit the current active list already licenses, then appends those people as an `utterance`. Speaker is stored when passed. A passed hearer is stored as given. An empty hearer argument may be filled by `vocative_hearer`. The names returned are still the names in the string.
+3. `query` decides with the active list as it stands, then appends the people `ask_people` returned for that question as an `ask`. An abstention that matched nobody appends nobody, and the turn still opens. A second `query` of the same string does not open another turn. After the ask is recorded, a resolved pronoun or hearer cue restamps that person the same way a turn does.
 
 `recall`, `heads`, and `replay` do not read or write this state, except that `replay` calls `new_session`, which drops the group's mentions.
 
@@ -44,7 +44,7 @@ A fact write does not put the person on the active list. The frozen near-duplica
 
 ## Deixis
 
-`resolve_deixis` in `question_surface.py` runs inside `matched_fact_rows` and `selected_fact_rows`. `ask_people` does not call it, so `note_turn` and the ask log still record names only. A pronoun does not become a later mention. There is no gender, no full coreference, and no flag.
+`resolve_deixis` in `question_surface.py` runs inside `matched_fact_rows` and `selected_fact_rows`. `ask_people` does not call it, so the names appended by `note_turn` and by the ask log are still names only. When `resolve_deixis` returns exactly one person, `refresh` moves that person's latest utterance or ask mention that is still inside `TURN_WINDOW` onto the current turn. The pronoun text is not stored, the mention's source and original surface stay, and a mention already outside the window is not pulled back. `None` and `()` do not restamp anyone. There is no gender, no full coreference, and no flag.
 
 The rule applies only when `utterances > 0` or a hearer string is already stored. No utterance and no hearer is the empty log: `you` / `他` stay on the ranker, and a hearer-role noun stays on the unique first-person fact. A stored name in the question, including an edit the active list already licenses, keeps the name path. `Can you read Ada's phone` stays Ada.
 
@@ -58,6 +58,6 @@ Otherwise:
 
 ## What this does not do
 
-The rule does not invent a hearer the caller did not pass, and it does not read a fact write as a mention. It does not track turn-taking beyond the speaker and hearer strings, and it does not chain a pronoun to a previous pronoun. With four people in the window the list is already those four, in recency order; the third-person read keeps only the newest turn's eligible names.
+The rule does not invent a hearer except that one leading vocative, and it does not read a fact write as a mention. It does not track turn-taking beyond the speaker and hearer strings. A chain of pronouns keeps a person alive only by restamping the mention that is still inside the window; it does not write the pronoun out as a name, and it does not resurrect a mention that has already aged out. With four people in the window the list is already those four, in recency order; the third-person read keeps only the newest turn's eligible names. Two names on that turn, an insertion, a transposition, `老` plus the full name, the speaker read as `he`, and `你们` are unchanged.
 
-The edit-1 dev bank, the with-log versus empty-log ask, and the single-turn floors for that rule are in `reports/dialogue_state.md`. A natural multi-turn measurement, with the rule left as it is, is in `reports/dialogue_real.md`.
+The edit-1 dev bank, the with-log versus empty-log ask, and the single-turn floors for that rule are in `reports/dialogue_state.md`. The natural multi-turn bank is in `reports/dialogue_real.md`. The keep-alive and vocative measurement, with a fresh held-out, is in `reports/dialogue_keepalive.md`.

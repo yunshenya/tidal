@@ -21,7 +21,7 @@ from tidal.question_surface import ABSTAIN_MARGIN, LEX_RIDGE_GAP
 
 QUESTIONS_SHA = "117ef589bb02bd883db44a4d2d5859b17c271c00a5df324574c8095aced5b704"
 BANK_SHA = "0be42845836ec2a19c961d5a415ccd0d9d0dcb1f8adf5bb632335cd26871cec5"
-SCOPES = {"gated": 106, "gap": 21, "oos": 8, "control": 4, "observe": 3}
+SCOPES = {"gated": 106, "gap": 17, "dev": 4, "oos": 8, "control": 4, "observe": 3}
 KINDS = {
     "you_hearer": 16,
     "third_unique": 14,
@@ -113,9 +113,15 @@ def test_real_score_matches_the_rule():
     assert scored["band"]["ordinary"]["state"] == 52
     assert scored["band"]["ordinary"]["human"] == 52
     gap = scored["scope"]["gap"]
-    assert gap["state"] == gap["n"] == 21
+    assert gap["state"] == gap["n"] == 17
     assert gap["human"] == 0
     assert gap["state_fa"] == 0
+    dev = scored["scope"]["dev"]
+    assert dev == {
+        "n": 4, "state": 4, "empty": 4, "human": 4, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["kind"]["pronoun_chain_age"]["human"] == 2
+    assert scored["kind"]["vocative_unpassed"]["human"] == 2
     oos = scored["scope"]["oos"]
     assert oos["state"] == oos["n"] == 8
     assert oos["human"] == 0

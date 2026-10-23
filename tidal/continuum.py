@@ -13,7 +13,7 @@ h_adapt = h + sum_levels B_l (A_l h) + b_l ; h' = h_adapt + episodic_readout(h_a
 Episodic readout is always on (tidal/episodic.py): one soft top-k over fact slots, ranked by raw cosine, added in full.
 An empty store adds zeros, so a fresh Continuum matches the static model. There is no enable flag.
 Facts are explicit (identity + key/value from this frozen encoder, or a positional byte code when the value is a string or token list). Replay does not store raw events.
-Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check. Two matched names both stay unless one is only in a dismissed clause, only one possessively governs the live cue, or a focus restrictor governs a proper subset. That path returns no fact when the person who remains lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A same-script edit of one character is that stored person only when the dialogue log names them and nobody else at that distance (tidal/dialogue_state.py). A fact write is logged and does not license the edit. An empty log leaves name resolution unchanged. After an utterance, you / 你 / 您 and a hearer-role cue name the hearer note_turn stored, and he / she / they / 他 / 她 / ta name the one person on the newest conversational turn who is neither speaker nor hearer. No utterance and no hearer leaves that pronoun on the ranker. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
+Natural-language questions use ask / query. A flat row keeps the 512-d sentence vector and is ranked by sentence cosine plus a relation logit (tidal/question_surface.py). When that surface string has selected people, ranking uses only their facts. The cue-nearest narrowing stays on the missing-relation check. Two matched names both stay unless one is only in a dismissed clause, only one possessively governs the live cue, or a focus restrictor governs a proper subset. That path returns no fact when the person who remains lacks the asked relation, or the string names nobody and is not second person and not an indirect hearer description with one first-person fact in the store. A same-script edit of one character is that stored person only when the dialogue log names them and nobody else at that distance (tidal/dialogue_state.py). A fact write is logged and does not license the edit. An empty log leaves name resolution unchanged. After an utterance, you / 你 / 您 and a hearer-role cue name the hearer note_turn stored, and he / she / they / 他 / 她 / ta name the one person on the newest conversational turn who is neither speaker nor hearer. A hearer argument that is empty is filled only by a leading exact roster name plus address punctuation. When that resolution is one person, their latest in-window conversational mention is restamped onto the current turn; the pronoun is not stored, and a mention outside the window is not pulled back. No utterance and no hearer leaves that pronoun on the ranker. A sparse name/relation row has no sentence vector and is ranked by the contrastive head (tidal/question_head.py), which does not abstain. Neither ranker is added into heads, and replay does not call them.
 Learning signal: the self-supervised VAP targets only (no labels). Strictly causal: target bin k of event i is used only
 once the stream clock has passed ts_i + hi_k (bin end); each (event, bin) is used exactly once.
 No live decisions: this module only replays logged streams and reports metrics."""
@@ -22,7 +22,15 @@ from tidal import vap_targets as VT
 from tidal.dialogue_state import DialogueState
 from tidal.episodic import EpisodicStore, cosine_scores, decode_span, decode_tokens, is_structured_value
 from tidal.question_head import QuestionHead, install_matching, question_scores
-from tidal.question_surface import ask_people, limit_scores, matched_fact_rows, surface_abstain, surface_scores
+from tidal.question_surface import (
+    apply_utterance,
+    ask_people,
+    limit_scores,
+    matched_fact_rows,
+    refresh_resolved,
+    surface_abstain,
+    surface_scores,
+)
 BIN_END = np.repeat(np.array([hi for _, hi in VT.BINS], float)[None], len(VT.CHANNELS), 0).reshape(-1)  # [NV] channel-major
 _GROUP_OMIT = object()
 
@@ -354,12 +362,17 @@ class Continuum:
         active = state.conversational(ignore_surface=surface)
         mentioned = ask_people(surface, names, surfaces, active)
         state.note_ask(mentioned, surface)
+        refresh_resolved(state, surface, names, surfaces)
     def note_turn(self, text, *, speaker=None, hearer=None, group=_GROUP_OMIT):
-        """Record one utterance. Returns the stored people it named.
+        """Record one utterance. Returns the stored people the string named.
 
         Resolves names with the active list as it stands, then opens a turn.
-        Speaker and hearer are stored when passed. They are not inferred.
-        An empty string records nothing.
+        A hearer string the caller passed is kept, including one that is not
+        on the roster. When that argument is empty, a leading exact roster
+        name plus address punctuation is the hearer. A resolved pronoun or
+        hearer cue restamps that person's in-window mention onto this turn.
+        The return value is still the names ``ask_people`` matched. An empty
+        string records nothing.
         """
         if not isinstance(text, str) or text == "":
             return ()
@@ -368,9 +381,9 @@ class Continuum:
         names = [slot.name for _, slot in visible]
         surfaces = [self._surface_lookup(slot.k) for _, slot in visible]
         state = self._dialogue_for(group)
-        mentioned = ask_people(text, names, surfaces, state.conversational())
-        state.note_utterance(mentioned, speaker=speaker, hearer=hearer, surface=text)
-        return tuple(mentioned)
+        return apply_utterance(
+            state, text, names, surfaces, speaker=speaker, hearer=hearer,
+        )
     def rank_question_scores(self, question, *, group=_GROUP_OMIT):
         """Scores ``ask`` / ``query`` use, one per visible slot, or None when empty.
 
@@ -428,10 +441,14 @@ class Continuum:
         fact write does not. After an utterance, a second-person or hearer
         cue selects the hearer ``note_turn`` stored, and a third-person
         pronoun selects the one person on the newest turn in the window who
-        is neither speaker nor hearer. Unset, ambiguous, tied, aged, or
-        write-only, that pronoun abstains. No utterance and no hearer leaves
-        the pronoun on the ranker. The people appended after the decision
-        are still the names ``ask_people`` matched, not the pronoun.
+        is neither speaker nor hearer. A hearer the caller did not pass is
+        filled only by a leading exact roster name plus address punctuation.
+        When that resolution is one person, their latest in-window mention
+        is restamped onto this turn. The pronoun is not stored, and a mention
+        outside the window is not pulled back. Unset, ambiguous, tied, aged,
+        or write-only, that pronoun abstains. No utterance and no hearer
+        leaves the pronoun on the ranker. The people appended after the
+        decision are still the names ``ask_people`` matched, not the pronoun.
         Either way the value mix is ``EpisodicStore.read`` when a fact is
         returned. A flat-row question whose recorded surface string names a
         person without the asked relation returns ``(None, info)`` with
