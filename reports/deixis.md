@@ -130,3 +130,77 @@ Lexical hits, the name head, the alias list, CJK verb attachment, and the longer
 ## Tests
 
 `tests/test_question_deixis.py` locks the sha, literal disjointness, the Jaccard cap, the resolver, and the 48/48 ask gate. `python3 -m pytest -q`: 299 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. That package is not installed here. The other `LLMMemory` tests passed. `tidal/llm_memory.py` is unchanged.
+
+## Held-out gate
+
+Fixed before the scored run. The rule is not changed on this bank. A miss is reported as a miss. It is not repaired here, and a repair would need a new slice.
+
+`tidal/question_deixis_heldout_data.py`. 136 gated episodes, 68 English and 68 Chinese. Question sha256 `d414c44654db45eb0df85e0220045a28a44441e65b539034545ce8bade0d0dd6`. Bank sha256 `901390f59988cf68bebfbc352a2c0f8f768262ab13a6057cb748a144e85ef770`, 670 strings. Names: Sunngifu, Tidfrith, Wynflaed, Beorngyth, Quenburh, Aelflaed; 鄢姝, 濮苓, 缑蔓, 佘芷, 卞琦, 邬岚. Carriers: `sklent` / `mundle` / `criftNNN` / `plorq` / `龗龞`.
+
+Literal overlap with every earlier bank is 0, including deixis dev questions `4c582b14b181fcead6b256e1bb031af1c59ffece6047c7eaebc5c814de183734` and bank `1f9674cb23237ba3879a8c4938be323024d3dcc590e982da55868f15cbe53338`, dialogue dev questions `11bc041256941969c1055bb5bfc3cd491407718131689aa2f253a2d38e669f2a`, and dialogue held-out questions `99acea85195eca1f0e680f287b040646c321853c7312168801c46d38175f8d5d`. Max token Jaccard is 0.312. The cap is 0.50.
+
+| against | sha | n | literal | max token Jaccard |
+|---|---|---:|---:|---:|
+| probe | — | 744 | 0 | 0.286 |
+| surface cue corpus | — | 1124 | 0 | 0.235 |
+| abstain dev | `26889048…` | 381 | 0 | 0.200 |
+| frozen adversarial | `cce20b6b…` | 381 | 0 | 0.250 |
+| CJK dev | `5e8b86f6…` | 201 | 0 | 0.125 |
+| nickname dev | `a766f748…` | 43 | 0 | 0.000 |
+| typo dev | `68260c01…` | 68 | 0 | 0.080 |
+| indirect questions | `daf4619f…` | 50 | 0 | 0.222 |
+| indirect bank | `18b5e2d1…` | 72 | 0 | 0.222 |
+| misleading-cue dev | `ed3bd6aa…` | 44 | 0 | 0.125 |
+| bare-locative dev | `a0d73095…` | 100 | 0 | 0.136 |
+| residual misleading | `b35a4c42…` | 100 | 0 | 0.167 |
+| two-name dev | `9c72a8b3…` | 120 | 0 | 0.143 |
+| focus dev | `03dea71d…` | 132 | 0 | 0.143 |
+| typo-edit dev | `3447aaaa…` | 96 | 0 | 0.000 |
+| lastname questions | `064d7052…` | 101 | 0 | 0.150 |
+| lastname bank | `626514af…` | 309 | 0 | 0.150 |
+| dialogue dev questions | `11bc0412…` | 102 | 0 | 0.214 |
+| dialogue dev bank | `69bd3ed6…` | 340 | 0 | 0.214 |
+| dialogue held-out questions | `99acea85…` | 118 | 0 | 0.312 |
+| dialogue held-out bank | `e09fbcc0…` | 538 | 0 | 0.312 |
+| deixis dev questions | `4c582b14…` | 48 | 0 | 0.308 |
+| deixis dev bank | `1f9674cb…` | 216 | 0 | 0.308 |
+
+Closest pair: "sklent mundle 面前这位电话 crift043 plorq 龗龞" ‖ "yelm stook 跟前这位 电话 rickle532 㐂㐃".
+
+`TURN_WINDOW` is 4. A mention followed by 3 quiet turns is still inside the window and is answered. Four quiet turns, and five, are outside it and abstain. The current speaker and the current hearer are the ones excluded. A hearer who was replaced is not excluded. Gender is not a feature: `his` names Wynflaed on that row. `them` is not a third-person cue. `你们` is not singular `你`. A fact write is not a mention. Silent is a write plus one turn that names nobody. A store with no turn is the empty column, not the silent kind.
+
+Empty log: the same facts, no `note_turn`, and no earlier ask. A deictic pronoun returns the first stored fact of the asked relation. `ta` abstains `absent_person`. A stored name returns that person. A hearer-role noun with no stored hearer returns the unique first-person person, or abstains `absent_person` when there is none. `人家` / `对方` / `这位` / `那位` and the English paraphrases `other party`, `this one`, `that person`, `our guest` are not deictic, so the empty log abstains `absent_person`.
+
+With the turns, every row is gated:
+
+| kind | n | pass |
+|---|---:|---|
+| hearer_set_you | 8 | the stored hearer (`you` / `your` / `yours` / `yourself` / `你` / `您`) |
+| hearer_set_role | 4 | the stored hearer, who is not the first-person self (`listener`, `hearer`, `面前这位`, `身边那人`) |
+| hearer_unset | 4 | abstain `absent_person` |
+| hearer_switch | 4 | the later hearer |
+| hearer_ambiguous_mixed | 4 | abstain `absent_person` |
+| hearer_ambiguous_roster | 4 | abstain `absent_person` |
+| addressee_extra | 8 | the stored hearer (`other party`, `this one`, `that person`, `our guest`, `人家`, `对方`, `这位`, `那位`) |
+| addressee_extra_unset | 4 | abstain `absent_person` |
+| third_unique | 8 | the one eligible person (`he` / `she` / `they` / `他` / `她` / `ta` / `他们`) |
+| third_oblique | 10 | that person (`him` / `her` / `his` / `hers` / `their` / `他的` / `她的`) |
+| third_later | 8 | the newest eligible person in a 3-person or 4-person window |
+| third_after_ask | 8 | the person named by the earlier ask, who is neither speaker nor hearer |
+| third_tie | 6 | abstain `absent_person`, including when an older eligible name is still inside the window |
+| window_filler_3 | 4 | the mentioned person |
+| window_filler_4 | 4 | abstain `absent_person` |
+| window_filler_5 | 4 | abstain `absent_person` |
+| third_silent | 4 | abstain `absent_person` |
+| third_wrong_role | 8 | abstain `absent_person` |
+| third_former_hearer | 4 | the mentioned person, after the hearer has changed away from them |
+| third_ask_hearer | 4 | abstain `absent_person` |
+| control_named | 4 | the named person |
+| control_you_named | 4 | the named person, not the hearer |
+| control_indirect | 4 | the unique first-person person |
+| control_indirect_noself | 4 | abstain `absent_person` |
+| control_missing | 4 | abstain `missing_rel` |
+| control_not_pronoun | 2 | abstain `absent_person` (`them`) |
+| control_plural | 2 | the ranker's first fact, not the hearer (`你们`) |
+
+A false accept is an `absent_person` or `missing_rel` row that returned a fact. The held-out confirms the rule only when every kind is complete on both passes and false accepts are 0. The scored run has not been started.
