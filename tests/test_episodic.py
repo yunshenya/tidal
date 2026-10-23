@@ -710,3 +710,32 @@ def test_continuum_injects_span_code_and_empty_stays_exact():
     with torch.no_grad():
         row0 = m.vap(torch.from_numpy(H[0:1]) + torch.from_numpy(code)).numpy()
     assert np.allclose(s4[0], row0, atol=1e-5)
+
+
+def test_replay_recomputes_decay_and_merges_a_near_duplicate():
+    store = EpisodicStore(capacity=8, dk=4, dv=4, overwrite_cos=0.9)
+    keep = np.array([1.0, 0.0, 0.0, 0.0])
+    other = np.array([0.0, 1.0, 0.0, 0.0])
+    twin = np.array([0.99, 0.01, 0.0, 0.0])
+    assert store.write(keep, np.array([1.0, 0, 0, 0]), name="ann", rel="one")
+    assert store.write(other, np.array([0, 1.0, 0, 0]), name="bob", rel="two")
+    # Same identity replaces bob and leaves a key that sits on ann.
+    assert store.write(twin, np.array([0, 0, 1.0, 0]), name="bob", rel="two")
+    assert len(store) == 2
+    assert store.near_duplicate_slots() == 2
+    store._slots[0].salience = 0.2
+    store._slots[1].salience = 0.9
+    store.recompute_decay(0.5)
+    assert [slot.strength for slot in store.slots] == [0.5, 0.5]
+    ranked = store.ranked_by_salience()
+    assert ranked[0] == 1
+    store.refresh_strength(ranked[:1])
+    assert store.slots[1].strength == 1.0
+    assert store.slots[1].age == 0
+    assert store.slots[0].strength == 0.5
+    merged = store.merge_near_duplicates(limit=1, protect=ranked[:1])
+    assert merged == 1
+    assert len(store) == 1
+    assert store.slots[0].name == "bob"
+    assert store.slots[0].strength == 1.0
+    assert store.near_duplicate_slots() == 0

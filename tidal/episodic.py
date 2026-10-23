@@ -248,6 +248,13 @@ class Slot:
     # Sentence vector that produced a flat-row key. ask ranks these.
     # recall keeps using ``k``. None on a sparse name/relation key.
     sentence: Optional[np.ndarray] = None
+    # Residual scale for the LM inject. Continuum readout ignores it.
+    # 1 until replay recomputes decay. A refresh sets it back to 1.
+    strength: float = 1.0
+    # High values are replayed first. Writers that do not stamp it leave 0.
+    salience: float = 0.0
+    # Consolidation cycles since the last refresh.
+    age: int = 0
 
 
 class EpisodicStore:
@@ -397,6 +404,113 @@ class EpisodicStore:
             self._slots.pop(oldest)
         self._slots.append(entry)
         return True
+
+    def recompute_decay(self, decay: float) -> None:
+        """Age every slot by one cycle and set ``strength = decay ** age``.
+
+        ``decay`` is in ``(0, 1)``. Keys and values stay put. This is the
+        decay replay refreshes; it is not a retrieval penalty.
+        """
+        factor = float(decay)
+        if not 0.0 < factor < 1.0:
+            raise ValueError("replay decay must be in (0, 1)")
+        for slot in self._slots:
+            slot.age = int(slot.age) + 1
+            slot.strength = float(factor ** int(slot.age))
+
+    def refresh_strength(self, indices: Sequence[int]) -> None:
+        """Mark the given slots as just replayed. Strength returns to 1."""
+        for index in indices:
+            slot = self._slots[int(index)]
+            slot.age = 0
+            slot.strength = 1.0
+
+    def ranked_by_salience(self) -> list:
+        """Slot indices, highest salience first. Newer ``t`` breaks ties."""
+        return sorted(
+            range(len(self._slots)),
+            key=lambda i: (float(self._slots[i].salience), int(self._slots[i].t), -i),
+            reverse=True,
+        )
+
+    def near_duplicate_slots(self) -> int:
+        """How many slots share a same-group key above ``overwrite_cos``.
+
+        The write path already overwrites a new key that close to an existing
+        one. Two slots can still both sit above that cosine after a
+        same-identity replace, which does not scan the rest of the store.
+        """
+        hit: set[int] = set()
+        slots = self._slots
+        for i in range(len(slots)):
+            for j in range(i + 1, len(slots)):
+                left, right = slots[i], slots[j]
+                if left.group != right.group:
+                    continue
+                if _cos(left.k, right.k) > self.overwrite_cos:
+                    hit.add(i)
+                    hit.add(j)
+        return len(hit)
+
+    def merge_near_duplicates(self, *, limit: int, protect: Sequence[int] = ()) -> int:
+        """Drop up to ``limit`` near-duplicate slots. Keep the stronger trace.
+
+        A pair qualifies when ``cos(k, k)`` is strictly above ``overwrite_cos``
+        and the slots share a group. The higher-salience slot is kept; a tie
+        keeps the newer ``t``. A protected index is dropped only when its
+        partner is protected too. Values are not blended. Cost is bounded by
+        ``limit`` scans of the current slots.
+        """
+        budget = int(limit)
+        if budget < 1 or len(self._slots) < 2:
+            return 0
+        protected = {int(index) for index in protect}
+        merged = 0
+        while merged < budget:
+            pair = self._best_near_pair()
+            if pair is None:
+                break
+            drop = self._drop_index(pair[0], pair[1], protected)
+            self._slots.pop(drop)
+            protected = {index - 1 if index > drop else index for index in protected if index != drop}
+            merged += 1
+        return merged
+
+    def _best_near_pair(self) -> Optional[tuple]:
+        best = None
+        best_key = None
+        slots = self._slots
+        for i in range(len(slots)):
+            for j in range(i + 1, len(slots)):
+                left, right = slots[i], slots[j]
+                if left.group != right.group:
+                    continue
+                if _cos(left.k, right.k) <= self.overwrite_cos:
+                    continue
+                key = (
+                    max(float(left.salience), float(right.salience)),
+                    max(int(left.t), int(right.t)),
+                    -i,
+                )
+                if best_key is None or key > best_key:
+                    best_key = key
+                    best = (i, j)
+        return best
+
+    def _drop_index(self, left: int, right: int, protected: set) -> int:
+        left_on = left in protected
+        right_on = right in protected
+        if left_on and not right_on:
+            return right
+        if right_on and not left_on:
+            return left
+        a = self._slots[left]
+        b = self._slots[right]
+        key_a = (float(a.salience), int(a.t), -left)
+        key_b = (float(b.salience), int(b.t), -right)
+        if key_a == key_b:
+            return max(left, right)
+        return right if key_a > key_b else left
 
     def _visible(self, group: Optional[str]) -> list[tuple[int, Slot]]:
         if group is None:
