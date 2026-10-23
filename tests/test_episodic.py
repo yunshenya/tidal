@@ -739,3 +739,37 @@ def test_replay_recomputes_decay_and_merges_a_near_duplicate():
     assert store.slots[0].name == "bob"
     assert store.slots[0].strength == 1.0
     assert store.near_duplicate_slots() == 0
+
+
+def test_experience_valence_accumulates_revises_and_decays():
+    store = EpisodicStore(capacity=4, dk=4, dv=4, overwrite_cos=0.9)
+    key = np.array([1.0, 0.0, 0.0, 0.0])
+    assert store.write(key, np.array([1.0, 0, 0, 0]), name="ada", rel="note")
+    episode = store.next_episode()
+    store._slots[0].episode_id = episode
+    first = store.add_experience("ada", "note", 1, 0.5, source="ada keeps broom within acquires.", episode_id=episode)
+    assert first["valence"] == 0.5
+    assert first["kind"] == "experience"
+    assert first["episode_id"] == episode
+    assert "t" in first
+    # Same identity keeps the scalar. The text is not what moves it.
+    assert store.write(key, np.array([1.0, 0, 0, 1.0]), name="ada", rel="note")
+    second = store.add_experience("ada", "note", 1, 0.5, source="ada keeps broom within acquires.")
+    assert store.slots[0].valence == 1.0
+    assert second["episode_id"] != episode
+    revised = store.add_experience("ada", "note", -1, 0.5, source="ada keeps broom within acquires.")
+    assert store.slots[0].valence == 0.5
+    assert revised["delta"] == -0.5
+    store.recompute_decay(0.5)
+    assert store.slots[0].valence == 0.25
+    assert store.slots[0].strength == 0.5
+    kinds = [event["kind"] for event in store.valence_history("ada", "note")]
+    assert kinds == ["experience", "experience", "experience", "replay"]
+    corrected = store.set_valence("ada", "note", 0.0, source="manual")
+    assert corrected["kind"] == "correction"
+    assert corrected["source"] == "manual"
+    assert store.slots[0].valence == 0.0
+    # A different identity does not inherit ada's history.
+    assert store.write(np.array([0.0, 1.0, 0.0, 0.0]), np.array([0, 1.0, 0, 0]), name="bea", rel="note")
+    assert store.slots[-1].valence == 0.0
+    assert store.slots[-1].history == []

@@ -210,6 +210,57 @@ def test_replay_refreshes_the_top_slot_and_merges_the_near_duplicate(monkeypatch
         mem.close()
 
 
+def test_experience_valence_scales_only_the_stored_sign(monkeypatch):
+    import math
+
+    import tidal.llm_memory as mod
+
+    monkeypatch.setattr(mod, "VALENCE_STEP", 1.0)
+    monkeypatch.setattr(mod, "VALENCE_SPAN", 1.0)
+    from tidal.llm_memory import ByteTokenizer
+
+    mem = LLMMemory(EyeLM(), ByteTokenizer())
+    try:
+        prompt = "Ask:"
+        fact = {"text": "code is Y", "answer": "Y", "name": "ada", "rel": "note"}
+        assert mem.remember(dict(fact))
+        base = mem.injection(prompt).copy()
+        assert np.allclose(base, mem.encode_value("code is Y", "Y"))
+        assert mem.store.slots[0].valence == 0.0
+        # Wording that looks negative does not move valence. Only the field does.
+        hated = dict(fact)
+        hated["text"] = "ada hates code is Y"
+        assert mem.remember(hated)
+        assert mem.store.slots[0].valence == 0.0
+        liked = dict(fact)
+        liked["experience"] = 1
+        assert mem.remember(liked)
+        gain = 1.0 + math.tanh(1.0)
+        assert mem.store.slots[0].valence == 1.0
+        assert np.allclose(mem.injection(prompt), base * gain)
+        history = mem.valence_history("ada", rel="note")
+        assert history[-1]["kind"] == "experience"
+        assert history[-1]["source"] == "code is Y"
+        assert history[-1]["episode_id"] > 0
+        assert "t" in history[-1]
+        contrary = dict(fact)
+        contrary["experience"] = -1
+        assert mem.remember(contrary)
+        assert mem.store.slots[0].valence == 0.0
+        assert np.allclose(mem.injection(prompt), base)
+        corrected = mem.correct_valence("ada", -0.5, rel="note", reason="manual")
+        assert corrected["kind"] == "correction"
+        assert corrected["source"] == "manual"
+        assert mem.valence_history("ada", rel="note")[-1]["valence"] == -0.5
+        # Another person's praise does not leak onto ada.
+        other = {"text": "town is Q", "answer": "Q", "name": "bea", "rel": "city", "experience": 1}
+        assert mem.remember(other)
+        assert [slot.valence for slot in mem.store.slots if slot.name == "ada"] == [-0.5]
+        assert [slot.valence for slot in mem.store.slots if slot.name == "bea"] == [1.0]
+    finally:
+        mem.close()
+
+
 def test_other_identity_is_kept_and_readout_is_top1():
     mem = _byte_memory()
     mix = None

@@ -21,14 +21,18 @@ hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
 estimated once from a calibration set and stored with the module. The add is
 
-    c * s * gain * (scale(v) + MLP(scale(v)))
+    c * s * u * gain * (scale(v) + MLP(scale(v)))
 
 with ``scale`` fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))``. ``w`` is a
 polarity vector and ``k`` is the winning slot's key. ``w = 0`` leaves
-``gain = 1``, so the add matches the unscaled residual. ``s`` is the winning
-slot's strength. It stays 1 until a replay cycle recomputes decay, and a
-refresh sets it back to 1, so a store that has not replayed matches the
-previous add. ``c`` is 1 when the store has one slot. Otherwise
+``gain = 1``. ``u = 1 + span * tanh(valence)``. Valence stays 0 until a
+stored experience adds ``sign * step`` on that slot, so ``u = 1`` and the add
+matches the replay formula. The sign is the experience field on the write.
+The fact text is not scored, and the language model does not supply a group
+prior. ``s`` is the winning slot's strength. It stays 1 until a replay cycle
+recomputes decay, and a refresh sets it back to 1. The same cycle multiplies
+valence by the replay decay. A store with no experience and no replay matches
+the previous add. ``c`` is 1 when the store has one slot. Otherwise
 ``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
 0.80. A tie adds nothing. The MLP weights are the shipped checkpoint;
 polarity does not replace them. The last layer of an untrained module is
@@ -58,6 +62,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
+import math
 import re
 
 import numpy as np
@@ -109,6 +114,14 @@ POLARITY_SPAN = 2.0
 REPLAY_EVERY = 32
 REPLAY_M = 1
 REPLAY_DECAY = 0.5
+# Experience valence. A write's experience field contributes its sign times
+# VALENCE_STEP. The text is not scored. u = 1 + VALENCE_SPAN * tanh(valence).
+# Valence 0 leaves u = 1, matching the replay add. Replay multiplies valence
+# by REPLAY_DECAY. The grid is span in {1, 2} and step in {0.25, 0.5, 1}.
+# Span 1 and step 0.25 are the smallest pair on that grid that clears the
+# fit decision floors. Not retuned on the held-out bank. 0 new parameters.
+VALENCE_SPAN = 1.0
+VALENCE_STEP = 0.25
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -812,6 +825,28 @@ def _parse_fact(fact, answer, name, rel, key, group, kind):
     return text, answer, name, rel, key, group, kind
 
 
+def _experience_sign(fact) -> Optional[float]:
+    """Sign of a stored experience. Missing or zero leaves valence unchanged.
+
+    The magnitude is ignored. The update rule supplies the step. The fact
+    text is not read, so the language model cannot plant a group prior.
+    """
+    if not isinstance(fact, Mapping) or "experience" not in fact:
+        return None
+    value = fact.get("experience")
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise TypeError("experience must be a number") from exc
+    if number == 0.0:
+        return 0.0
+    if number > 0.0:
+        return 1.0
+    return -1.0
+
+
 def _content_from_offsets(offsets: Sequence[tuple]) -> list:
     return [a != b for a, b in offsets]
 
@@ -981,14 +1016,21 @@ def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     return float(min(1.0, max(0.0, float(gap) / float(tau))))
 
 
+def valence_gain_of(valence: float) -> float:
+    """``1 + VALENCE_SPAN * tanh(valence)``. Zero valence is exactly 1."""
+    return float(1.0 + float(VALENCE_SPAN) * math.tanh(float(valence)))
+
+
 class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. The armed value is the top slot
     (hard top-1 on raw cosine), not a soft mixture,     multiplied by
-    :func:`retrieval_confidence`, by the slot's strength, and by the polarity
-    gain of that slot's key. Strength stays 1 until replay. Every
+    :func:`retrieval_confidence`, by the slot's strength, by
+    :func:`valence_gain_of` on that slot, and by the polarity gain of that
+    slot's key. Strength stays 1 until replay. Valence stays 0 until an
+    experience is stored. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
     near-duplicate keys are merged. Salience reuses the polarity vector.
@@ -1281,6 +1323,7 @@ class LLMMemory:
         text, answer, name, rel, key, group, kind = _parse_fact(
             fact, answer, name, rel, key, group, kind
         )
+        experience = _experience_sign(fact)
         if not self.store.gate_write(kind, surprise):
             return False
         if len(self.store) == 0:
@@ -1303,7 +1346,22 @@ class LLMMemory:
         )
         if not wrote:
             return False
+        episode_id = self.store.next_episode()
         self._stamp_salience(name, rel, group, key_vec)
+        slot = self.store._find(name, rel, group)
+        if slot is None:
+            raise RuntimeError("accepted write did not leave a slot")
+        slot.episode_id = int(episode_id)
+        if experience not in (None, 0.0):
+            self.store.add_experience(
+                name,
+                rel,
+                float(experience),
+                float(VALENCE_STEP),
+                source=text,
+                group=group,
+                episode_id=episode_id,
+            )
         self._accepted += 1
         if self._accepted % int(REPLAY_EVERY) == 0:
             self._consolidate()
@@ -1444,6 +1502,7 @@ class LLMMemory:
                 "gap": gap,
                 "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
                 "strength": float(slots[winner].strength),
+                "valence": float(slots[winner].valence),
             }
         )
         return info
@@ -1456,13 +1515,28 @@ class LLMMemory:
             self._delta = None
             return
         composed = self._compose(value, key=rank.get("key"), grad=False)
-        scale = conf * strength
-        # Strength 1 and full confidence leave the composed residual
-        # unmultiplied, matching the pre-replay inject bit for bit.
+        # Valence 0 is gain 1. Full confidence and strength 1 then leave the
+        # composed residual unmultiplied, matching the replay inject.
+        scale = conf * strength * valence_gain_of(float(rank.get("valence", 0.0)))
         if scale == 1.0:
             self._delta = composed
             return
+        if scale == 0.0:
+            self._delta = None
+            return
         self._delta = composed * scale
+
+    def correct_valence(self, name: str, value: float, *, rel: str, group: Optional[str] = None, reason: str = "correction") -> dict:
+        """Set one slot's valence and append an audit row. Does not write a fact."""
+        if not isinstance(name, str) or name == "":
+            raise ValueError("name is empty")
+        if not isinstance(rel, str) or rel == "":
+            raise ValueError("rel is empty")
+        return self.store.set_valence(name, rel, float(value), source=str(reason), group=group)
+
+    def valence_history(self, name: str, *, rel: str, group: Optional[str] = None) -> tuple:
+        """Copy of the valence audit for one slot, oldest event first."""
+        return self.store.valence_history(name, rel, group)
 
     def _arm(self, prompt: str) -> None:
         self._set_delta(self._rank(prompt))

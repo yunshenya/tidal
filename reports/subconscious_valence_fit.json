@@ -1,0 +1,654 @@
+{
+  "chosen": {
+    "span": 1.0,
+    "step": 0.25
+  },
+  "grid": [
+    {
+      "away_audit": 8,
+      "away_mean": -10.879163919948041,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 0.25,
+      "toward_audit": 8,
+      "toward_mean": 3.0373592149699107,
+      "toward_n": 8,
+      "toward_pos": 8
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -16.50746929552406,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 0.5,
+      "toward_audit": 8,
+      "toward_mean": 3.6293962604831904,
+      "toward_n": 8,
+      "toward_pos": 7
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -17.758370636962354,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 1.0,
+      "toward_audit": 8,
+      "toward_mean": 3.7518421427812427,
+      "toward_n": 8,
+      "toward_pos": 7
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -19.462700008414686,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 0.25,
+      "toward_audit": 8,
+      "toward_mean": 3.9869232759810984,
+      "toward_n": 8,
+      "toward_pos": 7
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -19.643761991523206,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 0.5,
+      "toward_audit": 8,
+      "toward_mean": 4.134313641581684,
+      "toward_n": 8,
+      "toward_pos": 7
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -19.388004421256483,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 1.0,
+      "toward_audit": 8,
+      "toward_mean": 4.129179204814136,
+      "toward_n": 8,
+      "toward_pos": 7
+    }
+  ],
+  "result": {
+    "away": {
+      "mean_delta": -10.879163919948041,
+      "n": 8,
+      "n_audit": 8,
+      "n_neg": 8,
+      "n_pos": 0,
+      "rows": [
+        {
+          "audit": true,
+          "delta": -10.492291510105133,
+          "hit": 1,
+          "id": "valence-fit-away-0",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -13.27153193950653,
+          "hit": 1,
+          "id": "valence-fit-away-1",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -12.944370821118355,
+          "hit": 1,
+          "id": "valence-fit-away-2",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -10.26050317287445,
+          "hit": 1,
+          "id": "valence-fit-away-3",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -15.20588693767786,
+          "hit": 1,
+          "id": "valence-fit-away-4",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -12.789546489715576,
+          "hit": 1,
+          "id": "valence-fit-away-5",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -6.79532527923584,
+          "hit": 1,
+          "id": "valence-fit-away-6",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -5.273855209350586,
+          "hit": 1,
+          "id": "valence-fit-away-7",
+          "valence": -0.75
+        }
+      ]
+    },
+    "bank_kind": "fit",
+    "bank_sha256": "72a1836feafaf6df89347b87f527cdc80cbe64d3709746c5ca0e57c89ad814c8",
+    "cost": {
+      "buffers": 66931,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "query_forwards": 1,
+      "remember_forwards": 2,
+      "valence_step": 0.25
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": 0.009850502014160156,
+            "flip": 0,
+            "id": "valence-fit-choice-0",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": -0.0008287429809570312,
+            "flip": 0,
+            "id": "valence-fit-choice-1",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": -0.008771896362304688,
+            "flip": 0,
+            "id": "valence-fit-choice-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0015611648559570312,
+            "flip": 0,
+            "id": "valence-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.02148914337158203,
+            "flip": 0,
+            "id": "valence-fit-choice-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0020551681518554688,
+            "flip": 0,
+            "id": "valence-fit-choice-5",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.02440643310546875,
+            "flip": 0,
+            "id": "valence-fit-choice-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.07320308685302734,
+            "flip": 0,
+            "id": "valence-fit-choice-7",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8490708812086063,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Narrate youthful acronym advertise.\nMark:",
+            "text": "\"I'm a young man."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate anaphyl apparently artists.\nMark:",
+            "text": "I'm not sure what you mean by that."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate bathtub biometric bounding.\nMark:",
+            "text": "100%"
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate caregivers challeng cinnamon.\nMark:",
+            "text": "I'm going to try this."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate communion conserv convection.\nMark:",
+            "text": "1."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate cumbersome delinqu desktop.\nMark:",
+            "text": "I'm not sure what you mean by that."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate district drifted ejected.\nMark:",
+            "text": "The first thing I noticed was that the first thing I noticed"
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate enlarge espionage excluded.\nMark:",
+            "text": "I'm not sure I understand your question."
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.011472702026367188,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 0.016820095941004476,
+            "delta": -0.052867889404296875,
+            "id": "valence-fit-nll-0",
+            "nll_inject": 15.792563438415527,
+            "nll_nomem": 15.845431327819824
+          },
+          {
+            "confidence": 0.001030324168013047,
+            "delta": 0.0004024505615234375,
+            "id": "valence-fit-nll-1",
+            "nll_inject": 15.592804908752441,
+            "nll_nomem": 15.592402458190918
+          },
+          {
+            "confidence": 0.018075705156037278,
+            "delta": -0.0029315948486328125,
+            "id": "valence-fit-nll-2",
+            "nll_inject": 10.936367988586426,
+            "nll_nomem": 10.939299583435059
+          },
+          {
+            "confidence": 0.0033477434075375456,
+            "delta": -0.014003753662109375,
+            "id": "valence-fit-nll-3",
+            "nll_inject": 15.182231903076172,
+            "nll_nomem": 15.196235656738281
+          },
+          {
+            "confidence": 0.011338535529095,
+            "delta": -0.0066375732421875,
+            "id": "valence-fit-nll-4",
+            "nll_inject": 16.453340530395508,
+            "nll_nomem": 16.459978103637695
+          },
+          {
+            "confidence": 0.04753097417516845,
+            "delta": -0.008103370666503906,
+            "id": "valence-fit-nll-5",
+            "nll_inject": 15.128329277038574,
+            "nll_nomem": 15.136432647705078
+          },
+          {
+            "confidence": 0.021850319633570925,
+            "delta": 0.0074977874755859375,
+            "id": "valence-fit-nll-6",
+            "nll_inject": 14.94398021697998,
+            "nll_nomem": 14.936482429504395
+          },
+          {
+            "confidence": 0.005509082876848023,
+            "delta": -0.015137672424316406,
+            "id": "valence-fit-nll-7",
+            "nll_inject": 12.708544731140137,
+            "nll_nomem": 12.723682403564453
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Narrate youthful acronym advertise.\nMark:",
+            "takeover": 0,
+            "text": "I am transcribing a transcript of a transcript of a transcript of a transcript of a transcript of a transcript of a transcript of a transcript of a transcript of a"
+          },
+          {
+            "prompt": "Narrate anaphyl apparently artists.\nMark:",
+            "takeover": 0,
+            "text": "I was not a good choice for a role."
+          },
+          {
+            "prompt": "Narrate bathtub biometric bounding.\nMark:",
+            "takeover": 0,
+            "text": "You need to complete the project."
+          },
+          {
+            "prompt": "Narrate caregivers challeng cinnamon.\nMark:",
+            "takeover": 0,
+            "text": "I am a great communicator, but I may not be the most engaging person on the day, I am a great communicator, I need to be heard"
+          },
+          {
+            "prompt": "Which phone reaches Tequlopo after the organelles shift?",
+            "takeover": 0,
+            "text": "A) cell organelles"
+          },
+          {
+            "prompt": "When is the birthday recorded for Tequlopo near overtime?",
+            "takeover": 1,
+            "text": "May 23, 2008"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Narrate youthful acronym advertise.\nMark:",
+            "takeover": 0,
+            "text": "\"I'm a young, youthful acronym advertise."
+          },
+          {
+            "prompt": "Narrate anaphyl apparently artists.\nMark:",
+            "takeover": 0,
+            "text": "I\u2019m Mark, I\u2019m Mark, I\u2019m Mark, I\u2019m Mark, I\u2019m Mark, I\u2019m Mark, I\u2019"
+          },
+          {
+            "prompt": "Narrate bathtub biometric bounding.\nMark:",
+            "takeover": 0,
+            "text": "100%"
+          },
+          {
+            "prompt": "Narrate caregivers challeng cinnamon.\nMark:",
+            "takeover": 0,
+            "text": "I\u2019m going to the store and I\u2019m going to buy cinnamon."
+          },
+          {
+            "prompt": "Which phone reaches Tequlopo after the organelles shift?",
+            "takeover": 1,
+            "text": "+1-415-555-1211"
+          },
+          {
+            "prompt": "When is the birthday recorded for Tequlopo near overtime?",
+            "takeover": 0,
+            "text": "The answer is: 1999-03-30."
+          }
+        ],
+        "phone_question": 1,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "phases_s": {
+      "away": 3.173021801001596,
+      "cost": 0.08324500199887552,
+      "neutral": 11.726442909999605,
+      "revise": 5.128202011001122,
+      "toward": 3.2260572429986496
+    },
+    "protocol": "subconscious-valence-fit-v1",
+    "repeats": 3,
+    "revise": {
+      "mean_peak_delta": 3.0373592149699107,
+      "mean_revised_delta": 0.0,
+      "n": 8,
+      "n_moved_back": 8,
+      "n_valence_revised": 8,
+      "rows": [
+        {
+          "id": "valence-fit-toward-0",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 0.3456399142742157,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-1",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 4.762441784143448,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-2",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 2.9617538452148438,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-3",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 1.1598156737163663,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-4",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 5.541339963674545,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-5",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 2.5298933908343315,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-6",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 0.630714476108551,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-7",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 6.367274671792984,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        }
+      ]
+    },
+    "toward": {
+      "mean_delta": 3.0373592149699107,
+      "n": 8,
+      "n_audit": 8,
+      "n_neg": 0,
+      "n_pos": 8,
+      "rows": [
+        {
+          "audit": true,
+          "delta": 0.3456399142742157,
+          "hit": 1,
+          "id": "valence-fit-toward-0",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 4.762441784143448,
+          "hit": 1,
+          "id": "valence-fit-toward-1",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 2.9617538452148438,
+          "hit": 1,
+          "id": "valence-fit-toward-2",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 1.1598156737163663,
+          "hit": 1,
+          "id": "valence-fit-toward-3",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 5.541339963674545,
+          "hit": 1,
+          "id": "valence-fit-toward-4",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 2.5298933908343315,
+          "hit": 1,
+          "id": "valence-fit-toward-5",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 0.630714476108551,
+          "hit": 1,
+          "id": "valence-fit-toward-6",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 6.367274671792984,
+          "hit": 1,
+          "id": "valence-fit-toward-7",
+          "valence": 0.75
+        }
+      ]
+    },
+    "wall_s": 23.336968966999848
+  }
+}
