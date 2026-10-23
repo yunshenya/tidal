@@ -1,10 +1,9 @@
 """Subconscious-style metrics for the shipped ``LLMMemory`` inject path.
 
 Log-prob scoring arms the prompt once and compares two continuations under
-that vector. ``generate`` is scored separately: with the shipped phone and
-birthday readouts enabled it encodes the query inside ``scripted_continuation``
-and, when that slot is not a phone or a birthday, encodes it again in
-``_arm``. This module does not import ``transformers``.
+that vector. The residual is scaled by the top-1 gap. ``generate`` encodes
+the query once: spelling replaces the token loop only when the prompt is
+completing the winning relation. This module does not import ``transformers``.
 """
 from __future__ import annotations
 
@@ -14,8 +13,8 @@ from typing import Callable, Optional
 import numpy as np
 import torch
 
-from tidal.episodic import cosine_scores
 from tidal.llm_memory import _logits_of
+from tidal import subconscious_data as _frozen_bank
 from tidal.subconscious_data import (
     AVOID,
     BIRTHDAY_FACT,
@@ -50,14 +49,14 @@ COST_NEW_TOKENS = 8
 PATH_FLAGS = (
     {
         "path": "query encode",
-        "when": "scripted_continuation and _arm, before any new token",
-        "varies": "skipped when the store is empty; runs twice when a readout is on and the winning relation is not phone or birthday",
+        "when": "once, inside continuation_ids, before any new token",
+        "varies": "skipped when the store is empty",
         "retries": False,
     },
     {
         "path": "scripted phone or birthday",
-        "when": "winning slot rel is phone or birthday and that readout buffer is on",
-        "varies": "replaces the token loop",
+        "when": "winning relation is phone or birthday and the prompt is completing that same relation",
+        "varies": "replaces the token loop; any other prompt keeps the residual path",
         "retries": False,
     },
     {
@@ -129,29 +128,18 @@ def _cosine(a, b) -> float:
 
 
 def _arm_info(mem, prompt: str) -> dict:
-    """One query, hard top-1, residual armed. Empty store arms nothing."""
-    info = {"n": len(mem.store), "top": None, "maxcos": None, "gap": None, "hit": 0}
-    if len(mem.store) == 0:
-        mem._delta = None
-        return info
-    query = mem._query_vector(prompt)
-    slots = mem.store.slots
-    keys = np.stack([np.asarray(slot.k, dtype=np.float64) for slot in slots], 0)
-    scores = cosine_scores(keys, np.asarray(query, dtype=np.float64))
-    order = np.argsort(-scores)
-    top_i = int(order[0])
-    gap = None if len(order) < 2 else float(scores[order[0]] - scores[order[1]])
-    slot = slots[top_i]
-    info.update(
-        {
-            "n": len(slots),
-            "top": [slot.name, slot.rel],
-            "maxcos": float(scores[top_i]),
-            "gap": gap,
-        }
-    )
-    mem._delta = mem._compose(slot.v, grad=False)
-    return info
+    """One query, hard top-1, residual scaled by the gap. Empty store arms nothing."""
+    rank = mem._rank(prompt)
+    mem._set_delta(rank)
+    top = rank.get("top")
+    return {
+        "n": int(rank["n"]),
+        "top": list(top) if top else None,
+        "maxcos": rank.get("maxcos"),
+        "gap": rank.get("gap"),
+        "confidence": float(rank.get("confidence") or 0.0),
+        "hit": 0,
+    }
 
 
 def score_pair(mem, prompt: str, good: str, bad: str, *, name: Optional[str] = None, rel: Optional[str] = None) -> dict:
@@ -431,7 +419,7 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
     }
     per_token_extra = [row["extra_s"] for row in forwards.values()]
     query_extra = float(query_bench["median_s"])
-    # Shipped non-phone generate pays this query twice (scripted probe, then _arm).
+    # One query per continuation. Spelling and the residual share that encode.
     prompt_extra = {
         "one_query_s": query_extra,
         "shipped_non_phone_queries": int(normal_path["queries"]),
@@ -481,10 +469,41 @@ def run_eval(
     do_cost: bool = True,
     do_greedy: bool = True,
     progress: Optional[Callable[[str], None]] = None,
+    data=None,
 ) -> dict:
-    """Score the pre-registered bank. ``retrieve(texts, query)`` is the RAG line."""
+    """Score the pre-registered bank. ``retrieve(texts, query)`` is the RAG line.
+
+    ``data`` is another bank with the same attributes. ``None`` scores
+    ``tidal.subconscious_data``.
+    """
     if retrieve is None:
         raise ValueError("retrieve is required")
+    src = _frozen_bank if data is None else data
+    PREFER = src.PREFER
+    AVOID = src.AVOID
+    CHATS = src.CHATS
+    GATES = src.GATES
+    LEAK_STORE_N = src.LEAK_STORE_N
+    LOADS = src.LOADS
+    NEUTRAL_CHOICE = src.NEUTRAL_CHOICE
+    NEUTRAL_GEN = src.NEUTRAL_GEN
+    NEUTRAL_NLL = src.NEUTRAL_NLL
+    NEUTRAL_STORE_N = src.NEUTRAL_STORE_N
+    PHONE_FACT = src.PHONE_FACT
+    PHONE_QUESTION = src.PHONE_QUESTION
+    BIRTHDAY_FACT = src.BIRTHDAY_FACT
+    PRIOR_PREFIX_N32 = src.PRIOR_PREFIX_N32
+    REPEAT_WRITES = src.REPEAT_WRITES
+    PROTOCOL = src.PROTOCOL
+    decision_items = src.decision_items
+    incidental_facts = src.incidental_facts
+    bank_kind = "frozen" if data is None else getattr(data, "kind", "held")
+    if data is None:
+        bank_sha = bank_sha256()
+        birthday_question = None
+    else:
+        bank_sha = data.sha256() if callable(getattr(data, "sha256", None)) else bank_sha256()
+        birthday_question = getattr(data, "BIRTHDAY_QUESTION", None)
     mem.inject.eval()
     enc = Encoder(mem)
     incidental = incidental_facts()
@@ -797,6 +816,8 @@ def run_eval(
     phone_on = float(mem.inject.phone_on.detach().cpu()) != 0.0
     date_on = float(mem.inject.date_on.detach().cpu()) != 0.0
     script_prompts = list(NEUTRAL_GEN[:4]) + [PHONE_QUESTION]
+    if birthday_question:
+        script_prompts.append(birthday_question)
     phone_rows = []
     write_rows(mem, [enc.one(PHONE_FACT)])
     for prompt in script_prompts:
@@ -849,7 +870,8 @@ def run_eval(
     update_deltas = [row["inject"]["delta"] for row in update_rows]
     result = {
         "protocol": PROTOCOL,
-        "bank_sha256": bank_sha256(),
+        "bank_sha256": bank_sha,
+        "bank_kind": bank_kind,
         "model_name": mem.model_name,
         "layer": int(mem.layer),
         "hidden": int(mem.hidden),
@@ -952,7 +974,18 @@ def run_eval(
             "birthday": date_rows,
             "phone_unrelated": _mean([row["takeover"] for row in phone_rows if row["prompt"] != PHONE_QUESTION]),
             "phone_question": next(row["takeover"] for row in phone_rows if row["prompt"] == PHONE_QUESTION),
-            "date_unrelated": _mean([row["takeover"] for row in date_rows if row["prompt"] != PHONE_QUESTION]),
+            "date_unrelated": _mean(
+                [
+                    row["takeover"]
+                    for row in date_rows
+                    if row["prompt"] != PHONE_QUESTION and row["prompt"] != birthday_question
+                ]
+            ),
+            "birthday_question": (
+                next(row["takeover"] for row in date_rows if row["prompt"] == birthday_question)
+                if birthday_question
+                else None
+            ),
         },
         "cost": cost,
         "greedy_tokens": GREEDY_TOKENS,
@@ -1040,7 +1073,8 @@ def render_report(result: dict) -> str:
         "Conditions, same decision prompt where the condition allows it:",
         "",
         "- **nomem**: empty store, prompt only.",
-        "- **inject**: facts in `EpisodicStore`, prompt only, hard top-1 residual (`v + MLP(v)` at every position).",
+        "- **inject**: facts in `EpisodicStore`, prompt only, hard top-1 residual "
+        "(`c * (scale(v) + MLP(scale(v)))`, `c` from the top-1 gap) at every position.",
         "- **context**: empty store, the fact line (or the whole transcript under load) prepended.",
         "- **rag**: empty store, `BAAI/bge-small-en-v1.5` CLS top-1 line prepended. No query-instruction prefix, matching `scripts/eval_llm_memory.py`.",
         "",

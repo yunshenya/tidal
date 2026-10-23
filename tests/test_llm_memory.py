@@ -189,12 +189,16 @@ def test_other_identity_is_kept_and_readout_is_top1():
         assert mix.remember("red is Y", name="a", rel="p", key="query")
         assert mix.remember("blue is Z", name="b", rel="c", key="query")
         assert len(mix.store) == 2
-        # Tied keys: hard top-1 returns the first slot, not a soft blend.
+        # Tied keys: hard top-1 still names the first slot, not a soft blend.
+        # The gap is 0, so the residual scale is 0 and nothing is added.
+        value, info = mix.store.read(mix._query_vector("query"), mode="top1")
+        assert info["top"] == ("a", "p")
+        assert np.allclose(value, v1, atol=1e-5)
+        assert not np.allclose(value, 0.5 * (v1 + v2), atol=1e-5)
         got = mix.injection("query")
-        assert np.allclose(got, v1, atol=1e-5)
-        assert not np.allclose(got, 0.5 * (v1 + v2), atol=1e-5)
+        assert np.allclose(got, 0.0, atol=1e-5)
         assert "self.store.write" in inspect.getsource(LLMMemory.remember)
-        assert 'mode="top1"' in inspect.getsource(LLMMemory._arm)
+        assert 'mode="top1"' in inspect.getsource(LLMMemory._rank)
     finally:
         mem.close()
         if mix is not None:
