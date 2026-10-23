@@ -255,6 +255,9 @@ class Slot:
     salience: float = 0.0
     # Consolidation cycles since the last refresh.
     age: int = 0
+    # Exact surface written with the slot. LM spelling copies this string.
+    # Continuum writes leave it empty and keep decoding the byte code.
+    answer: Optional[str] = None
 
 
 class EpisodicStore:
@@ -371,13 +374,16 @@ class EpisodicStore:
         surprise: Optional[float] = None,
         group: Optional[str] = None,
         sentence: Optional[np.ndarray] = None,
+        answer: Optional[str] = None,
     ) -> bool:
         """Insert or overwrite one slot. Returns True iff a write happened.
 
         ``v`` may be a numeric vector, a string, or a list of strings. A string
         or token list becomes a positional byte code of width ``dv`` (see
         ``encode_span``). Same-identity overwrite replaces that code; it is
-        not added to the previous value.
+        not added to the previous value. ``answer`` is the surface copied by
+        LM spelling. Overwrite replaces it. A write that omits ``answer``
+        stores none.
         """
         if not self.gate_write(kind, surprise):
             return False
@@ -394,7 +400,17 @@ class EpisodicStore:
         self._check_dims(kk, vv)
         self._step += 1
         sent = None if sentence is None else _as1d(sentence).copy()
-        entry = Slot(k=kk.copy(), v=vv.copy(), name=name, rel=rel, t=self._step, group=group, sentence=sent)
+        stored = answer if isinstance(answer, str) and answer != "" else None
+        entry = Slot(
+            k=kk.copy(),
+            v=vv.copy(),
+            name=name,
+            rel=rel,
+            t=self._step,
+            group=group,
+            sentence=sent,
+            answer=stored,
+        )
         hit = self._hit(kk, name, rel, group)
         if hit is not None:
             self._slots[hit] = entry

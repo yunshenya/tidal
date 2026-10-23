@@ -1,0 +1,285 @@
+{
+  "result": {
+    "bank_kind": "fit",
+    "bank_sha256": "9b677681fe0b626a8a7e411bf030e53b7f167e72dcee8b4de2d0393ab4822807",
+    "cost": {
+      "buffers": 66931,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "query_forwards": 1,
+      "query_text": "+1-449-555-3249",
+      "remember_forwards": 2
+    },
+    "exact": {
+      "birthday_exact": 1,
+      "birthday_off_equal": 0,
+      "birthday_off_n": 5,
+      "birthday_off_takeover": 0.0,
+      "birthday_prefix": 1,
+      "birthday_question_text": "February 21, 2018",
+      "birthday_stored": "February 21, 2018",
+      "phone_exact": 1,
+      "phone_off_equal": 0,
+      "phone_off_n": 5,
+      "phone_off_takeover": 0.0,
+      "phone_prefix": 0,
+      "phone_question_text": "+1-449-555-3249",
+      "phone_stored": "+1-449-555-3249"
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": -0.0678863525390625,
+            "flip": 0,
+            "id": "spell-fit-choice-0",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.029900550842285156,
+            "flip": 0,
+            "id": "spell-fit-choice-1",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.012892723083496094,
+            "flip": 0,
+            "id": "spell-fit-choice-2",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": -0.007336616516113281,
+            "flip": 0,
+            "id": "spell-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.03408050537109375,
+            "flip": 0,
+            "id": "spell-fit-choice-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0026674270629882812,
+            "flip": 0,
+            "id": "spell-fit-choice-5",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": -0.011722564697265625,
+            "flip": 0,
+            "id": "spell-fit-choice-6",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.0229949951171875,
+            "flip": 0,
+            "id": "spell-fit-choice-7",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8387271363887954,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Summarize emptying herbicide dynasties.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize colony device transgenic.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize screening curtail underwent.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize discuss civilians evident.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize heated installment action.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize cooperating interviewed detention.\nSlot:",
+            "text": "1"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize embodies mortgage earthqu.\nSlot:",
+            "text": "100"
+          },
+          {
+            "hits": [],
+            "prompt": "Summarize spectrom everlasting examined.\nSlot:",
+            "text": "1"
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.01671421527862549,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 7.437861788292532e-05,
+            "delta": -0.000225067138671875,
+            "id": "spell-fit-nll-0",
+            "nll_inject": 17.41838836669922,
+            "nll_nomem": 17.41861343383789
+          },
+          {
+            "confidence": 0.00021053803566345453,
+            "delta": -0.001758575439453125,
+            "id": "spell-fit-nll-1",
+            "nll_inject": 15.448246002197266,
+            "nll_nomem": 15.450004577636719
+          },
+          {
+            "confidence": 0.00028438296235416827,
+            "delta": 7.2479248046875e-05,
+            "id": "spell-fit-nll-2",
+            "nll_inject": 16.286449432373047,
+            "nll_nomem": 16.286376953125
+          },
+          {
+            "confidence": 0.0006870367133191002,
+            "delta": -0.0027141571044921875,
+            "id": "spell-fit-nll-3",
+            "nll_inject": 14.195140838623047,
+            "nll_nomem": 14.197854995727539
+          },
+          {
+            "confidence": 0.007453518972665857,
+            "delta": -0.013635635375976562,
+            "id": "spell-fit-nll-4",
+            "nll_inject": 14.937213897705078,
+            "nll_nomem": 14.950849533081055
+          },
+          {
+            "confidence": 0.022593867395386616,
+            "delta": -0.05443286895751953,
+            "id": "spell-fit-nll-5",
+            "nll_inject": 12.709979057312012,
+            "nll_nomem": 12.764411926269531
+          },
+          {
+            "confidence": 0.02849942507864134,
+            "delta": -0.05788421630859375,
+            "id": "spell-fit-nll-6",
+            "nll_inject": 16.560256958007812,
+            "nll_nomem": 16.618141174316406
+          },
+          {
+            "confidence": 0.001864637560593102,
+            "delta": -0.00313568115234375,
+            "id": "spell-fit-nll-7",
+            "nll_inject": 11.489093780517578,
+            "nll_nomem": 11.492229461669922
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Summarize emptying herbicide dynasties.\nSlot:",
+            "takeover": 0,
+            "text": "1 a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a"
+          },
+          {
+            "prompt": "Summarize colony device transgenic.\nSlot:",
+            "takeover": 0,
+            "text": "1."
+          },
+          {
+            "prompt": "Summarize screening curtail underwent.\nSlot:",
+            "takeover": 0,
+            "text": "pre-purchase pre-PODS pre-PODS pre-PODS pre-PODS pre-PODS pre-P"
+          },
+          {
+            "prompt": "Summarize discuss civilians evident.\nSlot:",
+            "takeover": 0,
+            "text": "[100% 100% 100% 100% 100% 100% 1"
+          },
+          {
+            "prompt": "What phone is assigned to Wapuyidu during quarrel?",
+            "takeover": 0,
+            "text": "this is a data packet data packet data packet data packet data packet this is a data packet data packet this is a data packet data packet this is a"
+          },
+          {
+            "prompt": "Which birthday is assigned to Wapuyidu during illustrating?",
+            "takeover": 1,
+            "text": "February 21, 2018"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Summarize emptying herbicide dynasties.\nSlot:",
+            "takeover": 0,
+            "text": "100-120, 120-125, 125-110, 110,"
+          },
+          {
+            "prompt": "Summarize colony device transgenic.\nSlot:",
+            "takeover": 0,
+            "text": "1"
+          },
+          {
+            "prompt": "Summarize screening curtail underwent.\nSlot:",
+            "takeover": 0,
+            "text": "30-06-2006, 30-06-2006, 30-06-2"
+          },
+          {
+            "prompt": "Summarize discuss civilians evident.\nSlot:",
+            "takeover": 0,
+            "text": "002"
+          },
+          {
+            "prompt": "What phone is assigned to Wapuyidu during quarrel?",
+            "takeover": 0,
+            "text": "+1-449-555-3249"
+          },
+          {
+            "prompt": "Which birthday is assigned to Wapuyidu during illustrating?",
+            "takeover": 0,
+            "text": "A."
+          }
+        ],
+        "phone_question": 0,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "protocol": "subconscious-spell-fit-v1",
+    "wall_s": 12.259678708000138
+  }
+}

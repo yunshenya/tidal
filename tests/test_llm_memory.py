@@ -966,19 +966,29 @@ def test_date_readout_spells_birthday_and_skips_other_relations():
         value = np.zeros(mem.hidden, dtype=np.float32)
         value[0] = 1.0
         key = np.ones(mem.hidden, dtype=np.float32)
-        assert mem.store.write(key, value, name="ada", rel="birthday")
-        assert mem.generate("When is Ada's birthday?") == "March 4, 1991"
-        assert len(mem.continuation_ids("When is Ada's birthday?", max_new_tokens=4)) == 4
-        mem.store.clear()
-        assert mem.store.write(key, value, name="ada", rel="phone")
-        assert mem.generate("What is Ada's phone number?") == "+1-415-555-2499"
-        mem.store.clear()
-        assert mem.store.write(key, value, name="ada", rel="city")
-        assert mem.scripted_continuation("Which city does Ada live in?") is None
-        mem.inject.date_on.fill_(0.0)
-        mem.store.clear()
+        value_t = torch.as_tensor(value)
+        assert mem.inject.date_spelling(value_t) == "March 4, 1991"
+        assert mem.inject.phone_digits(value_t) == [2, 4, 9, 9]
         assert mem.store.write(key, value, name="ada", rel="birthday")
         assert mem.scripted_continuation("When is Ada's birthday?") is None
+        stored = "October 16, 1971"
+        assert mem.store.write(key, value, name="ada", rel="birthday", answer=stored)
+        assert mem.generate("When is Ada's birthday?") == stored
+        assert len(mem.continuation_ids("When is Ada's birthday?", max_new_tokens=4)) == 4
+        assert mem.scripted_continuation("Where did Ada travel?") is None
+        mem.store.clear()
+        number = "+1-206-555-0142"
+        assert mem.store.write(key, value, name="ada", rel="phone", answer=number)
+        assert mem.generate("What is Ada's phone number?") == number
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="city", answer="Oslo")
+        assert mem.scripted_continuation("Which city does Ada live in?") is None
+        mem.inject.date_on.fill_(0.0)
+        mem.inject.phone_on.fill_(0.0)
+        mem.store.clear()
+        assert mem.store.write(key, value, name="ada", rel="birthday", answer=stored)
+        assert mem.generate("When is Ada's birthday?") == stored
+        assert mem.scripted_continuation("Where did Ada travel?") is None
     finally:
         mem.close()
 
@@ -1019,12 +1029,18 @@ def test_phone_readout_spells_digits_and_skips_other_relations():
         value = np.zeros(mem.hidden, dtype=np.float32)
         value[0] = 1.0
         key = np.ones(mem.hidden, dtype=np.float32)
+        assert mem.inject.phone_digits(torch.as_tensor(value)) == [2, 4, 9, 9]
         assert mem.store.write(key, value, name="ada", rel="phone")
-        assert mem.tokenizer.decode(mem.continuation_ids("What is Ada's phone number?")) == "+1-415-555-2499"
-        assert mem.generate("What is Ada's phone number?") == "+1-415-555-2499"
+        assert mem.scripted_continuation("What is Ada's phone number?") is None
+        number = "+1-206-555-0142"
+        assert mem.store.write(key, value, name="ada", rel="phone", answer=number)
+        assert mem.tokenizer.decode(mem.continuation_ids("What is Ada's phone number?")) == number
+        assert mem.generate("What is Ada's phone number?") == number
         assert len(mem.continuation_ids("What is Ada's phone number?", max_new_tokens=4)) == 4
+        assert mem.generate("What is Ada's phone number?", max_new_tokens=4) == number[:4]
+        assert mem.scripted_continuation("Where did Ada travel?") is None
         mem.store.clear()
-        assert mem.store.write(key, value, name="ada", rel="city")
+        assert mem.store.write(key, value, name="ada", rel="city", answer="Oslo")
         assert mem.scripted_continuation("Which city does Ada live in?") is None
     finally:
         mem.close()
