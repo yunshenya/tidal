@@ -131,7 +131,7 @@ Lexical hits, the name head, the alias list, CJK verb attachment, and the longer
 
 ## Tests
 
-`tests/test_question_deixis.py` locks the sha, literal disjointness, the Jaccard cap, the resolver, and the 48/48 ask gate. `python3 -m pytest -q`: 299 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. That package is not installed here. The other `LLMMemory` tests passed. `tidal/llm_memory.py` is unchanged.
+`tests/test_question_deixis.py` locks the sha, literal disjointness, the Jaccard cap, the resolver, and the 48/48 ask gate. `tests/test_question_deixis_heldout.py` locks this bank's sha, the Jaccard cap, and the recorded 128/136 miss. `python3 -m pytest -q`: 303 passed, 1 skipped. The skip is `test_tiny_llama_empty_store_matches_and_script_runs`, which imports `transformers`. That package is not installed here. The other `LLMMemory` tests passed. `tidal/llm_memory.py` is unchanged.
 
 ## Held-out gate
 
@@ -247,3 +247,5 @@ Eight state misses, all in `addressee_extra`, all `absent_person` rather than th
 `you` / `your` / `yours` / `yourself` / `你` / `您`, the closed hearer nouns, `he` / `she` / `they` / `him` / `her` / `his` / `hers` / `their` / `他` / `她` / `ta` / `他的` / `她的` / `他们`, a 3-person and 4-person window, a pronoun after a name-ask, filler 3 inside the window, fillers 4 and 5 aged out, a tie, a silent write, a speaker-only or hearer-only mention, a hearer change, and the named and indirect controls all met the gate. `them` did not select the mentioned person. `你们` did not select the hearer.
 
 The eight forms are outside that closed class, and the current rule leaves them on the no-name path, which abstains. That is a real miss of the pre-registered reading. The rule was not edited to cover them. A later change would need a fresh slice.
+
+Empty-log floors were run again after this score, with the rule unchanged. Probe answerable 365/370, false abstain 0/370, unanswerable 72/72. Frozen hits 188/216, false abstain 19/216, near_dup_absent 30/30. Dialogue dev 102/102 and 102/102. Dialogue held-out at window 4, gated 108/108 and 108/108, misses 0. `python3 -m pytest -q`: 303 passed, 1 skipped.
