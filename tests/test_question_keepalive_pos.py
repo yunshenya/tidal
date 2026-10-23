@@ -1,7 +1,8 @@
-"""Positive keep-alive slice. Labels are locked here, before any score.
+"""Positive keep-alive slice.
 
-The frozen rule is not applied to these rows in this file. Disjointness
-uses the earlier banks only.
+Listener labels were committed before the score. The score test locks the
+measured misses. It does not require them to be zero, and it does not
+relabel a row.
 """
 from collections import Counter
 from pathlib import Path
@@ -9,12 +10,10 @@ from pathlib import Path
 from tidal.dialogue_state import TURN_WINDOW
 from tidal.question_dialogue_eval import jaccard_report
 from tidal.question_keepalive_expand_data import bank_sha256 as expand_bank_sha
-from tidal.question_keepalive_expand_data import bank_strings as expand_bank
-from tidal.question_keepalive_expand_data import questions as expand_questions
 from tidal.question_keepalive_expand_data import questions_sha256 as expand_questions_sha
-from tidal.question_keepalive_expand_eval import prior_bags as expand_prior_bags
 from tidal.question_keepalive_heldout_data import bank_sha256 as frozen_bank_sha
 from tidal.question_keepalive_heldout_data import questions_sha256 as frozen_questions_sha
+from tidal.question_keepalive_pos_eval import prior_bags, replay_rows, score_rows
 from tidal.question_keepalive_pos_data import Ask, Turn, bank_sha256, bank_strings, build_rows, kind_counts, questions_sha256
 from tidal.question_surface import ABSTAIN_MARGIN, LEX_RIDGE_GAP
 
@@ -40,19 +39,6 @@ _FORBIDDEN = (
     "name_spans",
     "selected_fact_rows",
 )
-
-
-def _earlier_bags():
-    bags = expand_prior_bags()
-    bags["keepalive_expand_questions"] = {
-        "sha": expand_questions_sha(),
-        "strings": tuple(expand_questions()),
-    }
-    bags["keepalive_expand_bank"] = {
-        "sha": expand_bank_sha(),
-        "strings": tuple(expand_bank()),
-    }
-    return bags
 
 
 def _ask(row):
@@ -127,7 +113,7 @@ def test_pos_bank_matches_the_preregistered_labels():
 
 
 def test_pos_bank_is_disjoint_from_earlier_banks():
-    report = jaccard_report(bank_strings(build_rows()), _earlier_bags())
+    report = jaccard_report(bank_strings(build_rows()), prior_bags())
     assert report["keepalive_42_questions"]["sha"] == FROZEN_QUESTIONS_SHA
     assert report["keepalive_42_bank"]["sha"] == FROZEN_BANK_SHA
     assert report["keepalive_expand_questions"]["sha"] == EXPAND_QUESTIONS_SHA
@@ -149,3 +135,61 @@ def test_pos_bank_does_not_replay_the_rule_and_production_files_do_not_import_it
         text = (root / name).read_text(encoding="utf-8")
         assert "question_keepalive_pos" not in text
         assert "enable_keepalive" not in text
+
+
+# Measured once against the frozen rule. A later edit that removes a miss
+# has to change this list on purpose. This run does not.
+LISTENER_MISS_EIDS = (
+    "pos_keep_en_he6a_phone",
+    "pos_keep_en_he6a_birthday",
+    "pos_voc_en_dr_ranulf_phone",
+    "pos_voc_en_dr_ranulf_birthday",
+    "pos_voc_en_dr_isolde_phone",
+    "pos_voc_en_dr_isolde_birthday",
+    "pos_voc_en_dr_later_ranulf_phone",
+    "pos_voc_en_dr_later_ranulf_birthday",
+    "pos_voc_en_bare_you_later_isolde_phone",
+    "pos_voc_en_bare_you_later_isolde_birthday",
+    "pos_voc_en_dr_later_petronilla_phone",
+    "pos_voc_en_dr_later_petronilla_birthday",
+    "pos_keep_zh_ta6a_phone",
+    "pos_keep_zh_ta6a_birthday",
+    "pos_voc_zh_a_qi_phone",
+    "pos_voc_zh_a_qi_birthday",
+    "pos_voc_zh_ya_kang_phone",
+    "pos_voc_zh_ya_kang_birthday",
+    "pos_voc_zh_lao_qi_phone",
+    "pos_voc_zh_lao_qi_birthday",
+    "pos_voc_zh_teacher_qi_phone",
+    "pos_voc_zh_teacher_qi_birthday",
+    "pos_voc_zh_bare_ni_kang_phone",
+    "pos_voc_zh_bare_ni_kang_birthday",
+    "pos_voc_zh_lao_kang_later_phone",
+    "pos_voc_zh_lao_kang_later_birthday",
+    "pos_voc_zh_a_niu_later_phone",
+    "pos_voc_zh_a_niu_later_birthday",
+    "pos_voc_zh_teacher_kang_later_phone",
+    "pos_voc_zh_teacher_kang_later_birthday",
+)
+
+
+def test_pos_score_locks_the_measured_misses():
+    scored = score_rows(replay_rows())
+    assert scored["encoder_misses"] == []
+    assert [(item["eid"], item["rule_label"], item["listener_label"], item["state_reason"])
+            for item in scored["listener_misses"]] == [
+        (eid, "absent_person", "answerable", "absent_person") for eid in LISTENER_MISS_EIDS
+    ]
+    assert scored["kind"]["pos_keep"] == {
+        "n": 48, "state": 48, "empty": 48, "human": 44, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["kind"]["pos_voc"] == {
+        "n": 48, "state": 48, "empty": 48, "human": 22, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["kind"]["neg_near"] == {
+        "n": 20, "state": 20, "empty": 20, "human": 20, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["lang"]["en"]["n"] == 58 and scored["lang"]["en"]["human"] == 46
+    assert scored["lang"]["zh"]["n"] == 58 and scored["lang"]["zh"]["human"] == 40
+    assert scored["lang"]["en"]["state"] == 58 and scored["lang"]["zh"]["state"] == 58
+    assert scored["lang"]["en"]["state_fa"] == 0 and scored["lang"]["zh"]["empty_fa"] == 0
