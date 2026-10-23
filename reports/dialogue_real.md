@@ -10,9 +10,10 @@ Bank `0be42845836ec2a19c961d5a415ccd0d9d0dcb1f8adf5bb632335cd26871cec5` (1032 st
 
 State rule 142/142. Empty rule 142/142. False accepts 0.
 Gated rows, where the rule and the listener already agree: 106/106 with the turns, 106/106 on the empty log, human 106/106. Ordinary talk is 52/52.
-The listener's reading on the whole bank is 106/142. Experience gaps are 0/21 against the listener and 21/21 against the rule. Open addressee forms are 0/8 against the listener. Empty-log controls are 0/4 against the listener. Name-head observations are 0/3 against the listener. A miss in those four columns is not a regression.
+Pronoun-chain and leading-vocative rows are 4/4 against the listener and 4/4 against the rule.
+The listener's reading on the whole bank is 110/142. Experience gaps that remain are 0/17 against the listener and 17/17 against the rule. Open addressee forms are 0/8 against the listener. Empty-log controls are 0/4 against the listener. Name-head observations are 0/3 against the listener. A miss in the gap, open-addressee, empty-log, or name-head column is not a regression.
 
-Rule labels are the replay of `DialogueState`, `ask_people`, and the deixis row selectors. Human labels are the conversational reading written with the episode. State mode walks `note_turn` and `query` in order. Empty mode asks each question on a fresh store of the same facts. The encoder is the tied relation instrument from the deixis dev. Same-relation slots share one direction, the decoy is stored first, and a 1e-6 insertion-order slope keeps that earliest slot when a batched cosine would otherwise move the tie by one ulp. A hit is who was selected, not an e5 score. A false accept is a rule abstain (`absent_person` or `missing_rel`) that returned a value.
+Rule labels are the replay of `apply_utterance`, `refresh_resolved`, and the deixis row selectors. Human labels are the conversational reading written with the episode. State mode walks `note_turn` and `query` in order. Empty mode asks each question on a fresh store of the same facts. The encoder is the tied relation instrument from the deixis dev. Same-relation slots share one direction, the decoy is stored first, and a 1e-6 insertion-order slope keeps that earliest slot when a batched cosine would otherwise move the tie by one ulp. A hit is who was selected, not an e5 score. A false accept is a rule abstain (`absent_person` or `missing_rel`) that returned a value.
 
 ## Disjointness
 
@@ -55,35 +56,36 @@ Closest pair is 0.471 against residual.
 | | n | state rule | empty rule | state human | state FA | empty FA |
 |---|---:|---:|---:|---:|---:|---:|
 | gated | 106 | 106/106 | 106/106 | 106/106 | 0 | 0 |
-| gap | 21 | 21/21 | 21/21 | 0/21 | 0 | 0 |
+| gap | 17 | 17/17 | 17/17 | 0/17 | 0 | 0 |
+| dev | 4 | 4/4 | 4/4 | 4/4 | 0 | 0 |
 | oos | 8 | 8/8 | 8/8 | 0/8 | 0 | 0 |
 | control | 4 | 4/4 | 4/4 | 0/4 | 0 | 0 |
 | observe | 3 | 3/3 | 3/3 | 0/3 | 0 | 0 |
-| total | 142 | 142/142 | 142/142 | 106/142 | 0 | 0 |
+| total | 142 | 142/142 | 142/142 | 110/142 | 0 | 0 |
 
 ## Family
 
 | | n | state rule | empty rule | state human | state FA | empty FA |
 |---|---:|---:|---:|---:|---:|---:|
-| you | 33 | 33/33 | 33/33 | 30/33 | 0 | 0 |
+| you | 33 | 33/33 | 33/33 | 32/33 | 0 | 0 |
 | third | 35 | 35/35 | 35/35 | 27/35 | 0 | 0 |
 | name | 22 | 22/22 | 22/22 | 19/22 | 0 | 0 |
-| window | 6 | 6/6 | 6/6 | 2/6 | 0 | 0 |
+| window | 6 | 6/6 | 6/6 | 4/6 | 0 | 0 |
 | edit | 22 | 22/22 | 22/22 | 16/22 | 0 | 0 |
 | abstain | 6 | 6/6 | 6/6 | 6/6 | 0 | 0 |
 | indirect | 6 | 6/6 | 6/6 | 6/6 | 0 | 0 |
 | oos | 8 | 8/8 | 8/8 | 0/8 | 0 | 0 |
 | empty | 4 | 4/4 | 4/4 | 0/4 | 0 | 0 |
-| total | 142 | 142/142 | 142/142 | 106/142 | 0 | 0 |
+| total | 142 | 142/142 | 142/142 | 110/142 | 0 | 0 |
 
 ## Language
 
 | | n | state rule | empty rule | state human | state FA | empty FA |
 |---|---:|---:|---:|---:|---:|---:|
-| en | 70 | 70/70 | 70/70 | 52/70 | 0 | 0 |
-| zh | 70 | 70/70 | 70/70 | 52/70 | 0 | 0 |
+| en | 70 | 70/70 | 70/70 | 54/70 | 0 | 0 |
+| zh | 70 | 70/70 | 70/70 | 54/70 | 0 | 0 |
 | bi | 2 | 2/2 | 2/2 | 2/2 | 0 | 0 |
-| total | 142 | 142/142 | 142/142 | 106/142 | 0 | 0 |
+| total | 142 | 142/142 | 142/142 | 110/142 | 0 | 0 |
 
 ## Band
 
@@ -91,11 +93,12 @@ Closest pair is 0.471 against residual.
 |---|---:|---:|---:|---:|---:|---:|
 | ordinary | 52 | 52/52 | 52/52 | 52/52 | 0 | 0 |
 | boundary | 54 | 54/54 | 54/54 | 54/54 | 0 | 0 |
-| gap | 21 | 21/21 | 21/21 | 0/21 | 0 | 0 |
+| gap | 17 | 17/17 | 17/17 | 0/17 | 0 | 0 |
+| dev | 4 | 4/4 | 4/4 | 4/4 | 0 | 0 |
 | oos | 8 | 8/8 | 8/8 | 0/8 | 0 | 0 |
 | control | 4 | 4/4 | 4/4 | 0/4 | 0 | 0 |
 | observe | 3 | 3/3 | 3/3 | 0/3 | 0 | 0 |
-| total | 142 | 142/142 | 142/142 | 106/142 | 0 | 0 |
+| total | 142 | 142/142 | 142/142 | 110/142 | 0 | 0 |
 
 ## Phenomenon
 
@@ -136,8 +139,8 @@ Closest pair is 0.471 against residual.
 | vocative_question | 2 | 2/2 | 2/2 | 2/2 | 0 | 0 |
 | third_tie | 2 | 2/2 | 2/2 | 2/2 | 0 | 0 |
 | window_backchannel | 2 | 2/2 | 2/2 | 0/2 | 0 | 0 |
-| pronoun_chain_age | 2 | 2/2 | 2/2 | 0/2 | 0 | 0 |
-| vocative_unpassed | 2 | 2/2 | 2/2 | 0/2 | 0 | 0 |
+| pronoun_chain_age | 2 | 2/2 | 2/2 | 2/2 | 0 | 0 |
+| vocative_unpassed | 2 | 2/2 | 2/2 | 2/2 | 0 | 0 |
 | gender_tie | 4 | 4/4 | 4/4 | 0/4 | 0 | 0 |
 | recency_clash | 2 | 2/2 | 2/2 | 0/2 | 0 | 0 |
 | edit_aged | 2 | 2/2 | 2/2 | 0/2 | 0 | 0 |
@@ -151,11 +154,20 @@ Closest pair is 0.471 against residual.
 | short_name | 1 | 1/1 | 1/1 | 0/1 | 0 | 0 |
 | given_nick | 1 | 1/1 | 1/1 | 0/1 | 0 | 0 |
 | pinyin_name | 1 | 1/1 | 1/1 | 0/1 | 0 | 0 |
-| total | 142 | 142/142 | 142/142 | 106/142 | 0 | 0 |
+| total | 142 | 142/142 | 142/142 | 110/142 | 0 | 0 |
+
+## Keep-alive and leading vocatives
+
+These rows were experience gaps before the two updates. A resolved pronoun restamps the person, and a leading vocative is the hearer. They are scored apart from the gated 106 and the ordinary 52.
+
+- `en-chain` pronoun_chain_age (en): rule Torven / human Torven; ask returned Torven. `Which telephone did he leave with the horn cup after dusk?` Later turns only say he. That pronoun restamps Torven onto the current turn, so the name stays inside TURN_WINDOW.
+- `zh-chain` pronoun_chain_age (zh): rule 喻棠 / human 喻棠; ask returned 喻棠. `他留在黄昏后那只角杯上的电话是哪一页？` 后面几轮只说他。这个代词把喻棠重新盖到当前轮上，名字还在窗口里。
+- `en-vocative-miss` vocative_unpassed (en): rule Briony / human Briony; ask returned Briony. `Which telephone should the closer read for you off the green tin by the elbow?` The line starts with Briony and a comma, and note_turn was not given a hearer. That leading vocative is the hearer, so you is Briony.
+- `zh-vocative-miss` vocative_unpassed (zh): rule 闵昭 / human 闵昭; ask returned 闵昭. `值夜要回读给你的电话，看手边青瓷上的哪一页？` 这句话以闵昭加逗号开头，note_turn 没有传入听者。这个句首呼语就是听者，所以你是闵昭。
 
 ## Where the listener and the rule disagree
 
-These rows were marked gap before the score. A human miss with a rule hit is the experience gap. It is not a regression.
+These rows were marked gap before the score. A human miss with a rule hit is the experience gap. It is not a regression. Four quiet turns with no pronoun still age the name out.
 
 ### window_backchannel
 
@@ -163,20 +175,6 @@ Four short acknowledgements open four turns. The name is still what he means, an
 
 - `en-age` window_backchannel (en): rule absent_person / human Torven; ask returned absent_person. `Which telephone did he leave on the chalk slate after the nods?` Four short acknowledgements open four turns. The name is still what he means, and TURN_WINDOW has dropped it.
 - `zh-age` window_backchannel (zh): rule absent_person / human 喻棠; ask returned absent_person. `他留在后面那块粉笔板上的电话是哪一页？` 四句很短的应答各算一轮。听的人还是在问他，窗口已经把名字推出去了。
-
-### pronoun_chain_age
-
-Later turns only say he, and a pronoun is not written back onto the log, so the name ages out.
-
-- `en-chain` pronoun_chain_age (en): rule absent_person / human Torven; ask returned absent_person. `Which telephone did he leave with the horn cup after dusk?` Later turns only say he, and a pronoun is not written back onto the log, so the name ages out.
-- `zh-chain` pronoun_chain_age (zh): rule absent_person / human 喻棠; ask returned absent_person. `他留在黄昏后那只角杯上的电话是哪一页？` 后面几轮只说他。代词不会写回人名，名字就滑出了窗口。
-
-### vocative_unpassed
-
-The line addresses Briony, but note_turn was not given a hearer. you does not recover a vocative.
-
-- `en-vocative-miss` vocative_unpassed (en): rule absent_person / human Briony; ask returned absent_person. `Which telephone should the closer read for you off the green tin by the elbow?` The line addresses Briony, but note_turn was not given a hearer. you does not recover a vocative.
-- `zh-vocative-miss` vocative_unpassed (zh): rule absent_person / human 闵昭; ask returned absent_person. `值夜要回读给你的电话，看手边青瓷上的哪一页？` 这句话点了闵昭，但 note_turn 没有传入听者。你不会从呼语里补出来。
 
 ### gender_tie
 
@@ -269,8 +267,8 @@ None. Every ask matched its rule label on the state pass and on the empty pass.
 
 ## Floors
 
-The ask path is unchanged, so the floors already recorded in `reports/deixis.md` still stand. They were not re-run for this measurement. Probe answerable 365/370, false abstain 0/370, unanswerable 72/72, gold lost at overwrite 0.9 is 0, co-resident cosine above 0.9 is 0 (max 0.8927). Frozen hits 188/216, false abstain 19/216, near_dup_absent 30/30. Dialogue dev 102/102 and 102/102. Dialogue held-out at window 4, gated 108/108 and 108/108. Deixis dev 48/48 and 48/48. Deixis held-out 128/136 with the turns (the miss is `addressee_extra` 0/8) and 136/136 on the empty log.
+The ask path now restamps a resolved pronoun and reads a leading vocative, so the probe, frozen, dialogue, and deixis floors are re-run. This bank's own development floor stays gated 106/106 and ordinary talk 52/52, listener labels, false accepts 0. The re-run numbers are in `reports/dialogue_keepalive.md`.
 
 ## Recommendation
 
-Ship the caller contract, and do not widen the mechanism in this change. Gated rows match the shipped rule on both passes, and a rule abstain never returned a value. The experience gaps are the ones already outside the contract: four quiet turns age a name out, a pronoun does not refresh the log, a vocative is not a hearer unless the caller passes it, two people on the newest turn abstain with no gender, an insertion or a swap or a 老/小 prefix is not edit-1, and the speaker is not he. Open addressee forms stay out of scope. The next product step is to call note_turn with the hearer every time, and to treat the window and the closed class as the behavior, not as a full coreference model. A richer dialogue state would be a new mechanism, not a patch on this bank.
+Keep the two updates, and do not widen the mechanism further on this bank. Gated rows match the rule on both passes, and a rule abstain never returned a value. A resolved pronoun restamps that person's in-window mention, and a leading exact name plus address punctuation is the hearer when the caller did not pass one. The pronoun is not stored as a name, and a mention outside the window is not pulled back. What still disagrees with the listener is outside that contract: four quiet turns with no pronoun age a name out, two people on the newest turn abstain with no gender, an insertion or a swap or a 老/小 prefix is not edit-1, the speaker is not he, and 你们 is not a singular hearer. Open addressee forms stay out of scope.

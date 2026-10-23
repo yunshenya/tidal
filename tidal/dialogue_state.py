@@ -6,10 +6,14 @@ cannot license it. This object records writes, utterances, and earlier asks
 with recency. ``ask`` reads the conversational slice: utterances and earlier
 asks inside ``TURN_WINDOW``. A write is on the log and is not that slice.
 
-An empty conversational slice leaves name resolution unchanged. Speaker and
-hearer are set only when ``note_turn`` is given them. A third-person pronoun
-reads ``eligible_latest``: the people on the newest conversational turn in
-the window who are neither of those two.
+An empty conversational slice leaves name resolution unchanged. Speaker is
+set only when ``note_turn`` is given one. Hearer is that argument when it
+is a non-empty string, including a string that is not on the roster; when
+the argument is empty, a leading exact roster name plus address punctuation
+is the hearer. A third-person pronoun reads ``eligible_latest``: the people
+on the newest conversational turn in the window who are neither of those
+two. ``refresh`` restamps one in-window mention onto the current turn. It
+does not append a name, and it does not pull a mention back into the window.
 """
 from __future__ import annotations
 
@@ -150,6 +154,40 @@ class DialogueState:
         tied = [(seq, name) for name, (turn, seq) in best.items() if turn == top]
         tied.sort()
         return tuple(name for _seq, name in tied)
+
+    def refresh(self, name: str) -> bool:
+        """Restamp one in-window conversational mention of ``name`` onto this turn.
+
+        The latest utterance or ask mention still inside ``TURN_WINDOW`` moves
+        to ``self.turn``. Source and surface stay, and nothing is appended.
+        A mention already on this turn is left as it is. A mention outside
+        the window, a write, or a name that was never said returns False and
+        is not pulled back.
+        """
+        if not isinstance(name, str) or name == "" or self.turn <= 0:
+            return False
+        cutoff = self.turn - TURN_WINDOW
+        best_i = -1
+        best_key = (-1, -1)
+        for i, item in enumerate(self._mentions):
+            if item.name != name or item.source not in ("utterance", "ask"):
+                continue
+            if item.turn <= cutoff or item.turn > self.turn:
+                continue
+            key = (item.turn, item.seq)
+            if key > best_key:
+                best_key = key
+                best_i = i
+        if best_i < 0:
+            return False
+        item = self._mentions[best_i]
+        if item.turn == self.turn:
+            return True
+        self._seq += 1
+        self._mentions[best_i] = Mention(
+            item.name, self.turn, item.source, self._seq, item.surface,
+        )
+        return True
 
     def recent(self) -> Tuple[str, ...]:
         """Every source, most recent first, including writes. Not the ask gate."""

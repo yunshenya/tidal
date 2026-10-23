@@ -38,7 +38,7 @@ Floors, empty log: probe answerable at least 365/370, false abstain 0/370, unans
 
 ## Rule
 
-`resolve_deixis` runs from `matched_fact_rows` and `selected_fact_rows`. `ask_people` does not call it, so `note_turn` and the ask log still record names only. A pronoun is not a later mention.
+`resolve_deixis` runs from `matched_fact_rows` and `selected_fact_rows`. `ask_people` does not call it, so `note_turn` and the ask log still record names only. This score does not restamp a pronoun. A later change restamps an in-window mention when the resolution is one person; that behavior is in `docs/dialogue_state.md` and is not part of these 48 rows.
 
 The branch is taken only when `utterances > 0` or a hearer string is already stored. A fact write does not increment `utterances`. Recording the ask does not either, so asking one string twice stays on the empty slice. No utterance and no hearer is the current path: `you` / `他` stay on the ranker, and a hearer-role noun stays on the unique first-person fact.
 
