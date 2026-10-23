@@ -1,10 +1,9 @@
 """Subconscious-style metrics for the shipped ``LLMMemory`` inject path.
 
 Log-prob scoring arms the prompt once and compares two continuations under
-that vector. ``generate`` is scored separately: with the shipped phone and
-birthday readouts enabled it encodes the query inside ``scripted_continuation``
-and, when that slot is not a phone or a birthday, encodes it again in
-``_arm``. This module does not import ``transformers``.
+that vector. ``generate`` encodes the query once. Phone and birthday spelling
+runs only when the winning relation is the one the prompt is completing.
+This module does not import ``transformers``.
 """
 from __future__ import annotations
 
@@ -14,7 +13,6 @@ from typing import Callable, Optional
 import numpy as np
 import torch
 
-from tidal.episodic import cosine_scores
 from tidal.llm_memory import _logits_of
 from tidal.subconscious_data import (
     AVOID,
@@ -50,14 +48,14 @@ COST_NEW_TOKENS = 8
 PATH_FLAGS = (
     {
         "path": "query encode",
-        "when": "scripted_continuation and _arm, before any new token",
-        "varies": "skipped when the store is empty; runs twice when a readout is on and the winning relation is not phone or birthday",
+        "when": "once, inside continuation_ids, before any new token",
+        "varies": "skipped when the store is empty",
         "retries": False,
     },
     {
         "path": "scripted phone or birthday",
-        "when": "winning slot rel is phone or birthday and that readout buffer is on",
-        "varies": "replaces the token loop",
+        "when": "winning relation is phone or birthday and the prompt is completing that same relation",
+        "varies": "replaces the token loop; any other prompt keeps the residual path",
         "retries": False,
     },
     {
@@ -129,28 +127,28 @@ def _cosine(a, b) -> float:
 
 
 def _arm_info(mem, prompt: str) -> dict:
-    """One query, hard top-1, residual armed. Empty store arms nothing."""
-    info = {"n": len(mem.store), "top": None, "maxcos": None, "gap": None, "hit": 0}
-    if len(mem.store) == 0:
+    """One query, hard top-1, confidence-scaled residual. Empty store arms nothing."""
+    rank = mem._rank(prompt)
+    info = {
+        "n": 0 if rank is None else rank["n"],
+        "top": None,
+        "maxcos": None,
+        "gap": None,
+        "hit": 0,
+        "confidence": 0.0 if rank is None else rank["confidence"],
+    }
+    if rank is None:
         mem._delta = None
         return info
-    query = mem._query_vector(prompt)
-    slots = mem.store.slots
-    keys = np.stack([np.asarray(slot.k, dtype=np.float64) for slot in slots], 0)
-    scores = cosine_scores(keys, np.asarray(query, dtype=np.float64))
-    order = np.argsort(-scores)
-    top_i = int(order[0])
-    gap = None if len(order) < 2 else float(scores[order[0]] - scores[order[1]])
-    slot = slots[top_i]
     info.update(
         {
-            "n": len(slots),
-            "top": [slot.name, slot.rel],
-            "maxcos": float(scores[top_i]),
-            "gap": gap,
+            "top": [rank["name"], rank["rel"]],
+            "maxcos": rank["cosine"],
+            "gap": rank["gap"],
+            "confidence": rank["confidence"],
         }
     )
-    mem._delta = mem._compose(slot.v, grad=False)
+    mem._set_delta(rank, grad=False)
     return info
 
 
@@ -321,7 +319,11 @@ def inject_census(module) -> dict:
     return {
         "parameters": int(sum(n for _, n in params)),
         "buffers": int(sum(n for _, n in buffers)),
-        "mlp_parameters": int(sum(n for name, n in params if name.startswith("net."))),
+        "mlp_parameters": int(
+            sum(n for name, n in params if name.startswith("net.") or name.startswith("key_proj."))
+        ),
+        "net_parameters": int(sum(n for name, n in params if name.startswith("net."))),
+        "key_parameters": int(sum(n for name, n in params if name.startswith("key_proj."))),
         "named_parameters": params,
         "named_buffers": buffers,
     }
@@ -368,18 +370,36 @@ def _ids_exact(mem, n: int) -> list:
     return token_ids(mem.tokenizer, text)[:n]
 
 
-def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: int, warmup: int, prompt: str) -> dict:
-    """CPU cost of the shipped path. Retrieval is timed without the LM forward."""
+def measure_cost(
+    mem,
+    incidental: list,
+    normal: dict,
+    phone: dict,
+    *,
+    repeats: int,
+    warmup: int,
+    prompt: str,
+    phone_prompt: Optional[str] = None,
+) -> dict:
+    """CPU cost of the shipped path. Retrieval is timed without the LM forward.
+
+    ``phone_prompt`` is a prompt that completes a phone number. The decision
+    ``prompt`` with a phone slot must not take the spelling path.
+    """
     census = inject_census(mem.inject)
     model_bytes = int(sum(p.numel() * p.element_size() for p in mem.model.parameters()))
     rss_before = _rss_kb()
+    spell_prompt = phone_prompt or prompt
 
     write_rows(mem, [])
     empty_path = _count_path(mem, prompt, COST_NEW_TOKENS)
     write_rows(mem, [normal])
     normal_path = _count_path(mem, prompt, COST_NEW_TOKENS)
     write_rows(mem, [phone])
-    phone_path = _count_path(mem, prompt, COST_NEW_TOKENS)
+    phone_path = _count_path(mem, spell_prompt, COST_NEW_TOKENS)
+    phone_decision_path = None
+    if phone_prompt and phone_prompt != prompt:
+        phone_decision_path = _count_path(mem, prompt, COST_NEW_TOKENS)
 
     write_rows(mem, [normal])
     query_bench = _bench(lambda: mem._query_vector(prompt), repeats, warmup)
@@ -395,9 +415,10 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
             warmup,
         )
     value = torch.tensor(np.asarray(normal["value"], dtype=np.float32))
-    mlp_bench = _bench(lambda: mem.inject(value), repeats, warmup)
+    key_t = torch.tensor(np.asarray(normal["key"], dtype=np.float32))
+    mlp_bench = _bench(lambda: mem.inject(value, key_t), repeats, warmup)
 
-    delta = mem._compose(normal["value"], grad=False).detach()
+    delta = mem._compose(normal["value"], normal["key"], grad=False).detach()
     forwards = {}
     for length in (16, 32, 64):
         ids = torch.tensor([_ids_exact(mem, length)], dtype=torch.long, device=mem._device)
@@ -419,19 +440,19 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
             "extra_s": float(armed_s["median_s"] - empty_s["median_s"]),
         }
 
-    def run_ids(rows):
+    def run_ids(rows, text):
         write_rows(mem, rows)
-        mem.continuation_ids(prompt, max_new_tokens=COST_NEW_TOKENS, done=lambda _ids: False)
+        mem.continuation_ids(text, max_new_tokens=COST_NEW_TOKENS, done=lambda _ids: False)
         mem._delta = None
 
     totals = {
-        "empty": _bench(lambda: run_ids([]), repeats, warmup),
-        "inject": _bench(lambda: run_ids([normal]), repeats, warmup),
-        "scripted_phone": _bench(lambda: run_ids([phone]), repeats, warmup),
+        "empty": _bench(lambda: run_ids([], prompt), repeats, warmup),
+        "inject": _bench(lambda: run_ids([normal], prompt), repeats, warmup),
+        "scripted_phone": _bench(lambda: run_ids([phone], spell_prompt), repeats, warmup),
     }
     per_token_extra = [row["extra_s"] for row in forwards.values()]
     query_extra = float(query_bench["median_s"])
-    # Shipped non-phone generate pays this query twice (scripted probe, then _arm).
+    # One query per continuation. Spelling does not encode the prompt again.
     prompt_extra = {
         "one_query_s": query_extra,
         "shipped_non_phone_queries": int(normal_path["queries"]),
@@ -444,11 +465,17 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
     )
     write_rows(mem, [])
     return {
+        "gap_tau": float(mem.inject.gap_tau.detach().cpu()),
         "inject": census,
         "model_parameter_bytes": model_bytes,
         "rss_kb": {"before": rss_before, "after": _rss_kb()},
         "torch_threads": int(torch.get_num_threads()),
-        "path_counts": {"empty": empty_path, "inject": normal_path, "scripted_phone": phone_path},
+        "path_counts": {
+            "empty": empty_path,
+            "inject": normal_path,
+            "scripted_phone": phone_path,
+            **({"phone_on_decision": phone_decision_path} if phone_decision_path is not None else {}),
+        },
         "query_s": query_bench,
         "readout_s": readout,
         "mlp_s": mlp_bench,
@@ -481,11 +508,42 @@ def run_eval(
     do_cost: bool = True,
     do_greedy: bool = True,
     progress: Optional[Callable[[str], None]] = None,
+    data=None,
 ) -> dict:
-    """Score the pre-registered bank. ``retrieve(texts, query)`` is the RAG line."""
+    """Score one pre-registered bank. ``retrieve(texts, query)`` is the RAG line.
+
+    ``data`` defaults to ``tidal.subconscious_data``. Another module with the
+    same names scores a disjoint bank through the same harness.
+    """
     if retrieve is None:
         raise ValueError("retrieve is required")
+    if data is None:
+        import tidal.subconscious_data as data
+    PREFER = data.PREFER
+    AVOID = data.AVOID
+    CHATS = data.CHATS
+    GATES = data.GATES
+    LEAK_STORE_N = data.LEAK_STORE_N
+    LOADS = data.LOADS
+    NEUTRAL_CHOICE = data.NEUTRAL_CHOICE
+    NEUTRAL_GEN = data.NEUTRAL_GEN
+    NEUTRAL_NLL = data.NEUTRAL_NLL
+    NEUTRAL_STORE_N = data.NEUTRAL_STORE_N
+    PHONE_FACT = data.PHONE_FACT
+    PHONE_QUESTION = data.PHONE_QUESTION
+    BIRTHDAY_FACT = data.BIRTHDAY_FACT
+    BIRTHDAY_QUESTION = getattr(data, "BIRTHDAY_QUESTION", None)
+    PRIOR_PREFIX_N32 = data.PRIOR_PREFIX_N32
+    REPEAT_WRITES = data.REPEAT_WRITES
+    decision_items = data.decision_items
+    incidental_facts = data.incidental_facts
     mem.inject.eval()
+    sha_fn = getattr(data, "sha256", None)
+    if callable(sha_fn):
+        bank_sha = sha_fn()
+    else:
+        bank_sha = bank_sha256()
+    bank_kind = getattr(data, "kind", "frozen")
     enc = Encoder(mem)
     incidental = incidental_facts()
     phases = {}
@@ -797,6 +855,8 @@ def run_eval(
     phone_on = float(mem.inject.phone_on.detach().cpu()) != 0.0
     date_on = float(mem.inject.date_on.detach().cpu()) != 0.0
     script_prompts = list(NEUTRAL_GEN[:4]) + [PHONE_QUESTION]
+    if BIRTHDAY_QUESTION:
+        script_prompts.append(BIRTHDAY_QUESTION)
     phone_rows = []
     write_rows(mem, [enc.one(PHONE_FACT)])
     for prompt in script_prompts:
@@ -821,6 +881,7 @@ def run_eval(
             repeats=cost_repeats,
             warmup=cost_warmup,
             prompt=PREFER[0]["prompt"],
+            phone_prompt=PHONE_QUESTION,
         )
         phases["cost"] = time.perf_counter() - t7
     write_rows(mem, [])
@@ -849,7 +910,9 @@ def run_eval(
     update_deltas = [row["inject"]["delta"] for row in update_rows]
     result = {
         "protocol": PROTOCOL,
-        "bank_sha256": bank_sha256(),
+        "bank_sha256": bank_sha,
+        "bank_kind": bank_kind,
+        "gap_tau": float(mem.inject.gap_tau.detach().cpu()),
         "model_name": mem.model_name,
         "layer": int(mem.layer),
         "hidden": int(mem.hidden),
@@ -952,7 +1015,18 @@ def run_eval(
             "birthday": date_rows,
             "phone_unrelated": _mean([row["takeover"] for row in phone_rows if row["prompt"] != PHONE_QUESTION]),
             "phone_question": next(row["takeover"] for row in phone_rows if row["prompt"] == PHONE_QUESTION),
-            "date_unrelated": _mean([row["takeover"] for row in date_rows if row["prompt"] != PHONE_QUESTION]),
+            "date_unrelated": _mean(
+                [
+                    row["takeover"]
+                    for row in date_rows
+                    if row["prompt"] != (BIRTHDAY_QUESTION or PHONE_QUESTION)
+                ]
+            ),
+            "birthday_question": (
+                next(row["takeover"] for row in date_rows if row["prompt"] == BIRTHDAY_QUESTION)
+                if BIRTHDAY_QUESTION
+                else None
+            ),
         },
         "cost": cost,
         "greedy_tokens": GREEDY_TOKENS,

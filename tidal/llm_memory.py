@@ -21,14 +21,17 @@ hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
 estimated once from a calibration set and stored with the module. The add is
 
-    scale(v) + MLP(scale(v))
+    c * (scale(v) + MLP(scale(v) + W k))
 
-with ``scale`` fixed at 1 and the MLP's last layer initialized to zeros, so an
-untrained module copies ``v`` through. When this wrapper loads the default
-SmolLM2-135M checkpoint at the default layer, that MLP is replaced by the
-shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP, plus
+with ``scale`` fixed at 1, ``W`` and the MLP's last layer initialized to zeros,
+and ``c`` the retrieval confidence. An untrained module copies ``v`` through.
+``c`` is 1 when the store has a single slot. With two or more slots,
+``c = clip((top1 - top2) / gap_tau, 0, 1)``. When this wrapper loads the
+default SmolLM2-135M checkpoint at the default layer, that MLP is replaced by
+the shipped weights in ``llm_inject_smollm2_135m.pt`` (decision-trained, plus
 linear readouts that spell ``+1-415-555-dddd`` from a phone value and
-``Month D, YYYY`` from a birthday value). A
+``Month D, YYYY`` from a birthday value). Spelling runs only when the winning
+relation is the one the prompt is completing. A
 caller-supplied model, another checkpoint, or another layer keeps the zero
 last layer until :meth:`LLMMemory.load_inject`. There is no switch. This is
 the A2s inject from
@@ -44,6 +47,7 @@ Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
@@ -52,7 +56,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tidal.episodic import EpisodicStore
+from tidal.episodic import EpisodicStore, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
 
@@ -89,6 +93,15 @@ _DATE_KEYS = (
     "date_digit_b",
 )
 _READOUT_KEYS = _PHONE_KEYS + _DATE_KEYS
+# Absent from a checkpoint saved before the decision objective. A missing
+# key projection stays at zero, so the add is still ``scale(v) + MLP(scale(v))``.
+# A missing ``gap_tau`` keeps the default below.
+_OPTIONAL_INJECT_KEYS = ("key_proj.weight", "gap_tau")
+# Runner-up gap that maps to confidence 1. Fit on the scale bank, not on an eval bank.
+# Grid 0.02, 0.05, 0.10, 0.20, 0.40, 0.80, 1.60, 3.20. Smallest passing value is 0.80.
+DEFAULT_GAP_TAU = 0.80
+_PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
+_BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 # Shares of the value vector. Day-tens is the small block: it is a zero vector
 # for days 1–9, and only digits 0–2 occur for days 1–27. The rest is split
 # evenly across the month token, the day-ones token, and the four year digits.
@@ -504,7 +517,11 @@ def _inject_core_fits(module: nn.Module, state) -> bool:
     current = module.state_dict()
     if not set(state) <= set(current):
         return False
-    required = [key for key in current if key not in _READOUT_KEYS]
+    required = [
+        key
+        for key in current
+        if key not in _READOUT_KEYS and key not in _OPTIONAL_INJECT_KEYS
+    ]
     if not set(required) <= set(state):
         return False
     for key, got in state.items():
@@ -526,7 +543,11 @@ def _load_inject_tensors(module: nn.Module, state) -> None:
 
 
 class InjectMLP(nn.Module):
-    """``scaled + MLP(scaled)``. Last layer is exact zeros, so the add starts as ``scaled``."""
+    """``scaled + MLP(scaled + W k)``. Last layer and ``W`` start at zero.
+
+    An untrained module copies ``scaled`` through. ``gap_tau`` is the top1−top2
+    gap that saturates retrieval confidence. It is not a switch.
+    """
 
     def __init__(self, d: int, hid: Optional[int] = None):
         super().__init__()
@@ -537,7 +558,10 @@ class InjectMLP(nn.Module):
         self.net = nn.Sequential(nn.Linear(d, h), nn.GELU(), nn.Linear(h, d))
         nn.init.zeros_(self.net[-1].weight)
         nn.init.zeros_(self.net[-1].bias)
+        self.key_proj = nn.Linear(d, d, bias=False)
+        nn.init.zeros_(self.key_proj.weight)
         self.register_buffer("scale", torch.ones((), dtype=torch.float32))
+        self.register_buffer("gap_tau", torch.tensor(float(DEFAULT_GAP_TAU), dtype=torch.float32))
         # Linear phone readout. ``phone_on`` stays 0 until a fit writes it, so
         # a fresh module does not spell a number. ``phone_w[p, digit]`` is the
         # weight of digit 0-9 at variable position p. ``phone_b`` is 0 for a
@@ -560,9 +584,15 @@ class InjectMLP(nn.Module):
         self.register_buffer("date_digit_w", torch.zeros(6, 10, d, dtype=torch.float32))
         self.register_buffer("date_digit_b", torch.zeros(6, 10, dtype=torch.float32))
 
-    def forward(self, value: torch.Tensor) -> torch.Tensor:
+    def forward(self, value: torch.Tensor, key: Optional[torch.Tensor] = None) -> torch.Tensor:
         scaled = value * self.scale
-        return scaled + self.net(scaled)
+        seen = scaled
+        if key is not None:
+            key_t = key.reshape(-1).to(dtype=scaled.dtype, device=scaled.device)
+            if int(key_t.numel()) != int(scaled.numel()):
+                raise ValueError(f"key dim {int(key_t.numel())} != value dim {int(scaled.numel())}")
+            seen = scaled + self.key_proj(key_t)
+        return scaled + self.net(seen)
 
     def phone_digits(self, value: torch.Tensor) -> Optional[list]:
         """Four digits read from a phone value, or None when the readout is off."""
@@ -876,15 +906,47 @@ def build_tiny_lm(seed: int = 0, *, hidden: int = 32, layers: int = 4, vocab: in
     return model, ByteTokenizer()
 
 
+def completing_relation(prompt: str) -> Optional[str]:
+    """Relation a prompt is completing, or None.
+
+    Phone spelling requires ``phone``. Birthday spelling requires ``birthday``.
+    The match is a word, so ``telephone`` does not count as a phone completion.
+    """
+    if not isinstance(prompt, str) or prompt == "":
+        return None
+    if _PHONE_WORD.search(prompt):
+        return "phone"
+    if _BIRTHDAY_WORD.search(prompt):
+        return "birthday"
+    return None
+
+
+def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
+    """Scale on the inject add. One slot is unscaled. A tie adds nothing.
+
+    ``gap`` is top-1 cosine minus top-2 cosine. ``tau`` is the gap that
+    saturates the scale at 1. Both are computed on every non-empty read.
+    """
+    if int(n) < 2:
+        return 1.0
+    if not tau or float(tau) <= 0.0:
+        raise ValueError("gap_tau must be positive")
+    if gap is None:
+        return 1.0
+    return float(max(0.0, min(1.0, float(gap) / float(tau))))
+
+
 class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. The armed value is the top slot
-    (hard top-1 on raw cosine), not a soft mixture. ``soft_k`` and
-    ``soft_temp`` are kept on the episodic store; ``generate`` does not read
-    them. An empty store leaves the residual untouched, so greedy tokens
-    match the same model with the hook removed.
+    (hard top-1 on raw cosine), not a soft mixture, scaled by
+    :func:`retrieval_confidence`. ``soft_k`` and ``soft_temp`` are kept on
+    the episodic store; ``generate`` does not read them. An empty store leaves
+    the residual untouched, so greedy tokens match the same model with the
+    hook removed. A phone or birthday slot is spelled only when the prompt is
+    completing that relation. The query is encoded once per continuation.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -1189,29 +1251,72 @@ class LLMMemory:
         raw = self._raw_key_pool(prompt)
         return (raw - self.query_mean).astype(np.float64, copy=False)
 
-    def _compose(self, value, *, grad: bool) -> torch.Tensor:
+    def _as_hidden(self, value, label: str) -> torch.Tensor:
         arr = np.asarray(value, dtype=np.float32).reshape(-1)
         if arr.shape != (self.hidden,):
-            raise ValueError(f"value dim {arr.shape[0]} != hidden {self.hidden}")
-        v = torch.tensor(arr, dtype=torch.float32, device=self._device)
-        if grad:
-            return self.inject(v)
-        with torch.no_grad():
-            return self.inject(v).detach()
+            raise ValueError(f"{label} dim {arr.shape[0]} != hidden {self.hidden}")
+        return torch.tensor(arr, dtype=torch.float32, device=self._device)
 
-    def _arm(self, prompt: str) -> None:
+    def _compose(self, value, key=None, *, grad: bool) -> torch.Tensor:
+        v = self._as_hidden(value, "value")
+        k = None if key is None else self._as_hidden(key, "key")
+        if grad:
+            return self.inject(v, k)
+        with torch.no_grad():
+            return self.inject(v, k).detach()
+
+    def _rank(self, prompt: str) -> Optional[dict]:
+        """One query. Hard top-1, same winner as ``store.read(..., mode="top1")``.
+
+        Soft top-4 at T=0.05 matched top-1 on prefix free-gen and trailed it
+        on natural questions; T=0.20 mixed neighbors and dropped N32 questions
+        from 36/48 to 19/48. Measured in ``docs/llm_memory.md``.
+        """
+        if not isinstance(prompt, str) or prompt == "":
+            raise ValueError("prompt is empty")
         if len(self.store) == 0:
+            return None
+        query = self._query_vector(prompt)
+        value, info = self.store.read(query, mode="top1")
+        top = info.get("top") if isinstance(info, dict) else None
+        if value is None or not top:
+            return None
+        slots = list(self.store.slots)
+        keys = np.stack([np.asarray(slot.k, dtype=np.float64) for slot in slots], 0)
+        scores = cosine_scores(keys, np.asarray(query, dtype=np.float64))
+        top_i = int(np.argmax(scores))
+        n = len(slots)
+        gap = None
+        if n >= 2:
+            rival = float(np.max(np.delete(scores, top_i)))
+            gap = float(scores[top_i] - rival)
+        tau = float(self.inject.gap_tau.detach().cpu())
+        slot = slots[top_i]
+        return {
+            "n": n,
+            "index": top_i,
+            "value": slot.v,
+            "key": slot.k,
+            "name": slot.name,
+            "rel": slot.rel,
+            "cosine": float(scores[top_i]),
+            "gap": gap,
+            "confidence": retrieval_confidence(n, gap, tau),
+        }
+
+    def _set_delta(self, rank: Optional[dict], *, grad: bool) -> None:
+        if rank is None or float(rank["confidence"]) == 0.0:
             self._delta = None
             return
-        query = self._query_vector(prompt)
-        # Hard top-1. Soft top-4 at T=0.05 matched this on prefix free-gen and
-        # trailed it on natural questions; T=0.20 mixed neighbors and dropped
-        # N32 questions from 36/48 to 19/48. Measured in docs/llm_memory.md.
-        value = self.store.readout(query, mode="top1")
-        self._delta = self._compose(value, grad=False)
+        composed = self._compose(rank["value"], rank["key"], grad=grad)
+        conf = float(rank["confidence"])
+        self._delta = composed if conf == 1.0 else composed * conf
+
+    def _arm(self, prompt: str) -> None:
+        self._set_delta(self._rank(prompt), grad=False)
 
     def injection(self, prompt: str) -> np.ndarray:
-        """Vector added at the chosen layer. Zeros when the store is empty."""
+        """Vector added at the chosen layer. Zeros when the store is empty or the gap scale is 0."""
         if len(self.store) == 0:
             return np.zeros(self.hidden, dtype=np.float32)
         self._arm(prompt)
@@ -1222,30 +1327,18 @@ class LLMMemory:
         finally:
             self._delta = None
 
-    def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
-        """Token ids spelled by a linear readout, or None to use the LM.
-
-        Hard top-1. A winning phone slot with the phone readout on spells
-        ``+1-415-555-`` plus the four digits. A winning birthday slot with
-        the date readout on spells ``Month D, YYYY``. An empty store, any
-        other relation, or a readout that is still zero returns None.
-        ``max_new_tokens`` truncates the id list.
-        """
-        if not isinstance(prompt, str) or prompt == "":
-            raise ValueError("prompt is empty")
-        if int(max_new_tokens) < 0:
-            raise ValueError("max_new_tokens must be >= 0")
+    def _spell_ids(self, prompt: str, rank: Optional[dict], max_new_tokens: int) -> Optional[list]:
+        """Spelled ids when the winning relation is the one ``prompt`` is completing."""
+        if rank is None:
+            return None
         phone_on = float(self.inject.phone_on.detach().cpu()) != 0.0
         date_on = float(self.inject.date_on.detach().cpu()) != 0.0
-        if len(self.store) == 0 or not (phone_on or date_on):
+        if not (phone_on or date_on):
             return None
-        query = self._query_vector(prompt)
-        value, info = self.store.read(query, mode="top1")
-        top = info.get("top") if isinstance(info, dict) else None
-        if value is None or not top:
+        rel = rank["rel"]
+        if rel != completing_relation(prompt):
             return None
-        rel = top[1]
-        value_t = torch.as_tensor(np.asarray(value, dtype=np.float32))
+        value_t = torch.as_tensor(np.asarray(rank["value"], dtype=np.float32))
         spelled = None
         if rel == "phone" and phone_on:
             digits = self.inject.phone_digits(value_t)
@@ -1258,18 +1351,46 @@ class LLMMemory:
         ids = _id_list(self.tokenizer, spelled, add_special_tokens=False)
         return ids[: int(max_new_tokens)]
 
+    def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
+        """Token ids spelled by a linear readout, or None to use the LM.
+
+        Hard top-1. A winning phone slot spells ``+1-415-555-`` plus four
+        digits only when the prompt itself is completing a phone number. A
+        winning birthday slot spells ``Month D, YYYY`` only when the prompt
+        is completing a birthday. Any other prompt returns None, including a
+        phone slot asked about a snack. An empty store or a readout that is
+        still zero returns None. ``max_new_tokens`` truncates the id list.
+        """
+        if not isinstance(prompt, str) or prompt == "":
+            raise ValueError("prompt is empty")
+        if int(max_new_tokens) < 0:
+            raise ValueError("max_new_tokens must be >= 0")
+        return self._spell_ids(prompt, self._rank(prompt), int(max_new_tokens))
+
     def continuation_ids(
         self,
         prompt: str,
         max_new_tokens: int = 32,
         done: Optional[Callable[[list], bool]] = None,
+        *,
+        arm: bool = True,
     ) -> list:
+        """Greedy token ids. One query when ``arm`` is true.
+
+        ``arm=False`` keeps a residual the caller already set. The question
+        ablation uses that so a soft mix is not retrieved a second time.
+        """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
-        scripted = self.scripted_continuation(prompt, max_new_tokens)
-        if scripted is not None:
-            return scripted
-        self._arm(prompt)
+        if int(max_new_tokens) < 0:
+            raise ValueError("max_new_tokens must be >= 0")
+        if arm:
+            rank = self._rank(prompt)
+            scripted = self._spell_ids(prompt, rank, int(max_new_tokens))
+            if scripted is not None:
+                self._delta = None
+                return scripted
+            self._set_delta(rank, grad=False)
         try:
             with torch.no_grad():
                 return greedy_continuation(
@@ -1287,10 +1408,9 @@ class LLMMemory:
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        A phone slot is spelled from the phone readout, and a birthday slot
-        from the date readout, before the LM runs. Leading whitespace is
-        skipped before the stop, so
-        a natural question whose first token is a newline still yields the
+        A phone or birthday slot is spelled only when the prompt is completing
+        that relation. Leading whitespace is skipped before the stop, so a
+        natural question whose first token is a newline still yields the
         following line. The span then ends at the next newline or at
         sentence-ending punctuation.
         """
@@ -1302,12 +1422,14 @@ class LLMMemory:
         ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done)
         return decode_answer(self.tokenizer, ids)
 
-    def teacher_force_loss(self, prompt: str, answer: str, value) -> torch.Tensor:
-        """Next-token cross-entropy on ``answer`` with ``value`` injected.
+    def teacher_force_loss(self, prompt: str, answer: str, value, *, key=None, armed: bool = True) -> torch.Tensor:
+        """Next-token cross-entropy on ``answer``.
 
         ``prompt + answer`` is the teacher-forced string. ``prompt`` alone is
-        the generation prefix, so the fact text is not required in it. Used by
-        ``tidal.llm_memory_train``.
+        the generation prefix, so the fact text is not required in it. ``key``
+        is the fact key when the decision loss should see the frame. ``armed``
+        false scores the empty residual, which is the no-memory baseline.
+        Used by ``tidal.llm_memory_train``.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -1326,7 +1448,7 @@ class LLMMemory:
         idxs = [i for i, flag in enumerate(mask) if flag]
         if not idxs or min(idxs) < 1:
             raise ValueError("answer span produced no token the model can predict")
-        self._delta = self._compose(value, grad=True)
+        self._delta = self._compose(value, key, grad=True) if armed else None
         try:
             attn = _batch_mask(enc, self._device)
             kwargs = {"input_ids": ids, "use_cache": False}

@@ -162,18 +162,23 @@ def test_residual_raises_the_stored_byte():
     mem.close()
 
 
-def test_readout_queries_twice_unless_the_slot_is_spelled():
+def test_one_query_and_spelling_follows_the_prompt():
     mem = _memory()
     mem.inject.phone_on.fill_(1.0)
     assert mem.remember("Mara's favorite snack is apples.", answer="apples", name="Mara", rel="snack")
     snack = _count_path(mem, "Pick one snack for Mara.\nAnswer:", 4)
-    assert snack["queries"] == 2
+    assert snack["queries"] == 1
     assert snack["forwards"] == snack["queries"] + snack["new_tokens"]
     mem.store.clear()
     assert mem.remember(PHONE_FACT["text"], answer=PHONE_FACT["answer"], name="Quill", rel="phone")
-    spelled = mem.continuation_ids("What should we cook tonight?\nAnswer:", max_new_tokens=32)
+    unrelated = mem.continuation_ids("What should we cook tonight?\nAnswer:", max_new_tokens=32)
+    assert not phone_takeover(mem.tokenizer.decode(unrelated))
+    other = _count_path(mem, "What should we cook tonight?\nAnswer:", 4)
+    assert other["queries"] == 1
+    assert other["forwards"] == 1 + other["new_tokens"]
+    spelled = mem.continuation_ids("What is Quill's phone number?", max_new_tokens=32)
     assert phone_takeover(mem.tokenizer.decode(spelled))
-    phone = _count_path(mem, "What should we cook tonight?\nAnswer:", 4)
+    phone = _count_path(mem, "What is Quill's phone number?", 4)
     assert phone["queries"] == 1
     assert phone["forwards"] == 1
     mem.close()

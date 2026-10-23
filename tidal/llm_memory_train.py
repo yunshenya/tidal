@@ -6,10 +6,10 @@ tokens. Birthday answers concatenate field-token slices. Other answers
 pool the whole span.
 ``fit_phone_readout`` and ``fit_date_readout`` fit the linear spellings
 and do not touch the MLP.
-``add = scale(v) + MLP(scale(v))`` with the MLP's last layer starting at zero.
-Teacher-forced next-token cross-entropy on the answer, given the prompt only
-(the fact text is not in the prompt). A fraction of steps adds the v21 hinge
-on a wrong value.
+``add = c * (scale(v) + MLP(scale(v) + W k))``. ``fit_inject`` is the older
+prefix cross-entropy. ``fit_decision`` trains the same MLP on the decision
+continuation, with the forbidden word as a negative and the fact key as ``k``.
+A fraction of ``fit_inject`` steps adds the v21 hinge on a wrong value.
 
 CPU smoke, no download::
 
@@ -83,6 +83,110 @@ def _cache(mem, facts: list) -> list:
             }
         )
     return rows
+
+
+def fit_decision(
+    mem,
+    facts: list,
+    *,
+    steps: int = 400,
+    bs: int = 4,
+    lr: float = 3e-4,
+    margin: float = 1.0,
+    seed: int = 0,
+    weight_decay: float = 1e-4,
+    on_step=None,
+) -> list:
+    """Decision continuation loss. The forbidden word is the negative.
+
+    Each fact mapping has ``text``, ``a`` (stored answer), ``q`` (decision
+    prompt), ``good``, and ``bad``. ``good`` and ``bad`` are continuations,
+    including the leading space when the scorer uses one. The fact key is
+    passed into the MLP so a constraint frame is not the same input as a
+    preference frame with the same answer word. The value stays the
+    answer-span pool. Retrieval confidence is not applied here: the example's
+    own value is the one being taught.
+
+    The hinge is against the empty-store cross-entropy, not against an
+    absolute margin. An absolute margin can be satisfied while the inject
+    still moves probability toward the forbidden word. ``margin`` is how many
+    nats the good token must improve, and the bad token worsen, versus that
+    baseline.
+    """
+    import torch
+
+    if steps < 1:
+        raise ValueError("steps must be >= 1")
+    if bs < 1:
+        raise ValueError("bs must be >= 1")
+    if not facts:
+        raise ValueError("facts is empty")
+    if float(margin) < 0:
+        raise ValueError("margin must be >= 0")
+    random.seed(int(seed))
+    torch.manual_seed(int(seed))
+    cache = []
+    for fact in facts:
+        cache.append(
+            {
+                "value": mem.encode_value(fact["text"], fact["a"]),
+                "key": mem.encode_key(fact["text"], fact["a"]),
+                "prompt": fact["q"],
+                "good": fact["good"],
+                "bad": fact["bad"],
+            }
+        )
+    mem.inject.eval()
+    with torch.no_grad():
+        for ex in cache:
+            ex["ce_good0"] = float(
+                mem.teacher_force_loss(ex["prompt"], ex["good"], ex["value"], key=ex["key"], armed=False)
+            )
+            ex["ce_bad0"] = float(
+                mem.teacher_force_loss(ex["prompt"], ex["bad"], ex["value"], key=ex["key"], armed=False)
+            )
+    opt = torch.optim.AdamW(mem.inject.parameters(), lr=float(lr), weight_decay=float(weight_decay))
+    mem.inject.train()
+    log = []
+    try:
+        for step in range(1, int(steps) + 1):
+            # One graph at a time. Stacking a batch keeps every frozen-LM
+            # activation alive until the combined backward.
+            opt.zero_grad()
+            total = 0.0
+            for _ in range(int(bs)):
+                ex = cache[random.randrange(len(cache))]
+                loss_good = mem.teacher_force_loss(ex["prompt"], ex["good"], ex["value"], key=ex["key"])
+                loss_bad = mem.teacher_force_loss(ex["prompt"], ex["bad"], ex["value"], key=ex["key"])
+                # CE is -log p. Beat the empty-store baseline by ``margin`` nats
+                # on the good token and on the bad token.
+                base_good = loss_good.new_tensor(float(ex["ce_good0"]))
+                base_bad = loss_bad.new_tensor(float(ex["ce_bad0"]))
+                better_good = torch.relu(loss_good - base_good + float(margin))
+                worse_bad = torch.relu(base_bad + float(margin) - loss_bad)
+                loss = (loss_good + better_good + worse_bad) / float(bs)
+                loss.backward()
+                total += float(loss.detach())
+                mem._delta = None
+            opt.step()
+            mem._delta = None
+            row = {"step": step, "loss": total}
+            if on_step is not None and (step == 1 or step % 50 == 0 or step == int(steps)):
+                mem.inject.eval()
+                try:
+                    extra = on_step(step)
+                finally:
+                    mem.inject.train()
+                    mem._delta = None
+                if isinstance(extra, dict):
+                    row.update(extra)
+            if step == 1 or step % 50 == 0 or step == int(steps):
+                log.append(row)
+                print(row, flush=True)
+    finally:
+        mem.inject.eval()
+        mem._delta = None
+    return log
 
 
 def fit_inject(
