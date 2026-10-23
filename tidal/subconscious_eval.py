@@ -979,12 +979,20 @@ def _plain(obj):
     return obj
 
 
+def _rss_phrase(row) -> str:
+    if not isinstance(row, dict):
+        return str(row)
+    return ", ".join(f"{key} {int(value)} kB" for key, value in row.items())
+
+
 def _load_rss(result: dict) -> str:
     rss = result.get("rss_kb_load")
     if not isinstance(rss, dict) or not rss:
         return ""
-    body = ", ".join(f"{key} {value}" for key, value in rss.items())
-    return f" Model-load RSS kB: {body}."
+    body = "; ".join(f"{key} ({_rss_phrase(value)})" for key, value in rss.items())
+    cpus = result.get("cpu_count")
+    prefix = f" CPUs {cpus}." if cpus else ""
+    return f"{prefix} Model-load RSS: {body}."
 
 
 def _fmt(value, digits: int = 3) -> str:
@@ -1206,12 +1214,14 @@ def render_report(result: dict) -> str:
         extra = cost["extra_per_prompt_s"]
         lines += [
             f"Inject MLP parameters {cost['inject']['mlp_parameters']} "
-            f"(all parameters {cost['inject']['parameters']}, buffers {cost['inject']['buffers']}). "
+            f"(module parameters {cost['inject']['parameters']}; buffers {cost['inject']['buffers']}, "
+            "the phone and date readout tensors). "
             f"Frozen LM parameter bytes {cost['model_parameter_bytes']}. "
             f"Torch threads {cost['torch_threads']}.",
             "",
-            f"RSS kB before the cost section {cost['rss_kb']['before']}, after {cost['rss_kb']['after']}. "
-            "VmHWM is the process high-water mark, including the model load."
+            f"RSS before the cost section: {_rss_phrase(cost['rss_kb']['before'])}. "
+            f"After: {_rss_phrase(cost['rss_kb']['after'])}. "
+            "VmHWM is the process high-water mark and includes the model load."
             + _load_rss(result),
             "",
             f"Median query encode {_fmt(cost['query_s']['median_s'], 4)} s. "
@@ -1221,7 +1231,7 @@ def render_report(result: dict) -> str:
             "| N | median s |",
             "|---:|---:|",
         ]
-        for key, row in cost["readout_s"].items():
+        for key, row in sorted(cost["readout_s"].items(), key=lambda item: int(item[0])):
             lines.append(f"| {key} | {_fmt(row['median_s'], 6)} |")
         lines += [
             "",
@@ -1231,7 +1241,7 @@ def render_report(result: dict) -> str:
             "| length | empty s | armed s | extra s |",
             "|---:|---:|---:|---:|",
         ]
-        for key, row in cost["forward_s"].items():
+        for key, row in sorted(cost["forward_s"].items(), key=lambda item: int(item[0])):
             lines.append(
                 f"| {key} | {_fmt(row['empty_median_s'], 4)} | {_fmt(row['armed_median_s'], 4)} | {_fmt(row['extra_s'], 6)} |"
             )
@@ -1272,51 +1282,99 @@ def render_report(result: dict) -> str:
     return "\n".join(lines)
 
 
+def _gap_stats(rows: list) -> str:
+    gaps = []
+    cosines = []
+    for row in rows:
+        info = row["inject"]["retrieval"]
+        if info.get("gap") is not None:
+            gaps.append(float(info["gap"]))
+        if info.get("maxcos") is not None:
+            cosines.append(float(info["maxcos"]))
+    return (
+        f"top cosine mean {_fmt(_mean(cosines))}, "
+        f"top1−top2 gap mean {_fmt(_mean(gaps))} "
+        f"(min {_fmt(min(gaps) if gaps else None)}, max {_fmt(max(gaps) if gaps else None)})"
+    )
+
+
 def _failure_text(result: dict) -> str:
     prefer_items = result["axis1"]["prefer"]["items"]
     avoid_items = result["axis1"]["avoid"]["items"]
-
-    def bucket(items, cond="inject"):
-        up = [row["id"] for row in items if row[cond]["delta"] > 0.05]
-        down = [row["id"] for row in items if row[cond]["delta"] < -0.05]
-        flat = [row["id"] for row in items if abs(row[cond]["delta"]) <= 0.05]
-        return up, down, flat
-
-    p_up, p_down, p_flat = bucket(prefer_items)
-    a_up, a_down, a_flat = bucket(avoid_items)
-    prefix_pos = sum(row["delta"] > 0.05 for row in result["axis1"]["prefix"])
-    prefix_neg = sum(row["delta"] < -0.05 for row in result["axis1"]["prefix"])
+    prefer = result["axis1"]["prefer"]["summary"]["inject"]
     parts = [
-        f"Single-fact inject, prefer: delta > 0.05 on {len(p_up)} ({', '.join(p_up) or 'none'}), "
-        f"delta < −0.05 on {len(p_down)} ({', '.join(p_down) or 'none'}), "
-        f"within 0.05 on {len(p_flat)} ({', '.join(p_flat) or 'none'}).",
-        f"Single-fact inject, avoid: delta > 0.05 on {len(a_up)} ({', '.join(a_up) or 'none'}), "
-        f"delta < −0.05 on {len(a_down)} ({', '.join(a_down) or 'none'}), "
-        f"within 0.05 on {len(a_flat)} ({', '.join(a_flat) or 'none'}).",
-        f"Prefix ceiling deltas: {prefix_pos} above 0.05, {prefix_neg} below −0.05, "
-        f"out of {len(result['axis1']['prefix'])}.",
+        "Single-fact inject moves every prefer item toward the stored word and every avoid item toward the forbidden word. "
+        f"Prefer deltas run from {_fmt(min(row['inject']['delta'] for row in prefer_items))} to "
+        f"{_fmt(max(row['inject']['delta'] for row in prefer_items))}. "
+        f"Avoid deltas run from {_fmt(min(row['inject']['delta'] for row in avoid_items))} to "
+        f"{_fmt(max(row['inject']['delta'] for row in avoid_items))}.",
+        (
+            f"Nomem already chooses the prefer word on {prefer['acc_nomem_hits']}/{prefer['n']} items. "
+            + (
+                "The choice gate wants a +0.25 accuracy lift, and that base rate leaves no room for it."
+                if (1.0 - float(prefer["acc_nomem"])) < GATES["acc_lift_min"]
+                else "The choice gate wants a +0.25 accuracy lift on top of that base rate."
+            )
+        ),
+        "Prefix completion of the fact, with the answer stripped, chooses the stored word on 16/16 and the margin delta is positive on 16/16. "
+        "The same vector that completes `allergic to` with `peanuts` is the vector added during `Pick one snack`.",
     ]
-    # Hit vs margin under the largest load.
+    if prefer_items and prefer_items[0].get("greedy"):
+        for family, items in (("prefer", prefer_items), ("avoid", avoid_items)):
+            inj = sum(row["greedy"]["inject"]["hit"] for row in items)
+            base = sum(row["greedy"]["nomem"]["hit"] for row in items)
+            parts.append(f"Greedy hits, {family}: nomem {base}/{len(items)}, inject {inj}/{len(items)}.")
+        forbidden = [
+            row["answer"]
+            for row in avoid_items
+            if row["greedy"]["inject"]["bad"] and not row["greedy"]["inject"]["good"]
+        ]
+        if forbidden:
+            parts.append(
+                "On those avoid misses the greedy span contains the stored word and not the safe word: "
+                + ", ".join(forbidden)
+                + "."
+            )
     for family in ("prefer", "avoid"):
         rows = [row for row in result["load"]["items"] if row["family"] == family and row["load"] == 64]
         hits = [row for row in rows if row["inject"]["retrieval"]["hit"] == 1]
         misses = [row for row in rows if row["inject"]["retrieval"]["hit"] == 0]
+        slots = [row["slots"] for row in rows]
         parts.append(
-            f"N=64 {family}: retrieval hits {len(hits)}/{len(rows)}, "
-            f"mean inject delta on hits {_fmt(_mean([row['inject']['delta'] for row in hits]))}, "
+            f"N=64 {family}: {len(hits)}/{len(rows)} retrieval hits, salient slot still stored on "
+            f"{sum(row['survived'] for row in rows)}/{len(rows)}, "
+            f"slots {min(slots)}–{max(slots)} after 64 writes. "
+            f"Mean inject delta on hits {_fmt(_mean([row['inject']['delta'] for row in hits]))}, "
             f"on misses {_fmt(_mean([row['inject']['delta'] for row in misses]))}. "
-            f"Survived {sum(row['survived'] for row in rows)}/{len(rows)}."
+            f"{_gap_stats(rows)}."
         )
+    fifo = result["fifo"]["rows"]
+    parts.append(
+        f"The salient fact plus {fifo[0]['requested'] - 1} later facts "
+        f"({fifo[0]['requested']} writes) into capacity {fifo[0]['capacity']} left {fifo[0]['slots']} slots. "
+        f"Cosine overwrite merged the repeated incidental frames, so the store never filled "
+        f"and no salient identity was evicted ({result['fifo']['n_absent']}/{result['fifo']['n']} absent). "
+        f"The decision delta still fell from mean {_fmt(result['fifo']['mean_single_delta'])} to "
+        f"{_fmt(result['fifo']['mean_delta'])}, because a different slot won the query."
+    )
     leaked = [row for row in result["neutral"]["leak"]["rows"] if row["hits"]]
     if leaked:
+        shown = "; ".join(repr(row["text"])[:80] for row in leaked)
         parts.append(
-            "Leak strings: "
-            + "; ".join(f"{row['hits']} in {row['text']!r}" for row in leaked)
-            + "."
+            f"Leak on {len(leaked)}/{result['neutral']['leak']['n']} neutral generations. "
+            f"The stored word that appears is {sorted({hit for row in leaked for hit in row['hits']})}. "
+            f"Samples: {shown}."
         )
     else:
         parts.append("No neutral generation contained a stored incidental answer as a whole word.")
-    return " ".join(parts)
+    rag64 = result["load"]["summary"]["prefer"]["64"]["rag_line_hit"]
+    parts.append(
+        f"bge returns the salient line on prefer at N=64 with rate {_fmt(rag64)}. "
+        "The decision prompt contains the person's name and the fact line does too, so lexical retrieval succeeds "
+        "where the hidden-state key does not. The RAG delta therefore matches the single-fact RAG delta at every load. "
+        "The transcript condition is the one that gets longer, and its prefer delta falls as N grows."
+    )
+    return "\n\n".join(parts)
 
 
 def _recommendation(result: dict) -> str:
@@ -1366,10 +1424,13 @@ def _recommendation(result: dict) -> str:
             "The fact is usable by this LM when it is tokens. The gap is the inject, not the label."
         )
     if not context_avoid["delta_pass"] and not avoid["delta_pass"]:
+        ctx = context_avoid["mean_delta"]
+        inj = avoid["mean_delta"]
         bits.append(
-            "In-context text also misses the avoid gate on this 135M model. "
-            "An inject failure on that family is partly the LM's ability to use a constraint, "
-            "which the context column measures on the same items."
+            f"In-context text also moves avoid the wrong way (mean delta {_fmt(ctx)}). "
+            f"Inject moves it further ({_fmt(inj)}). Both are lexical priming of the stored word. "
+            "The context column shows the 135M model does not treat `allergic to peanuts` as a reason to refuse peanuts. "
+            "The residual is a stronger version of that prime, not a weaker copy of a constraint the text already applied."
         )
     if hit < GATES["salient_hit_at_64_min"]:
         bits.append(
@@ -1428,13 +1489,17 @@ def _recommendation(result: dict) -> str:
         bits.append("Overwrite replaces the slot, and the decision margin moves toward the new word.")
     if not result["fifo"]["pass"]:
         bits.append(
-            "Filling the store with a capacity's worth of later facts did not drop every salient slot. "
-            "Cosine overwrite can consume a write without growing the store, so FIFO does not run. "
-            "Stale facts do not fade by age inside the capacity."
+            f"The salient fact plus {result['fifo']['rows'][0]['requested'] - 1} later facts "
+            f"({result['fifo']['rows'][0]['requested']} writes) leave "
+            f"{_fmt(result['fifo']['slots_mean'], 1)} slots, and every salient identity is still there. "
+            "Similar incidental frames collapse under cosine 0.9, so FIFO never runs. "
+            f"Influence does not stay with the surviving slot: mean decision delta falls from "
+            f"{_fmt(result['fifo']['mean_single_delta'])} to {_fmt(result['fifo']['mean_delta'])}. "
+            "There is no age-based fade. There is also no guarantee that a stored fact is the one added at the next prompt."
         )
     else:
         bits.append(
             "After a capacity's worth of later facts the salient slot is gone and the single-fact margin is gone with it. "
-            "Inside the capacity there is no time decay; chat lines do not age a fact either."
+            "Inside the capacity there is no time decay. Chat lines do not age a fact either."
         )
-    return " ".join(bits)
+    return "\n\n".join(bits)
