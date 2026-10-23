@@ -1,0 +1,728 @@
+{
+  "bank_kind": "held",
+  "bank_sha256": "ef0d06d320c3e8e15f1ac78bbe3e486bdd3017ca37f61b193089303fe5e3d6e9",
+  "cost": {
+    "buffers": 66931,
+    "losers": 3,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "rank_forwards": 1,
+    "rank_gap": 0.18387485946378201,
+    "scale_strength_median_s": 5.23999915458262e-07
+  },
+  "direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.7501506805419922,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-0",
+          "margin": -0.12670326232910156,
+          "nomem_margin": -0.8768539428710938,
+          "stored_lift": -4.601710319519043
+        },
+        {
+          "delta": -5.149541854858398,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-1",
+          "margin": -2.3970260620117188,
+          "nomem_margin": 2.7525157928466797,
+          "stored_lift": 5.820599555969238
+        },
+        {
+          "delta": -0.36345386505126953,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-2",
+          "margin": 0.8699169158935547,
+          "nomem_margin": 1.2333707809448242,
+          "stored_lift": 0.6323509216308594
+        },
+        {
+          "delta": 1.5890321731567383,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-3",
+          "margin": 0.34356117248535156,
+          "nomem_margin": -1.2454710006713867,
+          "stored_lift": -2.4037952423095703
+        },
+        {
+          "delta": 0.5761146545410156,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-4",
+          "margin": -0.8814945220947266,
+          "nomem_margin": -1.4576091766357422,
+          "stored_lift": -0.8721580505371094
+        },
+        {
+          "delta": -0.2022418975830078,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-5",
+          "margin": 2.678738594055176,
+          "nomem_margin": 2.8809804916381836,
+          "stored_lift": -0.6098718643188477
+        },
+        {
+          "delta": 1.7314996719360352,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-6",
+          "margin": 2.1413888931274414,
+          "nomem_margin": 0.40988922119140625,
+          "stored_lift": -0.7845191955566406
+        },
+        {
+          "delta": -0.2217721939086914,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-held-avoid-7",
+          "margin": 0.7900781631469727,
+          "nomem_margin": 1.011850357055664,
+          "stored_lift": -0.8279104232788086
+        }
+      ],
+      "summary": {
+        "mean_delta": -0.16127657890319824,
+        "mean_stored_lift": -0.45587682723999023,
+        "n": 8,
+        "n_delta_pos": 4,
+        "n_stored_down": 6
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 8.56364631652832,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-0",
+          "margin": 6.55052375793457,
+          "nomem_margin": -2.01312255859375,
+          "stored_lift": 8.599936485290527
+        },
+        {
+          "delta": 12.246288061141968,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-1",
+          "margin": 15.941962003707886,
+          "nomem_margin": 3.695673942565918,
+          "stored_lift": 6.820143461227417
+        },
+        {
+          "delta": 12.686363242566586,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-2",
+          "margin": 12.72613050788641,
+          "nomem_margin": 0.03976726531982422,
+          "stored_lift": 13.514156363904476
+        },
+        {
+          "delta": 9.523597240447998,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-3",
+          "margin": 9.553147792816162,
+          "nomem_margin": 0.029550552368164062,
+          "stored_lift": 6.812239170074463
+        },
+        {
+          "delta": 8.20813274383545,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-4",
+          "margin": 9.004312515258789,
+          "nomem_margin": 0.7961797714233398,
+          "stored_lift": 3.5543928146362305
+        },
+        {
+          "delta": 6.290003776550293,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-5",
+          "margin": 6.650835037231445,
+          "nomem_margin": 0.36083126068115234,
+          "stored_lift": 7.281881332397461
+        },
+        {
+          "delta": 6.830828666687012,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-6",
+          "margin": 5.088912010192871,
+          "nomem_margin": -1.7419166564941406,
+          "stored_lift": 8.72847843170166
+        },
+        {
+          "delta": 13.185736656188965,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-held-prefer-7",
+          "margin": 13.209456443786621,
+          "nomem_margin": 0.02371978759765625,
+          "stored_lift": 11.754469871520996
+        }
+      ],
+      "summary": {
+        "mean_delta": 9.691824587993324,
+        "mean_stored_lift": 8.383212241344154,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 0,
+      "n": 8,
+      "rows": [
+        {
+          "delta": 0.04590415954589844,
+          "flip": 0,
+          "id": "rif-held-choice-0",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.024430274963378906,
+          "flip": 0,
+          "id": "rif-held-choice-1",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.006608009338378906,
+          "flip": 0,
+          "id": "rif-held-choice-2",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.08257007598876953,
+          "flip": 0,
+          "id": "rif-held-choice-3",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0018558502197265625,
+          "flip": 0,
+          "id": "rif-held-choice-4",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.019606590270996094,
+          "flip": 0,
+          "id": "rif-held-choice-5",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.005017280578613281,
+          "flip": 0,
+          "id": "rif-held-choice-6",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.05588245391845703,
+          "flip": 0,
+          "id": "rif-held-choice-7",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.802739808219562,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Draw two loud stables.\nCheck:",
+          "text": "\u2022 1."
+        },
+        {
+          "hits": [],
+          "prompt": "Explain an inland valley.\nCheck:",
+          "text": "1."
+        },
+        {
+          "hits": [],
+          "prompt": "When will mist settle.\nCheck:",
+          "text": "\u2022 The mist will settle in the first 1"
+        },
+        {
+          "hits": [],
+          "prompt": "Why would oak scent.\nCheck:",
+          "text": "The oak tree is a tree that is native to"
+        },
+        {
+          "hits": [],
+          "prompt": "Narrate some slow descent.\nCheck:",
+          "text": "\u2022 The air pressure is 100 k"
+        },
+        {
+          "hits": [],
+          "prompt": "Tally kegs atop sleds.\nCheck:",
+          "text": "10000000000"
+        },
+        {
+          "hits": [],
+          "prompt": "Which item rests by docks.\nCheck:",
+          "text": "\u2022 The item is in the dock."
+        },
+        {
+          "hits": [],
+          "prompt": "Suggest some muddy trail.\nCheck:",
+          "text": "The trail is muddy."
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": 0.0032662153244018555,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.0031676231731354865,
+          "delta": 0.0058078765869140625,
+          "id": "rif-held-nll-0",
+          "nll_inject": 13.597238540649414,
+          "nll_nomem": 13.5914306640625
+        },
+        {
+          "confidence": 0.010569520730801876,
+          "delta": 0.0021371841430664062,
+          "id": "rif-held-nll-1",
+          "nll_inject": 11.365148544311523,
+          "nll_nomem": 11.363011360168457
+        },
+        {
+          "confidence": 0.006974210562363456,
+          "delta": -0.00695037841796875,
+          "id": "rif-held-nll-2",
+          "nll_inject": 13.169729232788086,
+          "nll_nomem": 13.176679611206055
+        },
+        {
+          "confidence": 0.007851099789800281,
+          "delta": -0.00012493133544921875,
+          "id": "rif-held-nll-3",
+          "nll_inject": 12.396869659423828,
+          "nll_nomem": 12.396994590759277
+        },
+        {
+          "confidence": 0.018090636328569817,
+          "delta": 0.015051841735839844,
+          "id": "rif-held-nll-4",
+          "nll_inject": 14.936419486999512,
+          "nll_nomem": 14.921367645263672
+        },
+        {
+          "confidence": 0.012194682917338537,
+          "delta": -0.022798538208007812,
+          "id": "rif-held-nll-5",
+          "nll_inject": 15.6312255859375,
+          "nll_nomem": 15.654024124145508
+        },
+        {
+          "confidence": 0.009764761950745125,
+          "delta": 0.004428863525390625,
+          "id": "rif-held-nll-6",
+          "nll_inject": 14.95350456237793,
+          "nll_nomem": 14.949075698852539
+        },
+        {
+          "confidence": 0.07661220296756366,
+          "delta": 0.028577804565429688,
+          "id": "rif-held-nll-7",
+          "nll_inject": 19.62649917602539,
+          "nll_nomem": 19.59792137145996
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Draw two loud stables.\nCheck:",
+          "takeover": 0,
+          "text": "we have a stowaway."
+        },
+        {
+          "prompt": "Explain an inland valley.\nCheck:",
+          "takeover": 0,
+          "text": "you have an important section of the document."
+        },
+        {
+          "prompt": "When will mist settle.\nCheck:",
+          "takeover": 0,
+          "text": "you need to check your shipment, check your shipment, check your shipment, check your shipment, check your shipment, check your shipment, check your shipment, check"
+        },
+        {
+          "prompt": "Why would oak scent.\nCheck:",
+          "takeover": 0,
+          "text": "we need to find your research paper abstract, please read our paper abstract for more information, please read our paper abstract for more information, please read our paper abstract"
+        },
+        {
+          "prompt": "Read the phone saved under Cicaba please.",
+          "takeover": 0,
+          "text": "We have a lot of important documents."
+        },
+        {
+          "prompt": "Tell the birthday noted for Cicaba.",
+          "takeover": 1,
+          "text": "October 23, 2002"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Draw two loud stables.\nCheck:",
+          "takeover": 0,
+          "text": "Make sure everything is OK, then check it's fine, then check it's fine, then check it's fine, then check it's fine, then check"
+        },
+        {
+          "prompt": "Explain an inland valley.\nCheck:",
+          "takeover": 0,
+          "text": "Check to make sure you know how to do it, then do not do any of these things, then do not do any of these things, then do not"
+        },
+        {
+          "prompt": "When will mist settle.\nCheck:",
+          "takeover": 0,
+          "text": "6006,0006001,0001,0001,0001,000"
+        },
+        {
+          "prompt": "Why would oak scent.\nCheck:",
+          "takeover": 0,
+          "text": "You"
+        },
+        {
+          "prompt": "Read the phone saved under Cicaba please.",
+          "takeover": 1,
+          "text": "+1-415-555-1137"
+        },
+        {
+          "prompt": "Tell the birthday noted for Cicaba.",
+          "takeover": 0,
+          "text": "\"Twas the last of an ordinary day, so felt like a month, so was come,"
+        }
+      ],
+      "phone_question": 1,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "overwrite": {
+    "mean_delta": 4.350526764988899,
+    "mean_margin": 4.572538688778877,
+    "n": 8,
+    "n_follows": 8,
+    "n_pos": 7,
+    "rows": [
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8762774487953467,
+        "delta": 6.022567510604858,
+        "follows_new": true,
+        "id": "rif-held-overwrite-0",
+        "margin": 7.221015691757202,
+        "nomem_margin": 1.1984481811523438,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8690586417647301,
+        "delta": 3.437524676322937,
+        "follows_new": true,
+        "id": "rif-held-overwrite-1",
+        "margin": 5.268710970878601,
+        "nomem_margin": 1.831186294555664,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8840605554923929,
+        "delta": 4.604645729064941,
+        "follows_new": true,
+        "id": "rif-held-overwrite-2",
+        "margin": 4.096991539001465,
+        "nomem_margin": -0.5076541900634766,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 0.9999999999999998,
+        "cos_old": 0.7820049993039492,
+        "delta": 14.333609580993652,
+        "follows_new": true,
+        "id": "rif-held-overwrite-3",
+        "margin": 8.969480514526367,
+        "nomem_margin": -5.364129066467285,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8983268373217534,
+        "delta": 0.576991081237793,
+        "follows_new": true,
+        "id": "rif-held-overwrite-4",
+        "margin": 2.033663749694824,
+        "nomem_margin": 1.4566726684570312,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0000000000000002,
+        "cos_old": 0.9491728778251539,
+        "delta": 2.9896678924560547,
+        "follows_new": true,
+        "id": "rif-held-overwrite-5",
+        "margin": 5.721029281616211,
+        "nomem_margin": 2.7313613891601562,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 0.9999999999999998,
+        "cos_old": 0.9086462290233005,
+        "delta": 0.7392692565917969,
+        "follows_new": true,
+        "id": "rif-held-overwrite-6",
+        "margin": -2.9621105194091797,
+        "nomem_margin": -3.7013797760009766,
+        "positive": false,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 0.9999999999999998,
+        "cos_old": 0.8951821248931071,
+        "delta": 2.09993839263916,
+        "follows_new": true,
+        "id": "rif-held-overwrite-7",
+        "margin": 6.231528282165527,
+        "nomem_margin": 4.131589889526367,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      }
+    ]
+  },
+  "phases_s": {
+    "cost": 0.2432896760001313,
+    "direction": 3.310441281999374,
+    "neutral": 13.544132256996818,
+    "overwrite": 2.154840017999959,
+    "quartets": 2.030667758001073
+  },
+  "protocol": "subconscious-rif-v1",
+  "quartets": {
+    "competitor_drop_mean": 0.1970376173655192,
+    "competitor_drop_min": 0.10338211059570312,
+    "geometry_ok": true,
+    "quartets": [
+      {
+        "competitor_drops": [
+          0.35381460189819336,
+          0.1766049861907959,
+          0.14818859100341797
+        ],
+        "decay_confidence": 0.22984357432972752,
+        "decay_gap": 0.18387485946378201,
+        "decay_top": [
+          "Yacaba",
+          "warp"
+        ],
+        "geometry_ok": true,
+        "index": 0,
+        "items": [
+          {
+            "control_delta": 10.367671012878418,
+            "drop": 0.0,
+            "gap": 0.18387485946378201,
+            "hit": 1,
+            "id": "rif-held-q0-0",
+            "name": "Yacaba",
+            "rel": "warp",
+            "role": "target",
+            "top": [
+              "Yacaba",
+              "warp"
+            ],
+            "treated_delta": 10.367671012878418
+          },
+          {
+            "control_delta": 6.877101898193359,
+            "drop": 0.35381460189819336,
+            "gap": 0.17857738825644187,
+            "hit": 1,
+            "id": "rif-held-q0-1",
+            "name": "Zacaba",
+            "rel": "ruler",
+            "role": "competitor",
+            "top": [
+              "Zacaba",
+              "ruler"
+            ],
+            "treated_delta": 6.523287296295166
+          },
+          {
+            "control_delta": 6.5177001953125,
+            "drop": 0.1766049861907959,
+            "gap": 0.23156478897119104,
+            "hit": 1,
+            "id": "rif-held-q0-2",
+            "name": "Becaba",
+            "rel": "circle",
+            "role": "competitor",
+            "top": [
+              "Becaba",
+              "circle"
+            ],
+            "treated_delta": 6.341095209121704
+          },
+          {
+            "control_delta": 4.806880950927734,
+            "drop": 0.14818859100341797,
+            "gap": 0.2588969640839147,
+            "hit": 1,
+            "id": "rif-held-q0-3",
+            "name": "Cecaba",
+            "rel": "cone",
+            "role": "competitor",
+            "top": [
+              "Cecaba",
+              "cone"
+            ],
+            "treated_delta": 4.658692359924316
+          }
+        ],
+        "max_key_cosine": 0.8012271092366791,
+        "slots": 4,
+        "strengths": [
+          1.0,
+          0.97,
+          0.97,
+          0.97
+        ],
+        "winner_drop": 0.0
+      },
+      {
+        "competitor_drops": [
+          0.2844390869140625,
+          0.10338211059570312,
+          0.11579632759094238
+        ],
+        "decay_confidence": 0.3788854085683227,
+        "decay_gap": 0.30310832685465816,
+        "decay_top": [
+          "Decaba",
+          "cylinder"
+        ],
+        "geometry_ok": true,
+        "index": 1,
+        "items": [
+          {
+            "control_delta": 14.27883392572403,
+            "drop": 0.0,
+            "gap": 0.30310832685465816,
+            "hit": 1,
+            "id": "rif-held-q1-0",
+            "name": "Decaba",
+            "rel": "cylinder",
+            "role": "target",
+            "top": [
+              "Decaba",
+              "cylinder"
+            ],
+            "treated_delta": 14.27883392572403
+          },
+          {
+            "control_delta": 5.944281578063965,
+            "drop": 0.2844390869140625,
+            "gap": 0.2121665256757138,
+            "hit": 1,
+            "id": "rif-held-q1-1",
+            "name": "Fecaba",
+            "rel": "wedge",
+            "role": "competitor",
+            "top": [
+              "Fecaba",
+              "wedge"
+            ],
+            "treated_delta": 5.659842491149902
+          },
+          {
+            "control_delta": 3.102654457092285,
+            "drop": 0.10338211059570312,
+            "gap": 0.2387410596606226,
+            "hit": 1,
+            "id": "rif-held-q1-2",
+            "name": "Gecaba",
+            "rel": "plank",
+            "role": "competitor",
+            "top": [
+              "Gecaba",
+              "plank"
+            ],
+            "treated_delta": 2.999272346496582
+          },
+          {
+            "control_delta": 1.9827539920806885,
+            "drop": 0.11579632759094238,
+            "gap": 0.25316214126658687,
+            "hit": 1,
+            "id": "rif-held-q1-3",
+            "name": "Hecaba",
+            "rel": "post",
+            "role": "competitor",
+            "top": [
+              "Hecaba",
+              "post"
+            ],
+            "treated_delta": 1.866957664489746
+          }
+        ],
+        "max_key_cosine": 0.7343021523767759,
+        "slots": 4,
+        "strengths": [
+          1.0,
+          0.97,
+          0.97,
+          0.97
+        ],
+        "winner_drop": 0.0
+      }
+    ],
+    "winner_abs_drop_max": 0.0
+  },
+  "wall_s": 21.283370990997355
+}
