@@ -75,7 +75,7 @@ PATH_FLAGS = (
     {
         "path": "remember",
         "when": "each accepted fact",
-        "varies": "two full forwards (key, then value); chat and noise return before that",
+        "varies": "value forward, then key forward only if surprise clears the threshold; chat, noise, and a low score return earlier. Surprise is the answer-token NLL of the value forward's logits",
         "retries": False,
     },
 )

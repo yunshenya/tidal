@@ -32,7 +32,10 @@ are the shipped checkpoint; polarity does not replace them. The last layer of
 an untrained module is still zeros, so that module copies ``v`` through when
 ``c`` is 1 and ``w`` is 0. Phone and birthday
 spelling runs only when the winning relation is the one the prompt is
-completing. A continuation encodes the query once. When this wrapper loads
+completing. A continuation encodes the query once. ``remember`` scores a
+fact from the answer-token logprobs of that same value forward: chat and
+noise have salience 0, and a salient fact is written only when its surprise
+is at least ``surprise_tau``. There is no extra forward. When this wrapper loads
 the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
 by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP,
 plus linear readouts that spell ``+1-415-555-dddd`` from a phone value and
@@ -94,6 +97,12 @@ DEFAULT_GAP_TAU = 0.80
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
 POLARITY_SPAN = 2.0
+# Total answer-token NLL, in nats, from the value forward's logits.
+# Chat and noise stay at salience 0 and are not written.
+# Highest 0.25-grid point on the surprise fit bank that still writes the
+# facts those floors need and stays at or below the green-color floor.
+# Not retuned on the held-out bank.
+DEFAULT_SURPRISE_TAU = 2.0
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -949,6 +958,65 @@ def completing_relation(prompt: str) -> Optional[str]:
     return None
 
 
+def factual_salience(kind: str) -> float:
+    """1 for a fact, 0 for chat and noise. This is the existing write filter."""
+    if kind in ("chat", "noise"):
+        return 0.0
+    return 1.0
+
+
+def write_score(kind: str, surprise: float) -> float:
+    """One score: salience times total answer-token surprise, in nats.
+
+    Chat and noise score 0. A salient fact scores its surprise. Surprise is
+    nonnegative, so a threshold of 0 writes every salient fact.
+    """
+    return factual_salience(kind) * max(0.0, float(surprise))
+
+
+def accept_write(kind: str, surprise: float, tau: float) -> bool:
+    """Write only a salient fact whose score clears ``tau``.
+
+    Salience 0 never writes, including when ``tau`` is 0.
+    """
+    if factual_salience(kind) <= 0.0:
+        return False
+    if float(tau) < 0.0:
+        raise ValueError("surprise_tau must be >= 0")
+    return write_score(kind, surprise) >= float(tau)
+
+
+def answer_surprise(logits: torch.Tensor, token_ids: Sequence[int], answer_mask: Sequence[bool]) -> float:
+    """Total NLL, in nats, of the answer tokens under logits the forward already returned.
+
+    Position ``i`` is predicted by ``logits[i - 1]``. The score is the sum,
+    not the mean: a phone number's average digit is only moderately
+    surprising, while the number as a whole is not. The first token has no
+    predictor; if the answer is only that token, the score is 0.
+    """
+    if not torch.is_tensor(logits):
+        raise TypeError("logits must be a tensor")
+    if logits.dim() == 3:
+        if int(logits.shape[0]) != 1:
+            raise ValueError("answer surprise expects one sequence")
+        logits = logits[0]
+    if logits.dim() != 2:
+        raise ValueError(f"logits rank {logits.dim()} is not a sequence")
+    ids = [int(i) for i in token_ids]
+    mask = [bool(flag) for flag in answer_mask]
+    n = int(logits.shape[0])
+    if len(ids) != n or len(mask) != n:
+        raise ValueError(f"token axis {len(ids)} / mask {len(mask)} != logits {n}")
+    idxs = [i for i, flag in enumerate(mask) if flag and i >= 1]
+    if not idxs:
+        return 0.0
+    rows = logits[[i - 1 for i in idxs]]
+    target = torch.tensor([ids[i] for i in idxs], dtype=torch.long, device=rows.device)
+    logp = torch.log_softmax(rows.float(), dim=-1)
+    taken = logp.gather(1, target.unsqueeze(1)).squeeze(1)
+    return float((-taken.sum()).detach().cpu())
+
+
 def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     """Scale for the residual. One slot is unscaled. A tie adds nothing."""
     if int(n) < 2:
@@ -972,7 +1040,8 @@ class LLMMemory:
     leaves the residual untouched, so greedy tokens match the same model
     with the hook removed. Phone and birthday spelling runs only when the
     prompt is completing that relation. A zero polarity vector leaves the
-    gain at 1.
+    gain at 1. ``remember`` writes a salient fact only when the answer-token
+    surprise from the value forward clears ``surprise_tau``.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -1036,6 +1105,8 @@ class LLMMemory:
         )
         self._delta: Optional[torch.Tensor] = None
         self.last_added: Optional[torch.Tensor] = None
+        self.last_surprise: Optional[float] = None
+        self.last_write_score: float = 0.0
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
@@ -1098,7 +1169,8 @@ class LLMMemory:
             # Transformers may load SmolLM2 in bfloat16. Numpy cannot hold that
             # dtype, and the key center is estimated in float32/float64.
             hidden = hidden.detach().float()
-        return hidden, enc
+            logits = _logits_of(out).detach()
+        return hidden, enc, logits
 
     def _answer_mask(self, text: str, enc, answer: str, n_tokens: int) -> list:
         offsets = _offset_pairs(enc)
@@ -1135,8 +1207,16 @@ class LLMMemory:
         and 4 year tokens falls back to the whole-span mean. A phone with
         fewer than four answer tokens falls back to the mean of those tokens.
         """
-        hidden, enc = self._run_hidden(text)
+        value, _surprise = self._value_and_surprise(text, answer)
+        return value
+
+    def _value_and_surprise(self, text: str, answer: str):
+        """Answer-span value and its total answer-token NLL from one forward."""
+        hidden, enc, logits = self._run_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
+        ids = _batch_ids(enc)[0].tolist()
+        surprise = answer_surprise(logits, ids, mask)
+        del logits
         if date_like(answer):
             offsets = _offset_pairs(enc)
             if offsets is not None:
@@ -1144,12 +1224,15 @@ class LLMMemory:
                 if parts is not None:
                     month, day_rows, year_rows = parts
                     packed = assemble_date_value(month, day_rows, year_rows)
-                    return packed.detach().cpu().numpy().astype(np.float32, copy=False)
-        return pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
+                    value = packed.detach().cpu().numpy().astype(np.float32, copy=False)
+                    return value, surprise
+        value = pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
+        return value, surprise
 
     def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
         """Sink-dropped mean of the key tokens, before the fixed center."""
-        hidden, enc = self._run_hidden(text)
+        hidden, enc, _logits = self._run_hidden(text)
+        del _logits
         content = self._content_mask(enc, hidden.shape[0])
         if answer is None:
             mask = content
@@ -1250,13 +1333,28 @@ class LLMMemory:
         kind: str = "fact",
         surprise: Optional[float] = None,
     ) -> bool:
-        """Write one fact into the episodic store. Same ``(name, rel)`` overwrites."""
+        """Write one fact into the episodic store. Same ``(name, rel)`` overwrites.
+
+        Chat and noise are salience 0 and return before any forward. A fact's
+        score is the total NLL of its answer tokens under the logits of the
+        value forward. The key forward runs only when that score clears
+        ``surprise_tau``. A caller-supplied ``surprise`` does not replace the
+        measured one and does not bypass the threshold.
+        """
+        # The measured answer NLL is the score. A caller value cannot bypass it.
+        del surprise
         text, answer, name, rel, key, group, kind = _parse_fact(
             fact, answer, name, rel, key, group, kind
         )
-        if not self.store.gate_write(kind, surprise):
+        self.last_surprise = None
+        self.last_write_score = 0.0
+        if factual_salience(kind) <= 0.0:
             return False
-        value = self.encode_value(text, answer)
+        value, measured = self._value_and_surprise(text, answer)
+        self.last_surprise = float(measured)
+        self.last_write_score = write_score(kind, measured)
+        if not accept_write(kind, measured, DEFAULT_SURPRISE_TAU):
+            return False
         if key is None:
             key_vec = self.encode_key(text, answer)
         else:
@@ -1268,7 +1366,7 @@ class LLMMemory:
                 name=name,
                 rel=rel,
                 kind=kind,
-                surprise=surprise,
+                surprise=measured,
                 group=group,
             )
         )

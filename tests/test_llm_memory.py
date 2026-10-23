@@ -12,7 +12,16 @@ import pytest
 import torch
 import torch.nn as nn
 
-from tidal.llm_memory import LLMMemory, answer_span, decode_answer, greedy_continuation, span_complete
+from tidal.llm_memory import (
+    LLMMemory,
+    accept_write,
+    answer_span,
+    answer_surprise,
+    decode_answer,
+    greedy_continuation,
+    span_complete,
+    write_score,
+)
 from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -325,9 +334,73 @@ def test_generate_skips_leading_newline_and_stops():
 def test_chat_write_is_dropped():
     mem = _byte_memory()
     try:
+        model = mem.model
+        calls = {"n": 0}
+        forward = model.forward
+
+        def counted(*args, **kwargs):
+            calls["n"] += 1
+            return forward(*args, **kwargs)
+
+        model.forward = counted
         assert mem.remember("code is Y", name="ada", rel="phone", kind="chat") is False
+        assert calls["n"] == 0
+        assert mem.last_write_score == 0.0
         assert len(mem.store) == 0
         assert np.all(mem.injection("Ask:") == 0)
+    finally:
+        mem.close()
+
+
+def test_write_score_is_salience_times_surprise():
+    assert write_score("chat", 9.0) == 0.0
+    assert write_score("noise", 9.0) == 0.0
+    assert write_score("fact", 4.5) == 4.5
+    assert accept_write("chat", 9.0, 0.0) is False
+    assert accept_write("fact", 4.5, 4.5) is True
+    assert accept_write("fact", 4.49, 4.5) is False
+    logits = torch.zeros(3, 6)
+    logits[1, 2] = 20.0
+    assert answer_surprise(logits, [0, 1, 2], [False, False, True]) < 1e-4
+    logits[0] = 0.0
+    logits[1] = 0.0
+    logits[0, 5] = 20.0
+    logits[1, 0] = 20.0
+    one = answer_surprise(logits, [0, 1, 2], [False, False, True])
+    assert one > 10.0
+    both = answer_surprise(logits, [0, 1, 2], [False, True, True])
+    assert both > one + 10.0
+    assert answer_surprise(logits, [0, 1, 2], [True, False, False]) == 0.0
+
+
+def test_low_surprise_does_not_write_and_uses_one_forward():
+    import tidal.llm_memory as llm_memory
+
+    mem = _byte_memory()
+    try:
+        model = mem.model
+        calls = {"n": 0}
+        forward = model.forward
+
+        def counted(*args, **kwargs):
+            calls["n"] += 1
+            return forward(*args, **kwargs)
+
+        model.forward = counted
+        saved = llm_memory.DEFAULT_SURPRISE_TAU
+        llm_memory.DEFAULT_SURPRISE_TAU = 1.0e6
+        try:
+            assert mem.remember("code is Y", answer="Y", name="ada", rel="phone") is False
+        finally:
+            llm_memory.DEFAULT_SURPRISE_TAU = saved
+        assert calls["n"] == 1
+        assert mem.last_surprise is not None and mem.last_surprise < 1.0e6
+        assert mem.last_write_score == mem.last_surprise
+        assert len(mem.store) == 0
+        calls["n"] = 0
+        assert mem.remember("code is Y", answer="Y", name="ada", rel="phone", surprise=0.0) is True
+        assert calls["n"] == 2
+        assert len(mem.store) == 1
     finally:
         mem.close()
 
@@ -569,7 +642,7 @@ def test_sink_token_does_not_collapse_distinct_facts():
         legacy = []
         fixed = []
         for text, answer, name, rel in facts:
-            hidden, enc = mem._run_hidden(text)
+            hidden, enc, _logits = mem._run_hidden(text)
             content = mem._content_mask(enc, hidden.shape[0])
             answer_m = mem._answer_mask(text, enc, answer, hidden.shape[0])
             mask = [c and not a for c, a in zip(content, answer_m)]

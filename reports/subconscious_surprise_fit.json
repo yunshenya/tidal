@@ -1,0 +1,884 @@
+{
+  "cost": {
+    "above_threshold_forwards": 2,
+    "above_threshold_surprise": 17.42112159729004,
+    "above_threshold_written": true,
+    "answer_surprise_median_s": 5.357300142350141e-05,
+    "answer_surprise_rows": 1,
+    "below_threshold_forwards": 1,
+    "below_threshold_surprise": 0.1398274302482605,
+    "below_threshold_written": false,
+    "buffers": 66931,
+    "chat_forwards": 0,
+    "chat_written": false,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576
+  },
+  "fit": {
+    "avoid": {
+      "items": [
+        {
+          "choose": 0,
+          "delta": 1.2108478546142578,
+          "family": "avoid",
+          "id": "sur-fit-avoid-0",
+          "inject_margin": -0.30344390869140625,
+          "nomem_choose": 0,
+          "nomem_margin": -1.514291763305664,
+          "stored_lift": -1.6894712448120117,
+          "surprise": 13.244197845458984,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 0.3056783676147461,
+          "family": "avoid",
+          "id": "sur-fit-avoid-1",
+          "inject_margin": 0.6063976287841797,
+          "nomem_choose": 1,
+          "nomem_margin": 0.3007192611694336,
+          "stored_lift": -2.073772430419922,
+          "surprise": 11.318193435668945,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 2.2660627365112305,
+          "family": "avoid",
+          "id": "sur-fit-avoid-2",
+          "inject_margin": -0.5065650939941406,
+          "nomem_choose": 0,
+          "nomem_margin": -2.772627830505371,
+          "stored_lift": -1.562474250793457,
+          "surprise": 12.428105354309082,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": -0.5805988311767578,
+          "family": "avoid",
+          "id": "sur-fit-avoid-3",
+          "inject_margin": -2.0418872833251953,
+          "nomem_choose": 0,
+          "nomem_margin": -1.4612884521484375,
+          "stored_lift": -1.8203668594360352,
+          "surprise": 13.16605281829834,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 1.0448904037475586,
+          "family": "avoid",
+          "id": "sur-fit-avoid-4",
+          "inject_margin": -0.4365253448486328,
+          "nomem_choose": 0,
+          "nomem_margin": -1.4814157485961914,
+          "stored_lift": -2.052661895751953,
+          "surprise": 14.16398811340332,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": -0.26303577423095703,
+          "family": "avoid",
+          "id": "sur-fit-avoid-5",
+          "inject_margin": 2.8368234634399414,
+          "nomem_choose": 1,
+          "nomem_margin": 3.0998592376708984,
+          "stored_lift": -2.132486343383789,
+          "surprise": 12.56541633605957,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 1.4596834182739258,
+          "family": "avoid",
+          "id": "sur-fit-avoid-6",
+          "inject_margin": 3.822342872619629,
+          "nomem_choose": 1,
+          "nomem_margin": 2.362659454345703,
+          "stored_lift": -1.6531810760498047,
+          "surprise": 12.472915649414062,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 0.4307565689086914,
+          "family": "avoid",
+          "id": "sur-fit-avoid-7",
+          "inject_margin": 0.11811256408691406,
+          "nomem_choose": 0,
+          "nomem_margin": -0.31264400482177734,
+          "stored_lift": -2.0012311935424805,
+          "surprise": 13.481948852539062,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 14.16398811340332,
+        "mean_delta": 0.7342855930328369,
+        "mean_surprise": 12.855102300643921,
+        "min_surprise": 11.318193435668945,
+        "n": 8,
+        "n_delta_pos": 6,
+        "written": 8
+      }
+    },
+    "bank_kind": "fit",
+    "bank_sha256": "4a90e639af898812b9edd13f68cf6c1edebbadaf36c761d0b2d03fdddc30bec0",
+    "forbidden_down": 8,
+    "forbidden_lift": -1.8732056617736816,
+    "green": {
+      "max": 2.494716167449951,
+      "min": 2.091827392578125,
+      "n": 24
+    },
+    "hidden": 576,
+    "high": {
+      "items": [
+        {
+          "choose": 0,
+          "delta": 1.6902799606323242,
+          "family": "high",
+          "id": "sur-fit-high-0",
+          "inject_margin": -5.040178298950195,
+          "nomem_choose": 0,
+          "nomem_margin": -6.7304582595825195,
+          "stored_lift": 1.8235225677490234,
+          "surprise": 17.42112159729004,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 24.324005611240864,
+          "family": "high",
+          "id": "sur-fit-high-1",
+          "inject_margin": 20.917212016880512,
+          "nomem_choose": 0,
+          "nomem_margin": -3.4067935943603516,
+          "stored_lift": 16.177412517368793,
+          "surprise": 16.264549255371094,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 9.652011036872864,
+          "family": "high",
+          "id": "sur-fit-high-2",
+          "inject_margin": 7.908942341804504,
+          "nomem_choose": 0,
+          "nomem_margin": -1.7430686950683594,
+          "stored_lift": 12.698490262031555,
+          "surprise": 12.714225769042969,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 17.427289279177785,
+          "family": "high",
+          "id": "sur-fit-high-3",
+          "inject_margin": 12.618069441989064,
+          "nomem_choose": 0,
+          "nomem_margin": -4.809219837188721,
+          "stored_lift": 12.022205146029592,
+          "surprise": 12.035362243652344,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 8.794435024261475,
+          "family": "high",
+          "id": "sur-fit-high-4",
+          "inject_margin": 2.516887664794922,
+          "nomem_choose": 0,
+          "nomem_margin": -6.277547359466553,
+          "stored_lift": 7.315107345581055,
+          "surprise": 11.969139099121094,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 16.725521475076675,
+          "family": "high",
+          "id": "sur-fit-high-5",
+          "inject_margin": 12.670566946268082,
+          "nomem_choose": 0,
+          "nomem_margin": -4.054954528808594,
+          "stored_lift": 11.215258985757828,
+          "surprise": 11.23071575164795,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": -0.1355452537536621,
+          "family": "high",
+          "id": "sur-fit-high-6",
+          "inject_margin": -3.880504608154297,
+          "nomem_choose": 0,
+          "nomem_margin": -3.7449593544006348,
+          "stored_lift": -2.1767539978027344,
+          "surprise": 10.56087875366211,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 7.335763022303581,
+          "family": "high",
+          "id": "sur-fit-high-7",
+          "inject_margin": 11.334376379847527,
+          "nomem_choose": 1,
+          "nomem_margin": 3.9986133575439453,
+          "stored_lift": 9.903237387537956,
+          "surprise": 10.024419784545898,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 17.42112159729004,
+        "mean_delta": 10.726720019476488,
+        "mean_surprise": 12.777551531791687,
+        "min_surprise": 10.024419784545898,
+        "n": 8,
+        "n_delta_pos": 7,
+        "written": 8
+      }
+    },
+    "layer": 15,
+    "low": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-0",
+          "inject_margin": 23.928123772144318,
+          "nomem_choose": 1,
+          "nomem_margin": 23.928123772144318,
+          "stored_lift": 0.0,
+          "surprise": 0.1398274302482605,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-1",
+          "inject_margin": 14.731162950396538,
+          "nomem_choose": 1,
+          "nomem_margin": 14.731162950396538,
+          "stored_lift": 0.0,
+          "surprise": 0.14608485996723175,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-2",
+          "inject_margin": 12.137410581111908,
+          "nomem_choose": 1,
+          "nomem_margin": 12.137410581111908,
+          "stored_lift": 0.0,
+          "surprise": 0.500170886516571,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-3",
+          "inject_margin": 10.774801909923553,
+          "nomem_choose": 1,
+          "nomem_margin": 10.774801909923553,
+          "stored_lift": 0.0,
+          "surprise": 0.8702529072761536,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-4",
+          "inject_margin": 13.147278070449829,
+          "nomem_choose": 1,
+          "nomem_margin": 13.147278070449829,
+          "stored_lift": 0.0,
+          "surprise": 0.9660051465034485,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-5",
+          "inject_margin": 8.503555178642273,
+          "nomem_choose": 1,
+          "nomem_margin": 8.503555178642273,
+          "stored_lift": 0.0,
+          "surprise": 1.0771743059158325,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-6",
+          "inject_margin": 11.264992833137512,
+          "nomem_choose": 1,
+          "nomem_margin": 11.264992833137512,
+          "stored_lift": 0.0,
+          "surprise": 1.2173720598220825,
+          "written": false
+        },
+        {
+          "choose": 1,
+          "delta": 0.0,
+          "family": "low",
+          "id": "sur-fit-low-7",
+          "inject_margin": 12.93514084815979,
+          "nomem_choose": 1,
+          "nomem_margin": 12.93514084815979,
+          "stored_lift": 0.0,
+          "surprise": 1.2430856227874756,
+          "written": false
+        }
+      ],
+      "summary": {
+        "max_surprise": 1.2430856227874756,
+        "mean_delta": 0.0,
+        "mean_surprise": 0.769996652379632,
+        "min_surprise": 0.1398274302482605,
+        "n": 8,
+        "n_delta_pos": 0,
+        "written": 0
+      }
+    },
+    "measured": {
+      "avoid": [
+        13.244197845458984,
+        11.318193435668945,
+        12.428105354309082,
+        13.16605281829834,
+        14.16398811340332,
+        12.56541633605957,
+        12.472915649414062,
+        13.481948852539062
+      ],
+      "birthday": 19.126981735229492,
+      "high": [
+        17.42112159729004,
+        16.264549255371094,
+        12.714225769042969,
+        12.035362243652344,
+        11.969139099121094,
+        11.23071575164795,
+        10.56087875366211,
+        10.024419784545898
+      ],
+      "incidental": [
+        26.898990631103516,
+        28.538066864013672,
+        26.815780639648438,
+        25.21573257446289,
+        30.42913055419922,
+        28.98902130126953,
+        26.658666610717773,
+        27.919950485229492,
+        27.427091598510742,
+        31.55122947692871,
+        26.240493774414062,
+        28.92696189880371,
+        25.92889976501465,
+        27.797489166259766,
+        27.86080551147461,
+        29.312664031982422,
+        25.69071388244629,
+        27.561824798583984,
+        26.044788360595703,
+        26.265106201171875,
+        28.244516372680664,
+        25.656789779663086,
+        26.64687156677246,
+        29.741769790649414,
+        27.758392333984375,
+        30.356250762939453,
+        24.757131576538086,
+        25.137908935546875,
+        27.863121032714844,
+        30.57671356201172,
+        26.961002349853516,
+        29.056306838989258
+      ],
+      "low": [
+        0.1398274302482605,
+        0.14608485996723175,
+        0.500170886516571,
+        0.8702529072761536,
+        0.9660051465034485,
+        1.0771743059158325,
+        1.2173720598220825,
+        1.2430856227874756
+      ],
+      "phone": 40.438140869140625,
+      "prefer": [
+        15.123520851135254,
+        12.708942413330078,
+        12.574178695678711,
+        12.659303665161133,
+        12.928245544433594,
+        12.241342544555664,
+        13.425517082214355,
+        13.689445495605469
+      ]
+    },
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": -0.0018410682678222656,
+            "flip": 0,
+            "id": "sur-fit-ch-0",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.00930643081665039,
+            "flip": 0,
+            "id": "sur-fit-ch-1",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 5.7220458984375e-06,
+            "flip": 0,
+            "id": "sur-fit-ch-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.005925178527832031,
+            "flip": 0,
+            "id": "sur-fit-ch-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.07460689544677734,
+            "flip": 0,
+            "id": "sur-fit-ch-4",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.0061016082763671875,
+            "flip": 0,
+            "id": "sur-fit-ch-5",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.004988670349121094,
+            "flip": 0,
+            "id": "sur-fit-ch-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0040988922119140625,
+            "flip": 0,
+            "id": "sur-fit-ch-7",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          }
+        ]
+      },
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_surprise_min": 24.757131576538086,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Sketch one quiet granary.\nSeal:",
+            "text": "10000000000"
+          },
+          {
+            "hits": [],
+            "prompt": "How is flax pulled from a field?\nSeal:",
+            "text": "The flax is pulled from the field by a hand-operated"
+          },
+          {
+            "hits": [],
+            "prompt": "Where do kestrels perch at noon?\nSeal:",
+            "text": "1000 feet"
+          },
+          {
+            "hits": [],
+            "prompt": "Propose a gravel footpath inland.\nSeal:",
+            "text": "A small, round, smooth-sided, usually black,"
+          },
+          {
+            "hits": [],
+            "prompt": "What hangs beside a loom?\nSeal:",
+            "text": "a piece of leather or cloth, used for fastening"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe the smell of damp cedar.\nSeal:",
+            "text": "The smell of damp cedar."
+          },
+          {
+            "hits": [],
+            "prompt": "Narrate one canal lock.\nSeal:",
+            "text": "A lock that seals the entrance to a canal."
+          },
+          {
+            "hits": [],
+            "prompt": "Count markers past a breakwater.\nSeal:",
+            "text": "A seal is a type of underwater structure that is used to"
+          }
+        ]
+      },
+      "leak_written": 8,
+      "nll": {
+        "mean_delta": -0.014753401279449463,
+        "n_bad": 0,
+        "rows": [
+          {
+            "delta": -0.0008344650268554688,
+            "id": "sur-fit-nll-0",
+            "nll_inject": 11.444149017333984,
+            "nll_nomem": 11.44498348236084
+          },
+          {
+            "delta": 0.0024595260620117188,
+            "id": "sur-fit-nll-1",
+            "nll_inject": 9.53007698059082,
+            "nll_nomem": 9.527617454528809
+          },
+          {
+            "delta": 0.000659942626953125,
+            "id": "sur-fit-nll-2",
+            "nll_inject": 6.493755340576172,
+            "nll_nomem": 6.493095397949219
+          },
+          {
+            "delta": -0.15720796585083008,
+            "id": "sur-fit-nll-3",
+            "nll_inject": 5.974925518035889,
+            "nll_nomem": 6.132133483886719
+          },
+          {
+            "delta": -0.017564773559570312,
+            "id": "sur-fit-nll-4",
+            "nll_inject": 11.740495681762695,
+            "nll_nomem": 11.758060455322266
+          },
+          {
+            "delta": 0.0043239593505859375,
+            "id": "sur-fit-nll-5",
+            "nll_inject": 14.019113540649414,
+            "nll_nomem": 14.014789581298828
+          },
+          {
+            "delta": 0.044951438903808594,
+            "id": "sur-fit-nll-6",
+            "nll_inject": 10.626981735229492,
+            "nll_nomem": 10.582030296325684
+          },
+          {
+            "delta": 0.005185127258300781,
+            "id": "sur-fit-nll-7",
+            "nll_inject": 11.093921661376953,
+            "nll_nomem": 11.088736534118652
+          }
+        ]
+      }
+    },
+    "phases_s": {
+      "influence": 5.073180649000278,
+      "leak": 3.338551056000142,
+      "neutral": 3.8687924799996836,
+      "scripted": 12.057158524999977
+    },
+    "prefer": {
+      "items": [
+        {
+          "choose": 1,
+          "delta": 14.320680320262909,
+          "family": "prefer",
+          "id": "sur-fit-prefer-0",
+          "inject_margin": 15.834972083568573,
+          "nomem_choose": 1,
+          "nomem_margin": 1.514291763305664,
+          "stored_lift": 10.751210868358612,
+          "surprise": 15.123520851135254,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 20.21541991829872,
+          "family": "prefer",
+          "id": "sur-fit-prefer-1",
+          "inject_margin": 19.914700657129288,
+          "nomem_choose": 0,
+          "nomem_margin": -0.3007192611694336,
+          "stored_lift": 12.590884357690811,
+          "surprise": 12.708942413330078,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 8.162368774414062,
+          "family": "prefer",
+          "id": "sur-fit-prefer-2",
+          "inject_margin": 10.934996604919434,
+          "nomem_choose": 1,
+          "nomem_margin": 2.772627830505371,
+          "stored_lift": 7.231961250305176,
+          "surprise": 12.574178695678711,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 3.5807108879089355,
+          "family": "prefer",
+          "id": "sur-fit-prefer-3",
+          "inject_margin": 5.041999340057373,
+          "nomem_choose": 1,
+          "nomem_margin": 1.4612884521484375,
+          "stored_lift": 5.465785503387451,
+          "surprise": 12.659303665161133,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 21.694134175777435,
+          "family": "prefer",
+          "id": "sur-fit-prefer-4",
+          "inject_margin": 23.175549924373627,
+          "nomem_choose": 1,
+          "nomem_margin": 1.4814157485961914,
+          "stored_lift": 11.166565358638763,
+          "surprise": 12.928245544433594,
+          "written": true
+        },
+        {
+          "choose": 0,
+          "delta": 2.5230960845947266,
+          "family": "prefer",
+          "id": "sur-fit-prefer-5",
+          "inject_margin": -0.5767631530761719,
+          "nomem_choose": 0,
+          "nomem_margin": -3.0998592376708984,
+          "stored_lift": 3.1104354858398438,
+          "surprise": 12.241342544555664,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 2.4513959884643555,
+          "family": "prefer",
+          "id": "sur-fit-prefer-6",
+          "inject_margin": 0.08873653411865234,
+          "nomem_choose": 0,
+          "nomem_margin": -2.362659454345703,
+          "stored_lift": 4.308619499206543,
+          "surprise": 13.425517082214355,
+          "written": true
+        },
+        {
+          "choose": 1,
+          "delta": 6.355940818786621,
+          "family": "prefer",
+          "id": "sur-fit-prefer-7",
+          "inject_margin": 6.668584823608398,
+          "nomem_choose": 1,
+          "nomem_margin": 0.31264400482177734,
+          "stored_lift": 5.3357954025268555,
+          "surprise": 13.689445495605469,
+          "written": true
+        }
+      ],
+      "summary": {
+        "max_surprise": 15.123520851135254,
+        "mean_delta": 9.91296837106347,
+        "mean_surprise": 13.168812036514282,
+        "min_surprise": 12.241342544555664,
+        "n": 8,
+        "n_delta_pos": 8,
+        "written": 8
+      }
+    },
+    "prefer_lift": 7.495157215744257,
+    "protocol": "subconscious-surprise-fit-v1",
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Sketch one quiet granary.\nSeal:",
+          "takeover": 0,
+          "text": "SanITY L SanITY L Harris, L SanITY L San all L San all L San all L San all L San all L San all L San all"
+        },
+        {
+          "prompt": "How is flax pulled from a field?\nSeal:",
+          "takeover": 0,
+          "text": "scan full run cost run scan scan run scan run run run run scan run scan run run run run run scan run run scan run run run run scan run run"
+        },
+        {
+          "prompt": "Where do kestrels perch at noon?\nSeal:",
+          "takeover": 0,
+          "text": "we visit search platforms with visit full scalp with visit visit full load require Yu shore visit visit visit search position we visit position search we visit position search we visit position"
+        },
+        {
+          "prompt": "Propose a gravel footpath inland.\nSeal:",
+          "takeover": 0,
+          "text": "SanITYurburb Sanall run scan fullurb scalp load run run run run scanurburburburburburburburburburb run run run run run"
+        },
+        {
+          "prompt": "Recall Ostrek phone digits now.",
+          "takeover": 0,
+          "text": "SanITYurb Scurityurb scalp cover with micro scalp cover with micro scalp cover with scan fullitan fully scan with micro scalp with scan with micro scalp with scan"
+        },
+        {
+          "prompt": "State the birthday Ostrek keeps on file.",
+          "takeover": 1,
+          "text": "June 12, 1995"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_surprise": 19.126981735229492,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Sketch one quiet granary.\nSeal:",
+          "takeover": 0,
+          "text": "Scoot with awoop, as, as, as, as, as, as, as, as,, as,,,,,,"
+        },
+        {
+          "prompt": "How is flax pulled from a field?\nSeal:",
+          "takeover": 0,
+          "text": "Sears 3s, Sears 3s,s,s,s,s,6s,s,6s,6s,6"
+        },
+        {
+          "prompt": "Where do kestrels perch at noon?\nSeal:",
+          "takeover": 0,
+          "text": "ssudes atimes together,SSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOSOS"
+        },
+        {
+          "prompt": "Propose a gravel footpath inland.\nSeal:",
+          "takeover": 0,
+          "text": "entered the bank of the railroad notes, andropunesumsinoesangoonsinoughardsoonsinoughardsoonsoonsinoughardsoonsoonsoonsoons"
+        },
+        {
+          "prompt": "Recall Ostrek phone digits now.",
+          "takeover": 1,
+          "text": "+1-415-555-1194"
+        },
+        {
+          "prompt": "State the birthday Ostrek keeps on file.",
+          "takeover": 0,
+          "text": "RAsOsMsAsAsAsMEsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAsAs"
+        }
+      ],
+      "phone_question": 1,
+      "phone_surprise": 40.438140869140625,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    },
+    "tau": 2.0,
+    "wall_s": 24.33768271000008
+  },
+  "green": {
+    "max": 2.494716167449951,
+    "min": 2.091827392578125,
+    "n": 24
+  },
+  "measured": {
+    "avoid": [
+      13.244197845458984,
+      11.318193435668945,
+      12.428105354309082,
+      13.16605281829834,
+      14.16398811340332,
+      12.56541633605957,
+      12.472915649414062,
+      13.481948852539062
+    ],
+    "birthday": 19.126981735229492,
+    "high": [
+      17.42112159729004,
+      16.264549255371094,
+      12.714225769042969,
+      12.035362243652344,
+      11.969139099121094,
+      11.23071575164795,
+      10.56087875366211,
+      10.024419784545898
+    ],
+    "incidental": [
+      26.898990631103516,
+      28.538066864013672,
+      26.815780639648438,
+      25.21573257446289,
+      30.42913055419922,
+      28.98902130126953,
+      26.658666610717773,
+      27.919950485229492,
+      27.427091598510742,
+      31.55122947692871,
+      26.240493774414062,
+      28.92696189880371,
+      25.92889976501465,
+      27.797489166259766,
+      27.86080551147461,
+      29.312664031982422,
+      25.69071388244629,
+      27.561824798583984,
+      26.044788360595703,
+      26.265106201171875,
+      28.244516372680664,
+      25.656789779663086,
+      26.64687156677246,
+      29.741769790649414,
+      27.758392333984375,
+      30.356250762939453,
+      24.757131576538086,
+      25.137908935546875,
+      27.863121032714844,
+      30.57671356201172,
+      26.961002349853516,
+      29.056306838989258
+    ],
+    "low": [
+      0.1398274302482605,
+      0.14608485996723175,
+      0.500170886516571,
+      0.8702529072761536,
+      0.9660051465034485,
+      1.0771743059158325,
+      1.2173720598220825,
+      1.2430856227874756
+    ],
+    "phone": 40.438140869140625,
+    "prefer": [
+      15.123520851135254,
+      12.708942413330078,
+      12.574178695678711,
+      12.659303665161133,
+      12.928245544433594,
+      12.241342544555664,
+      13.425517082214355,
+      13.689445495605469
+    ]
+  },
+  "tau": 2.0
+}
