@@ -1,0 +1,477 @@
+{
+  "bank_kind": "held",
+  "bank_sha256": "e684c422049c720b269a50d762ca8ec1be87b397c93068ea2d61fa20ad4127ce",
+  "cost": {
+    "buffers": 66931,
+    "consolidate_forwards": 0,
+    "consolidate_median_s": 0.0030547499991371296,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "query_forwards": 1,
+    "remember_forwards": 2,
+    "replay_m": 1
+  },
+  "direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.32952404022216797,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-0",
+          "margin": -1.5831527709960938,
+          "nomem_margin": -1.9126768112182617,
+          "stored_lift": -0.8544893264770508,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.9636983871459961,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-1",
+          "margin": 0.9866571426391602,
+          "nomem_margin": 0.022958755493164062,
+          "stored_lift": -2.6277456283569336,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.16751575469970703,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-2",
+          "margin": 1.7334184646606445,
+          "nomem_margin": 1.5659027099609375,
+          "stored_lift": -0.5639123916625977,
+          "strength": 1.0
+        },
+        {
+          "delta": 2.1696529388427734,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-3",
+          "margin": 5.219482421875,
+          "nomem_margin": 3.0498294830322266,
+          "stored_lift": -2.1630401611328125,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.9227018356323242,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-4",
+          "margin": 1.464756965637207,
+          "nomem_margin": -0.4579448699951172,
+          "stored_lift": -1.837881088256836,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.7418718338012695,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-5",
+          "margin": 3.9559755325317383,
+          "nomem_margin": 3.2141036987304688,
+          "stored_lift": -1.415445327758789,
+          "strength": 1.0
+        },
+        {
+          "delta": 3.651744842529297,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-6",
+          "margin": 2.0893421173095703,
+          "nomem_margin": -1.5624027252197266,
+          "stored_lift": -1.3626785278320312,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.6744203567504883,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-7",
+          "margin": 3.996156692504883,
+          "nomem_margin": 2.3217363357543945,
+          "stored_lift": -1.7997827529907227,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 1.452641248703003,
+        "mean_stored_lift": -1.5781219005584717,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 8
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 27.063646214082837,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-0",
+          "margin": 23.569672482088208,
+          "nomem_margin": -3.493973731994629,
+          "stored_lift": 16.01508034951985,
+          "strength": 1.0
+        },
+        {
+          "delta": 27.008492521941662,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-1",
+          "margin": 27.419674925506115,
+          "nomem_margin": 0.4111824035644531,
+          "stored_lift": 13.871454291045666,
+          "strength": 1.0
+        },
+        {
+          "delta": 26.111989349126816,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-2",
+          "margin": 26.10615572333336,
+          "nomem_margin": -0.005833625793457031,
+          "stored_lift": 15.082558006048203,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.970106843858957,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-3",
+          "margin": 14.192668680101633,
+          "nomem_margin": -1.7774381637573242,
+          "stored_lift": 16.598287347704172,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.311187893152237,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-4",
+          "margin": 11.6376191675663,
+          "nomem_margin": -3.6735687255859375,
+          "stored_lift": 16.34810271859169,
+          "strength": 1.0
+        },
+        {
+          "delta": 14.425395665690303,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-5",
+          "margin": 14.214806256815791,
+          "nomem_margin": -0.21058940887451172,
+          "stored_lift": 14.219082532450557,
+          "strength": 1.0
+        },
+        {
+          "delta": 19.140147924423218,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-6",
+          "margin": 15.837314367294312,
+          "nomem_margin": -3.3028335571289062,
+          "stored_lift": 12.676599264144897,
+          "strength": 1.0
+        },
+        {
+          "delta": 20.96598209440708,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-7",
+          "margin": 19.958177223801613,
+          "nomem_margin": -1.0078048706054688,
+          "stored_lift": 15.476359024643898,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 20.74961856333539,
+        "mean_stored_lift": 15.035940441768616,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 0,
+      "n": 8,
+      "rows": [
+        {
+          "delta": -2.384185791015625e-05,
+          "flip": 0,
+          "id": "replay-held-choice-0",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0020427703857421875,
+          "flip": 0,
+          "id": "replay-held-choice-1",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.05309581756591797,
+          "flip": 0,
+          "id": "replay-held-choice-2",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.014726638793945312,
+          "flip": 0,
+          "id": "replay-held-choice-3",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.000110626220703125,
+          "flip": 0,
+          "id": "replay-held-choice-4",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.010942459106445312,
+          "flip": 0,
+          "id": "replay-held-choice-5",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.004291534423828125,
+          "flip": 0,
+          "id": "replay-held-choice-6",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -8.392333984375e-05,
+          "flip": 0,
+          "id": "replay-held-choice-7",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.8569699403430409,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Outline serving sidewalk slowing.\nCheck:",
+          "text": "100%"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline stagnant storyline submitted.\nCheck:",
+          "text": "100%"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline symbolized television thicker.\nCheck:",
+          "text": "100%"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline treasured unattended unnamed.\nCheck:",
+          "text": "100%"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline violations weakest wonderful.\nCheck:",
+          "text": "100%"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline adaptive affecting allowing.\nCheck:",
+          "text": "1."
+        },
+        {
+          "hits": [],
+          "prompt": "Outline appliances asparagus authorship.\nCheck:",
+          "text": "1."
+        },
+        {
+          "hits": [],
+          "prompt": "Outline biopsies bounded burials.\nCheck:",
+          "text": "1."
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": -0.010581612586975098,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.0030238322492920355,
+          "delta": -0.0033788681030273438,
+          "id": "replay-held-nll-0",
+          "nll_inject": 13.563924789428711,
+          "nll_nomem": 13.567303657531738
+        },
+        {
+          "confidence": 0.008660824965426167,
+          "delta": -0.005153656005859375,
+          "id": "replay-held-nll-1",
+          "nll_inject": 15.99565315246582,
+          "nll_nomem": 16.00080680847168
+        },
+        {
+          "confidence": 0.006556011813579343,
+          "delta": -0.0066089630126953125,
+          "id": "replay-held-nll-2",
+          "nll_inject": 11.041787147521973,
+          "nll_nomem": 11.048396110534668
+        },
+        {
+          "confidence": 0.02115268547669663,
+          "delta": -0.03692436218261719,
+          "id": "replay-held-nll-3",
+          "nll_inject": 16.700359344482422,
+          "nll_nomem": 16.73728370666504
+        },
+        {
+          "confidence": 0.01663725814472647,
+          "delta": 0.007040977478027344,
+          "id": "replay-held-nll-4",
+          "nll_inject": 13.225593566894531,
+          "nll_nomem": 13.218552589416504
+        },
+        {
+          "confidence": 0.019074189564699806,
+          "delta": -0.033415794372558594,
+          "id": "replay-held-nll-5",
+          "nll_inject": 13.907149314880371,
+          "nll_nomem": 13.94056510925293
+        },
+        {
+          "confidence": 0.013149566726165796,
+          "delta": -0.008138656616210938,
+          "id": "replay-held-nll-6",
+          "nll_inject": 13.824371337890625,
+          "nll_nomem": 13.832509994506836
+        },
+        {
+          "confidence": 0.009138200841794161,
+          "delta": 0.001926422119140625,
+          "id": "replay-held-nll-7",
+          "nll_inject": 17.633642196655273,
+          "nll_nomem": 17.631715774536133
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Outline serving sidewalk slowing.\nCheck:",
+          "takeover": 0,
+          "text": "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -"
+        },
+        {
+          "prompt": "Outline stagnant storyline submitted.\nCheck:",
+          "takeover": 0,
+          "text": "Check:"
+        },
+        {
+          "prompt": "Outline symbolized television thicker.\nCheck:",
+          "takeover": 0,
+          "text": "[ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ [ ["
+        },
+        {
+          "prompt": "Outline treasured unattended unnamed.\nCheck:",
+          "takeover": 0,
+          "text": "cd of book \u2013 cd of book \u2013 cd of book \u2013 cd of book \u2013 cd of book \u2013 cd of book \u2013 "
+        },
+        {
+          "prompt": "What phone number belongs with Wizomuko near the foremost gate?",
+          "takeover": 0,
+          "text": "** component ** component ** component ** component ** component ** component ** component ** component ** component ** component ** component ** component ** component ** component ** component"
+        },
+        {
+          "prompt": "Which birthday was written for Wizomuko before geographic?",
+          "takeover": 1,
+          "text": "December 8, 2011"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Outline serving sidewalk slowing.\nCheck:",
+          "takeover": 0,
+          "text": "Out of order, please."
+        },
+        {
+          "prompt": "Outline stagnant storyline submitted.\nCheck:",
+          "takeover": 0,
+          "text": "100% STABLE STORY, NOT STABLE STORY, NOT STABLE STORY, NOT STABLE STORY, NOT STABLE ST"
+        },
+        {
+          "prompt": "Outline symbolized television thicker.\nCheck:",
+          "takeover": 0,
+          "text": "Out of 1000, 1030 was the out-of-the-box."
+        },
+        {
+          "prompt": "Outline treasured unattended unnamed.\nCheck:",
+          "takeover": 0,
+          "text": "100% unopened, unmarked, unclaimed, unopened, unmarked, unmarked, unmarked, unmarked, unmarked,"
+        },
+        {
+          "prompt": "What phone number belongs with Wizomuko near the foremost gate?",
+          "takeover": 1,
+          "text": "+1-415-555-1158"
+        },
+        {
+          "prompt": "Which birthday was written for Wizomuko before geographic?",
+          "takeover": 0,
+          "text": "Wizomuko was written for Wizomuko before Wizomuko was written for Wizomuko."
+        }
+      ],
+      "phone_question": 1,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "phases_s": {
+    "cost": 1.8214498499983165,
+    "direction": 3.0733678809992853,
+    "neutral": 13.39863830199829,
+    "replay": 1.7208848350019252
+  },
+  "protocol": "subconscious-replay-v1",
+  "replay": {
+    "accepted": 32,
+    "consolidate_s": 0.0032960729986371007,
+    "control_n_slots": 31,
+    "control_near_dup_slots": 2,
+    "control_salient_mean": 0.5,
+    "decay": 0.5,
+    "every": 32,
+    "m": 1,
+    "merged": 1,
+    "near_dup_drop": 2,
+    "replay_n_slots": 30,
+    "replay_near_dup_slots": 0,
+    "replay_salient_mean": 1.0,
+    "salient_gain": 0.5,
+    "slot_drop": 1,
+    "slots": 30
+  },
+  "wall_s": 20.014340867997817
+}
