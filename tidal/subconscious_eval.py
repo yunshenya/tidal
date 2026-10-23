@@ -78,6 +78,12 @@ PATH_FLAGS = (
         "varies": "two full forwards (key, then value); chat and noise return before that",
         "retries": False,
     },
+    {
+        "path": "retrieval decay",
+        "when": "a strict top-1, inside the same query that arms the residual",
+        "varies": "multiplies the other soft top-4 strengths by a fixed keep; no extra forward",
+        "retries": False,
+    },
 )
 
 

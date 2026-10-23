@@ -21,13 +21,14 @@ hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
 estimated once from a calibration set and stored with the module. The add is
 
-    c * gain * (scale(v) + MLP(scale(v)))
+    c * s * gain * (scale(v) + MLP(scale(v)))
 
 with ``scale`` fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))``. ``w`` is a
 polarity vector and ``k`` is the winning slot's key. ``w = 0`` leaves
 ``gain = 1``, so the add matches the unscaled residual. ``c`` is 1 when the
 store has one slot. Otherwise ``c = clip((top1 cosine - top2 cosine) /
-gap_tau, 0, 1)`` and ``gap_tau`` is 0.80. A tie adds nothing. The MLP weights
+gap_tau, 0, 1)`` and ``gap_tau`` is 0.80. A tie adds nothing. ``s`` is the
+winning slot's retrieval strength (1 until that slot loses a top-4). The MLP weights
 are the shipped checkpoint; polarity does not replace them. The last layer of
 an untrained module is still zeros, so that module copies ``v`` through when
 ``c`` is 1 and ``w`` is 0. Phone and birthday
@@ -94,6 +95,15 @@ DEFAULT_GAP_TAU = 0.80
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
 POLARITY_SPAN = 2.0
+# Retrieval-induced forgetting. The competitive set is the store's soft top-k
+# (default 4). The injected value stays hard top-1. On a strict win the other
+# members of that set have their strength multiplied by this keep. A same-key
+# overwrite stores the new value and keeps none of the old one, which is a
+# stronger decay. 0.97 is the largest keep on the fit grid
+# (0.99, 0.97, 0.95, 0.93, 0.90, 0.85) that cleared the competitor-drop
+# floors. Not retuned on the held-out bank.
+RIF_COMPETITOR_KEEP = 0.97
+RIF_OVERWRITE_KEEP = 0.0
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -966,13 +976,16 @@ class LLMMemory:
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. The armed value is the top slot
     (hard top-1 on raw cosine), not a soft mixture, multiplied by
-    :func:`retrieval_confidence` and by the polarity gain of that slot's key.
-    ``soft_k`` and ``soft_temp`` are kept on
-    the episodic store; ``generate`` does not read them. An empty store
+    :func:`retrieval_confidence`, by that slot's retrieval strength, and by
+    the polarity gain of that slot's key. The store's ``soft_k`` (default 4)
+    is only the competitive set: on a strict top-1 win the other members of
+    that set have their strength multiplied by :data:`RIF_COMPETITOR_KEEP`.
+    There is no extra forward. An empty store
     leaves the residual untouched, so greedy tokens match the same model
     with the hook removed. Phone and birthday spelling runs only when the
     prompt is completing that relation. A zero polarity vector leaves the
-    gain at 1.
+    gain at 1. Same-key overwrite stores the new value and none of the old
+    one (:data:`RIF_OVERWRITE_KEEP`).
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -1261,6 +1274,14 @@ class LLMMemory:
             key_vec = self.encode_key(text, answer)
         else:
             key_vec = self.encode_key(key)
+        # Same-key overwrite. The old value is scaled by RIF_OVERWRITE_KEEP
+        # and then the new value is what the slot stores. Keep 0 drops the
+        # old value, which is stronger than the competitor keep.
+        hit = self.store._hit(key_vec, name, rel, group)
+        if hit is not None:
+            old = np.asarray(self.store._slots[hit].v, dtype=np.float64)
+            mixed = np.asarray(value, dtype=np.float64) + float(RIF_OVERWRITE_KEEP) * old
+            value = mixed.astype(np.float32, copy=False)
         return bool(
             self.store.write(
                 key_vec,
@@ -1322,6 +1343,7 @@ class LLMMemory:
         top = read_info.get("top") if isinstance(read_info, dict) else None
         n = len(slots)
         winner = int(read_info.get("top_i", top_i)) if isinstance(read_info, dict) else top_i
+        strength = float(slots[winner].strength)
         info.update(
             {
                 "n": n,
@@ -1331,21 +1353,32 @@ class LLMMemory:
                 "maxcos": float(scores[top_i]),
                 "gap": gap,
                 "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
+                "strength": strength,
             }
         )
+        # Soft top-k names the batch. Top-1 is the value above. A strict win
+        # decays the other members of that batch. A tie adds nothing and
+        # decays nothing. The cosines were already computed for the gap.
+        if gap is not None and float(gap) > 0.0 and n >= 2:
+            kk = min(int(self.store.soft_k), n)
+            chosen = np.argpartition(-scores, kk - 1)[:kk]
+            losers = [int(i) for i in chosen if int(i) != int(winner)]
+            self.store.scale_strength(losers, RIF_COMPETITOR_KEEP)
         return info
 
     def _set_delta(self, rank: dict) -> None:
         value = rank.get("value")
         conf = float(rank.get("confidence") or 0.0)
-        if value is None or conf <= 0.0:
+        strength = float(rank.get("strength") or 1.0)
+        if value is None or conf <= 0.0 or strength <= 0.0:
             self._delta = None
             return
         composed = self._compose(value, key=rank.get("key"), grad=False)
-        if conf >= 1.0:
+        scale = conf * strength
+        if scale == 1.0:
             self._delta = composed
             return
-        self._delta = composed * conf
+        self._delta = composed * scale
 
     def _arm(self, prompt: str) -> None:
         self._set_delta(self._rank(prompt))

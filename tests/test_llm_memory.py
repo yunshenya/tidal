@@ -12,7 +12,15 @@ import pytest
 import torch
 import torch.nn as nn
 
-from tidal.llm_memory import LLMMemory, answer_span, decode_answer, greedy_continuation, span_complete
+from tidal.llm_memory import (
+    LLMMemory,
+    RIF_COMPETITOR_KEEP,
+    RIF_OVERWRITE_KEEP,
+    answer_span,
+    decode_answer,
+    greedy_continuation,
+    span_complete,
+)
 from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -203,6 +211,67 @@ def test_other_identity_is_kept_and_readout_is_top1():
         mem.close()
         if mix is not None:
             mix.close()
+
+
+def test_top1_decays_the_other_soft_top4_and_overwrite_drops_the_old_value():
+    mem = _byte_memory()
+    try:
+        hidden = mem.hidden
+        query = np.zeros(hidden, dtype=np.float64)
+        query[0] = 1.0
+        mem._query_vector = lambda _prompt: query
+        # Cosines against query: 1.0, 0.8, 0.6, 0.4, and an outsider at 0.
+        specs = (
+            ("win", 1.0, 0.0),
+            ("a", 0.8, 0.6),
+            ("b", 0.6, 0.8),
+            ("c", 0.4, np.sqrt(1.0 - 0.16)),
+            ("out", 0.0, 1.0),
+        )
+        for name, x, y in specs:
+            key = np.zeros(hidden, dtype=np.float64)
+            key[0] = x
+            key[1] = y
+            value = np.zeros(hidden, dtype=np.float64)
+            value[2] = 1.0
+            assert mem.store.write(key, value, name=name, rel="fact")
+        rank = mem._rank("probe")
+        assert rank["top"] == ("win", "fact")
+        assert rank["strength"] == 1.0
+        strengths = {slot.name: slot.strength for slot in mem.store.slots}
+        assert strengths["win"] == 1.0
+        assert strengths["out"] == 1.0
+        for name in ("a", "b", "c"):
+            assert strengths[name] == pytest.approx(RIF_COMPETITOR_KEEP)
+        # A second win decays the same three again. The outsider stays out.
+        mem._rank("probe")
+        strengths = {slot.name: slot.strength for slot in mem.store.slots}
+        assert strengths["a"] == pytest.approx(RIF_COMPETITOR_KEEP ** 2)
+        assert strengths["out"] == 1.0
+        # A tie adds nothing and does not decay.
+        same = _byte_memory()
+        try:
+            q = np.zeros(same.hidden, dtype=np.float64)
+            q[0] = 1.0
+            same._query_vector = lambda _prompt: q
+            key = q.copy()
+            for name in ("a", "b"):
+                assert same.store.write(key, np.ones(same.hidden), name=name, rel="fact")
+            assert np.allclose(same.injection("query"), 0.0)
+            assert [slot.strength for slot in same.store.slots] == [1.0, 1.0]
+        finally:
+            same.close()
+        assert RIF_OVERWRITE_KEEP < RIF_COMPETITOR_KEEP
+        assert mem.remember("code is Y", name="ada", rel="phone")
+        first = mem.encode_value("code is Y", "Y")
+        assert mem.remember("code is Z", name="ada", rel="phone")
+        updated = [slot for slot in mem.store.slots if slot.name == "ada"]
+        assert len(updated) == 1
+        assert updated[0].strength == 1.0
+        assert np.allclose(updated[0].v, mem.encode_value("code is Z", "Z"))
+        assert not np.allclose(updated[0].v, first)
+    finally:
+        mem.close()
 
 
 def _legacy_v22(tok, ids) -> str:

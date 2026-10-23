@@ -248,6 +248,9 @@ class Slot:
     # Sentence vector that produced a flat-row key. ask ranks these.
     # recall keeps using ``k``. None on a sparse name/relation key.
     sentence: Optional[np.ndarray] = None
+    # 1 on a fresh write. LLMMemory scales the residual by this. Continuum
+    # readout does not. Same-key overwrite installs a new slot at 1.
+    strength: float = 1.0
 
 
 class EpisodicStore:
@@ -397,6 +400,18 @@ class EpisodicStore:
             self._slots.pop(oldest)
         self._slots.append(entry)
         return True
+
+    def scale_strength(self, indices: Sequence[int], keep: float) -> None:
+        """Multiply ``strength`` on the given slots. Does not change keys or values."""
+        factor = float(keep)
+        if not 0.0 <= factor <= 1.0:
+            raise ValueError("strength keep must be in [0, 1]")
+        n = len(self._slots)
+        for raw in indices:
+            i = int(raw)
+            if i < 0 or i >= n:
+                raise IndexError(f"slot {i} outside 0..{n - 1}")
+            self._slots[i].strength = float(self._slots[i].strength) * factor
 
     def _visible(self, group: Optional[str]) -> list[tuple[int, Slot]]:
         if group is None:

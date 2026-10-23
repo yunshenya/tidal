@@ -1,0 +1,728 @@
+{
+  "bank_kind": "fit",
+  "bank_sha256": "2ad8038eefbb5bd77f7d8d3d9e52b30f2c1abf4467713c35b8eacad5bb72fe44",
+  "cost": {
+    "buffers": 66931,
+    "losers": 3,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "rank_forwards": 1,
+    "rank_gap": 0.21803869296909073,
+    "scale_strength_median_s": 4.780013114213943e-07
+  },
+  "direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.4445056915283203,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-0",
+          "margin": -1.290964126586914,
+          "nomem_margin": -1.7354698181152344,
+          "stored_lift": -1.2126617431640625
+        },
+        {
+          "delta": 0.34771156311035156,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-1",
+          "margin": 0.3034095764160156,
+          "nomem_margin": -0.04430198669433594,
+          "stored_lift": -0.46046924591064453
+        },
+        {
+          "delta": 1.2600317001342773,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-2",
+          "margin": -0.726531982421875,
+          "nomem_margin": -1.9865636825561523,
+          "stored_lift": -1.4643430709838867
+        },
+        {
+          "delta": 1.671952247619629,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-3",
+          "margin": 3.132754325866699,
+          "nomem_margin": 1.4608020782470703,
+          "stored_lift": -2.264719009399414
+        },
+        {
+          "delta": 0.5089797973632812,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-4",
+          "margin": 3.4324188232421875,
+          "nomem_margin": 2.9234390258789062,
+          "stored_lift": -1.6319751739501953
+        },
+        {
+          "delta": 0.7695446014404297,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-5",
+          "margin": -2.2596797943115234,
+          "nomem_margin": -3.029224395751953,
+          "stored_lift": -1.3975372314453125
+        },
+        {
+          "delta": 0.3542499542236328,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-6",
+          "margin": 0.13704681396484375,
+          "nomem_margin": -0.21720314025878906,
+          "stored_lift": -0.7320346832275391
+        },
+        {
+          "delta": 3.4855804443359375,
+          "family": "avoid",
+          "hit": 1,
+          "id": "rif-fit-avoid-7",
+          "margin": 4.712599754333496,
+          "nomem_margin": 1.2270193099975586,
+          "stored_lift": -2.9398202896118164
+        }
+      ],
+      "summary": {
+        "mean_delta": 1.1053194999694824,
+        "mean_stored_lift": -1.5129450559616089,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 8
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 18.980857849121094,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-0",
+          "margin": 17.981639862060547,
+          "nomem_margin": -0.9992179870605469,
+          "stored_lift": 14.756523132324219
+        },
+        {
+          "delta": 12.21464722417295,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-1",
+          "margin": 12.138372352346778,
+          "nomem_margin": -0.07627487182617188,
+          "stored_lift": 15.297409942373633
+        },
+        {
+          "delta": 12.968164294958115,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-2",
+          "margin": 14.830905765295029,
+          "nomem_margin": 1.862741470336914,
+          "stored_lift": 12.434314578771591
+        },
+        {
+          "delta": 9.801915168762207,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-3",
+          "margin": 8.309072494506836,
+          "nomem_margin": -1.492842674255371,
+          "stored_lift": 10.303768157958984
+        },
+        {
+          "delta": 13.962981783784926,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-4",
+          "margin": 14.038346850313246,
+          "nomem_margin": 0.07536506652832031,
+          "stored_lift": 18.32820185367018
+        },
+        {
+          "delta": 9.2725191116333,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-5",
+          "margin": 9.386690139770508,
+          "nomem_margin": 0.11417102813720703,
+          "stored_lift": 13.006062507629395
+        },
+        {
+          "delta": 19.61172933317721,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-6",
+          "margin": 16.633150765672326,
+          "nomem_margin": -2.978578567504883,
+          "stored_lift": 19.3523642513901
+        },
+        {
+          "delta": 10.683473467826843,
+          "family": "prefer",
+          "hit": 1,
+          "id": "rif-fit-prefer-7",
+          "margin": 10.263150095939636,
+          "nomem_margin": -0.42032337188720703,
+          "stored_lift": 12.637274622917175
+        }
+      ],
+      "summary": {
+        "mean_delta": 13.43703602917958,
+        "mean_stored_lift": 14.51448988087941,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 0,
+      "n": 8,
+      "rows": [
+        {
+          "delta": -0.03386878967285156,
+          "flip": 0,
+          "id": "rif-fit-choice-0",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.001766204833984375,
+          "flip": 0,
+          "id": "rif-fit-choice-1",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0006656646728515625,
+          "flip": 0,
+          "id": "rif-fit-choice-2",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0006237030029296875,
+          "flip": 0,
+          "id": "rif-fit-choice-3",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.040619850158691406,
+          "flip": 0,
+          "id": "rif-fit-choice-4",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0004825592041015625,
+          "flip": 0,
+          "id": "rif-fit-choice-5",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.00830078125,
+          "flip": 0,
+          "id": "rif-fit-choice-6",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.006161689758300781,
+          "flip": 0,
+          "id": "rif-fit-choice-7",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.8107058339861757,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Render two silent coves.\nMark:",
+          "text": "\"I'm going to go to the other side of the"
+        },
+        {
+          "hits": [],
+          "prompt": "Describe a distant ridge.\nMark:",
+          "text": "A ridge is a line of hills or mountains that are separated"
+        },
+        {
+          "hits": [],
+          "prompt": "Where does fog gather.\nMark:",
+          "text": "It's a foggy day."
+        },
+        {
+          "hits": [],
+          "prompt": "How does cedar smell.\nMark:",
+          "text": "It smells like cedar."
+        },
+        {
+          "hits": [],
+          "prompt": "Recount a short climb.\nMark:",
+          "text": "\"I'm going to the top of the hill."
+        },
+        {
+          "hits": [],
+          "prompt": "Count crates on a wagon.\nMark:",
+          "text": "\"I'm going to the store."
+        },
+        {
+          "hits": [],
+          "prompt": "What sits near a well.\nMark:",
+          "text": "\"I'm going to the well."
+        },
+        {
+          "hits": [],
+          "prompt": "Propose a gravel path.\nMark:",
+          "text": "A path that is marked with a gravel path."
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": 0.006898641586303711,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.030406951504503288,
+          "delta": -0.00579833984375,
+          "id": "rif-fit-nll-0",
+          "nll_inject": 10.403419494628906,
+          "nll_nomem": 10.409217834472656
+        },
+        {
+          "confidence": 0.030095006115617162,
+          "delta": 0.012209892272949219,
+          "id": "rif-fit-nll-1",
+          "nll_inject": 14.676678657531738,
+          "nll_nomem": 14.664468765258789
+        },
+        {
+          "confidence": 0.041690085723212825,
+          "delta": -0.004965782165527344,
+          "id": "rif-fit-nll-2",
+          "nll_inject": 13.607765197753906,
+          "nll_nomem": 13.612730979919434
+        },
+        {
+          "confidence": 0.048062783830418905,
+          "delta": 0.027730941772460938,
+          "id": "rif-fit-nll-3",
+          "nll_inject": 10.21429443359375,
+          "nll_nomem": 10.186563491821289
+        },
+        {
+          "confidence": 0.05137418683017425,
+          "delta": -0.017641067504882812,
+          "id": "rif-fit-nll-4",
+          "nll_inject": 17.07408332824707,
+          "nll_nomem": 17.091724395751953
+        },
+        {
+          "confidence": 0.017916542518643386,
+          "delta": 0.004620552062988281,
+          "id": "rif-fit-nll-5",
+          "nll_inject": 9.379243850708008,
+          "nll_nomem": 9.37462329864502
+        },
+        {
+          "confidence": 0.016063165965683954,
+          "delta": -0.0044269561767578125,
+          "id": "rif-fit-nll-6",
+          "nll_inject": 17.940589904785156,
+          "nll_nomem": 17.945016860961914
+        },
+        {
+          "confidence": 0.054090061830934025,
+          "delta": 0.04345989227294922,
+          "id": "rif-fit-nll-7",
+          "nll_inject": 15.160492897033691,
+          "nll_nomem": 15.117033004760742
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Render two silent coves.\nMark:",
+          "takeover": 0,
+          "text": "\"I'm going to go to the other side of the island."
+        },
+        {
+          "prompt": "Describe a distant ridge.\nMark:",
+          "takeover": 0,
+          "text": "\"The ridge is a long, narrow, flat-topped mountain."
+        },
+        {
+          "prompt": "Where does fog gather.\nMark:",
+          "takeover": 0,
+          "text": "It's a foggy day."
+        },
+        {
+          "prompt": "How does cedar smell.\nMark:",
+          "takeover": 0,
+          "text": "It smells like cedar."
+        },
+        {
+          "prompt": "Give the phone listed for Gubaba today.",
+          "takeover": 0,
+          "text": "\"I'm going to call you back,\" he said."
+        },
+        {
+          "prompt": "State the birthday kept for Gubaba.",
+          "takeover": 1,
+          "text": "October 3, 1974"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Render two silent coves.\nMark:",
+          "takeover": 0,
+          "text": "You want to get rid of bills."
+        },
+        {
+          "prompt": "Describe a distant ridge.\nMark:",
+          "takeover": 0,
+          "text": "An old ridge, with a length of 10 miles, and a width of 10 miles,"
+        },
+        {
+          "prompt": "Where does fog gather.\nMark:",
+          "takeover": 0,
+          "text": "We're talking about a fog haul, and we're talking about a fog haul,"
+        },
+        {
+          "prompt": "How does cedar smell.\nMark:",
+          "takeover": 0,
+          "text": "Cares for the mail order order,"
+        },
+        {
+          "prompt": "Give the phone listed for Gubaba today.",
+          "takeover": 1,
+          "text": "+1-415-555-1186"
+        },
+        {
+          "prompt": "State the birthday kept for Gubaba.",
+          "takeover": 0,
+          "text": "The same way, you want to get the best possible"
+        }
+      ],
+      "phone_question": 1,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "overwrite": {
+    "mean_delta": 12.351589204918128,
+    "mean_margin": 11.311893942009192,
+    "n": 8,
+    "n_follows": 8,
+    "n_pos": 8,
+    "rows": [
+      {
+        "cos_new": 1.0000000000000002,
+        "cos_old": 0.868330399166182,
+        "delta": 8.666543912142515,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-0",
+        "margin": 7.462177228182554,
+        "nomem_margin": -1.204366683959961,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.858936186469573,
+        "delta": 11.397430313751101,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-1",
+        "margin": 6.883940590545535,
+        "nomem_margin": -4.513489723205566,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8869217939684981,
+        "delta": 15.835931824985892,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-2",
+        "margin": 12.435552644077688,
+        "nomem_margin": -3.400379180908203,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.7612074787825986,
+        "delta": 15.750911317765713,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-3",
+        "margin": 17.559786401689053,
+        "nomem_margin": 1.8088750839233398,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8334638586824253,
+        "delta": 9.128760904073715,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-4",
+        "margin": 8.962812036275864,
+        "nomem_margin": -0.16594886779785156,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.7780756050944027,
+        "delta": 18.860141006298363,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-5",
+        "margin": 16.891773429699242,
+        "nomem_margin": -1.968367576599121,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0,
+        "cos_old": 0.8205204862755637,
+        "delta": 10.909360513091087,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-6",
+        "margin": 10.905845269560814,
+        "nomem_margin": -0.0035152435302734375,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      },
+      {
+        "cos_new": 1.0000000000000002,
+        "cos_old": 0.842602172051289,
+        "delta": 8.263633847236633,
+        "follows_new": true,
+        "id": "rif-fit-overwrite-7",
+        "margin": 9.393263936042786,
+        "nomem_margin": 1.1296300888061523,
+        "positive": true,
+        "slots": 1,
+        "strength": 1.0
+      }
+    ]
+  },
+  "phases_s": {
+    "cost": 0.22453641099855304,
+    "direction": 3.274975379001262,
+    "neutral": 9.866304286999366,
+    "overwrite": 2.330805698999029,
+    "quartets": 2.0905361820005055
+  },
+  "protocol": "subconscious-rif-fit-v1",
+  "quartets": {
+    "competitor_drop_mean": 0.23719929655392966,
+    "competitor_drop_min": 0.10120916366577148,
+    "geometry_ok": true,
+    "quartets": [
+      {
+        "competitor_drops": [
+          0.36939114332199097,
+          0.25031065940856934,
+          0.3076963424682617
+        ],
+        "decay_confidence": 0.2725483662113634,
+        "decay_gap": 0.21803869296909073,
+        "decay_top": [
+          "Cobaba",
+          "pocket"
+        ],
+        "geometry_ok": true,
+        "index": 0,
+        "items": [
+          {
+            "control_delta": 11.743232727050781,
+            "drop": 0.0,
+            "gap": 0.21803869296909073,
+            "hit": 1,
+            "id": "rif-fit-q0-0",
+            "name": "Cobaba",
+            "rel": "pocket",
+            "role": "target",
+            "top": [
+              "Cobaba",
+              "pocket"
+            ],
+            "treated_delta": 11.743232727050781
+          },
+          {
+            "control_delta": 10.004646003246307,
+            "drop": 0.36939114332199097,
+            "gap": 0.2227846107060465,
+            "hit": 1,
+            "id": "rif-fit-q0-1",
+            "name": "Dobaba",
+            "rel": "castle",
+            "role": "competitor",
+            "top": [
+              "Dobaba",
+              "castle"
+            ],
+            "treated_delta": 9.635254859924316
+          },
+          {
+            "control_delta": 8.648432612419128,
+            "drop": 0.25031065940856934,
+            "gap": 0.24066124210092577,
+            "hit": 1,
+            "id": "rif-fit-q0-2",
+            "name": "Fobaba",
+            "rel": "island",
+            "role": "competitor",
+            "top": [
+              "Fobaba",
+              "island"
+            ],
+            "treated_delta": 8.398121953010559
+          },
+          {
+            "control_delta": 12.930363535881042,
+            "drop": 0.3076963424682617,
+            "gap": 0.25205750573816915,
+            "hit": 1,
+            "id": "rif-fit-q0-3",
+            "name": "Gobaba",
+            "rel": "ocean",
+            "role": "competitor",
+            "top": [
+              "Gobaba",
+              "ocean"
+            ],
+            "treated_delta": 12.62266719341278
+          }
+        ],
+        "max_key_cosine": 0.7577848790130668,
+        "slots": 4,
+        "strengths": [
+          1.0,
+          0.97,
+          0.97,
+          0.97
+        ],
+        "winner_drop": 0.0
+      },
+      {
+        "competitor_drops": [
+          0.190399169921875,
+          0.10120916366577148,
+          0.20418930053710938
+        ],
+        "decay_confidence": 0.25633758931710143,
+        "decay_gap": 0.20507007145368117,
+        "decay_top": [
+          "Hobaba",
+          "curtain"
+        ],
+        "geometry_ok": true,
+        "index": 1,
+        "items": [
+          {
+            "control_delta": 3.0909528732299805,
+            "drop": 0.0,
+            "gap": 0.20507007145368117,
+            "hit": 1,
+            "id": "rif-fit-q1-0",
+            "name": "Hobaba",
+            "rel": "curtain",
+            "role": "target",
+            "top": [
+              "Hobaba",
+              "curtain"
+            ],
+            "treated_delta": 3.0909528732299805
+          },
+          {
+            "control_delta": 5.527849197387695,
+            "drop": 0.190399169921875,
+            "gap": 0.23276805038857806,
+            "hit": 1,
+            "id": "rif-fit-q1-1",
+            "name": "Jobaba",
+            "rel": "shelf",
+            "role": "competitor",
+            "top": [
+              "Jobaba",
+              "shelf"
+            ],
+            "treated_delta": 5.33745002746582
+          },
+          {
+            "control_delta": 3.117912769317627,
+            "drop": 0.10120916366577148,
+            "gap": 0.23853082764606887,
+            "hit": 1,
+            "id": "rif-fit-q1-2",
+            "name": "Kobaba",
+            "rel": "torch",
+            "role": "competitor",
+            "top": [
+              "Kobaba",
+              "torch"
+            ],
+            "treated_delta": 3.0167036056518555
+          },
+          {
+            "control_delta": 3.695511817932129,
+            "drop": 0.20418930053710938,
+            "gap": 0.19446960454767337,
+            "hit": 1,
+            "id": "rif-fit-q1-3",
+            "name": "Lobaba",
+            "rel": "frying",
+            "role": "competitor",
+            "top": [
+              "Lobaba",
+              "frying"
+            ],
+            "treated_delta": 3.4913225173950195
+          }
+        ],
+        "max_key_cosine": 0.7835038155896438,
+        "slots": 4,
+        "strengths": [
+          1.0,
+          0.97,
+          0.97,
+          0.97
+        ],
+        "winner_drop": 0.0
+      }
+    ],
+    "winner_abs_drop_max": 0.0
+  },
+  "wall_s": 17.787157957998716
+}
