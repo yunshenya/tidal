@@ -2,6 +2,8 @@
 
 **48/48 with the turns, 48/48 on the empty log.** Probe answerable **365/370**, false abstain **0/370**, unanswerable **72/72**. Frozen hits **188/216**, false abstain **19/216**, near_dup_absent **30/30**. Dialogue dev **102/102** and **102/102**. Held-out at window 4, gated **108/108** and **108/108**, misses 0.
 
+The 136-episode deixis held-out does not clear its gate. With the turns **128/136**, empty log **136/136**, false accepts **0**. The miss is `addressee_extra` **0/8**: `other party`, `this one`, `that person`, `our guest`, `人家`, `对方`, `这位`, and `那位` abstain `absent_person` while a hearer is stored. Every other kind is complete on both passes. The rule was not changed.
+
 `you` / `你` / `您` and a hearer-role cue name the hearer `note_turn` stored. `he` / `she` / `they` / `他` / `她` / `ta` name the one person on the newest conversational turn who is neither speaker nor hearer. An empty log does not take that branch.
 
 `ABSTAIN_MARGIN` stays 0.1. `LEX_RIDGE_GAP` stays 0.15. There is no enable flag. `LLMMemory` is untouched. The frozen file was not an input. The rule was fixed before this run.
@@ -203,4 +205,45 @@ With the turns, every row is gated:
 | control_not_pronoun | 2 | abstain `absent_person` (`them`) |
 | control_plural | 2 | the ranker's first fact, not the hearer (`你们`) |
 
-A false accept is an `absent_person` or `missing_rel` row that returned a fact. The held-out confirms the rule only when every kind is complete on both passes and false accepts are 0. The scored run has not been started.
+A false accept is an `absent_person` or `missing_rel` row that returned a fact. The held-out confirms the rule only when every kind is complete on both passes and false accepts are 0.
+
+## Held-out result
+
+Scored once, with the rule left as it was when the gate was committed. Tiny encoder, same tie break as the 48-episode dev: an unscoped deictic ask returns the first fact of that relation.
+
+| kind | n | state | empty | state false accept | empty false accept |
+|---|---:|---:|---:|---:|---:|
+| hearer_set_you | 8 | 8/8 | 8/8 | 0 | 0 |
+| hearer_set_role | 4 | 4/4 | 4/4 | 0 | 0 |
+| hearer_unset | 4 | 4/4 | 4/4 | 0 | 0 |
+| hearer_switch | 4 | 4/4 | 4/4 | 0 | 0 |
+| hearer_ambiguous_mixed | 4 | 4/4 | 4/4 | 0 | 0 |
+| hearer_ambiguous_roster | 4 | 4/4 | 4/4 | 0 | 0 |
+| addressee_extra | 8 | 0/8 | 8/8 | 0 | 0 |
+| addressee_extra_unset | 4 | 4/4 | 4/4 | 0 | 0 |
+| third_unique | 8 | 8/8 | 8/8 | 0 | 0 |
+| third_oblique | 10 | 10/10 | 10/10 | 0 | 0 |
+| third_later | 8 | 8/8 | 8/8 | 0 | 0 |
+| third_after_ask | 8 | 8/8 | 8/8 | 0 | 0 |
+| third_tie | 6 | 6/6 | 6/6 | 0 | 0 |
+| window_filler_3 | 4 | 4/4 | 4/4 | 0 | 0 |
+| window_filler_4 | 4 | 4/4 | 4/4 | 0 | 0 |
+| window_filler_5 | 4 | 4/4 | 4/4 | 0 | 0 |
+| third_silent | 4 | 4/4 | 4/4 | 0 | 0 |
+| third_wrong_role | 8 | 8/8 | 8/8 | 0 | 0 |
+| third_former_hearer | 4 | 4/4 | 4/4 | 0 | 0 |
+| third_ask_hearer | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_named | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_you_named | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_indirect | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_indirect_noself | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_missing | 4 | 4/4 | 4/4 | 0 | 0 |
+| control_not_pronoun | 2 | 2/2 | 2/2 | 0 | 0 |
+| control_plural | 2 | 2/2 | 2/2 | 0 | 0 |
+| total | 136 | 128/136 | 136/136 | 0 | 0 |
+
+Eight state misses, all in `addressee_extra`, all `absent_person` rather than the stored hearer's value. No fact was returned on a row whose label was an abstention. Empty is 136/136.
+
+`you` / `your` / `yours` / `yourself` / `你` / `您`, the closed hearer nouns, `he` / `she` / `they` / `him` / `her` / `his` / `hers` / `their` / `他` / `她` / `ta` / `他的` / `她的` / `他们`, a 3-person and 4-person window, a pronoun after a name-ask, filler 3 inside the window, fillers 4 and 5 aged out, a tie, a silent write, a speaker-only or hearer-only mention, a hearer change, and the named and indirect controls all met the gate. `them` did not select the mentioned person. `你们` did not select the hearer.
+
+The eight forms are outside that closed class, and the current rule leaves them on the no-name path, which abstains. That is a real miss of the pre-registered reading. The rule was not edited to cover them. A later change would need a fresh slice.

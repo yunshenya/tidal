@@ -72,6 +72,30 @@ def test_heldout_is_disjoint_from_earlier_splits():
         assert row["max_jaccard"] < 0.50, (name, row["max_jaccard"], row["pair"])
 
 
+def test_heldout_score_matches_the_recorded_run():
+    """The pre-registered gate does not clear. The miss stays on the record.
+
+    addressee_extra is 0/8 with the turns. Every other kind is complete.
+    """
+    from tidal.question_deixis_heldout_eval import score_rows
+
+    scored = score_rows(build_rows())
+    kinds = scored["kinds"]
+    assert sum(slot["state"] for slot in kinds.values()) == 128
+    assert sum(slot["empty"] for slot in kinds.values()) == 136
+    assert sum(slot["state_fa"] + slot["empty_fa"] for slot in kinds.values()) == 0
+    assert kinds["addressee_extra"] == {
+        "n": 8, "state": 0, "empty": 8, "state_fa": 0, "empty_fa": 0,
+    }
+    for name, slot in kinds.items():
+        if name == "addressee_extra":
+            continue
+        assert slot["state"] == slot["n"], name
+        assert slot["empty"] == slot["n"], name
+    assert {row["kind"] for row in scored["failures"]} == {"addressee_extra"}
+    assert all(row["mode"] == "state" and row["reason"] == "absent_person" for row in scored["failures"])
+
+
 def test_rule_sources_do_not_import_the_heldout_bank():
     root = Path("tidal")
     for name in ("question_surface.py", "dialogue_state.py", "continuum.py", "llm_memory.py"):
