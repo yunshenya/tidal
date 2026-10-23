@@ -21,6 +21,7 @@ from tidal.question_surface import (
     ABSTAIN_MARGIN,
     LEX_RIDGE_GAP,
     apply_utterance,
+    name_spans,
     refresh_resolved,
     resolve_deixis,
     vocative_hearer,
@@ -70,6 +71,68 @@ def test_vocative_is_only_a_leading_exact_name():
     assert vocative_hearer("苟宁，卞茗，海带票", names) is None
     assert vocative_hearer("队列散了以后，苟宁，海带票", names) is None
     assert vocative_hearer("苟柠，海带票", ["苟宁"]) is None
+
+
+def test_vocative_reads_titles_particles_and_name_plus_you():
+    names = ["Ranulf", "Isolde", "Petronilla", "Wymond", "祁松", "康梧", "钮芮", "费桐"]
+    assert vocative_hearer("Dr. Ranulf, the tag", names) == "Ranulf"
+    assert vocative_hearer("Dr Ranulf, the tag", names) == "Ranulf"
+    assert vocative_hearer("dr. ranulf, the tag", names) == "Ranulf"
+    assert vocative_hearer("Mr. Isolde! the tag", names) == "Isolde"
+    assert vocative_hearer("Mrs. Petronilla: the tag", names) == "Petronilla"
+    assert vocative_hearer("Ms. Isolde, the tag", names) == "Isolde"
+    assert vocative_hearer("Miss Petronilla, the tag", names) == "Petronilla"
+    assert vocative_hearer("Dr. Ranulf you left the tag", names) == "Ranulf"
+    assert vocative_hearer("Isolde you left the tag", names) == "Isolde"
+    assert vocative_hearer("Isolde your tag stays", names) is None
+    assert vocative_hearer("Dr. Ranulf said you left", names) is None
+    assert vocative_hearer("Dr. Ranulf left the tag", names) is None
+    assert vocative_hearer("Dr.Ranulf, the tag", names) is None
+    assert vocative_hearer("Hey Ranulf, the tag", names) is None
+    assert vocative_hearer("Dr. Ranulf. the tag", names) is None
+    assert vocative_hearer("Dr. Swithin, the tag", names) is None
+    assert vocative_hearer("Dr. Ranulf, Ms. Isolde, the tag", names) is None
+    assert vocative_hearer("Mr. Ranulf, Isolde, wait", names) is None
+    assert vocative_hearer("老祁，牌", names) == "祁松"
+    assert vocative_hearer("小康，牌", names) == "康梧"
+    assert vocative_hearer("大钮，牌", names) == "钮芮"
+    assert vocative_hearer("阿费，牌", names) == "费桐"
+    assert vocative_hearer("老祁松，牌", names) == "祁松"
+    assert vocative_hearer("老祁松把牌收好", names) is None
+    assert vocative_hearer("祁老师，牌", names) == "祁松"
+    assert vocative_hearer("祁松老师，牌", names) == "祁松"
+    assert vocative_hearer("康老师啊，牌", names) == "康梧"
+    assert vocative_hearer("祁老师说牌", names) is None
+    assert vocative_hearer("祁老师把牌放好", names) is None
+    assert vocative_hearer("祁松啊，牌", names) == "祁松"
+    assert vocative_hearer("康梧呀，牌", names) == "康梧"
+    assert vocative_hearer("钮芮呢，牌", names) == "钮芮"
+    assert vocative_hearer("祁松啊牌", names) == "祁松"
+    assert vocative_hearer("康梧你把牌挪开", names) == "康梧"
+    assert vocative_hearer("祁松您先看牌", names) == "祁松"
+    assert vocative_hearer("康梧你们先看", names) is None
+    assert vocative_hearer("啊，算了", names) is None
+    assert vocative_hearer("呀，算了", names) is None
+    assert vocative_hearer("呢，先这样", names) is None
+    assert vocative_hearer("老师说先这样", names) is None
+    assert vocative_hearer("鄂老师，牌", names) is None
+    assert vocative_hearer("祁松先生，牌", names) is None
+    assert vocative_hearer("祁松啊，康梧，牌", names) is None
+    assert vocative_hearer("老祁，老康，牌", names) is None
+    assert vocative_hearer("老祁，牌", ["祁松", "祁桐"]) is None
+    assert vocative_hearer("祁老师，牌", ["祁松", "祁桐"]) is None
+    assert vocative_hearer("祁松，牌", ["祁松", "祁桐"]) == "祁松"
+    assert vocative_hearer("老祁松，牌", ["祁松", "祁桐"]) == "祁松"
+    assert name_spans("闵昭", "老闵昭的电话记在藤圈上的哪一页？") == []
+    assert name_spans("康梧", "康梧呀，牌") == []
+
+    state = DialogueState()
+    apply_utterance(state, "Dr. Ranulf, the tag stays.", names, None, hearer="Isolde")
+    assert state.hearer == "Isolde"
+    bare = DialogueState()
+    apply_utterance(bare, "老祁，牌靠着。", names, None)
+    assert bare.hearer == "祁松"
+    assert resolve_deixis("Which telephone is yours?", names, DialogueState()) is None
 
 
 def test_refresh_restamps_inside_the_window_only():

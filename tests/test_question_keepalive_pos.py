@@ -137,39 +137,13 @@ def test_pos_bank_does_not_replay_the_rule_and_production_files_do_not_import_it
         assert "enable_keepalive" not in text
 
 
-# Measured once against the frozen rule. A later edit that removes a miss
-# has to change this list on purpose. This run does not.
+# Widened vocative. The #36 title, particle, and name-plus-you rows are hits.
+# These four stay: five acknowledgements, then he / 他. TURN_WINDOW is 4.
 LISTENER_MISS_EIDS = (
     "pos_keep_en_he6a_phone",
     "pos_keep_en_he6a_birthday",
-    "pos_voc_en_dr_ranulf_phone",
-    "pos_voc_en_dr_ranulf_birthday",
-    "pos_voc_en_dr_isolde_phone",
-    "pos_voc_en_dr_isolde_birthday",
-    "pos_voc_en_dr_later_ranulf_phone",
-    "pos_voc_en_dr_later_ranulf_birthday",
-    "pos_voc_en_bare_you_later_isolde_phone",
-    "pos_voc_en_bare_you_later_isolde_birthday",
-    "pos_voc_en_dr_later_petronilla_phone",
-    "pos_voc_en_dr_later_petronilla_birthday",
     "pos_keep_zh_ta6a_phone",
     "pos_keep_zh_ta6a_birthday",
-    "pos_voc_zh_a_qi_phone",
-    "pos_voc_zh_a_qi_birthday",
-    "pos_voc_zh_ya_kang_phone",
-    "pos_voc_zh_ya_kang_birthday",
-    "pos_voc_zh_lao_qi_phone",
-    "pos_voc_zh_lao_qi_birthday",
-    "pos_voc_zh_teacher_qi_phone",
-    "pos_voc_zh_teacher_qi_birthday",
-    "pos_voc_zh_bare_ni_kang_phone",
-    "pos_voc_zh_bare_ni_kang_birthday",
-    "pos_voc_zh_lao_kang_later_phone",
-    "pos_voc_zh_lao_kang_later_birthday",
-    "pos_voc_zh_a_niu_later_phone",
-    "pos_voc_zh_a_niu_later_birthday",
-    "pos_voc_zh_teacher_kang_later_phone",
-    "pos_voc_zh_teacher_kang_later_birthday",
 )
 
 
@@ -184,12 +158,12 @@ def test_pos_score_locks_the_measured_misses():
         "n": 48, "state": 48, "empty": 48, "human": 44, "state_fa": 0, "empty_fa": 0,
     }
     assert scored["kind"]["pos_voc"] == {
-        "n": 48, "state": 48, "empty": 48, "human": 22, "state_fa": 0, "empty_fa": 0,
+        "n": 48, "state": 48, "empty": 48, "human": 48, "state_fa": 0, "empty_fa": 0,
     }
     assert scored["kind"]["neg_near"] == {
         "n": 20, "state": 20, "empty": 20, "human": 20, "state_fa": 0, "empty_fa": 0,
     }
-    assert scored["lang"]["en"]["n"] == 58 and scored["lang"]["en"]["human"] == 46
-    assert scored["lang"]["zh"]["n"] == 58 and scored["lang"]["zh"]["human"] == 40
+    assert scored["lang"]["en"]["n"] == 58 and scored["lang"]["en"]["human"] == 56
+    assert scored["lang"]["zh"]["n"] == 58 and scored["lang"]["zh"]["human"] == 56
     assert scored["lang"]["en"]["state"] == 58 and scored["lang"]["zh"]["state"] == 58
     assert scored["lang"]["en"]["state_fa"] == 0 and scored["lang"]["zh"]["empty_fa"] == 0

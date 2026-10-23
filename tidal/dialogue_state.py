@@ -9,8 +9,10 @@ asks inside ``TURN_WINDOW``. A write is on the log and is not that slice.
 An empty conversational slice leaves name resolution unchanged. Speaker is
 set only when ``note_turn`` is given one. Hearer is that argument when it
 is a non-empty string, including a string that is not on the roster; when
-the argument is empty, a leading exact roster name plus address punctuation
-is the hearer. A third-person pronoun reads ``eligible_latest``: the people
+the argument is empty, a leading vocative of one roster person is the
+hearer: the name, a courtesy title, ``老`` / ``小`` / ``大`` / ``阿``, or
+``老师``, then punctuation, ``啊`` / ``呀`` / ``呢``, or ``you`` / ``你`` /
+``您``. A third-person pronoun reads ``eligible_latest``: the people
 on the newest conversational turn in the window who are neither of those
 two. ``refresh`` restamps one in-window mention onto the current turn. It
 does not append a name, and it does not pull a mention back into the window.

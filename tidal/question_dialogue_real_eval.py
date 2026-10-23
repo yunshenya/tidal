@@ -323,7 +323,7 @@ def recommendation(scored: dict) -> str:
             "Keep the two updates, and do not widen the mechanism further on this bank. "
             "Gated rows match the rule on both passes, and a rule abstain never returned "
             "a value. A resolved pronoun restamps that person's in-window mention, and a "
-            "leading exact name plus address punctuation is the hearer when the caller "
+            "leading vocative of one roster person is the hearer when the caller "
             "did not pass one. The pronoun is not stored as a name, and a mention outside "
             "the window is not pulled back. What still disagrees with the listener is "
             "outside that contract: four quiet turns with no pronoun age a name out, two "
