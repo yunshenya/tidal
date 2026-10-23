@@ -1,7 +1,7 @@
 """Wider vocative held-out.
 
-Listener labels were committed before the score. This file checks the bank
-shape and disjointness. The score lock is added after that one score.
+Listener labels were committed before the score. The score lock records that
+one run. It does not relabel a row.
 """
 from collections import Counter
 from pathlib import Path
@@ -88,6 +88,28 @@ def test_widen_bank_is_disjoint():
     for name, row in report.items():
         assert row["literal"] == 0, name
         assert row["max_jaccard"] < 0.50, (name, row["max_jaccard"], row["pair"])
+
+
+def test_widen_score_locks_the_measured_run():
+    from tidal.question_vocative_widen_eval import replay_rows, score_rows
+
+    scored = score_rows(replay_rows())
+    assert scored["listener_misses"] == []
+    assert scored["encoder_misses"] == []
+    assert scored["kind"]["pos"] == {
+        "n": 68, "state": 68, "empty": 68, "human": 68, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["kind"]["neg"] == {
+        "n": 44, "state": 44, "empty": 44, "human": 44, "state_fa": 0, "empty_fa": 0,
+    }
+    assert scored["lang"]["en"]["n"] == 56 and scored["lang"]["en"]["human"] == 56
+    assert scored["lang"]["zh"]["n"] == 56 and scored["lang"]["zh"]["human"] == 56
+    assert scored["lang"]["en"]["state_fa"] == 0 and scored["lang"]["zh"]["empty_fa"] == 0
+    assert len(scored["shape"]) == 56
+    for name, slot in scored["shape"].items():
+        assert slot == {
+            "n": 2, "state": 2, "empty": 2, "human": 2, "state_fa": 0, "empty_fa": 0,
+        }, name
 
 
 def test_widen_bank_does_not_replay_the_rule_and_production_files_do_not_import_it():

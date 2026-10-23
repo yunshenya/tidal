@@ -296,3 +296,5 @@ No encoder miss. State and empty matched the replayed rule on all 116 asks.
 ## Recommendation
 
 Keep both updates on the evidence of the 42-ask bank and the 94-ask expansion. A pronoun chain keeps a person alive only while some mention is still inside the window, and it does not write the pronoun out as a name. A leading exact name plus address punctuation is the only vocative. The positive slice was not used to change that. Its 30 listener misses stay as scored: five quiet turns before `he` / `他`, and addresses the frozen vocative does not read (`Dr.`, `啊`, `呀`, `老` plus a surname, surname plus `老师`, and a name then `you` / `你` with no comma). Gender, open addressee forms, insertions, swaps, the speaker read as `he`, and `你们` stay as they are.
+
+The widening of those vocatives is a later change, measured in `reports/dialogue_vocative_widen.md`. This section stays the score of the rule before that change. The five-acknowledgement rows are still the window.
