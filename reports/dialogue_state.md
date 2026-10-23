@@ -6,7 +6,7 @@
 
 ## Rule
 
-`DialogueState` is one log per group (`tidal/dialogue_state.py`). The design, the update rules, and the deixis extension that is not implemented are in `docs/dialogue_state.md`.
+`DialogueState` is one log per group (`tidal/dialogue_state.py`). The design and the update rules are in `docs/dialogue_state.md`. Pronoun resolution, added after this edit-1 rule, is in `reports/deixis.md`.
 
 `ask` reads `conversational()`: utterance and ask mentions inside the last `TURN_WINDOW` (4) turns, most recent first, one entry per person. The question being answered is not its own prior mention. A fact write is on `recent()` and is not on that list, so a store that merely contains the person does not license an edit. `new_session` drops that group's mentions and keeps the facts. `episodic.clear()` drops every log.
 

@@ -6,12 +6,15 @@ cannot license it. This object records writes, utterances, and earlier asks
 with recency. ``ask`` reads the conversational slice: utterances and earlier
 asks inside ``TURN_WINDOW``. A write is on the log and is not that slice.
 
-An empty conversational slice leaves name resolution unchanged.
+An empty conversational slice leaves name resolution unchanged. Speaker and
+hearer are set only when ``note_turn`` is given them. A third-person pronoun
+reads ``eligible_latest``: the people on the newest conversational turn in
+the window who are neither of those two.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 # Conversational turns that still count as recent. A mention older than this
 # is not active. Four covers a short exchange. Fact writes do not use a turn.
@@ -42,6 +45,7 @@ class DialogueState:
 
     def __init__(self) -> None:
         self.turn = 0
+        self.utterances = 0
         self.speaker: Optional[str] = None
         self.hearer: Optional[str] = None
         self._seq = 0
@@ -66,6 +70,7 @@ class DialogueState:
     ) -> None:
         """One conversational utterance. Opens a turn even if nobody is named."""
         self.turn += 1
+        self.utterances += 1
         self._open_ask = ""
         if isinstance(speaker, str) and speaker:
             self.speaker = speaker
@@ -108,6 +113,43 @@ class DialogueState:
                 best[item.name] = item.seq
         ordered = sorted(best.items(), key=lambda pair: -pair[1])
         return tuple(name for name, _seq in ordered)
+
+    def eligible_latest(self, *, ignore_surface: str = "") -> Tuple[str, ...]:
+        """People on the newest conversational turn who are not speaker or hearer.
+
+        Same window and same ``ignore_surface`` rule as ``conversational``.
+        A write is not eligible. Two names on that newest turn are both
+        returned, in mention order, and the caller abstains. One name is the
+        most recent third person. An older name still inside the window does
+        not join this tuple.
+        """
+        if self.turn <= 0:
+            return ()
+        cutoff = self.turn - TURN_WINDOW
+        blocked = set()
+        if isinstance(self.speaker, str) and self.speaker:
+            blocked.add(self.speaker)
+        if isinstance(self.hearer, str) and self.hearer:
+            blocked.add(self.hearer)
+        best: Dict[str, Tuple[int, int]] = {}
+        for item in self._mentions:
+            if item.source not in ("utterance", "ask"):
+                continue
+            if item.turn <= cutoff or item.turn > self.turn:
+                continue
+            if ignore_surface and item.source == "ask" and item.surface == ignore_surface:
+                continue
+            if item.name in blocked:
+                continue
+            prev = best.get(item.name)
+            if prev is None or (item.turn, item.seq) > prev:
+                best[item.name] = (item.turn, item.seq)
+        if not best:
+            return ()
+        top = max(turn for turn, _seq in best.values())
+        tied = [(seq, name) for name, (turn, seq) in best.items() if turn == top]
+        tied.sort()
+        return tuple(name for _seq, name in tied)
 
     def recent(self) -> Tuple[str, ...]:
         """Every source, most recent first, including writes. Not the ask gate."""
