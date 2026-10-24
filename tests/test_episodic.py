@@ -546,23 +546,40 @@ def _cos(a, b):
     return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
 
 
+def _sparse_name_rel(name, rel, query, n_feat=8):
+    """Sparse name/relation row. Constant-heavy rows are the other regime."""
+    feats = np.zeros(n_feat, np.float32)
+    feats[0] = 1.0 if query else -1.0
+    feats[1 + (name % 3)] = 1.0
+    feats[4 + rel] = 0.5
+    return feats
+
+
 def test_flat_feature_rows_do_not_share_one_cosine():
     """A constant-heavy feature row must not pin unrelated sentences together.
 
-    Sparse name/relation rows stay on the uncorrected projection, so the
-    question head's encoder states do not move. Flat rows drop that offset.
+    Sparse rows stay on the uncorrected projection. Flat rows drop that offset.
     Same-identity overwrite still replaces the slot. Two different identities
     whose uncorrected states sit above 0.9 both remain at the live threshold.
     """
     torch.backends.mkldnn.enabled = False
-    from tidal.question_head import _feats, load_reference
+    from tidal.vap import VAPModel
+    from tidal.continuum import Continuum, _cfg
 
-    cont = load_reference(overwrite_cos=0.9)
+    torch.manual_seed(0)
+    model = VAPModel(8, d=32, hidden=32, layers=1, dropout=0).eval()
+    model.tproj = torch.nn.Linear(512, 32)
+    model.tproj.eval()
+    # A constant bias disappears in LayerNorm. This shared direction does not,
+    # so uncorrected flat rows sit in one cone and the corrected rows do not.
+    with torch.no_grad():
+        model.fproj.bias.copy_(torch.linspace(-1, 1, model.fproj.bias.numel()))
+    cont = Continuum(model, _cfg(dict(levels=(), episodic_cfg={"overwrite_cos": 0.9})))
     rng = np.random.default_rng(1)
     for name in range(4):
         for rel in range(4):
             for query in (False, True):
-                feats = _feats(name, rel, query)
+                feats = _sparse_name_rel(name, rel, query)
                 text = rng.normal(size=512).astype(np.float32)
                 got = cont.embed_event(feats, text)
                 raw = _uncorrected_text_state(cont, feats, text)
@@ -617,11 +634,7 @@ def test_episodic_eval_is_larger_than_n96_and_exact():
         "causality": 100,
         "hard": 90,
         "evict": 16,
-        "question": 1200,
     }
-    qr = report["question_ret"]
-    assert qr["question_trained_hits"] > qr["question_cosine_hits"]
-    assert qr["fact_key_cosine_hits"] == qr["n_test"]
     for key, floor in floors.items():
         assert report["counts"][key] >= floor, report["counts"]
 

@@ -22,7 +22,7 @@ from tidal.llm_memory import (
     completing_relation,
 )
 from tidal.llm_memory_data import _MONTHS, names, parse_date
-from tidal.question_heldout_data import _tokens
+from tidal.subconscious_eval import _tokens
 from tidal.subconscious_data import PHONE_FACT, bank_payload, decision_items, incidental_facts
 from tidal.subconscious_direction_data import (
     fit_bank as direction_fit_bank,

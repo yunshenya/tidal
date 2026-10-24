@@ -31,7 +31,7 @@ from tidal.llm_memory import (
     surprise_quantile,
 )
 from tidal.llm_memory_data import _MONTHS, names, parse_date
-from tidal.question_heldout_data import _tokens
+from tidal.subconscious_eval import _tokens
 from tidal.subconscious_circadian_data import (
     fit_bank as clock_fit_bank,
     held_bank as clock_held_bank,

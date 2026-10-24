@@ -42,6 +42,18 @@ from tidal.subconscious_data import (
     word_hit,
 )
 
+def _tokens(text: str) -> set:
+    import re
+    out = set()
+    for match in re.finditer(r"[\u4e00-\u9fff]|[A-Za-z0-9]+(?:'[A-Za-z]+)?", text):
+        seg = match.group(0)
+        if "\u4e00" <= seg[0] <= "\u9fff":
+            out.add(seg)
+        else:
+            out.add(seg.lower())
+    return out
+
+
 GREEDY_TOKENS = 12
 SCRIPTED_TOKENS = 32
 COST_NEW_TOKENS = 8

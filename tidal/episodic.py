@@ -21,11 +21,7 @@ Retrieval in this module is raw cosine over slot keys. The vector added by
 Exact text is decoded from the winning slot's code, not from that blend. An
 empty store returns zeros.
 
-Natural-language questions, where the encoder state is not the stored key,
-go through ``Continuum.ask`` / ``Continuum.query``. Flat rows carry a sentence
-vector on the slot and are ranked in that space. Sparse name/relation rows
-use the contrastive head in ``tidal.question_head``. Neither ranker is applied
-here. A residual inject MLP was measured on these byte codes and is not used
+A residual inject MLP was measured on these byte codes and is not used
 here: it pushed phone codes off the grid. ``tidal.llm_memory`` injects LM
 hidden states, not these codes. The counts are in ``docs/episodic_memory.md``
 and ``docs/llm_memory.md``.

@@ -13,6 +13,8 @@ import hashlib
 import json
 import re
 
+from tidal.subconscious_ids import LEAK_STORE_N
+
 PROTOCOL = "subconscious-v1"
 
 # Length-normalized natural log. n = 8 items in a family unless noted.
@@ -54,7 +56,6 @@ LOADS = (8, 32, 64)
 RETRIEVAL_SIZES = (8, 32, 64, 128)
 REPEAT_WRITES = 3
 NEUTRAL_STORE_N = 32
-LEAK_STORE_N = 8
 DISTRACTOR_STRIDE = 17
 
 _PREFER_ROWS = (
