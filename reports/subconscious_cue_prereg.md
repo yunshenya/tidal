@@ -224,4 +224,20 @@ The sweep is half-life in {2, 4, 8, 16, 30} and lambda in {0.10, 0.15, 0.20, 0.2
 
 The item-to-token conversion is a HYPOTHESIS. Joordens and Becker found semantic priming reduced to non-significant levels after one or two intervening items. A Chinese word is about one to two tokens, so a half-life of about 2–4 tokens is a plausible reading of that lag. It is not a measured conversion. The short values are on the grid because of that reading. The selected cell is still the passing cell with the largest mean cued margin on the direction fit bank. Ties go to the half-life closer to 4, then the lambda closer to 0.25. Held banks are not used to choose.
 
-The widened half-life fit has not been scored.
+## Widened half-life result
+
+One pass of the 25-cell grid. Git of the scorer before this result was written: `f07de9b0b90613b7d76246bb236cd773ff6576a2`. Elapsed 106.0 seconds. Alpha 0.25 again. All 25 cells passed gates 1–5 and the fit fan check. Mean cued margin on the direction fit bank:
+
+| half-life | lambda 0.10 | 0.15 | 0.20 | 0.25 | 0.30 |
+| --- | --- | --- | --- | --- | --- |
+| 2 | 0.099 | 0.152 | 0.208 | 0.265 | 0.323 |
+| 4 | 0.116 | 0.180 | 0.245 | 0.313 | 0.383 |
+| 8 | 0.130 | 0.201 | 0.275 | 0.352 | 0.431 |
+| 16 | 0.138 | 0.214 | 0.294 | 0.377 | 0.462 |
+| 30 | 0.142 | 0.221 | 0.304 | 0.390 | 0.479 |
+
+The widened half-life fit selected half-life 30 and lambda 0.3. Mean cued margin 0.479. It is the unique maximum. The 2–4 token reading did not override that rule. The module constants were already that cell, so they were not changed. The existing held pass for that cell still applies. Held was not scored again. The amendment pass remains false, and the pull request stays a draft.
+
+Selected cell, same direction fit bank, n=8: 7/8 cued margins positive, unrelated absolute margin 0.0, false triggers 0/8 with Wilson [0.0, 0.324], decay 6/8, store means 0.0144 / 0.0132 / 0.0129, quiet NLL 0.0 on 9 tokens, fan means 0.479 / 0.203 / 0.0 with 6/8 strict. Inject cost on this run, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000120, store 16 is 0.000084, store 32 is 0.000108. The armed forward is about 0.0025 seconds per token.
+
+The report is `reports/subconscious_cue_halflife_fit.json`.
