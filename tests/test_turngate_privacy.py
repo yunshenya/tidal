@@ -76,11 +76,3 @@ def test_every_converter_has_a_licensed_manifest_entry():
         entry = manifest.DATASETS[key]
         assert entry.get("license") and isinstance(entry.get("research_only"), bool), name
     assert manifest.DATASETS["interactspeech"]["research_only"] and manifest.DATASETS["magicdata_ms"]["research_only"]
-
-
-def test_llm_demo_refuses_external_by_default():
-    from scripts.demo_chat_llm import is_local
-    assert is_local("http://localhost:11434/v1") and is_local("http://127.0.0.1:8000") and is_local("http://[::1]:1")
-    assert not is_local("https://api.example.com")
-    src = open("scripts/demo_chat_llm.py", encoding="utf-8").read()
-    assert "DEEPSEEK" not in src and "deepseek" not in src.lower() and "weights_only=False" not in src

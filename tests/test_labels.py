@@ -38,11 +38,3 @@ def test_incomplete_future_window_is_unknown_not_negative():
     d4["bot_act_src"] = ["silent", None]
     assert np.isnan(compute_labels(d4).y_act.iloc[0])
     assert compute_labels(d4, horizon=80).y_act.iloc[0] == 2
-
-def test_vap_bin_past_observed_end_is_masked():
-    from tidal import vap_targets as VT
-    d = frame([(0, "other", "a"), (1, "other", "b")])
-    V = VT.compute(d)
-    # bin (0, 2] is not fully observed (stream ends at t=1) -> unknown, not a negative
-    assert np.isnan(V[0, VT.idx("human", 0)])
-    assert np.isnan(V[0, VT.idx("self", 0)])

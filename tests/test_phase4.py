@@ -58,21 +58,3 @@ def test_transformer_cache_is_bounded():
     x = torch.randn(1, 30, 128, dtype=torch.float64); st = None
     for t in range(30): o, st = b.step(x[:, t], st)
     assert all(k.shape[2] == 8 for k, v in st["kv"]) and torch.isfinite(o).all()
-
-def test_continuum_strictly_causal_and_static_equivalence():
-    """phase 4C: a prediction may only depend on targets whose bin end lies strictly before it; with no levels the
-    replay equals the static model."""
-    import numpy as np
-    from tidal.vap import VAPModel
-    from tidal.continuum import Continuum, replay, _cfg, BIN_END
-    torch.manual_seed(0); m = VAPModel(17).eval(); d = m.vap[0].in_features; rng = np.random.default_rng(0)
-    n = 200; H = rng.standard_normal((n, d)).astype(np.float32); V = (rng.random((n, 20)) > 0.7).astype(np.float32)
-    ts = np.cumsum(rng.exponential(3, n)); conv = np.array(["a"] * n)
-    a1, _, _ = replay(Continuum(m, _cfg(dict(levels=("med", "slow", "glob")))), H, V, ts, conv, None)
-    V2 = V.copy(); V2[120:] = 1 - V2[120:]
-    a2, _, _ = replay(Continuum(m, _cfg(dict(levels=("med", "slow", "glob")))), H, V2, ts, conv, None)
-    changed = np.flatnonzero(np.abs(a1 - a2).max(1) > 1e-7)
-    assert len(changed) and ts[changed[0]] >= ts[120] + BIN_END.min() and (np.abs(a1[:121] - a2[:121]).max() == 0)
-    s, _, _ = replay(Continuum(m, _cfg(dict(levels=()))), H, V, ts, conv, None)
-    with torch.no_grad(): ref = m.vap(torch.from_numpy(H)).numpy()
-    assert np.allclose(s, ref, atol=1e-6)

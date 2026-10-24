@@ -1,7 +1,7 @@
 """Padded steps must not change the prediction of a short sequence."""
 import torch
 from tidal.backbones import make_body
-from tidal.vap import VAPModel
+from tidal.model import TurnModel
 
 def _pad(x, n):
     """Left-pad with NONZERO junk. The model has to ignore it via the valid mask, not via zero inputs."""
@@ -14,7 +14,7 @@ def _same(a, b, n):
 @torch.no_grad()
 def test_gru_pad_length_does_not_change_predictions():
     torch.manual_seed(0)
-    m = VAPModel(8, kind="gru").eval()
+    m = TurnModel(8, False, kind="gru").eval()
     x = torch.randn(2, 5, 8)
     v0 = torch.ones(2, 5, dtype=torch.bool)
     y0 = m(x, v0)
@@ -26,7 +26,6 @@ def test_gru_pad_length_does_not_change_predictions():
             v = torch.cat([torch.zeros(2, n, dtype=torch.bool), torch.ones(2, 5, dtype=torch.bool)], 1)
             y = m(xp, v)
         _same(y0["y_eot"], y["y_eot"], n)
-        _same(y0["vap"], y["vap"], n)
 
 @torch.no_grad()
 def test_recurrent_backbones_ignore_pad():
@@ -52,11 +51,11 @@ def test_recurrent_backbones_ignore_pad():
 @torch.no_grad()
 def test_learned_pos_transformer_ignores_pad():
     torch.manual_seed(2)
-    m = VAPModel(8, kind="tf").eval()   # fallback encoder: learned positions, not a BODY_KIND
+    m = TurnModel(8, False, kind="tf").eval()
     x = torch.randn(2, 4, 8)
     y0 = m(x, torch.ones(2, 4, dtype=torch.bool))
     n = 3
     xp = torch.cat([torch.randn(2, n, 8), x], 1)
     v = torch.cat([torch.zeros(2, n, dtype=torch.bool), torch.ones(2, 4, dtype=torch.bool)], 1)
     y = m(xp, v)
-    _same(y0["vap"], y["vap"], n)
+    _same(y0["y_eot"], y["y_eot"], n)

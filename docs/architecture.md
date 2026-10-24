@@ -227,7 +227,9 @@ Each offline tick exports the same fields. tidal only supplies the signals. Turn
 
 Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). On 2026-10-24 this pull request removed the duplex, turn, audio, modalities, phase5, head-training, and shadow packages that had been kept here pending handoff. Historical writeups stay in `reports/phase1.md` through `reports/phase5.md`. They are not live gates.
 
-`HEAD_DIMS` in `tidal/model.py` was left in place. `tidal/vap.py`, `tidal/continuum.py`, and `tests/test_episodic.py` still import that turn model. Continuum `heads` still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace in the store section.
+This pull request removed residual turn-taking / six-head code that #71 left in place: `tidal/vap.py`, `tidal/vap_targets.py`, `tidal/continuum.py`, the six-head demos, and the vap-only eval/dataset/report scripts that imported them. Continuum JSON reports are historical, not live gates.
+
+`HEAD_DIMS` and `TurnModel` in `tidal/model.py` stay. They are not imported by cue/sleep/arousal/clock/reconstruct, `llm_memory*`, adapters, backends, or `GrowbrainBackend`. Remaining importers are leftover six-head train/export helpers (`tidal/train.py`, `tidal/evaluate.py`, `tidal/export.py`, `tidal/audit.py`) plus padding/ONNX tests. The memory inject is the cue trace in the store section.
 
 ## Multimodal fusion division (PLANNED, after text stage-1)
 
