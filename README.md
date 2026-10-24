@@ -35,7 +35,7 @@ The score is only implicit influence: the continuation margin against no memory,
 
 [#56](https://github.com/yunshenya/tidal/pull/56) is merged. It removes a key forward inside `_rank` and locks the readout as identical, so it adds no held behavior.
 
-The cue schedule is in `reports/subconscious_cue_prereg.md`. On the direction fit bank the selected cell is theta 0.32, half-life 30, lambda 0.3, mean cued margin 0.479. The schedule held, scored before competitive retrieval, is false: prefer 46/50, avoid up 37/50, away 47/50, competitor below 1 is 15/50, winner unchanged 46/50, similarity 39/50, count 29/50, and fan 1/2/4 decreasing 44/50. The floors were not moved. `interface_version` is 4. Version 2 was the activation `a_trig * fan_factor * decay`. Version 3 adds `modality` on every stored slot and every exported token. The value is `text`. Version 4 adds `sleep_pressure` and `source` (`cue`, `spontaneous`, or `none`) on every exported token. There is no perceptual-fingerprint field.
+The cue schedule is in `reports/subconscious_cue_prereg.md`. On the direction fit bank the selected cell is theta 0.32, half-life 30, lambda 0.3, mean cued margin 0.479. The schedule held, scored before competitive retrieval, is false: prefer 46/50, avoid up 37/50, away 47/50, competitor below 1 is 15/50, winner unchanged 46/50, similarity 39/50, count 29/50, and fan 1/2/4 decreasing 44/50. The floors were not moved. The live `interface_version` is 5. Version 2 was the activation `a_trig * fan_factor * decay`. Version 3 adds `modality` on every stored slot and every exported token. The value is `text`. Version 4 adds `sleep_pressure` and `source` (`cue`, `spontaneous`, or `none`) on every exported token. Version 5 adds `arousal` in `[0, 1]`. It is not part of the residual. There is no perceptual-fingerprint field.
 
 A fit-only diagnostic compared that one winner with a k-winner-take-all mix at k=2, 3, and 4 (Norman, Newman, and Detre 2007). It did not select a k. Mean cued margin stayed 0.479. Store-size means at 8/16/32 were 0.0144/0.0132/0.0129 for k=1 and 0.0163/0.0125/0.0125 for k=4. Held was not rescored.
 
@@ -116,6 +116,32 @@ Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 4
 
 Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.0001314447264038873, 0.00014579572598449886, and 0.00018903836396268824. Armed seconds per token are 0.002436959727095779, 0.0023961939084322444, and 0.0024913608186497268.
 
+## Arousal
+
+`LLMMemory` owns an arousal scalar in `[0, 1]`. It starts at 0.2. A quiet token moves it by `0.2 + (level - 0.2) * exp(-1 / 8)`. Surprise raises it when the new value is strictly above the mean of at least two samples in a window of 8 that is not the write-gate window. The bump is `0.35 * tanh((surprise - mean) / (|mean| + 1))`. `|valence|` adds `0.25 * tanh(|valence|)`. A positive trigger count adds `0.20 * tanh(count)`. A count of 0 does not decay. Those weights, the baseline, the time constant, and the window are a hypothesis. No grid was run.
+
+Aston-Jones and Cohen (2005) describe locus coeruleus–norepinephrine activity as an arousal signal with phasic and tonic modes. Phasic activation follows the outcome of a task decision. Tonic activity, when utility falls, is associated with disengagement. https://doi.org/10.1146/annurev.neuro.28.061604.135709 tidal does not choose exploitation or exploration, and it does not choose to speak or to wait. The quiet decay is not that tonic rise. growbrain only consumes the scalar. There is no switch and no feature flag.
+
+`remember` applies the surprise update after the accepted write has appended its measured NLL, and only when that NLL is finite. A nonzero experience also applies the valence update. Cue retrieval steps arousal after the residual is computed. `_on_layer` repeats the current scalar and does not step, because generation re-forwards the prefix. Sleep ticks export the scalar and do not step. `wake_for` and `sleep_for` do not move arousal. Process S formulas are unchanged. Theta, half-life, and lambda are unchanged. Arousal is not an input to `θ = θ0 + a·S − b·C`, and tidal does not compute that expression.
+
+Protocol `arousal-lcne-v1`. Fit ids `arousal-fit-000` through `arousal-fit-007` are disjoint from held ids `arousal-held-000` through `arousal-held-049`. The fit bank, git `835b9d4062a30d70f56bd8246376b804c5aaab2b`, is 8/8 on surprise, quiet, valence and triggers, export, and the item, Wilson 95% [0.6755924351161198, 1.0]. After four surprises of 1, arousal is 0.2. Surprise 4 raises it to 0.5168018887757032. Quiet durations 1 and 4 end at 0.4795766855775076 and 0.39215005859733565. Valence 0, 0.5, and 1.5 end at 0.2, 0.31552928931500246, and 0.4262870634112166. Trigger counts 0, 1, and 4 end at 0.2, 0.352318831191153, and 0.39986585994781343. The held floors are 50/50 on each gate. The held bank was not scored.
+
+The cue-triggered floors stay the merged #57/#62 rates. A cue guard rescores them once into new files and must match. The cue guard was not scored. Theta, half-life, lambda, fan S, and the RIF span are unchanged.
+
+Sleep gates stay the #63 record, 50/50, with the same canonical pressures. The sleep guard writes a new file. The sleep guard was not scored.
+
+The held bank was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 34.27422829999705 seconds. Report `reports/subconscious_arousal_held.json`. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: surprise, quiet, valence and triggers, export, and the item. The levels match the fit record. Constants were not changed.
+
+The sleep guard was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 25.302216481999494 seconds. Report `reports/subconscious_arousal_sleep_held.json`. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The canonical record matches `reports/subconscious_sleep_held.json`.
+
+The cue guard was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Outer elapsed time 197.12438608800585 seconds, including the floor pass of 122.81260742200539 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_arousal_cue_held.json` and `reports/subconscious_arousal_cue_floors.json`.
+
+Direction gates match. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 8.600245399231261e-05, 0.00016695663692768324, and 0.00021598081829407337. Armed seconds per token are 0.0025160807272186503, 0.0025945083642992276, and 0.002651235182632015.
+
 ## Signals exported to growbrain
 
 The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:
@@ -130,7 +156,8 @@ The per-token cue export is what generation injects. The growbrain backend that 
 - `modality`, currently always `text`
 - `sleep_pressure`, process S in `[0, 1]`
 - `source`: `cue`, `spontaneous`, or `none`
-- `interface_version` 4
+- `arousal`, LC-NE scalar in `[0, 1]`
+- `interface_version` 5
 
 `source` is `cue` or `none` on the cue path. `spontaneous` is a no-cue offline tick. The same fields are exported on each offline tick. tidal only supplies these signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 

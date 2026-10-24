@@ -1,0 +1,92 @@
+{
+  "bank_sha256": "f1b2336a04c1aa9d7ff15562347fb6c37cdf105857135b6ddf91fade401feec9",
+  "canonical": {
+    "after_high": 0.5168018887757032,
+    "after_seeds": 0.2,
+    "drop_long": 0.12465183017836756,
+    "drop_short": 0.03722520319819561,
+    "export_0": 0.35231882333755493,
+    "export_last": 0.3344208896160126,
+    "quiet_long": 0.39215005859733565,
+    "quiet_short": 0.4795766855775076,
+    "trace_four": 0.8092753247646118,
+    "trace_one": 0.352318831191153,
+    "trace_quiet": 0.2,
+    "trigger_high": 0.39986585994781343,
+    "trigger_hold": 0.4262870634112166,
+    "trigger_low": 0.352318831191153,
+    "trigger_zero": 0.2,
+    "valence_high": 0.4262870634112166,
+    "valence_low": 0.31552928931500246,
+    "valence_zero": 0.2
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.16463506199943367,
+  "gates": {
+    "export": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "quiet": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "surprise": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "valence_trigger": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "git": "835b9d4062a30d70f56bd8246376b804c5aaab2b",
+  "ids": [
+    "arousal-fit-000",
+    "arousal-fit-001",
+    "arousal-fit-002",
+    "arousal-fit-003",
+    "arousal-fit-004",
+    "arousal-fit-005",
+    "arousal-fit-006",
+    "arousal-fit-007"
+  ],
+  "kind": "arousal-fit",
+  "note": "Fit only. The held bank was not scored.",
+  "pass": true,
+  "protocol": "arousal-lcne-v1"
+}
