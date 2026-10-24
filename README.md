@@ -255,9 +255,7 @@ Store fields at v7: existing `vec` (float32, width `d_model`; stage0 192); perce
 
 Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). On 2026-10-24 this pull request removed the duplex, turn, audio, modalities, phase5, head-training, and shadow packages that had been kept here pending handoff. Historical writeups stay in `reports/phase1.md` through `reports/phase5.md`. They are not live gates.
 
-This pull request removed residual turn-taking / six-head code that #71 left in place: `tidal/vap.py`, `tidal/vap_targets.py`, `tidal/continuum.py`, `scripts/demo_sixhead.py`, `scripts/demo_chat_llm.py`, and the vap-only eval/dataset/report scripts that imported them. Continuum JSON reports are historical, not live gates.
-
-`HEAD_DIMS` and `TurnModel` in `tidal/model.py` stay. They are not imported by cue/sleep/arousal/clock/reconstruct, `llm_memory*`, adapters, backends, or `GrowbrainBackend`. Remaining importers are leftover six-head train/export helpers (`tidal/train.py`, `tidal/evaluate.py`, `tidal/export.py`, `tidal/audit.py`) plus padding/ONNX tests. Deleting the constant would break those files. The memory inject is the cue trace above.
+#71 and #72 already removed duplex, vap, continuum, and the six-head demos. This pull request deletes the leftover six-head train/eval/export/audit path that still imported `TurnModel` / `HEAD_DIMS`: `tidal/model.py`, `tidal/train.py`, `tidal/evaluate.py`, `tidal/export.py`, `tidal/audit.py`, plus the unused cone (`tidal/seqdata.py`, `tidal/dataset.py`, `tidal/baselines.py`, `tidal/features_g.py`, `tidal/backbones.py`, `tidal/adapters.py`) and the padding/ONNX tests that only exercised that stack. Cue/sleep/arousal/clock/reconstruct, `llm_memory*`, backends, and `GrowbrainBackend` did not import those symbols. The live `interface_version` is 6. The memory inject is the cue trace above.
 
 ## Tests
 
