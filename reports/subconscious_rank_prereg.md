@@ -32,4 +32,19 @@ At the cost thread count the report also records the max absolute difference amo
 
 ## Result
 
-The measurement has not been recorded.
+Recorded from `reports/subconscious_rank.json` at `2fdb5b99db40b78d754f9c4686c02d13f212a715`. SmolLM2-135M as loaded, on this CPU. Identity used 1 intra-op thread and 1 inter-op thread. Cost used 4 intra-op threads and 1 inter-op thread. The good and bad continuations are 2 tokens together.
+
+Identity passed. 3282 strings, 6 needed a second draw, and none missed all 3 draws. The sentinel matched. 150 of 150 implicit probes matched on the first draw, residual included. The logit control was bitwise, and the armed logits matched it. The phone spelled `+1-200-555-1000` on both paths. Two bare generations of the cost prompt matched.
+
+Per continuation token, median of 7 after warmup 2:
+
+| store | before | after | scan |
+| --- | --- | --- | --- |
+| 8 | 0.013011 | 0.006143 | 0.000073 |
+| 16 | 0.012171 | 0.005824 | 0.000083 |
+| 32 | 0.012261 | 0.005808 | 0.000109 |
+| 128 | 0.012592 | 0.005702 | 0.000272 |
+
+The scan column is one `_rank` with the query vector cached. It is the slot read, not a per-token figure. The forward is almost the whole `_rank` time. The prefix is about half the uncut forward. #52 reported about 0.014 s/token for `_rank` and about 0.0018 s for the in-context extra. On this CPU the uncut column is 0.012–0.013 s/token and the prefix column is 0.0057–0.0061 s/token.
+
+At the cost thread count, 7 pooled keys of the cost prompt moved by at most 0.1548 full against full, 0 prefix against prefix, and 0.1429 prefix against full. That row is the noise floor. It is not a pass rule. `MIX_K` stays 4 and `MIX_TEMP` stays 0.05.
