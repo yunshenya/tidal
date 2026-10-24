@@ -1,6 +1,7 @@
-"""Repeat-threshold bank, selection rule, and the pre-score preregistration."""
+"""Repeat-threshold bank, selection rule, and the preregistration."""
 import ast
 import inspect
+import json
 import re
 from pathlib import Path
 
@@ -140,9 +141,9 @@ def test_fit_scorer_does_not_read_held_items():
     assert "_held" not in calls
 
 
-def test_prereg_records_the_fit_and_waits_for_held():
+def test_prereg_records_fit_and_held():
     text = PREREG.read_text(encoding="utf-8")
-    assert "Held has not been scored." in text
+    assert "Held has not been scored." not in text
     assert "6f9530eb9a2684d258e7b2cd5714c61bb69fd6eb5950f5193e91f77d0d3130ba" in text
     low, high = IMPLICIT_DZ_INTERVAL
     assert str(low) in text
@@ -150,6 +151,23 @@ def test_prereg_records_the_fit_and_waits_for_held():
     for bounds in MEASURE_INTERVALS.values():
         assert str(bounds[0]) in text
         assert str(bounds[1]) in text
+    held = json.loads((ROOT / "reports" / "subconscious_interfere_held.json").read_text(encoding="utf-8"))
+    assert held["complete"] is True and held["pass"] is True
+    assert held["repeat_jaccard"] == 0.85
+    assert held["git_sha"] in text
+    assert str(held["elapsed_s"]) in text
+    assert str(held["implicit"]["soft_dz"]) in text
+    assert str(held["implicit"]["top1_dz"]) in text
+    assert held["implicit"]["slots_ok"] is True
+    assert "50/50 kept 5 slots" in text
+    assert f"{held['quartets']['similarity']['k']}/50" in text
+    assert f"{held['quartets']['fan']['k']}/50" in text
+    assert held["quartets"]["geometry_pass"] is True
+    assert held["quartets"]["pattern_pass"] is True
+    assert held["quartets"]["interference_pass"] is True
+    assert held["quartets"]["similarity_excluded"] == 0
+    assert held["rates"]["pass"] is True
+    assert "Not part of the score" in text
 
 
 def test_close_key_case_really_is_parallel():

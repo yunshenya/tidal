@@ -4,7 +4,7 @@ Similar memories stay in separate slots and compete. A cross-identity overwrite 
 
 `REPEAT_JACCARD` is `0.85`, the highest cell that passed the fit grid below. `MIX_K` 4, `MIX_TEMP` 0.05, `gap_tau` 0.80, polarity span 2, valence span 1, valence step 0.25, replay, the surprise gate, and the retrieval-induced-forgetting span are unchanged. Cutting the cost of `_rank` is not in this change.
 
-Held has not been scored.
+The one held pass is recorded under Held result. The threshold was chosen on the fit grid before that pass.
 
 ## Literature
 
@@ -101,5 +101,34 @@ Prefer, avoid, and valence. One fact per trial. The point estimate `k / 50` must
 An away rate of 50/50 is outside that last interval. Means are reported and are not a gate.
 
 Locked floors from the earlier banks stay in the existing tests. This change does not rescore those n=8 banks. Pytest of the suite is the floor.
+
+## Held result
+
+One pass. Git `3b20da0aaead34a136f3ba5e51a28a80afd7d55b`. Elapsed 290.51303531399753 seconds. Model HuggingFaceTB/SmolLM2-135M. `REPEAT_JACCARD` stayed 0.85. The report is `reports/subconscious_interfere_held.json`. Overall pass is true.
+
+| gate | result |
+|---|---|
+| at least 4 slots on at least 26/50 quartets | yes. 50/50 kept 5 slots, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| competitor strength below 1 | yes. 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| winner strength unchanged | yes. 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| outsider strength unchanged | yes. 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| more similar companion lowers the target margin | yes. 42/50, rate 0.84, Wilson [0.7148578393696501, 0.916625793219666]. Ties excluded: 0 |
+| three companions lower the target margin more than one | yes. 48/50, rate 0.96, Wilson [0.8653990931249297, 0.9889611156723802] |
+| mixture score inside [1.0171138974369223, 1.3856896713238247] and 4 slots | yes. 1.1516089064136972. All 150 probes kept 4 slots. Probe won 150/150 |
+| prefer margin up inside the #53 interval | yes. 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| avoid margin up inside the #53 interval | yes. 39/50, rate 0.78, Wilson [0.6475845041874634, 0.8724608402978559] |
+| avoid stored logprob down inside the #53 interval | yes. 42/50, rate 0.84, Wilson [0.7148578393696501, 0.916625793219666] |
+| toward inside the #53 interval | yes. 45/50, rate 0.9, Wilson [0.7863976856252035, 0.9565242350681096] |
+| away inside the #53 interval | yes. 48/50, rate 0.96, Wilson [0.8653990931249297, 0.9889611156723802] |
+| phone exact, excluded | 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0]. Not part of the score |
+| birthday exact, excluded | 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0]. Not part of the score |
+
+The pattern denominator was 50. Each pattern Wilson lower bound is 0.9286524008666414. The similarity Wilson lower bound is 0.7148578393696501. The count Wilson lower bound is 0.8653990931249297. Each of those is above 0.5.
+
+Four-slot family `d_z`, mixture: tone 0.8377903630705432, choice 1.2943307338186498, preference 1.322705622351898. Top-1 in the same store is 0.598030495653073 and is not the gate. Top-1 family `d_z`: tone 0.3815099176111003, choice 0.5295369079844059, preference 0.883044661363713. Mean participation was 1.9403741947075708. Mean top-1 gap was 0.06502326433924588, so mean top-1 confidence was 0.08127908042405735. All 150 probes kept 4 slots. The mixture point equals the #53 four-slot point 1.1516089064136972, which lies inside the bootstrap interval. The softmix fit bank records a max pairwise key cosine of 0.7808010045557472 inside a probe group, under the old 0.9 overwrite.
+
+One fact at a time, the prefer, avoid, and valence counts and means match the #53 report. Prefer mean delta 10.267230100784607, stored lift 7.149745581532674, stored down 0/50. Avoid mean delta 0.29070510550153755, stored lift -0.4041234005987644. Toward mean delta 1.9166707942753174, audit 50/50, repeats 3. Away mean delta -5.041761126883793, audit 50/50.
+
+Locked pytest floors on this revision: 313 passed, 14 warnings, 40.93 seconds. The warnings are the existing ONNX deprecation warnings. The suite does not rescore the held bank.
 
 #52 stays open and unmerged. It is the measurement record. #53 is the code those measurements were taken against before this change.
