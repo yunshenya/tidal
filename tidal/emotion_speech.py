@@ -1,4 +1,4 @@
-"""Phase 4A (speech): emotion head on top of the streaming audio front end (tidal/audio_fe.py).
+"""Phase 4A (speech): emotion head on CREMA-D and MagicData segments.
 
 Data (public only):
   * CREMA-D (ODbL; 91 actors, 6 acted emotions, human labels + intended intensity LO/MD/HI) -> supervised, speaker-held-out
@@ -8,8 +8,9 @@ Head: input = frozen AudioEncoder hidden state (96) + its normalised mel stack (
 step -> Linear(64) -> GRU(64) -> 8 emotion logits (shared label set) + valence/arousal. Streaming O(1)/step.
 usage: python -m tidal.emotion_speech teacher | train"""
 import glob, json, os, random, sys, time, numpy as np, pandas as pd, torch, torch.nn as nn, torch.nn.functional as F
-from tidal.audio_fe import logmel, stack_frames, AudioEncoder, SR, STEP
 from tidal.emotion import EMO, VA, va_target
+SR = 16000
+STEP = 0.02
 D = "data/public"; OUT = f"{D}/proc"; CREMA = f"{D}/crema_d/data/AudioWAV"; MD = f"{D}/magicdata_ms"
 CREMA_MAP = {"ANG": "anger", "DIS": "disgust", "FEA": "fear", "HAP": "joy", "NEU": "neutral", "SAD": "sadness"}
 SV_MAP = {"HAPPY": "joy", "SAD": "sadness", "ANGRY": "anger", "NEUTRAL": "neutral", "FEARFUL": "fear", "DISGUSTED": "disgust", "SURPRISED": "surprise"}

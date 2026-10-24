@@ -251,9 +251,11 @@ Low-level cross-sensory fusion is planned after text stage-1. The v7 multimodal 
 
 Store fields at v7: existing `vec` (float32, width `d_model`; stage0 192); perceptual fingerprint float32 `(F,)` with `F=32` (aligned with `mem_key_dim`; hypothesis until trained); modality enum `text | audio | image | fused | none`. `fused` is a memory after tidal low-level auto-fusion. Live writes stay `text`. Unknown is `none`. growbrain encoders produce the fingerprint; tidal stores and returns it at memory grain, not per-token. Cue additions at v7: winner `fingerprint` `(F,)`, and `fusion_confidence` in `[0, 1]` one per sample (last-token, same rule as #69 gate scalars; 0 when no fusion). `fusion_weights` is float32 `(M,)` with `M=3`, order `text, audio, image`, on a separate growbrain → tidal write API. Not in scope: raw encoder tensors, per-token fingerprint, `B>1` on the single-packet path, changing `TIDAL_DIM`, reserving empty keys on live v6, or implementing fusion/sleep/pairing.
 
-## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
+## Not part of tidal: brain-layer code removed (2026-10-24)
 
-`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace above.
+Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). On 2026-10-24 this pull request removed the duplex, turn, audio, modalities, phase5, head-training, and shadow packages that had been kept here pending handoff. Historical writeups stay in `reports/phase1.md` through `reports/phase5.md`. They are not live gates.
+
+`HEAD_DIMS` in `tidal/model.py` was left in place. `tidal/vap.py`, `tidal/continuum.py`, and `tests/test_episodic.py` still import that turn model. Those importers are not the cue/sleep/arousal/clock/reconstruct path, but deleting the constant would break the remaining episodic continuum tests. The memory inject is the cue trace above.
 
 ## Tests
 

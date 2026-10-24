@@ -27,7 +27,6 @@ dependencies = [
 [project.optional-dependencies]
 llm = ["torch>=2.3", "transformers>=4.40"]
 growbrain = ["growbrain @ git+https://origin.cursor.com/shen-yun/growbrain.git"]
-audio = ["soundfile>=0.12", "scipy>=1.13"]
 teacher = ["sherpa-onnx>=1.10"]
 
 [tool.setuptools.packages.find]

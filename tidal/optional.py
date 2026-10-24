@@ -1,4 +1,4 @@
-"""Clear errors for optional extras (requirements-audio.txt, requirements-teacher.txt, requirements-llm.txt)."""
+"""Clear errors for optional extras (requirements-teacher.txt, requirements-llm.txt)."""
 import importlib
 
 def require(module, extra, pip_name=None):
