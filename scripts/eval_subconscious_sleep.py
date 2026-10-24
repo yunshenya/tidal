@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tidal.llm_memory import ByteTokenizer, LLMMemory  # noqa: E402
+from tidal.llm_memory import ByteTokenizer, CUE_INTERFACE_VERSION, LLMMemory  # noqa: E402
 from tidal.sleep import (  # noqa: E402
     REPLAY_BLEND,
     SLEEP_FLOOR,
@@ -268,7 +268,7 @@ def _cue_gate() -> dict:
         # The export is float32. 0.1 is not a float32 value, so exact == fails.
         pressure_ok = bool(exported) and all(math.isclose(item, pressure, rel_tol=0.0, abs_tol=1e-6) for item in exported)
         passed = (
-            fields["interface_version"] == 4
+            fields["interface_version"] == int(CUE_INTERFACE_VERSION)
             and set(sources) <= {"cue", "none"}
             and "cue" in sources
             and "spontaneous" not in sources
@@ -277,7 +277,7 @@ def _cue_gate() -> dict:
         )
     finally:
         mem.close()
-    return {"pass": bool(passed), "interface_version": 4, "pressure": pressure}
+    return {"pass": bool(passed), "interface_version": int(CUE_INTERFACE_VERSION), "pressure": pressure}
 
 
 def score_item(item_id: str) -> dict:
