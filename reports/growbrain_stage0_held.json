@@ -1,0 +1,192 @@
+{
+  "bank_sha256": "b1f3775055590d95da065ecdab28ac0fb1c2caf9eb2bb7b06b16da41c227e5e7",
+  "birthday": {
+    "exact": {
+      "k": 4,
+      "n": 4,
+      "wilson95": [
+        0.5101091635454027,
+        1.0
+      ]
+    },
+    "misses": [],
+    "n": 4,
+    "retrieval_hits": 4,
+    "rows": [
+      {
+        "exact": 1,
+        "gold": "June 11, 1984",
+        "id": "growbrain-held-046",
+        "maxcos": 0.3530442416667938,
+        "retrieval_hit": 1,
+        "spelled": "June 11, 1984"
+      },
+      {
+        "exact": 1,
+        "gold": "August 2, 1977",
+        "id": "growbrain-held-047",
+        "maxcos": 0.3684808611869812,
+        "retrieval_hit": 1,
+        "spelled": "August 2, 1977"
+      },
+      {
+        "exact": 1,
+        "gold": "January 19, 2001",
+        "id": "growbrain-held-048",
+        "maxcos": 0.376848042011261,
+        "retrieval_hit": 1,
+        "spelled": "January 19, 2001"
+      },
+      {
+        "exact": 1,
+        "gold": "October 27, 1996",
+        "id": "growbrain-held-049",
+        "maxcos": 0.34730860590934753,
+        "retrieval_hit": 1,
+        "spelled": "October 27, 1996"
+      }
+    ]
+  },
+  "checkpoint_sha256": "1e535ca6a743b991890da4c6122ad9b643d9f78138c5b0da263426d85bf9c668",
+  "elapsed_s": 2.1850554943084717,
+  "families": {
+    "choice": {
+      "d_z": 1.8212376590142556,
+      "delta_positive": {
+        "k": 13,
+        "n": 14,
+        "wilson95": [
+          0.6853129557584889,
+          0.9872777847521093
+        ]
+      },
+      "mean_delta": 0.4476992216848192,
+      "misses": [
+        {
+          "bad": "late",
+          "delta": -0.016044530272483648,
+          "good": "early",
+          "id": "growbrain-held-016",
+          "margin_off": -0.7168735623359681,
+          "margin_on": -0.7329180926084518,
+          "maxcos": 0.4464626610279083,
+          "retrieval_hit": 1
+        }
+      ],
+      "n": 14,
+      "retrieval_hits": 14
+    },
+    "preference": {
+      "d_z": 1.2979603347321458,
+      "delta_positive": {
+        "k": 13,
+        "n": 14,
+        "wilson95": [
+          0.6853129557584889,
+          0.9872777847521093
+        ]
+      },
+      "mean_delta": 0.41717617658733513,
+      "misses": [
+        {
+          "bad": "grapes",
+          "delta": -0.06054665247599278,
+          "good": "pears",
+          "id": "growbrain-held-029",
+          "margin_off": -0.1995588779449462,
+          "margin_on": -0.260105530420939,
+          "maxcos": 0.37700048089027405,
+          "retrieval_hit": 1
+        }
+      ],
+      "n": 14,
+      "retrieval_hits": 14
+    },
+    "tone": {
+      "d_z": 1.3606919919061353,
+      "delta_positive": {
+        "k": 13,
+        "n": 14,
+        "wilson95": [
+          0.6853129557584889,
+          0.9872777847521093
+        ]
+      },
+      "mean_delta": 0.33776731716380226,
+      "misses": [
+        {
+          "bad": "grim",
+          "delta": -0.20466843247413635,
+          "good": "glad",
+          "id": "growbrain-held-008",
+          "margin_off": 0.40865448117256165,
+          "margin_on": 0.2039860486984253,
+          "maxcos": 0.4075204133987427,
+          "retrieval_hit": 1
+        }
+      ],
+      "n": 14,
+      "retrieval_hits": 14
+    }
+  },
+  "fan_s": 1.45,
+  "half_life": 30.0,
+  "hidden": 192,
+  "interface_version": 6,
+  "lambda": 0.3,
+  "layer": 2,
+  "mem_dim": 64,
+  "phone": {
+    "exact": {
+      "k": 4,
+      "n": 4,
+      "wilson95": [
+        0.5101091635454027,
+        1.0
+      ]
+    },
+    "misses": [],
+    "n": 4,
+    "retrieval_hits": 4,
+    "rows": [
+      {
+        "exact": 1,
+        "gold": "+1-415-555-4101",
+        "id": "growbrain-held-042",
+        "maxcos": 0.46482664346694946,
+        "retrieval_hit": 1,
+        "spelled": "+1-415-555-4101"
+      },
+      {
+        "exact": 1,
+        "gold": "+1-415-555-4102",
+        "id": "growbrain-held-043",
+        "maxcos": 0.39310166239738464,
+        "retrieval_hit": 1,
+        "spelled": "+1-415-555-4102"
+      },
+      {
+        "exact": 1,
+        "gold": "+1-415-555-4103",
+        "id": "growbrain-held-044",
+        "maxcos": 0.37139469385147095,
+        "retrieval_hit": 1,
+        "spelled": "+1-415-555-4103"
+      },
+      {
+        "exact": 1,
+        "gold": "+1-415-555-4104",
+        "id": "growbrain-held-045",
+        "maxcos": 0.324518084526062,
+        "retrieval_hit": 1,
+        "spelled": "+1-415-555-4104"
+      }
+    ]
+  },
+  "protocol": "growbrain-stage0-v1",
+  "rif_span": 0.05,
+  "split": "held",
+  "subconscious_score": 1.4932966618841788,
+  "theta": 0.32,
+  "weight_sha256": "1ce1f23a8080272b4972f67047d189a812d3e1715d51ca15590c6888bb603cca:fc617de4486132ec9dd008e7efbfd759f5541f74965095e64cd1c6f2d8e684c3"
+}

@@ -313,6 +313,8 @@ GROWBRAIN_INJECT_LAYER = 2
 GROWBRAIN_N_LAYERS = 4
 GROWBRAIN_HEAD_DIM = 48
 GROWBRAIN_CHECKPOINT = "e1_base_rebalance"
+GROWBRAIN_VOCAB_SIZE = 5135
+GROWBRAIN_STAGE0_SHA256 = "1e535ca6a743b991890da4c6122ad9b643d9f78138c5b0da263426d85bf9c668"
 
 
 def _cfg_get(cfg, name: str):
@@ -387,14 +389,122 @@ def try_import_growbrain():
     return growbrain
 
 
+def _sha256_file(path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def stage0_checkpoint_files():
+    """``(checkpoint, vocab)`` under the repo or the working directory.
+
+    Both files are required. A missing pair is None. This does not search
+    a package tree and does not invent a path.
+    """
+    from pathlib import Path
+
+    roots = []
+    for root in (Path.cwd(), Path(__file__).resolve().parents[1]):
+        if root not in roots:
+            roots.append(root)
+    for root in roots:
+        ckpt = root / "checkpoints" / "e1_base_rebalance.pt"
+        vocab = root / "vocab" / "charlist.txt"
+        if ckpt.is_file() and vocab.is_file():
+            return ckpt, vocab
+    return None
+
+
+class _CharTokenizerAdapter:
+    """Char tokenizer with the call shape ``LLMMemory`` already uses.
+
+    Ids are one per character. No bos or eos is added, so a fact's offsets
+    stay aligned with the string. Multi-character specials are left to the
+    inner tokenizer and then have no offset map.
+    """
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.eos_token_id = None
+
+    def __len__(self):
+        return len(self.inner)
+
+    def encode(self, text, add_special_tokens=True, **_kwargs):
+        del add_special_tokens, _kwargs
+        ids = self.inner.encode(text)
+        if hasattr(ids, "tolist"):
+            ids = ids.tolist()
+        return [int(i) for i in ids]
+
+    def decode(self, ids, skip_special_tokens=True, **_kwargs):
+        del skip_special_tokens, _kwargs
+        if torch.is_tensor(ids):
+            ids = ids.detach().cpu().view(-1).tolist()
+        elif hasattr(ids, "tolist"):
+            ids = ids.tolist()
+        return self.inner.decode([int(i) for i in ids])
+
+    def __call__(self, text, return_tensors="pt", add_special_tokens=True, return_offsets_mapping=False, **_kwargs):
+        del return_tensors, add_special_tokens, return_offsets_mapping, _kwargs
+        ids = self.encode(text)
+        if not ids:
+            raise ValueError("text tokenized to an empty id sequence")
+        payload = {"input_ids": torch.tensor([ids], dtype=torch.long)}
+        if len(ids) == len(text):
+            payload["offset_mapping"] = torch.tensor([[(i, i + 1) for i in range(len(ids))]], dtype=torch.long)
+        return payload
+
+
+class _GrowbrainHost(torch.nn.Module):
+    """``model(idx)`` and the keyword call ``LLMMemory`` already makes.
+
+    ``blocks`` is the growbrain decoder stack. It is not registered twice.
+    """
+
+    def __init__(self, inner):
+        super().__init__()
+        self.gb = inner
+        object.__setattr__(self, "blocks", inner.blocks)
+        object.__setattr__(self, "cfg", inner.cfg)
+        object.__setattr__(self, "config", inner.cfg)
+
+    def forward(
+        self,
+        idx=None,
+        signals=None,
+        hippo_state=None,
+        return_cache=False,
+        input_ids=None,
+        use_cache=False,
+        attention_mask=None,
+        output_hidden_states=False,
+    ):
+        del use_cache, attention_mask, output_hidden_states
+        ids = idx if idx is not None else input_ids
+        if ids is None:
+            raise TypeError("model(idx) requires token ids")
+        if ids.dim() == 1:
+            ids = ids.unsqueeze(0)
+        limit = int(self.cfg.max_seq_len)
+        if int(ids.shape[-1]) > limit:
+            raise RuntimeError(f"sequence length {int(ids.shape[-1])} exceeds max_seq_len {limit}")
+        return self.gb(ids, signals, hippo_state, return_cache)
+
+
 def load_growbrain_stage0(*, device, dtype=None):
     """Load stage0 ``e1_base_rebalance`` for :class:`GrowbrainBackend`.
 
-    The package and the checkpoint were not readable from this machine.
-    This raises instead of constructing :class:`SmolLM2Backend`. It does not
-    guess a loader name from an unread source file.
+    The package must provide ``model.load_checkpoint`` and
+    ``tokenizer.CharTokenizer``. The checkpoint and ``vocab/charlist.txt``
+    must sit under the repo or the working directory. A missing package, a
+    package without that loader, or a missing file raises. This does not
+    construct :class:`SmolLM2Backend`.
     """
-    del device, dtype
     module = try_import_growbrain()
     if module is None:
         raise ImportError(
@@ -405,14 +515,56 @@ def load_growbrain_stage0(*, device, dtype=None):
             "model_name='HuggingFaceTB/SmolLM2-135M', to construct SmolLM2Backend. "
             "There is no process switch."
         )
-    names = [name for name in dir(module) if not name.startswith("_")]
-    raise RuntimeError(
-        "growbrain imported, but e1_base_rebalance is not loaded. "
-        "No checkpoint was on this machine, and the load call was not read "
-        "from source, so it was not guessed. "
-        f"Public names: {', '.join(names) if names else '(none)'}. "
-        "Refusing a 576-d SmolLM2 shell."
-    )
+    import importlib
+
+    try:
+        model_mod = importlib.import_module("growbrain.model")
+        tok_mod = importlib.import_module("growbrain.tokenizer")
+    except ImportError:
+        model_mod = None
+        tok_mod = None
+    load_checkpoint = getattr(model_mod, "load_checkpoint", None) if model_mod is not None else None
+    char_tokenizer = getattr(tok_mod, "CharTokenizer", None) if tok_mod is not None else None
+    if load_checkpoint is None or char_tokenizer is None:
+        names = [name for name in dir(module) if not name.startswith("_")]
+        raise RuntimeError(
+            "growbrain imported, but e1_base_rebalance is not loaded. "
+            "The package has no model.load_checkpoint or tokenizer.CharTokenizer, "
+            "so the load call was not guessed. "
+            f"Public names: {', '.join(names) if names else '(none)'}. "
+            "Refusing a 576-d SmolLM2 shell."
+        )
+    found = stage0_checkpoint_files()
+    if found is None:
+        raise RuntimeError(
+            "growbrain imported, but e1_base_rebalance is not loaded. "
+            "checkpoints/e1_base_rebalance.pt and vocab/charlist.txt were not "
+            "both present under the repo or the working directory. "
+            "Refusing a 576-d SmolLM2 shell."
+        )
+    ckpt, vocab = found
+    digest = _sha256_file(ckpt)
+    if digest != GROWBRAIN_STAGE0_SHA256:
+        raise RuntimeError(
+            f"e1_base_rebalance sha256 {digest} != {GROWBRAIN_STAGE0_SHA256}. "
+            "Refusing a 576-d SmolLM2 shell."
+        )
+    gb, _extra = load_checkpoint(str(ckpt))
+    tok = char_tokenizer.from_file(vocab)
+    if int(gb.cfg.vocab_size) != int(len(tok)):
+        raise RuntimeError(
+            f"checkpoint vocab_size {int(gb.cfg.vocab_size)} != tokenizer {len(tok)}"
+        )
+    if int(gb.cfg.vocab_size) != int(GROWBRAIN_VOCAB_SIZE):
+        raise RuntimeError(
+            f"checkpoint vocab_size {int(gb.cfg.vocab_size)} != {GROWBRAIN_VOCAB_SIZE}"
+        )
+    if dtype is not None:
+        gb = gb.to(dtype=dtype)
+    gb = gb.to(device=torch.device(device) if device is not None else "cpu")
+    gb.eval()
+    cfg = gb.config_dict()
+    return _GrowbrainHost(gb), _CharTokenizerAdapter(tok), cfg
 
 
 def _logits_from_model_call(out):
@@ -475,6 +627,9 @@ class GrowbrainBackend(MemoryBackend):
     def key_prefix_ok(self) -> bool:
         """Char stacks do not use the Llama prefix. The full ``model(idx)`` runs."""
         return False
+
+    def tokenize(self, text: str) -> dict:
+        return self._tokenize(text)
 
     def _tokenize(self, text: str) -> dict:
         tok = self.tokenizer

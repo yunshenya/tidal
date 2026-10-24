@@ -10,7 +10,7 @@ import pytest
 import torch
 from torch import nn
 
-from tidal.backend import GrowbrainBackend, MemoryBackend, SmolLM2Backend, answer_nll, try_import_growbrain
+from tidal.backend import GrowbrainBackend, MemoryBackend, SmolLM2Backend, answer_nll
 from tidal.llm_memory import ByteTokenizer, LLMMemory, answer_surprise
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -47,7 +47,7 @@ def _memory():
         LLMMemory._key_centers = centers
 
 
-def test_passed_in_model_is_smollm2_and_default_is_growbrain():
+def test_passed_in_model_is_smollm2_and_default_is_growbrain(monkeypatch):
     signature = inspect.signature(LLMMemory.__init__)
     assert "backend" not in signature.parameters
     source = inspect.getsource(LLMMemory.__init__)
@@ -66,7 +66,7 @@ def test_passed_in_model_is_smollm2_and_default_is_growbrain():
     assert "transformers" not in imported
     assert "environ" not in text
     assert "import growbrain" in text
-    assert try_import_growbrain() is None
+    monkeypatch.setattr("tidal.backend.try_import_growbrain", lambda: None)
     with pytest.raises(ImportError, match="GrowbrainBackend"):
         LLMMemory()
     mem = _memory()

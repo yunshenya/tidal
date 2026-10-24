@@ -19,11 +19,15 @@ from tidal.backend import (
     GROWBRAIN_MEM_DIM,
     GROWBRAIN_MEM_KEY_DIM,
     GROWBRAIN_N_LAYERS,
+    GROWBRAIN_STAGE0_SHA256,
+    GROWBRAIN_VOCAB_SIZE,
     GrowbrainBackend,
     load_growbrain_stage0,
     resolve_d_model,
+    stage0_checkpoint_files,
     try_import_growbrain,
 )
+from tidal.growbrain_stage0_data import FIT, FIT_IDS, HELD, HELD_IDS, PROTOCOL, bank_sha256
 from tidal.llm_memory import CUE_INTERFACE_VERSION, CUE_LAMBDA, CUE_THETA, LLMMemory
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -88,8 +92,8 @@ def test_stage0_pins_and_interface_version():
         resolve_d_model({"d_model": 320}, type("M", (), {"config": type("C", (), {"d_model": 192})()})())
 
 
-def test_missing_package_does_not_construct_smollm():
-    assert try_import_growbrain() is None
+def test_missing_package_does_not_construct_smollm(monkeypatch):
+    monkeypatch.setattr("tidal.backend.try_import_growbrain", lambda: None)
     with pytest.raises(ImportError, match="SmolLM2Backend"):
         load_growbrain_stage0(device="cpu")
     with pytest.raises(ImportError, match="GrowbrainBackend"):
@@ -100,11 +104,15 @@ def test_imported_package_without_a_loader_refuses_a_576_shell(monkeypatch):
     fake = types.ModuleType("growbrain")
     fake.tidal_adapter = object()
     monkeypatch.setitem(sys.modules, "growbrain", fake)
+    for name in ("growbrain.model", "growbrain.tokenizer"):
+        monkeypatch.delitem(sys.modules, name, raising=False)
     with pytest.raises(RuntimeError, match="576"):
         load_growbrain_stage0(device="cpu")
 
 
-def test_default_store_is_d_model_not_the_injector_slot(monkeypatch):
+def test_default_store_is_d_model_not_the_injector_slot(monkeypatch, tmp_path):
+    from tidal.llm_memory import _growbrain_inject_path
+
     cfg = {
         "d_model": 192,
         "mem_dim": 64,
@@ -124,7 +132,16 @@ def test_default_store_is_d_model_not_the_injector_slot(monkeypatch):
         assert mem.store.dk != mem.backend.mem_dim
         assert mem.layer == 2 and mem.n_layers == 4
         assert mem.backend.mem_key_dim == 32 and mem.backend.head_dim == 48
-        assert torch.count_nonzero(mem.inject.net[-1].weight) == 0
+        last = mem.inject.net[-1].weight.detach().cpu()
+        assert tuple(last.shape) == (192, 192)
+        shipped_path = _growbrain_inject_path()
+        if shipped_path.is_file():
+            shipped = torch.load(shipped_path, map_location="cpu", weights_only=False)
+            expect = shipped["inject"]["net.2.weight"].detach().cpu()
+            assert torch.equal(last, expect)
+            assert int(torch.count_nonzero(last)) > 0
+        else:
+            assert int(torch.count_nonzero(last)) == 0
         hidden, enc, logits = mem.backend.encode_hidden("ab")
         assert tuple(hidden.shape) == (2, 192)
         assert hidden.dtype == torch.float32
@@ -140,6 +157,19 @@ def test_default_store_is_d_model_not_the_injector_slot(monkeypatch):
         assert tuple(fields["vec"].shape) == (1, 2, 192)
     finally:
         mem.close()
+
+    monkeypatch.setattr(
+        "tidal.llm_memory._growbrain_inject_path",
+        lambda: tmp_path / "absent.pt",
+    )
+    bare = LLMMemory()
+    try:
+        assert bare.hidden == 192
+        assert bare.backend.mem_dim == 64
+        assert bare.store.dk != bare.backend.mem_dim
+        assert torch.count_nonzero(bare.inject.net[-1].weight) == 0
+    finally:
+        bare.close()
 
 
 def test_cfg_d_model_replaces_the_pin_and_a_576_residual_is_refused(monkeypatch):
@@ -201,6 +231,51 @@ def test_backend_import_of_growbrain_is_inside_the_try():
     memory = open(os.path.join(ROOT, "tidal", "llm_memory.py"), encoding="utf-8").read()
     assert "import growbrain" not in memory
     assert "TidalAdapter.encode_hidden" not in inspect_encode()
+
+
+def test_stage0_banks_are_disjoint_and_explicit_is_separate():
+    from tidal.llm_memory import _CALIB_NAMES
+    from tidal.llm_memory_data import names
+
+    assert PROTOCOL == "growbrain-stage0-v1"
+    assert len(FIT_IDS) == 8 and len(HELD_IDS) == 50
+    assert set(FIT_IDS).isdisjoint(HELD_IDS)
+    assert FIT_IDS[0] == "growbrain-fit-000" and FIT_IDS[-1] == "growbrain-fit-007"
+    assert HELD_IDS[0] == "growbrain-held-000" and HELD_IDS[-1] == "growbrain-held-049"
+    banned = set(_CALIB_NAMES) | set(names("train")) | set(names("test"))
+    used = {row["name"] for row in FIT + HELD}
+    assert used.isdisjoint(banned)
+    assert len(bank_sha256()) == 64
+    families = {}
+    for row in HELD:
+        families[row["family"]] = families.get(row["family"], 0) + 1
+    assert families == {"tone": 14, "choice": 14, "preference": 14, "phone": 4, "birthday": 4}
+    assert GROWBRAIN_VOCAB_SIZE == 5135
+    assert len(GROWBRAIN_STAGE0_SHA256) == 64
+
+
+def test_stage0_checkpoint_loads_when_present():
+    if try_import_growbrain() is None or stage0_checkpoint_files() is None:
+        pytest.skip("stage0 package or checkpoint is not on this machine")
+    model, tok, cfg = load_growbrain_stage0(device="cpu")
+    assert cfg["d_model"] == 192 and cfg["mem_dim"] == 64
+    assert cfg["inject_layer"] == 2 and cfg["n_layers"] == 4
+    assert cfg["vocab_size"] == 5135 and len(tok) == 5135
+    ids = torch.tensor([tok.encode("ab")], dtype=torch.long)
+    logits = model(ids)
+    assert tuple(logits.shape) == (1, 2, 5135)
+    backend = GrowbrainBackend(
+        model,
+        tok,
+        layer=2,
+        n_layers=4,
+        layers=model.blocks,
+        device=torch.device("cpu"),
+        cfg=cfg,
+    )
+    hidden, _enc, got = backend.encode_hidden("Hi")
+    assert tuple(hidden.shape) == (2, 192)
+    assert tuple(got.shape) == (1, 2, 5135)
 
 
 def inspect_encode() -> str:

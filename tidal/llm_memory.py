@@ -187,6 +187,9 @@ KEY_GEOM_VERSION = "sink8-qmean-v1"
 _KEY_CENTER_FILE = "llm_key_center.npz"
 # 1500-step inject trained after the key-center fix. ``save_inject`` dict.
 _INJECT_FILE = "llm_inject_smollm2_135m.pt"
+# Stage0 growbrain retrain at d_model 192. Not the 576-d SmolLM files.
+_GROWBRAIN_KEY_CENTER_FILE = "llm_key_center_growbrain.npz"
+_GROWBRAIN_INJECT_FILE = "llm_inject_growbrain_192.pt"
 # Phone answers in ``llm_memory_data`` are ``+1-415-555-`` plus four digits.
 # Seven digits leaves ``111`` and birthdays (at most six digits) on the
 # full-span mean. Birthdays are detected by spelling, not by digit count,
@@ -331,6 +334,7 @@ _LAYER_PATHS = (
     ("transformer", "layers"),
     ("gpt_neox", "layers"),
     ("layers",),
+    ("blocks",),
 )
 
 
@@ -377,6 +381,8 @@ def _hidden_size(model: nn.Module) -> int:
 
 
 def _logits_of(out: Any) -> torch.Tensor:
+    if torch.is_tensor(out):
+        return out
     if hasattr(out, "logits"):
         return out.logits
     if isinstance(out, tuple) and out and torch.is_tensor(out[0]):
@@ -625,6 +631,14 @@ def key_calibration() -> list:
 
 def _center_path() -> Path:
     return Path(__file__).with_name(_KEY_CENTER_FILE)
+
+
+def _growbrain_center_path() -> Path:
+    return Path(__file__).with_name(_GROWBRAIN_KEY_CENTER_FILE)
+
+
+def _growbrain_inject_path() -> Path:
+    return Path(__file__).with_name(_GROWBRAIN_INJECT_FILE)
 
 
 def _load_key_centers(path: Path, *, model_name: str, layer: int, hidden: int):
@@ -1501,7 +1515,9 @@ class LLMMemory:
     :class:`tidal.backend.SmolLM2Backend`. That SmolLM checkpoint at layer
     ``n_layers // 2`` (layer 15, hidden 576) still installs
     ``llm_inject_smollm2_135m.pt``. Growbrain does not load that file and
-    does not load ``llm_key_center.npz``. There is no process flag.
+    does not load ``llm_key_center.npz``. It loads
+    ``llm_key_center_growbrain.npz`` and ``llm_inject_growbrain_192.pt``
+    when those stage0 files are present. There is no process flag.
     ``sleep_pressure`` is process S. ``wake_for`` raises it and ``sleep_for``
     lowers it. Neither call changes the residual. ``sleep_for`` rewrites a
     slot only when prediction error clears a threshold, and the audit of that
@@ -1850,8 +1866,9 @@ class LLMMemory:
         question mean raised it to 0.072 (soft top-4 mass 0.66 to 0.83).
         """
         if self.model_name:
+            path = _growbrain_center_path() if self.model_name == GROWBRAIN_CHECKPOINT else _center_path()
             loaded = _load_key_centers(
-                _center_path(),
+                path,
                 model_name=self.model_name,
                 layer=self.layer,
                 hidden=self.hidden,
@@ -1875,9 +1892,12 @@ class LLMMemory:
         last layer (the shipped tensors would not fit a narrower MLP). There
         is no switch. :meth:`load_inject` still replaces the MLP from any path.
         """
-        if self.model_name != DEFAULT_MODEL:
+        if self.model_name == GROWBRAIN_CHECKPOINT:
+            path = _growbrain_inject_path()
+        elif self.model_name == DEFAULT_MODEL:
+            path = _inject_path()
+        else:
             return
-        path = _inject_path()
         if not path.is_file():
             return
         ckpt = _torch_load(path)

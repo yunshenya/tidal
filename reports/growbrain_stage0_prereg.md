@@ -14,17 +14,17 @@ Protocol `growbrain-stage0-v1`. This is the behavior change. The live `interface
 
 Migrate the packet and the episodic store onto growbrain `d_model`. Stage0 `e1_base_rebalance` has no `expand_d`. The pinned ModelConfig is `d_model` 192, `mem_dim` 64, `mem_key_dim` 32, `inject_layer` 2, `n_layers` 4, `head_dim` 48. `d_model` is the text-hidden width and the packet `vec` width. `mem_dim` is the injector slot only. The episodic store and the key center are not 64. A later checkpoint's `cfg.d_model` wins over 192.
 
-Retire `TIDAL_DIM` 576 as the live packet width. `GrowbrainBackend` does not load `tidal/llm_key_center.npz` or `tidal/llm_inject_smollm2_135m.pt` and does not map 192 back to 576. Those two files stay on the explicit SmolLM2 constructor so that path can still be built. They are not a retrain. The 192-d key center and inject MLP are not in this pull request. Origin `shen-yun/growbrain` does not store the weights: `checkpoints/` is gitignored. The file is `/workspace/checkpoints/e1_base_rebalance.pt` on the growbrain VM, with a vocab sidecar, vocab 5135. Training, fit, and held stay paused until that file is attached. A zero MLP is not a trained substitute. `scripts/train_growbrain_inject.py` exits before writing a file.
+Retire `TIDAL_DIM` 576 as the live packet width. `GrowbrainBackend` does not load `tidal/llm_key_center.npz` or `tidal/llm_inject_smollm2_135m.pt` and does not map 192 back to 576. Those two files stay on the explicit SmolLM2 constructor so that path can still be built. They are not a retrain. The 192-d key center is `tidal/llm_key_center_growbrain.npz`. The inject MLP is `tidal/llm_inject_growbrain_192.pt`. `scripts/train_growbrain_inject.py` writes those two files from `checkpoints/e1_base_rebalance.pt` and `vocab/charlist.txt`. A zero MLP is not a trained substitute.
 
 `interface_version` was 5. It is 6. The field set is unchanged. Version 6 records the width. growbrain should set `TIDAL_DIM` to 192 and point `TidalAdapter.proj` at 192 → `mem_dim` 64.
 
 ## What was readable
 
-No `e1_base_rebalance` checkpoint and no growbrain tree were on this machine. Origin `shen-yun/growbrain` has no `.pt` in git. The real file is `/workspace/checkpoints/e1_base_rebalance.pt` on the growbrain VM, plus a vocab sidecar, vocab 5135. It is being exported as a cloud-agent artifact or a Hugging Face file. This protocol does not score until that file is attached. No cfg file was found, so these pins are the stage0 numbers above, not a cfg read from disk. `model(idx)` is the text call. A return value that does not expose a logits tensor raises. The loader does not guess a checkpoint constructor.
+The scored run read `checkpoints/e1_base_rebalance.pt` and `vocab/charlist.txt`. The package was the attached tree of `shen-yun/growbrain` at `ead0d06`, installed editable. `model.load_checkpoint` loads the file. `CharTokenizer.from_file` reads the sidecar. `model(idx)` is the text call. A return value that does not expose a logits tensor raises. The loader does not guess a checkpoint constructor.
 
 ## Gates
 
-Fit ids `growbrain-fit-000` through `growbrain-fit-007` are disjoint from held ids `growbrain-held-000` through `growbrain-held-049`. Neither bank was scored. The held bank was not scored.
+Fit ids `growbrain-fit-000` through `growbrain-fit-007` are disjoint from held ids `growbrain-held-000` through `growbrain-held-049`. The fit bank is scored before the held bank. The held bank is scored once. No constant is changed between those runs.
 
 Pre-registered checks, for the run that can load the checkpoint:
 
@@ -36,6 +36,6 @@ Pre-registered checks, for the run that can load the checkpoint:
 - Implicit influence is Cohen's `d_z` on tone, choice, and preference, n≥50 on held, Wilson 95%. Explicit phone and birthday strings are reported and are not part of `d_z`.
 - The old `matches_pr57` floors are not gates.
 
-No fit number and no held number are in this file. Scoring them on SmolLM2 would not be this protocol.
+No fit number and no held number are in this file. Scoring them on SmolLM2 would not be this protocol. The numbers are in `reports/growbrain_stage0_fit.json`, `reports/growbrain_stage0_held.json`, `README.md`, and `docs/architecture.md`.
 
-Constants were not changed. The held bank was not scored.
+Constants were not changed between the fit run and the held run.
