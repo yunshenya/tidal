@@ -39,6 +39,7 @@ REVISION_PATH = REPORT_DIR / "subconscious_cue_revision_held.json"
 WORD_HELD_PATH = REPORT_DIR / "subconscious_cue_word_held.json"
 EVENT_FIT_PATH = REPORT_DIR / "subconscious_cue_event_fit.json"
 EVENT_HELD_PATH = REPORT_DIR / "subconscious_cue_event_held.json"
+WINNER_EVENT_PATH = REPORT_DIR / "subconscious_cue_winner_event.json"
 COMPETITION_FIT_PATH = REPORT_DIR / "subconscious_cue_competition_fit.json"
 KWTA_KS = (1, 2, 3, 4)
 HELD_N_MIN = 50
@@ -93,22 +94,25 @@ FAN_ALPHAS = (0.25, 0.125, 0.0625, 0.03125, 0.015625)
 FAN_STRENGTH = 0.5
 FAN_RELATION = "fan-norm"
 FAN_FIT_MIN = 6
-HELD_FAN_MIN = 38
+HELD_FAN_MIN = 45
 
-# Point counts from the merged interfere held pass (#54). Not worse means
-# the cue pass is at least this many successes. n is 50.
+# Cue-triggered floors. User-approved tradeoff against the soft-mixture
+# floors from #53 and #54. These counts are the git 709ae8c held rescore.
+# winner_same is not the utterance-level 16/50. It is the per-event onset
+# check, filled from the one floor-bank score of that definition.
+# Direction gates stay at the 38/50 pre-registration. n is 50.
 HELD_FLOORS = {
-    "prefer_up": 50,
-    "avoid_up": 39,
+    "prefer_up": 46,
+    "avoid_up": 37,
     "avoid_stored_down": 42,
-    "toward_up": 45,
-    "away_down": 48,
+    "toward_up": 47,
+    "away_down": 47,
     "rif_ge4": 50,
-    "competitor_down": 50,
+    "competitor_down": 47,
     "winner_same": 50,
     "outsider_same": 50,
-    "similarity": 42,
-    "count": 48,
+    "similarity": 35,
+    "count": 32,
 }
 
 
@@ -990,7 +994,8 @@ def held(dest: Path = None) -> dict:
     ge4 = _count(quartet_rows, lambda row: bool(row["ge4"]))
     pattern = [row for row in quartet_rows if row["pattern_ok"]]
     competitor = _count(pattern, lambda row: bool(row["competitor_down"]))
-    winner = _count(pattern, lambda row: bool(row["winner_same"]))
+    # Per retrieval event, not the utterance-level target strength.
+    winner = _count(pattern, lambda row: bool(row["winner_event_same"]))
     outsider = _count(pattern, lambda row: bool(row["outsider_same"]))
     sim_rows = [row for row in quartet_rows if row["similarity"].get("included")]
     similarity = _count(sim_rows, lambda row: bool(row["similarity"]["high_lower"]))
@@ -1944,6 +1949,86 @@ def event_held() -> dict:
     return payload
 
 
+def winner_event() -> dict:
+    """One floor-bank pass of the per-event winner gate.
+
+    Does not rescore the direction gates and does not change theta, half-life,
+    lambda, or the retrieval mechanism. Refuses a second report.
+    """
+    from tidal.subconscious_interfere_score import score_quartet
+    from tidal.subconscious_measure_data import RifMeasure, wilson_interval
+
+    prereg = (REPORT_DIR / "subconscious_cue_prereg.md").read_text(encoding="utf-8")
+    for needle in (
+        "Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required.",
+        "The winner at event onset is unchanged by that event.",
+        "The per-event winner floor was not scored.",
+    ):
+        if needle not in prereg:
+            raise RuntimeError("the per-event winner definition is not in the preregistration")
+    if WINNER_EVENT_PATH.is_file():
+        raise RuntimeError("the per-event winner gate was already scored")
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        rows = []
+        for index, group in enumerate(RifMeasure.QUARTETS):
+            _print(f"winner-event {index + 1}/50")
+            rows.append(score_quartet(mem, group))
+    finally:
+        mem.close()
+    pattern = [row for row in rows if row["pattern_ok"]]
+    item_k = sum(1 for row in pattern if row["winner_event_same"])
+    item_n = len(pattern)
+    event_k = sum(int(row["winner_events_unchanged"]) for row in pattern)
+    event_n = sum(int(row["winner_events"]) for row in pattern)
+    utterance_k = sum(1 for row in pattern if row["winner_same"])
+    payload = {
+        "kind": "winner-event",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "definition": (
+            "Winner strength after its own retrieval event is unchanged by later "
+            "events in the same utterance is not required. The winner at event "
+            "onset is unchanged by that event."
+        ),
+        "items": {
+            "k": int(item_k),
+            "n": int(item_n),
+            "wilson": list(wilson_interval(item_k, item_n)) if item_n else None,
+        },
+        "events": {
+            "k": int(event_k),
+            "n": int(event_n),
+            "wilson": list(wilson_interval(event_k, event_n)) if event_n else None,
+        },
+        "utterance_winner_same": {
+            "k": int(utterance_k),
+            "n": int(item_n),
+            "wilson": list(wilson_interval(utterance_k, item_n)) if item_n else None,
+            "note": "Retired criterion. Not the floor.",
+        },
+        "rows": [
+            {
+                "id": row["id"],
+                "pattern_ok": row["pattern_ok"],
+                "winner_same": row["winner_same"],
+                "winner_event_same": row["winner_event_same"],
+                "winner_events": row["winner_events"],
+                "winner_events_unchanged": row["winner_events_unchanged"],
+                "strength": row["strength"],
+            }
+            for row in rows
+        ],
+        "constants_changed": False,
+        "mechanism_changed": False,
+        "note": "One pass of the floor-bank quartets. Direction gates were not rescored.",
+    }
+    _dump(WINNER_EVENT_PATH, payload)
+    _print(json.dumps({"items": payload["items"], "events": payload["events"], "utterance": payload["utterance_winner_same"]}, indent=2))
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1968,6 +2053,8 @@ def main(argv: list) -> None:
         event_fit()
     elif mode == "event-held":
         event_held()
+    elif mode == "winner-event":
+        winner_event()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

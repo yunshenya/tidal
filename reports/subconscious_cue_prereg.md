@@ -525,3 +525,29 @@ Same cell. `reports/subconscious_cue_schedule_held.json`, `reports/subconscious_
 | more similar companion lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 | no |
 | larger same-relation count lowers the target margin | 32/50 | [0.501410168761127, 0.7586125034815325] | 48/50 | no |
 | fan 1 / 2 / 4 strictly decreasing | 45/50 | [0.7863976856252035, 0.9565242350681096] | 38/50 | yes |
+
+## Cue-triggered floors, user-approved tradeoff
+
+The user approved path 1 for this pull request: accept the cost of single-winner cue-triggered injection and replace the soft-mixture floors. This is an explicit tradeoff. Human-like single retrieval injects one memory. The soft-mixture floors assumed a K=4 mixture. Theta stays 0.32, half-life stays 30, lambda stays 0.3, fan S stays 1.45, the RIF span stays 0.05, and alpha stays 0.25. The retrieval mechanism is not retuned. No constant was chosen from this tradeoff.
+
+Prefer, avoid, and interference weaken relative to soft-mixture #53 and #54 because one memory is injected instead of a K=4 mixture. #53 shipped mixture K=4, T=0.05, with the n=50 implicit rates prefer 50/50, avoid up 39/50, avoid stored down 42/50, toward 45/50, and away 48/50. #54 shipped coexist and interfere at at least 4 slots 50/50, competitor below 1 on 50/50, winner unchanged 50/50, outsider unchanged 50/50, similarity 42/50, and count 48/50.
+
+The counts below, other than the per-event winner floor, are the rates on the held rescore at git `709ae8c805c2924435c3ea25fd771286fb0c5dcf`. Direction gates stay the rates already passed on that rescore: cued 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]; unrelated absolute margin 0.0007146249711513519; false triggers 0/50, Wilson [0.0, 0.07134759913335872]; decay 50/50, Wilson [0.9286524008666414, 1.0]; store means 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597; quiet NLL −2.347582425826635e-05 on 117 tokens; fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239]. Inject cost on that pass, 11 tokens, warmup 2, repeats 7, extra seconds per token: store 8 is 7.983290891967376e-05, store 16 is 0.0001314778174591166, store 32 is 0.00016903945387722078.
+
+| floor | rate | Wilson 95% | soft-mixture floor |
+| --- | --- | --- | --- |
+| prefer up | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 |
+| avoid up | 37/50 | [0.6044684273515117, 0.8412847250644762] | 39/50 |
+| avoid stored down | 42/50 | [0.7148578393696501, 0.916625793219666] | 42/50 |
+| toward up | 47/50 | [0.8378290831116182, 0.979385029651026] | 45/50 |
+| away down | 47/50 | [0.8378290831116182, 0.979385029651026] | 48/50 |
+| coexist, at least 4 slots | 50/50 | [0.9286524008666414, 1.0] | 50/50 |
+| RIF competitor below 1 | 47/50 | [0.8378290831116182, 0.979385029651026] | 50/50 |
+| RIF outsider unchanged | 50/50 | [0.9286524008666414, 1.0] | 50/50 |
+| interference similarity | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 |
+| interference count | 32/50 | [0.501410168761127, 0.7586125034815325] | 48/50 |
+| fan strictly decreasing | 45/50 | [0.7863976856252035, 0.9565242350681096] | 38/50 |
+
+Toward up 47/50 is above the old floor of 45/50. Fan strictly decreasing 45/50 is above the old floor of 38/50. Avoid stored down, coexist, and outsider are unchanged. The utterance-level winner check on that rescore was 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. That check is retired.
+
+Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required. The winner at event onset is unchanged by that event. The floor for that definition is the rate observed on one pass of the existing floor bank. The per-event winner floor was not scored.

@@ -474,6 +474,50 @@ def test_rank_competes_on_a_winner_change_and_not_on_a_retrigger():
         mem.close()
 
 
+def test_each_event_leaves_its_own_winner_unscaled():
+    """A later event may scale an earlier winner. That event's winner stays put."""
+    import tidal.llm_memory as mod
+    from tidal.subconscious_interfere_score import observe_event_winners
+
+    original = mod.compete_retrieved
+    model, tok = build_tiny_lm(seed=5)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("left is A", name="left", rel="mrif")
+        assert mem.remember("right is B", name="right", rel="mrif")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        left = np.zeros(width, dtype=np.float64)
+        right = np.zeros(width, dtype=np.float64)
+        left[0] = 1.0
+        left[1] = 0.3
+        right[0] = 0.3
+        right[1] = 1.0
+        left /= np.linalg.norm(left)
+        right /= np.linalg.norm(right)
+        slots[0].k = left.copy()
+        slots[1].k = right.copy()
+        for slot in slots:
+            slot.salience = 0.0
+            slot.strength = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _rows(vectors):
+            return np.stack([vector + center for vector in vectors], 0)
+
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _right=right: _rows([_left, _right, _left])
+        _info, events = observe_event_winners(mem, "left is A")
+        assert mod.compete_retrieved is original
+        assert len(events) == 3
+        assert all(event["unchanged"] for event in events)
+        assert [event["winner"] for event in events] == [0, 1, 0]
+        assert slots[0].strength < 1.0
+        assert slots[1].strength < slots[0].strength
+    finally:
+        mod.compete_retrieved = original
+        mem.close()
+
+
 def test_rank_scales_a_same_relation_theta_companion_and_spares_the_outsider():
     """A missed-theta companion and a different-relation theta candidate stay at 1.
 

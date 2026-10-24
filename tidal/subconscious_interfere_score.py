@@ -240,11 +240,53 @@ def _unique_extreme(values):
     return values.index(top), values.index(bottom)
 
 
+def observe_event_winners(mem, prompt: str) -> tuple:
+    """Rank ``prompt`` and record whether each event leaves its winner unscaled.
+
+    This wraps :func:`tidal.llm_memory.compete_retrieved` for the one rank.
+    The wrapper calls the original function and does not change which slots
+    are scaled. A retrieval event's winner is unchanged by that event when
+    its strength after the call equals its strength before the call. Later
+    events in the same utterance may scale that slot. That later change is
+    not part of this record.
+    """
+    import tidal.llm_memory as mod
+
+    events = []
+    original = mod.compete_retrieved
+
+    def wrapped(slots, winner, competitors):
+        index = int(winner)
+        before = float(slots[index].strength)
+        changed = original(slots, winner, competitors)
+        after = float(slots[index].strength)
+        events.append(
+            {
+                "winner": index,
+                "before": before,
+                "after": after,
+                "unchanged": before == after,
+            }
+        )
+        return changed
+
+    mod.compete_retrieved = wrapped
+    try:
+        info = mem._rank(prompt)
+    finally:
+        mod.compete_retrieved = original
+    return info, events
+
+
 def score_quartet(mem, group) -> dict:
     """Slot count, strength pattern, similarity contrast, and count contrast.
 
     The similarity and count margins are taken at strength 1. ``score_pair``
     ranks before it scales rivals, so those margins are not the RIF pattern.
+    ``winner_same`` is the utterance-level check: the target strength is
+    still 1 after every event in the prompt. ``winner_event_same`` is the
+    cue-triggered check: each event leaves its own winner unscaled. A later
+    event may scale that winner. That does not fail ``winner_event_same``.
     """
     target, competitors, outsider = _roles(group)
     if len(competitors) != 3:
@@ -274,10 +316,11 @@ def score_quartet(mem, group) -> dict:
     for i in range(len(stored)):
         for j in range(i + 1, len(stored)):
             maxcos = max(maxcos, _cosine(stored[i], stored[j]))
-    decay = mem._rank(target["prompt"])
+    decay, winner_events = observe_event_winners(mem, target["prompt"])
     forgotten = 0
     if isinstance(getattr(mem, "last_rif", None), dict):
         forgotten = int(mem.last_rif["n"])
+    winner_event_unchanged = sum(1 for event in winner_events if event["unchanged"])
     strength = {}
     for fact in (target, *competitors, outsider):
         slot = _find_slot(mem, fact)
@@ -293,6 +336,7 @@ def score_quartet(mem, group) -> dict:
     )
     competitor_down = bool(pattern_ok and all(value < 1.0 for value in comp_strengths))
     winner_same = bool(pattern_ok and strength[target["id"]] == 1.0)
+    winner_event_same = bool(pattern_ok and winner_event_unchanged == len(winner_events))
     outsider_same = bool(pattern_ok and strength[outsider["id"]] == 1.0)
     numeric = [value for value in cosines if value is not None]
     extreme = _unique_extreme(numeric) if len(numeric) == 3 else None
@@ -348,6 +392,9 @@ def score_quartet(mem, group) -> dict:
         "pattern_ok": bool(pattern_ok),
         "competitor_down": competitor_down,
         "winner_same": winner_same,
+        "winner_event_same": winner_event_same,
+        "winner_events": int(len(winner_events)),
+        "winner_events_unchanged": int(winner_event_unchanged),
         "outsider_same": outsider_same,
         "nomem_margin": nomem,
         "similarity": similarity,

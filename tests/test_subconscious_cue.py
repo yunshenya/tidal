@@ -629,6 +629,9 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "Retriggers of the same winner within its active decay window do not rerun competition." in text
     assert "Anderson, Bjork, and Bjork (1994) treat retrieval-induced forgetting as a consequence of a retrieval attempt." in text
     assert "The event bank was not scored." in text
+    assert "Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required." in text
+    assert "The winner at event onset is unchanged by that event." in text
+    assert "The per-event winner floor was not scored." in text
     assert "compete_retrieved" in (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
