@@ -79,7 +79,7 @@ def test_import_tidal_does_not_import_transformers():
         "import tidal\n"
         "assert 'transformers' not in sys.modules\n"
         "assert 'tidal.llm_memory' not in sys.modules\n"
-        "import tidal.episodic, tidal.continuum, tidal.question_head, tidal.episodic_eval\n"
+        "import tidal.episodic, tidal.continuum, tidal.episodic_eval\n"
         "import tidal.llm_memory\n"
         "assert 'transformers' not in sys.modules\n"
         "import tidal.llm_memory_train\n"
@@ -816,6 +816,17 @@ def _zero_centers(self):
 
 def _last_weight(mem):
     return mem.inject.net[-1].weight.detach().cpu()
+
+
+def test_shipped_llm_files_stay_byte_identical():
+    """Full-file locks for the inject checkpoint and llm_memory.py."""
+    import hashlib
+
+    root = ROOT / "tidal"
+    inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
+    source = "0fb206668bc26ed6d0c2d7bf43b0f3b5070e0ca112bad4a8cb3c2ed357c2b36f"
+    assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
+    assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 
 
 def test_default_llm_memory_loads_shipped_inject(monkeypatch):

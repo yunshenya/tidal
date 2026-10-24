@@ -40,10 +40,12 @@ DIRECTION_GATES = {
     "birthday_question": 1,
 }
 
-FROZEN_SHA = "e3cdd7fd595d8a76af03a276c2ad750b25b68e1bd8460c9e22e95aa12a820e66"
-FIT39_SHA = "20b7cb3f9742709d320dc5913cf62675316673d7b457c55b6c78cf4de587e5ce"
-HELD39_SHA = "ea0a15e5edf0dcab53fede8fad1964b61c23b52c3df55c5f8e00865e59cb053a"
-GATE_SHA = "cbca1f62c152eb928f498629e8d39a79cdcd9a144589cf2ad8484b65806dd464"
+from tidal.subconscious_ids import (
+    FROZEN_SHA,
+    FIT39_SHA,
+    HELD39_SHA,
+    GATE_SHA,
+)
 _TRAIN_NAMES = (
     'Blavex',
     'Blazor',

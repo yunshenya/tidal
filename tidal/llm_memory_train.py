@@ -26,7 +26,7 @@ those weights. ``--tiny`` and any other model or layer still start from a zero
 last layer.
 
 Retrieval is the episodic store. This script does not train a second q/k
-adapter; contrastive questions for tidal features stay in ``tidal.question_head``.
+adapter.
 """
 from __future__ import annotations
 
