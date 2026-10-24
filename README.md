@@ -41,6 +41,8 @@ A fit-only diagnostic compared that one winner with a k-winner-take-all mix at k
 
 Cue-key cosine after `tidal/llm_key_center.npz`, on the direction fit bank: token AUC 0.797 (related n=80, unrelated n=368). The per-prompt maximum AUC is 1.0. Theta stays 0.32.
 
+The direction held bank was scored once at that cell and was not used to choose it. Prefer n=8, so every rate fails the n≥50 rule. The point pass is also false: decay is 5/8, below the 6/8 point rule, on the logit comparison. Cued mean margin is 1.191 (7/8 positive). Unrelated absolute margin is 0.0. False triggers are 0/8. Store-size means at 8/16/32 are 0.0154/0.0119/0.0125. Quiet NLL is 0.0 on 11 tokens. Fan means are 1.191/0.461/0.000034 with 7/8 strict. Inject cost at this cell is 0.000120, 0.000084, and 0.000108 extra seconds per token at store sizes 8, 16, and 32. The citations in `docs/architecture.md` were resolved on 2026-10-24; each DOI returned the named paper.
+
 ## Planned interface to growbrain
 
 The per-token cue export is what generation injects. There is still no growbrain package and no encode, NLL, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries:

@@ -555,6 +555,8 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "A rate whose n is below 50 fails." in text
     assert "This measurement does not change theta." in text
     assert "direction held bank" in text
+    assert "The point pass is false because decay is 5/8." in text
+    assert "The n≥50 pass is false." in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script

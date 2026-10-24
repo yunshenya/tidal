@@ -1,0 +1,136 @@
+{
+  "alpha": 0.25,
+  "bank": "direction-held",
+  "counts": {
+    "fan_means": {
+      "1": 1.1909517049789429,
+      "2": 0.46114861965179443,
+      "4": 3.409385681152344e-05
+    },
+    "mean_cued_delta": 1.1909517049789429,
+    "quiet_n50_pass": false,
+    "quiet_nll_mean": 0.0,
+    "quiet_nll_n": 11,
+    "quiet_point_pass": true,
+    "store_means": {
+      "16": 0.011889219284057617,
+      "32": 0.012487292289733887,
+      "8": 0.01543891429901123
+    },
+    "store_n": 8,
+    "store_n50_pass": false,
+    "store_point_pass": true,
+    "unrelated_abs_mean": 0.0,
+    "unrelated_n": 8,
+    "unrelated_n50_pass": false,
+    "unrelated_point_pass": true
+  },
+  "decay_reasons": [
+    {
+      "id": "dir-held-prefer-0",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "dir-held-prefer-1",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "dir-held-prefer-2",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "dir-held-prefer-3",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "dir-held-prefer-4",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "dir-held-prefer-5",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "dir-held-prefer-6",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "dir-held-prefer-7",
+      "pass": false,
+      "reason": "logit"
+    }
+  ],
+  "elapsed_s": 7.088067036995199,
+  "floors_rescored": false,
+  "git": "15943c570169113a67d665724362b6a7edfd3709",
+  "half_life": 30.0,
+  "kind": "direction-held",
+  "lambda": 0.3,
+  "n50_fail": [
+    "cued_positive",
+    "false_trigger",
+    "decay",
+    "fan_strict",
+    "unrelated",
+    "store",
+    "quiet"
+  ],
+  "n50_pass": false,
+  "note": "Point rules are the fit rules. n below 50 fails. No cell was selected.",
+  "point_pass": false,
+  "rates": [
+    {
+      "gate": "cued_positive",
+      "k": 7,
+      "n": 8,
+      "n50_pass": false,
+      "point_pass": true,
+      "wilson": [
+        0.5291118177871464,
+        0.9775825085499433
+      ]
+    },
+    {
+      "gate": "false_trigger",
+      "k": 0,
+      "n": 8,
+      "n50_pass": false,
+      "point_pass": true,
+      "wilson": [
+        0.0,
+        0.32440756488388023
+      ]
+    },
+    {
+      "gate": "decay",
+      "k": 5,
+      "n": 8,
+      "n50_pass": false,
+      "point_pass": false,
+      "wilson": [
+        0.30574239460262737,
+        0.8631557141764026
+      ]
+    },
+    {
+      "gate": "fan_strict",
+      "k": 7,
+      "n": 8,
+      "n50_pass": false,
+      "point_pass": true,
+      "wilson": [
+        0.5291118177871464,
+        0.9775825085499433
+      ]
+    }
+  ],
+  "theta": 0.32,
+  "theta_changed": false
+}

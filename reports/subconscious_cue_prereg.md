@@ -300,3 +300,23 @@ This measurement does not change theta.
 ## Citation check
 
 On 2026-10-24 each DOI in this file and in `docs/architecture.md` was resolved through `https://doi.org` as CSL JSON. Each record returned the paper named beside that DOI. The McClelland and Rumelhart record titles the article with "I." The architecture prose says "Part 1." It is that article. The fusion references in the architecture file still have no DOIs and were not part of this check.
+
+## Direction held mechanism result
+
+One pass. Git `15943c570169113a67d665724362b6a7edfd3709`. Elapsed 7.1 seconds. Theta 0.32, half-life 30, lambda 0.3, alpha 0.25. Theta was not changed. The floors were not rescored.
+
+The point pass is false because decay is 5/8. The n≥50 pass is false.
+
+| gate | count | Wilson 95% | point rule | n≥50 |
+| --- | --- | --- | --- | --- |
+| cued margin positive | 7/8 | [0.529, 0.978] | pass, mean 1.191 | fail |
+| unrelated absolute margin | n=8, mean 0.0 |  | pass, mean ≤ 0.05 | fail |
+| false triggers | 0/8 | [0.0, 0.324] | pass | fail |
+| decay after the last trigger | 5/8 | [0.306, 0.863] | fail, floor 6/8 | fail |
+| store 8 / 16 / 32 | n=8 |  | pass, 0.0154 / 0.0119 / 0.0125 | fail |
+| quiet-token NLL | 0.0 on 11 tokens |  | pass, mean ≤ 0.02 | fail |
+| fan 1 / 2 / 4 strict | 7/8 | [0.529, 0.978] | pass, means 1.191 / 0.461 / 0.000034 | fail |
+
+The three decay failures are the logit comparison, on `dir-held-prefer-2`, `dir-held-prefer-4`, and `dir-held-prefer-7`. Activation on those items still fell with distance. The report is `reports/subconscious_cue_direction_held.json`.
+
+Inject cost at the selected cell, from the widened half-life fit, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000120, store 16 is 0.000084, store 32 is 0.000108. The armed forward is about 0.0025 seconds per token.
