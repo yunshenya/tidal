@@ -68,7 +68,7 @@ def test_grid_selects_the_highest_threshold_that_keeps_the_different_fact():
     selected = select_threshold(rows)
     assert selected["threshold"] == 0.85
     assert select_threshold([{"threshold": 0.5, "pass": False}]) is None
-    assert REPEAT_JACCARD == 1.0
+    assert REPEAT_JACCARD == 0.85
 
 
 def test_surfaces_stay_disjoint_from_the_other_banks():
@@ -140,10 +140,10 @@ def test_fit_scorer_does_not_read_held_items():
     assert "_held" not in calls
 
 
-def test_prereg_is_before_any_margin():
+def test_prereg_records_the_fit_and_waits_for_held():
     text = PREREG.read_text(encoding="utf-8")
-    assert "Fit has not been scored." in text
     assert "Held has not been scored." in text
+    assert "6f9530eb9a2684d258e7b2cd5714c61bb69fd6eb5950f5193e91f77d0d3130ba" in text
     low, high = IMPLICIT_DZ_INTERVAL
     assert str(low) in text
     assert str(high) in text

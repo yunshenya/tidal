@@ -46,12 +46,13 @@ SKIP_KINDS = frozenset({"chat", "noise"})
 # The angle is not read from fact text. 0 new parameters.
 CLOCK_SPAN = 0.25
 CLOCK_STEP = math.pi / 16
-# Strictest corner of the fit grid (0.50, 0.67, 0.75, 0.85, 0.92, 1.0).
-# A different identity is overwritten only when the group matches, the
-# relation is the same non-empty string, and the surface token Jaccard is
-# at least this value. Key cosine does not merge slots. This corner is not
-# the selected cell: the fit bank has not been scored.
-REPEAT_JACCARD = 1.0
+# Highest passing cell on fit bank
+# 6f9530eb9a2684d258e7b2cd5714c61bb69fd6eb5950f5193e91f77d0d3130ba.
+# The grid is (0.50, 0.67, 0.75, 0.85, 0.92, 1.0). A cell must collapse the
+# added-token repeat (Jaccard 6/7) and keep the one-token replacement
+# (Jaccard 5/7). 0.75 and 0.85 pass. The higher threshold wins. Not retuned
+# on the held bank. Key cosine does not merge slots.
+REPEAT_JACCARD = 0.85
 _TOKEN_RE = re.compile(r"[\u4e00-\u9fff]|[A-Za-z0-9]+(?:'[A-Za-z]+)?")
 
 

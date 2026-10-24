@@ -2,9 +2,9 @@
 
 Similar memories stay in separate slots and compete. A cross-identity overwrite at key cosine above 0.9 is removed. A different identity is overwritten only when the group matches, the relation is the same non-empty string, and the surface token Jaccard is at least `REPEAT_JACCARD`. The same predicate is what replay merges. Same `(name, rel)` still overwrites that one slot, including when the new text is different. Key cosine does not merge slots.
 
-`REPEAT_JACCARD` in `tidal/episodic.py` is `1.0`. That is the strictest corner of the grid below. It is not the selected cell. `MIX_K` 4, `MIX_TEMP` 0.05, `gap_tau` 0.80, polarity span 2, valence span 1, valence step 0.25, replay, the surprise gate, and the retrieval-induced-forgetting span are unchanged. Cutting the cost of `_rank` is not in this change.
+`REPEAT_JACCARD` is `0.85`, the highest cell that passed the fit grid below. `MIX_K` 4, `MIX_TEMP` 0.05, `gap_tau` 0.80, polarity span 2, valence span 1, valence step 0.25, replay, the surprise gate, and the retrieval-induced-forgetting span are unchanged. Cutting the cost of `_rank` is not in this change.
 
-Fit has not been scored. Held has not been scored.
+Held has not been scored.
 
 ## Literature
 
@@ -59,7 +59,20 @@ A case with rule `merge` must end at 1 slot. A case with rule `stay` or `two` mu
 
 A cell passes when every case matches its rule. Among passing cells, take the highest threshold. That is the strictest rule that still collapses the added-token repeat. If no cell passes, the held bank is not scored and the constant is not given a second grid.
 
-The added-token pair is the near-identical repeat. The one-token replacement is a different fact and must keep its own slot. Those two Jaccard values sit on either side of 0.75 and of 0.85, and the added-token pair sits below 0.92. The grid is built that way. The fit script has not been run.
+The added-token pair is the near-identical repeat. The one-token replacement is a different fact and must keep its own slot. Those two Jaccard values sit on either side of 0.75 and of 0.85, and the added-token pair sits below 0.92. The grid is built that way.
+
+Fit bank `6f9530eb9a2684d258e7b2cd5714c61bb69fd6eb5950f5193e91f77d0d3130ba`. Git `f06f636aa55fc89ff6371ce74b0f9120e3f0f812`. Elapsed 0.003436908998992294 seconds. No language-model forward.
+
+| threshold | pass | why |
+|---|---|---|
+| 0.50 | no | the one-token replacement collapsed |
+| 0.67 | no | the one-token replacement collapsed |
+| 0.75 | yes | the added-token repeat collapsed and the one-token replacement stayed |
+| 0.85 | yes | same |
+| 0.92 | no | the added-token repeat stayed |
+| 1.0 | no | the added-token repeat stayed |
+
+Two cells pass. The higher threshold is 0.85, so that is the selected cell. 0.50 and 0.67 also collapsed the exact repeat, the different-relation copy stayed two slots, and the parallel keys with different text stayed two slots. They failed only because Jaccard 5/7 was treated as a repeat. 0.92 and 1.0 kept that different fact and failed because Jaccard 6/7 was not treated as a repeat.
 
 ## Held-out gates
 
