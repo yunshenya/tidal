@@ -17,6 +17,7 @@ from tidal.interface_v7 import (
     MODALITY_VALUES,
     FusionWeightsStub,
     check_fingerprint,
+    check_fusion_confidence,
     check_fusion_weights,
     check_modality,
     empty_fusion_weights,
@@ -95,6 +96,8 @@ def test_stub_shapes():
     assert w.shape == (3,) and w.dtype.name == "float32"
     assert check_fingerprint(fp).shape == (32,)
     assert check_fusion_weights(w).shape == (3,)
+    assert check_fusion_confidence(0.0) == 0.0
+    assert check_fusion_confidence(1.0) == 1.0
     assert check_modality("fused") == "fused"
     stub = FusionWeightsStub(weights=w)
     assert stub.weights.shape == (3,)
@@ -142,6 +145,49 @@ def test_set_fusion_weights_rejects_wrong_shape():
         fields = mem.cue_fields("Ab")
         assert "fusion_weights" not in fields
         assert float(fields["fusion_confidence"]) == 0.0
+    finally:
+        mem.close()
+
+
+def test_set_fusion_confidence_emits_on_cue_fields():
+    mem = _memory()
+    try:
+        assert float(mem.fusion_confidence) == 0.0
+        assert float(mem.cue_fields("Ab")["fusion_confidence"]) == 0.0
+        mem.set_fusion_confidence(0.75)
+        assert float(mem.fusion_confidence) == 0.75
+        fields = mem.cue_fields("Ab")
+        level = float(fields["fusion_confidence"])
+        assert 0.0 < level <= 1.0
+        assert level == 0.75
+        assert isinstance(fields["fusion_confidence"], float)
+        assert "fusion_weights" not in fields
+        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 7
+        hidden = mem.cue_hidden("Ab")
+        key = hidden[0] - mem.query_mean
+        value = np.linspace(0.1, 1.0, mem.cue_dim, dtype=np.float32)
+        assert mem.store.write(key, value, name="ada", rel="note", answer="A")
+        packed = mem.cue_fields("Ab")
+        assert 0.0 < float(packed["fusion_confidence"]) <= 1.0
+        assert float(packed["fusion_confidence"]) == 0.75
+        mem.set_fusion_confidence(1.0)
+        assert float(mem.cue_fields("Ab")["fusion_confidence"]) == 1.0
+        mem.set_fusion_confidence(0.0)
+        assert float(mem.cue_fields("Ab")["fusion_confidence"]) == 0.0
+    finally:
+        mem.close()
+
+
+def test_set_fusion_confidence_rejects_out_of_range():
+    mem = _memory()
+    try:
+        for bad in (-0.01, 1.01, float("nan"), float("inf"), float("-inf")):
+            with pytest.raises(ValueError, match="fusion_confidence"):
+                mem.set_fusion_confidence(bad)
+            with pytest.raises(ValueError, match="fusion_confidence"):
+                check_fusion_confidence(bad)
+        assert float(mem.fusion_confidence) == 0.0
+        assert float(mem.cue_fields("Ab")["fusion_confidence"]) == 0.0
     finally:
         mem.close()
 

@@ -81,7 +81,8 @@ is growbrain ``d_model``, pinned at 192 on stage0 ``e1_base_rebalance``.
 it is not an input to process S.
 ``interface_version`` 7 adds a memory-level ``fingerprint`` of width 32 on
 the cue winner and a sample-level ``fusion_confidence`` in ``[0, 1]``.
-``fusion_weights`` is not a cue field. ``s`` is the winner's strength frozen at the
+No fusion stores 0. :meth:`LLMMemory.set_fusion_confidence` writes a known
+value in ``(0, 1]``. ``fusion_weights`` is not a cue field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -153,6 +154,7 @@ import torch.nn.functional as F
 
 from tidal.interface_v7 import (
     check_fingerprint,
+    check_fusion_confidence,
     check_fusion_weights,
     check_modality,
     empty_fusion_weights,
@@ -242,6 +244,7 @@ MIX_TEMP = 0.05
 # is not part of the residual and is not an input to process S. The drifted
 # clock is not an input to decay. interface_version 7 adds fingerprint
 # (F,) on the cue winner and fusion_confidence as a last-token scalar.
+# No fusion stores 0. set_fusion_confidence writes a known value.
 # fusion_weights is a separate write, not a cue field. Live is 7.
 CUE_INTERFACE_VERSION = 7
 CUE_FLOOR = 0.05
@@ -1657,8 +1660,9 @@ class LLMMemory:
         # and not the store's circadian angle.
         self._wall_seconds = 0.0
         self._internal_seconds = 0.0
-        # growbrain → tidal fusion control. Not a cue-packet field.
-        # fusion_confidence stays 0 until a fusion algorithm writes it.
+        # growbrain → tidal fusion control. fusion_weights is not a cue field.
+        # fusion_confidence is the last-token cue scalar. 0 until
+        # set_fusion_confidence writes a known value.
         self._fusion_weights = empty_fusion_weights()
         self._fusion_pair = None
         self._fusion_confidence = 0.0
@@ -1701,10 +1705,27 @@ class LLMMemory:
 
         ``weights`` is float32 ``(3,)`` in order text, audio, image.
         Sleep replay and low-level fusion may read :attr:`fusion_weights`.
-        This method does not run fusion or pairing.
+        This method does not run fusion or pairing, and it does not write
+        :attr:`fusion_confidence`.
         """
         self._fusion_weights = check_fusion_weights(weights)
         self._fusion_pair = pair
+
+    @property
+    def fusion_confidence(self) -> float:
+        """Last ``set_fusion_confidence`` value in ``[0, 1]``. 0 when no fusion."""
+        return float(self._fusion_confidence)
+
+    def set_fusion_confidence(self, confidence) -> None:
+        """Store last-token / sample-level fusion confidence.
+
+        ``confidence`` is a finite float in ``[0, 1]``. 0 means no
+        cross-modal fusion. A known fusion writes a value in ``(0, 1]``.
+        This does not run fusion or pairing, and it does not write
+        :attr:`fusion_weights`. Cue export reads this scalar on the last
+        token, the same rule as the v6 gate scalars.
+        """
+        self._fusion_confidence = check_fusion_confidence(confidence)
 
     @contextmanager
     def _clean_forward(self):
@@ -2289,7 +2310,8 @@ class LLMMemory:
         level after each of those steps, in ``[0, 1]``. ``fingerprint`` is
         float32 ``(32,)`` on the cue winner, zeros when none is active.
         ``fusion_confidence`` is one float in ``[0, 1]`` (last-token /
-        sample-level). No fusion stores 0. ``fusion_weights`` is not
+        sample-level). No fusion stores 0. A known fusion is the last
+        :meth:`set_fusion_confidence` write. ``fusion_weights`` is not
         exported. ``interface_version`` is
         :data:`CUE_INTERFACE_VERSION`, which is 7. The trace starts empty
         and a new winner stamps the current wall time, so seconds since boot
@@ -2893,10 +2915,7 @@ def _token_sources(memory_id, triggered) -> list:
 
 
 def _export_fusion_confidence(value) -> float:
-    level = float(value)
-    if not math.isfinite(level) or level < 0.0 or level > 1.0:
-        raise ValueError("fusion_confidence must be in [0, 1]")
-    return level
+    return check_fusion_confidence(value)
 
 
 def _export_fingerprint(value) -> np.ndarray:
