@@ -1,4 +1,4 @@
-"""The key-layer stop matches the full forward, and passed-in models stay on it."""
+"""The key prefix matches the full forward, and passed-in models stay on it."""
 from __future__ import annotations
 
 import os
@@ -56,7 +56,7 @@ def test_passed_in_model_keeps_the_full_key_forward():
     finally:
         LLMMemory._key_centers = centers
     try:
-        assert mem._key_layer_stop_ok() is False
+        assert mem._key_prefix_ok() is False
         pooled = mem._raw_key_pool("ab cd")
         assert seen["output_hidden_states"] is True
         assert pooled.shape == (64,)
@@ -65,11 +65,47 @@ def test_passed_in_model_keeps_the_full_key_forward():
         mem.close()
 
 
+def test_tiny_llama_prefix_matches_the_full_hidden():
+    previous = torch.get_num_threads()
+    torch.set_num_threads(1)
+    from tidal.llm_memory import build_tiny_lm
+
+    model, tokenizer = build_tiny_lm(seed=0)
+    centers = LLMMemory._key_centers
+    LLMMemory._key_centers = lambda self: (
+        np.zeros(self.hidden, dtype=np.float64),
+        np.zeros(self.hidden, dtype=np.float64),
+    )
+    try:
+        mem = LLMMemory(model, tokenizer)
+    finally:
+        LLMMemory._key_centers = centers
+    try:
+        assert mem._key_prefix_ok() is True
+        text = "Ada's phone is 111"
+        fast_hidden, _enc = mem._run_key_hidden(text)
+        slow_hidden, _enc, _logits = mem._run_hidden(text)
+        assert torch.equal(fast_hidden, slow_hidden)
+        assert np.array_equal(mem._raw_key_pool(text, "111"), mem._raw_key_pool(text, "111", full=True))
+        hits = {"n": 0}
+        handle = mem.layers[-1].register_forward_hook(lambda *_args: hits.__setitem__("n", hits["n"] + 1))
+        try:
+            mem._raw_key_pool(text)
+        finally:
+            handle.remove()
+        assert hits["n"] == 0
+    finally:
+        mem.close()
+        torch.set_num_threads(previous)
+
+
 def test_prereg_locks_bitwise_identity_and_the_cost_grid():
     text = open(PREREG, encoding="utf-8").read()
     assert "torch.equal" in text
     assert "np.array_equal" in text
     assert "No absolute tolerance" in text
+    assert "one CPU thread" in text
+    assert "noise floor" in text
     assert "Weigh unlabeled cadence." in text
     assert "Tone mqtag0:" in text
     assert "8, 16, 32, 128" in text
@@ -84,17 +120,20 @@ def test_prereg_locks_bitwise_identity_and_the_cost_grid():
 def shipped():
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-    torch.set_num_threads(os.cpu_count() or 1)
+    previous = torch.get_num_threads()
+    # One thread is the regime where this bfloat16 forward is bitwise.
+    torch.set_num_threads(1)
     mem = LLMMemory()
     try:
         yield mem
     finally:
         mem.close()
+        torch.set_num_threads(previous)
 
 
-def test_shipped_key_stop_matches_the_full_hidden(shipped):
+def test_shipped_key_prefix_matches_the_full_hidden(shipped):
     mem = shipped
-    assert mem._key_layer_stop_ok() is True
+    assert mem._key_prefix_ok() is True
     hits = {"n": 0}
     handle = mem.layers[-1].register_forward_hook(lambda *_args: hits.__setitem__("n", hits["n"] + 1))
     try:
@@ -109,3 +148,4 @@ def test_shipped_key_stop_matches_the_full_hidden(shipped):
     assert np.array_equal(fast_fact, slow_fact)
     again = mem._raw_key_pool(PROMPT, full=True)
     assert np.array_equal(again, slow)
+    assert mem.model.model.config.num_hidden_layers == mem.n_layers

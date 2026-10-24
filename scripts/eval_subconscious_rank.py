@@ -245,6 +245,7 @@ def _last_logits(mem, text: str, delta):
 def _identity(mem) -> dict:
     import torch
 
+    torch.set_num_threads(1)
     from tidal.subconscious_eval import Encoder, write_rows
     from tidal.subconscious_measure_data import choice_items, phone_items, preference_items, tone_items
     from tidal.subconscious_softmix_score import _group_rows
@@ -252,20 +253,41 @@ def _identity(mem) -> dict:
     pairs = _pairs()
     _print(f"identity strings {len(pairs)}")
     sentinel_text, sentinel_answer = pairs[0]
-    sentinel = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
+    sentinel_hidden, _, _ = mem._run_hidden(sentinel_text)
+    sentinel_hidden = sentinel_hidden.clone()
+    sentinel_pool = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
     mismatches = []
     for index, (text, answer) in enumerate(pairs):
         if index % 50 == 0:
             _print(f"pool {index}/{len(pairs)}")
+        slow_h, _, _ = mem._run_hidden(text)
+        fast_h, _ = mem._run_key_hidden(text)
+        if slow_h.shape != fast_h.shape or not torch.equal(slow_h, fast_h):
+            max_abs = None
+            if slow_h.shape == fast_h.shape:
+                max_abs = float((slow_h - fast_h).abs().max())
+            mismatches.append(
+                {"text": text[:80], "answer": answer, "kind": "hidden", "max_abs": max_abs}
+            )
+            break
         slow = mem._raw_key_pool(text, answer, full=True)
         fast = mem._raw_key_pool(text, answer)
         if not _equal_array(slow, fast):
-            mismatches.append({"text": text[:80], "answer": answer, "max_abs": _max_abs(slow, fast)})
+            mismatches.append(
+                {"text": text[:80], "answer": answer, "kind": "pool", "max_abs": _max_abs(slow, fast)}
+            )
             break
-    sentinel_again = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
-    sentinel_ok = bool(_equal_array(sentinel, sentinel_again))
+    sentinel_again, _, _ = mem._run_hidden(sentinel_text)
+    sentinel_pool_again = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
+    sentinel_ok = bool(torch.equal(sentinel_hidden, sentinel_again) and _equal_array(sentinel_pool, sentinel_pool_again))
     if not sentinel_ok:
-        mismatches.append({"text": "sentinel", "max_abs": _max_abs(sentinel, sentinel_again)})
+        hidden_gap = float((sentinel_hidden - sentinel_again).abs().max())
+        mismatches.append(
+            {
+                "text": "sentinel",
+                "max_abs": max(hidden_gap, _max_abs(sentinel_pool, sentinel_pool_again)),
+            }
+        )
 
     probes = []
     for family, items in (
@@ -357,6 +379,7 @@ def _identity(mem) -> dict:
         "phone_slow": spelled_slow,
         "phone_equal": spelled_fast == spelled_slow,
         "bare_generate_equal": bare_fast == bare_slow_model,
+        "threads": int(__import__("torch").get_num_threads()),
         "ok": (
             not mismatches
             and sentinel_ok
@@ -409,9 +432,45 @@ def _fill(mem, n: int) -> None:
         raise RuntimeError(f"store size {len(mem.store)} != {n}")
 
 
+def _pool_spread(rows) -> float:
+    import numpy as np
+
+    if len(rows) < 2:
+        return 0.0
+    spread = 0.0
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            diff = np.asarray(rows[i], dtype=np.float64) - np.asarray(rows[j], dtype=np.float64)
+            spread = max(spread, float(np.max(np.abs(diff))))
+    return spread
+
+
+def _noise(mem) -> dict:
+    """Max abs pooled-key movement at the cost thread count. Not a pass rule."""
+    fulls = [mem._raw_key_pool(PROMPT, full=True) for _ in range(REPEATS)]
+    fasts = [mem._raw_key_pool(PROMPT) for _ in range(REPEATS)]
+    cross = 0.0
+    import numpy as np
+
+    for left in fulls:
+        for right in fasts:
+            diff = np.asarray(left, dtype=np.float64) - np.asarray(right, dtype=np.float64)
+            cross = max(cross, float(np.max(np.abs(diff))))
+    return {
+        "prompt": PROMPT,
+        "repeats": REPEATS,
+        "full_max_abs": _pool_spread(fulls),
+        "prefix_max_abs": _pool_spread(fasts),
+        "cross_max_abs": cross,
+    }
+
+
 def _cost(mem) -> dict:
+    import torch
+
     from tidal.subconscious_eval import token_ids
 
+    torch.set_num_threads(os.cpu_count() or 1)
     prompt_n = len(token_ids(mem.tokenizer, PROMPT))
     good_n = len(token_ids(mem.tokenizer, PROMPT + GOOD)) - prompt_n
     bad_n = len(token_ids(mem.tokenizer, PROMPT + BAD)) - prompt_n
@@ -471,6 +530,7 @@ def _cost(mem) -> dict:
         "warmup": WARMUP,
         "repeats": REPEATS,
         "threads": int(__import__("torch").get_num_threads()),
+        "prompt_pool_noise": _noise(mem),
         "rows": rows,
     }
 
@@ -478,7 +538,7 @@ def _cost(mem) -> dict:
 def main() -> None:
     import torch
 
-    torch.set_num_threads(os.cpu_count() or 1)
+    torch.set_num_threads(1)
     started = time.perf_counter()
     from tidal.llm_memory import LLMMemory
 
