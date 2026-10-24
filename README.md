@@ -67,9 +67,30 @@ Winner strength after its own retrieval event is unchanged by later events in th
 
 That definition was scored once on the floor bank at git `b3726225387f7d592a89de6f0c412091a72af112`, elapsed 47.2 seconds. Every event left its own winner unscaled: 215/215 events, Wilson 95% [0.9824463845132672, 1.0], and 50/50 items, Wilson [0.9286524008666414, 1.0]. The floor is 50/50. The retired utterance-level check on the same pass is still 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. Theta, half-life, lambda, and the retrieval mechanism were not changed.
 
-## Planned interface to growbrain
+## Language-model backend
 
-The per-token cue export is what generation injects. There is still no growbrain package and no encode, NLL, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries:
+tidal calls four hooks. The memory layer still chooses the winner, the fan, the decay, and the residual. The backend runs the model and adds that residual.
+
+- `encode_hidden(text) -> (hidden, encoding, logits)`. One forward. `hidden` is the inject-layer residual, float32 `[T, H]`. `logits` are from that same forward. The forward does not add a memory residual.
+- `encode_cue(text) -> cue`. Pre-add inject-layer rows, float64 `[T, H]`. It does not inject and does not change the store. `encode_key_hidden(text) -> (hidden, encoding)` is the key-span form. When the stack matches `LlamaModel.forward`, it runs the decoder prefix through the inject layer. Otherwise it uses `encode_hidden` and drops the logits. Those rows match `encode_hidden`.
+- `answer_nll(logits, token_ids, answer_mask) -> float`. Total answer-token NLL, in nats, from logits `encode_hidden` already returned. It does not run the model. Position `i` is scored from `logits[i - 1]`. The stored value and this NLL share one forward.
+- `inject_residual(output, residual, *, broadcast=False, batched=True)`. Adds a residual into a decoder-layer output. `broadcast=False` adds a numpy residual `[batch, steps, hidden]` at the same index, in the layer output's dtype and device. `broadcast=True` adds one vector on every position. Only teacher-forced loss uses the broadcast. When the retrieval residual is all zeros, the hook returns None and does not call inject, so the layer output object stays the one the block produced.
+
+`SmolLM2Backend` is the only implementation. `LLMMemory` constructs it for the shipped SmolLM2-135M checkpoint and for a caller-supplied model. There is no switch and no environment flag. The growbrain backend is **planned**. This repository does not import growbrain and does not depend on it.
+
+Theta, half-life, lambda, fan S, the RIF span, and the floors are unchanged. This pull request is interface-only. No number is expected to change. The backend bank was not scored.
+
+That rescore was run once after the sentence above was committed. Git `167f196ccd6788579c39a882f3a9abf145d0a557`. Protocol `cue-direction-word-v1`. Bank sha256 `7a8f62d244ec98b52349bf441bcc3262c9c5ff10f7148d3d79fb824e7d109110`. The outer elapsed time is 172.05785542300146 seconds and includes the floor pass. The floor pass itself took 128.34025156700227 seconds. `matches_pr57` is true. `constants_changed` is false. Reports: `reports/subconscious_backend_held.json` and `reports/subconscious_backend_floors.json`.
+
+Direction gates match the merged cue-triggered rescore. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519 on 50 items. False triggers 0/50, rate 0, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match as well. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist, at least 4 slots, 50/50. RIF competitor below 1 is 47/50. The winner at event onset is unchanged on 50/50 items and on 215/215 events. Outsider unchanged 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match the same rescore: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.00013567636382173407, 0.00017457663489039987, and 0.00016208354579496452. Armed seconds per token are 0.002798841636500914, 0.0027643739079146394, and 0.002902572545942596.
+
+## Signals exported to growbrain
+
+The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:
 
 - `memory_id`
 - `vec`
