@@ -552,6 +552,9 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "No k was selected." in text
     assert "Token AUC is 0.797." in text
     assert "Theta was not changed." in text
+    assert "A rate whose n is below 50 fails." in text
+    assert "This measurement does not change theta." in text
+    assert "direction held bank" in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script

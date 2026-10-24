@@ -34,7 +34,10 @@ SCHEDULE_HELD_PATH = REPORT_DIR / "subconscious_cue_schedule_held.json"
 HALFLIFE_FIT_PATH = REPORT_DIR / "subconscious_cue_halflife_fit.json"
 ANISOTROPY_PATH = REPORT_DIR / "subconscious_cue_anisotropy.json"
 KWTA_FIT_PATH = REPORT_DIR / "subconscious_cue_kwta_fit.json"
+DIRECTION_HELD_PATH = REPORT_DIR / "subconscious_cue_direction_held.json"
 KWTA_KS = (1, 2, 3, 4)
+HELD_N_MIN = 50
+FROZEN_ALPHA = 0.25
 
 # First schedule, already scored. fit() does not iterate this.
 HISTORICAL_GRID = tuple(
@@ -1303,6 +1306,132 @@ def compete() -> dict:
     return payload
 
 
+def direction_held() -> dict:
+    """Gates 1–5 on the direction held bank. Does not choose a cell.
+
+    The 6-of-8 point rules stay the fit rules because this bank has 8 prefer
+    items and 8 neutral-choice items. A rate whose n is below 50 fails even
+    when that point rule passes. Theta, half-life, and lambda are not written
+    back, and the n=50 floor table is not rescored.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_direction_data import held_bank
+
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = held_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        prefer = list(bank.PREFER)
+        neutrals = list(bank.NEUTRAL_CHOICE)
+        nll_items = list(bank.NEUTRAL_NLL)
+        if len(prefer) != 8 or len(neutrals) != 8 or len(nll_items) != 12:
+            raise RuntimeError("direction held bank size changed")
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        base = _baselines(mem, bank, prefer_rows)
+        scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base, FROZEN_ALPHA)
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+
+    def _rate(name: str, k: int, n: int, point_pass: bool) -> dict:
+        return {
+            "gate": name,
+            "k": int(k),
+            "n": int(n),
+            "wilson": _wilson(int(k), int(n)) if int(n) > 0 else None,
+            "point_pass": bool(point_pass),
+            "n50_pass": bool(int(n) >= HELD_N_MIN and point_pass),
+        }
+
+    cued_point = bool(
+        int(scored["n_cued_pos"]) >= CUED_POS_MIN and float(scored["mean_cued_delta"]) > 0.0
+    )
+    unrelated_point = bool(float(scored["unrelated_abs_mean"]) <= UNRELATED_ABS_MAX)
+    rates = [
+        _rate("cued_positive", scored["n_cued_pos"], scored["decay_n"], cued_point),
+        _rate(
+            "false_trigger",
+            scored["false_triggers"],
+            scored["false_trigger_n"],
+            bool(scored["gate2_pass"]),
+        ),
+        _rate("decay", scored["decay_pass"], scored["decay_n"], bool(scored["gate3_pass"])),
+        _rate("fan_strict", scored["fan_k"], scored["fan_n"], bool(scored["fan_pass"])),
+    ]
+    counts = {
+        "unrelated_abs_mean": float(scored["unrelated_abs_mean"]),
+        "unrelated_n": int(scored["false_trigger_n"]),
+        "unrelated_point_pass": unrelated_point,
+        "unrelated_n50_pass": bool(
+            int(scored["false_trigger_n"]) >= HELD_N_MIN and unrelated_point
+        ),
+        "store_means": scored["store_means"],
+        "store_n": int(scored["decay_n"]),
+        "store_point_pass": bool(scored["gate4_pass"]),
+        "store_n50_pass": bool(int(scored["decay_n"]) >= HELD_N_MIN and scored["gate4_pass"]),
+        "quiet_nll_mean": scored["quiet_nll_mean"],
+        "quiet_nll_n": int(scored["quiet_nll_n"]),
+        "quiet_point_pass": bool(scored["gate5_pass"]),
+        "quiet_n50_pass": bool(
+            int(scored["quiet_nll_n"]) >= HELD_N_MIN and scored["gate5_pass"]
+        ),
+        "mean_cued_delta": float(scored["mean_cued_delta"]),
+        "fan_means": scored["fan_means"],
+    }
+    n50_fail = [row["gate"] for row in rates if not row["n50_pass"]]
+    for name in ("unrelated", "store", "quiet"):
+        if not counts[f"{name}_n50_pass"]:
+            n50_fail.append(name)
+    payload = {
+        "kind": "direction-held",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "bank": "direction-held",
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "rates": rates,
+        "counts": counts,
+        "decay_reasons": [
+            {"id": row.get("id"), "pass": row.get("pass"), "reason": row.get("reason")}
+            for row in scored["decay_rows"]
+        ],
+        "point_pass": bool(scored["pass"] and unrelated_point),
+        "n50_pass": not n50_fail,
+        "n50_fail": n50_fail,
+        "theta_changed": False,
+        "floors_rescored": False,
+        "note": "Point rules are the fit rules. n below 50 fails. No cell was selected.",
+    }
+    _dump(DIRECTION_HELD_PATH, payload)
+    _print(
+        json.dumps(
+            {
+                "point_pass": payload["point_pass"],
+                "n50_pass": payload["n50_pass"],
+                "mean_cued_delta": counts["mean_cued_delta"],
+                "unrelated_abs_mean": counts["unrelated_abs_mean"],
+                "store_means": counts["store_means"],
+                "quiet_nll_mean": counts["quiet_nll_mean"],
+                "quiet_nll_n": counts["quiet_nll_n"],
+                "rates": rates,
+            },
+            indent=2,
+        )
+    )
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1315,6 +1444,8 @@ def main(argv: list) -> None:
         anisotropy()
     elif mode == "compete":
         compete()
+    elif mode == "direction-held":
+        direction_held()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

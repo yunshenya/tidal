@@ -286,3 +286,17 @@ k=2 is higher at store size 8. At 16 and 32 every k above 1 is slightly below k=
 One pass. Git `8e085f31e5841405832fd374e931ad31f0378918`. Elapsed 0.495 seconds. Centers were `key_mean` and `query_mean` from `tidal/llm_key_center.npz`. Theta before and after was 0.32. Theta was not changed.
 
 Related prompt tokens, n=80: min −0.191, median 0.223, mean 0.216, max 0.582. Unrelated prompt tokens, n=368: min −0.192, median 0.036, mean 0.032, max 0.303. Token AUC is 0.797. Per-prompt maximum AUC is 1.0. The lowest related maximum is 0.436 and the highest unrelated maximum is 0.303. The report is `reports/subconscious_cue_anisotropy.json`.
+
+## Direction held mechanism gates
+
+This section does not choose a cell and does not move theta, half-life, lambda, fan S, or the floors. The cell is the one already selected: theta 0.32, half-life 30, lambda 0.3, `a_trig` 1. Alpha stays 0.25. The n=50 floor table is not rescored.
+
+The bank is the direction held bank. It has 8 prefer items, 8 neutral-choice prompts, and 12 neutral-NLL items. Distractors are the held incidental facts. One pass.
+
+The point rules are gates 1–5 and the fit fan check. Wilson 95% intervals are reported on the cued-positive count, the false-trigger count, the decay-pass count, and the strict fan count. A rate whose n is below 50 fails. The prefer count and the neutral-choice count are 8, so those rates fail that rule before the point estimate is read. The point estimates are still reported. Quiet-token NLL is a mean. Its token count fails the same rule when it is below 50. Store size is the number of scored targets, which is 8, so it fails too.
+
+This measurement does not change theta.
+
+## Citation check
+
+On 2026-10-24 each DOI in this file and in `docs/architecture.md` was resolved through `https://doi.org` as CSL JSON. Each record returned the paper named beside that DOI. The McClelland and Rumelhart record titles the article with "I." The architecture prose says "Part 1." It is that article. The fusion references in the architecture file still have no DOIs and were not part of this check.
