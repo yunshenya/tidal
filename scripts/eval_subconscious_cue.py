@@ -31,6 +31,7 @@ FIT_PATH = REPORT_DIR / "subconscious_cue_fit.json"
 HELD_PATH = REPORT_DIR / "subconscious_cue_held.json"
 SCHEDULE_FIT_PATH = REPORT_DIR / "subconscious_cue_schedule_fit.json"
 SCHEDULE_HELD_PATH = REPORT_DIR / "subconscious_cue_schedule_held.json"
+HALFLIFE_FIT_PATH = REPORT_DIR / "subconscious_cue_halflife_fit.json"
 
 # First schedule, already scored. fit() does not iterate this.
 HISTORICAL_GRID = tuple(
@@ -43,9 +44,15 @@ HISTORICAL_GRID = tuple(
 # Theta is frozen at the low end of the cosine bracket. Half-life is the
 # hypothesis sweep in tokens. Lambda is the injection scale. a_trig stays 1.
 FROZEN_THETA = 0.32
-SCHEDULE = tuple(
+# Retired sweep. fit() does not iterate this.
+HISTORICAL_SCHEDULE = tuple(
     {"theta": FROZEN_THETA, "half_life": half_life, "lambda": lam, "a_trig": 1.0}
     for half_life in (10.0, 20.0, 30.0)
+    for lam in (0.10, 0.15, 0.20, 0.25, 0.30)
+)
+SCHEDULE = tuple(
+    {"theta": FROZEN_THETA, "half_life": half_life, "lambda": lam, "a_trig": 1.0}
+    for half_life in (2.0, 4.0, 8.0, 16.0, 30.0)
     for lam in (0.10, 0.15, 0.20, 0.25, 0.30)
 )
 
@@ -719,7 +726,7 @@ def _select(cells: list) -> dict:
     def key(cell):
         return (
             float(cell["mean_cued_delta"]),
-            -abs(float(cell["half_life"]) - 20.0),
+            -abs(float(cell["half_life"]) - 4.0),
             -abs(float(cell["lambda"]) - 0.25),
         )
 
@@ -734,7 +741,7 @@ def _select(cells: list) -> dict:
             "mean_cued_delta": best["mean_cued_delta"],
             "fan_means": best["fan_means"],
         },
-        "reason": "largest mean cued margin; ties prefer half-life closer to 20, then lambda closer to 0.25",
+        "reason": "largest mean cued margin; ties prefer half-life closer to 4, then lambda closer to 0.25",
     }
 
 
@@ -860,7 +867,7 @@ def fit() -> dict:
     finally:
         mem.close()
     payload = {
-        "kind": "schedule-fit",
+        "kind": "halflife-fit",
         "git": _git_sha(),
         "elapsed_s": time.perf_counter() - started,
         "bank": "direction-fit",
@@ -872,7 +879,7 @@ def fit() -> dict:
         "cost": cost,
         "held_scored": False,
     }
-    _dump(SCHEDULE_FIT_PATH, payload)
+    _dump(HALFLIFE_FIT_PATH, payload)
     return payload
 
 

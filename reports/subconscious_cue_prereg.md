@@ -215,3 +215,13 @@ One pass. Git `6f7644d344b0d8a563ae07982407196b87295694`. Elapsed 115.4 seconds.
 Fan means, which did decrease: fan 1 is 3.035, fan 2 is 0.992, fan 4 is 0.00018. Means, not a gate: prefer delta 3.035, avoid delta 0.097, avoid stored lift -0.129, toward delta 1.788, away delta -1.094.
 
 The report is `reports/subconscious_cue_schedule_held.json`.
+
+## Widened half-life
+
+This section supersedes the half-life sweep and the tie-break above. The 15-cell fit and its held pass stay the record of half-life in {10, 20, 30}. They are not used to choose among the cells in this section.
+
+The sweep is half-life in {2, 4, 8, 16, 30} and lambda in {0.10, 0.15, 0.20, 0.25, 0.30}. Theta stays 0.32. `a_trig` stays 1. That is 25 cells.
+
+The item-to-token conversion is a HYPOTHESIS. Joordens and Becker found semantic priming reduced to non-significant levels after one or two intervening items. A Chinese word is about one to two tokens, so a half-life of about 2–4 tokens is a plausible reading of that lag. It is not a measured conversion. The short values are on the grid because of that reading. The selected cell is still the passing cell with the largest mean cued margin on the direction fit bank. Ties go to the half-life closer to 4, then the lambda closer to 0.25. Held banks are not used to choose.
+
+The widened half-life fit has not been scored.

@@ -483,6 +483,10 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "37/50" in text
     assert "29/50" in text
     assert "38/50" in text
+    assert "2, 4, 8, 16, 30" in text
+    assert "Chinese word" in text
+    assert "closer to 4" in text
+    assert "The widened half-life fit has not been scored." in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script
