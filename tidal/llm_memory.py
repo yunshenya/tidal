@@ -127,6 +127,7 @@ Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
@@ -148,6 +149,7 @@ from tidal.arousal import (
     quiet_step,
 )
 from tidal.backend import SmolLM2Backend
+from tidal.clock_drift import WALL_TAU, WALL_TICK, advance_clock, clock_activation, elapsed_since, entrain
 from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
@@ -199,9 +201,11 @@ MIX_TEMP = 0.05
 # formula. interface_version 3 adds modality on every stored slot and every
 # exported token. The value is "text". interface_version 4 adds
 # sleep_pressure and source. interface_version 5 adds arousal in [0, 1].
-# Lambda is not part of the version. Process S is not part of the residual.
-# Arousal is not part of the residual and is not an input to process S.
-# There is no perceptual-fingerprint field.
+# Wall-clock decay and the drifting internal clock are not exported, so the
+# version stays 5. Lambda is not part of the version. Process S is not part
+# of the residual. Arousal is not part of the residual and is not an input
+# to process S. The drifted clock is not an input to decay. There is no
+# perceptual-fingerprint field.
 CUE_INTERFACE_VERSION = 5
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
@@ -1476,6 +1480,11 @@ class LLMMemory:
     lowers it. Neither call changes the residual. ``sleep_for`` rewrites a
     slot only when prediction error clears a threshold, and the audit of that
     rewrite has no fact text. ``cue_fields`` and ``generate`` do not read it.
+    ``advance_wall`` moves wall seconds and a faster internal clock, then
+    decays a carried trace by wall seconds since its trigger. ``calibrate``
+    moves only the internal clock. Neither call is the store's circadian
+    angle, and neither call changes theta, the token half-life, lambda,
+    process S, or arousal. The cue export does not grow a field.
     """
 
     def __init__(
@@ -1563,6 +1572,11 @@ class LLMMemory:
         # is not the write-gate surprise window.
         self._arousal = float(AROUSAL_BASELINE)
         self._arousal_window: list[float] = []
+        # Wall seconds and the drifted internal estimate. store.clear() does
+        # not move them. Decay reads wall seconds, not the internal estimate,
+        # and not the store's circadian angle.
+        self._wall_seconds = 0.0
+        self._internal_seconds = 0.0
         # Kept so older callers can assign it. The cue path does not read it.
         self.injection_readout = "cue"
         # Registered for the life of this wrapper. A forward that is not a
@@ -1620,8 +1634,9 @@ class LLMMemory:
         tensor does not. A training inject is the only remaining whole-sequence
         add, and only :meth:`teacher_force_loss` sets it. Retrieval never does.
         Generation re-forwards the prefix, so this hook repeats the current
-        arousal scalar and does not step it. ``cue_fields`` and ``advance_cue``
-        are the trace that steps.
+        arousal scalar and does not step it. It also does not advance wall
+        time. ``cue_fields`` and ``advance_cue`` are the trace that steps.
+        A resumed trace uses the wall time already applied.
         """
         train = self._train_delta
         if train is not None:
@@ -2063,7 +2078,11 @@ class LLMMemory:
         return keys, strengths, valences, values, modalities
 
     def _trace_numpy(self, cues, state=None) -> tuple:
-        """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token."""
+        """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token.
+
+        Wall time is the current reading and stays fixed for every row. The
+        drifted internal clock is not passed in.
+        """
         rows = np.asarray(cues, dtype=np.float64)
         if rows.ndim != 2:
             raise ValueError("cues must be [tokens, cue_dim]")
@@ -2084,6 +2103,8 @@ class LLMMemory:
             state=state,
             fan_s=float(CUE_FAN_S),
             modalities=modalities,
+            now=float(self._wall_seconds),
+            wall_tau=float(WALL_TAU),
         )
         residual = self._residual_from_fields(fields, values, keys)
         return fields, residual, final
@@ -2143,7 +2164,10 @@ class LLMMemory:
         token. ``source`` is ``cue`` or ``none``, never ``spontaneous``.
         ``sleep_pressure`` repeats the current process S. ``arousal`` is the
         level after each of those steps, in ``[0, 1]``. ``interface_version``
-        is :data:`CUE_INTERFACE_VERSION`, which is 5.
+        is :data:`CUE_INTERFACE_VERSION`, which is 5. The trace starts empty
+        and a new winner stamps the current wall time, so seconds since boot
+        do not decay this retrieval. The drifted internal clock is not read.
+        No clock field is exported.
         """
         if len(self.store) == 0:
             hidden = self.cue_hidden(text)
@@ -2269,6 +2293,73 @@ class LLMMemory:
 
     def clock_log(self) -> tuple:
         return self.store.clock_log()
+
+    @property
+    def wall_seconds(self) -> float:
+        """Wall time in seconds. Not the store's circadian angle."""
+        return float(self._wall_seconds)
+
+    @property
+    def internal_seconds(self) -> float:
+        """Drifted estimate of wall time. Not an input to cue decay."""
+        return float(self._internal_seconds)
+
+    @property
+    def clock_error(self) -> float:
+        """Signed internal minus wall, in seconds. Not a cue-export field."""
+        return float(self._internal_seconds) - float(self._wall_seconds)
+
+    def _clock_reading(self) -> dict:
+        return {
+            "wall": float(self.wall_seconds),
+            "internal": float(self.internal_seconds),
+            "clock_error": float(self.clock_error),
+        }
+
+    def _project_cue_state(self, state):
+        """Apply wall decay to a carried trace. A fresh trace is not passed here.
+
+        The activation is recomputed from the trigger peak, the tokens already
+        counted, and wall seconds since the trigger. It is then clamped so a
+        continued winner does not rise. The internal clock is not read.
+        """
+        if isinstance(state, list):
+            return [self._project_cue_state(item) for item in state]
+        if not isinstance(state, CueState) or state.inactive():
+            return state
+        elapsed = elapsed_since(state.trigger_wall, self._wall_seconds)
+        peak = float(CUE_A_TRIG) * float(state.fan_factor)
+        activation = clock_activation(peak, int(state.dt), elapsed, float(CUE_TAU), float(WALL_TAU))
+        if activation > float(state.a):
+            activation = float(state.a)
+        if (int(state.dt) > 0 or elapsed > 0.0) and activation < float(CUE_FLOOR):
+            return CueState()
+        if activation == float(state.a):
+            return state
+        return replace(state, a=float(activation))
+
+    def advance_wall(self, seconds: float = WALL_TICK) -> dict:
+        """Advance wall time and the internal clock, then decay a carried trace.
+
+        The default tick is one second. Wall time moves only through this
+        call. Decay uses wall seconds since the trigger. The internal clock
+        runs at the drift rate and does not scale the residual. Process S
+        and arousal stay put. A negative span is refused.
+        """
+        wall, internal = advance_clock(self._wall_seconds, self._internal_seconds, seconds)
+        self._wall_seconds = float(wall)
+        self._internal_seconds = float(internal)
+        self.cue_state = self._project_cue_state(self.cue_state)
+        return self._clock_reading()
+
+    def calibrate(self, timestamp: float) -> dict:
+        """Pull the internal clock partway toward ``timestamp``.
+
+        Wall time stays put. A carried activation stays put. Process S and
+        arousal stay put. This is not a circadian phase shift.
+        """
+        self._internal_seconds = float(entrain(self._internal_seconds, timestamp))
+        return self._clock_reading()
 
     @property
     def arousal(self) -> float:

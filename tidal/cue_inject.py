@@ -15,9 +15,13 @@ On the trigger token, ``dt`` is 0 and the exported activation is
 activation down. A token with candidates past ``theta`` still triggers when
 the product is below ``floor``, including when the factor is 0. A later
 token that does not trigger keeps that fan factor and uses
-``a = a_trig * fan_factor * exp(-dt / tau)``. ``dt`` is the number of tokens
-after the trigger. A new winner resets ``dt`` and recomputes the fan factor.
-On that decay path, ``a`` below ``floor`` clears the carried trace. The
+``a = a_trig * fan_factor * exp(-dt / tau)`` when no wall time has passed
+since the trigger. ``dt`` is the number of tokens after the trigger. If wall
+seconds have passed, the remaining factor is the lower of that token factor
+and ``exp(-elapsed / wall_tau)``. A frozen wall clock leaves the token
+formula. A new winner resets ``dt`` and the wall stamp and recomputes the
+fan factor. On that decay path, ``a`` below ``floor`` clears the carried
+trace. Continuing the same winner never raises ``a``. The
 same-token add is applied after the cue is copied, so the cue does not
 depend on the add and no earlier position sees it. This module does not
 apply the language-model gain.
@@ -30,6 +34,7 @@ from typing import Optional
 
 import numpy as np
 
+from tidal.clock_drift import WALL_TAU, clock_activation, elapsed_since
 from tidal.episodic import MEMORY_MODALITY, cosine_scores
 
 # Anderson & Reder 1999 estimated S = 1.45 for the Anderson 1974 fan data.
@@ -57,6 +62,8 @@ class CueState:
     is active. ``a`` is the activation in ``[0, 1]``. ``dt`` is tokens since
     the trigger. ``fan_factor`` is frozen at the trigger. Strength,
     confidence, valence offset, and the stored value are frozen there too.
+    ``trigger_wall`` is the wall time stamped at the trigger. It is not the
+    drifted internal clock.
     """
 
     a: float = 0.0
@@ -70,6 +77,7 @@ class CueState:
     fan_factor: float = 1.0
     modality: str = MEMORY_MODALITY
     vec: Optional[np.ndarray] = None
+    trigger_wall: float = 0.0
 
     def inactive(self) -> bool:
         return int(self.memory_id) < 0 or float(self.a) <= 0.0
@@ -295,8 +303,14 @@ def step_cue(
     valence_span: float,
     fan_s: float = FAN_S,
     modalities=None,
+    now=None,
+    wall_tau: float = WALL_TAU,
 ) -> tuple:
-    """Advance one token. Returns ``(new_state, row)`` and does not mutate ``state``."""
+    """Advance one token. Returns ``(new_state, row)`` and does not mutate ``state``.
+
+    ``now`` is the wall time in seconds. Omitted, the wall elapsed is 0 and
+    the decay is the token formula. A new winner stamps ``now``.
+    """
     _check_schedule(tau, a_trig, floor)
     values = np.asarray(values, dtype=np.float32)
     if values.ndim != 2:
@@ -333,6 +347,7 @@ def step_cue(
             fan_factor=factor,
             modality=_modality_of(modalities, index, int(values.shape[0])),
             vec=vec,
+            trigger_wall=0.0 if now is None else float(now),
         )
         row = _row_from_state(new, cue_dim, triggered=True)
         row["candidates"] = [int(item) for item in choice["candidates"]]
@@ -341,7 +356,11 @@ def step_cue(
         return CueState(), _blank(cue_dim)
     dt = int(state.dt) + 1
     factor = float(state.fan_factor)
-    activation = float(a_trig) * factor * math.exp(-float(dt) / float(tau))
+    elapsed = elapsed_since(state.trigger_wall, now)
+    activation = clock_activation(float(a_trig) * factor, dt, elapsed, tau, wall_tau)
+    # A continued trace does not rise when a stamp sits behind the trigger.
+    if activation > float(state.a):
+        activation = float(state.a)
     if activation < float(floor):
         return CueState(), _blank(cue_dim)
     new = CueState(
@@ -356,6 +375,7 @@ def step_cue(
         fan_factor=factor,
         modality=str(state.modality),
         vec=None if state.vec is None else np.asarray(state.vec, dtype=np.float32).copy(),
+        trigger_wall=float(state.trigger_wall),
     )
     return new, _row_from_state(new, cue_dim, triggered=False)
 
@@ -377,6 +397,8 @@ def trace_sequence(
     state: Optional[CueState] = None,
     fan_s: float = FAN_S,
     modalities=None,
+    now=None,
+    wall_tau: float = WALL_TAU,
 ) -> tuple:
     """Left-to-right trace. ``cues`` is ``[T, cue_dim]`` before the query center.
 
@@ -431,6 +453,8 @@ def trace_sequence(
             valence_span=valence_span,
             fan_s=fan_s,
             modalities=modalities,
+            now=now,
+            wall_tau=wall_tau,
         )
         memory_id[index] = int(row["memory_id"])
         vec[index] = row["vec"]

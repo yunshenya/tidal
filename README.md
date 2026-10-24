@@ -142,6 +142,24 @@ Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 4
 
 Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 8.600245399231261e-05, 0.00016695663692768324, and 0.00021598081829407337. Armed seconds per token are 0.0025160807272186503, 0.0025945083642992276, and 0.002651235182632015.
 
+## Wall clock
+
+Cue activation keeps the token clock and adds a wall-clock clock. Inside one utterance the token factor is still `exp(-dt / tau)` with the 30-token half-life. Wall seconds since the trigger use `exp(-elapsed / wall_tau)` with a half-life of 60 seconds. At an update the remaining factor is the lower of the two. That is the stronger decay. It is not the product, so one clock is not applied twice. When no wall time has passed, the token formula is returned directly and the minimum is not taken.
+
+`dt` counts tokens already seen after the trigger. One utterance trace holds the wall reading fixed, so a tick that has not been applied is invisible inside that forward. A new winner resets `dt` to 0 and stamps the current wall time. A fresh retrieval starts from an empty trace, so seconds since boot do not decay it. Continuing the same winner never raises activation. Wall time moves only through `advance_wall`. The default tick is 1 second. The code does not read the operating-system clock.
+
+The internal clock runs at 1.25 internal seconds per wall second. `calibrate(timestamp)` moves it halfway toward that timestamp. Decay uses wall seconds, not the internal reading, so calibration does not change activation. It also does not change process S or arousal. This is not the store's circadian angle. The live `interface_version` is 5. No clock-error field is added to the per-token export. `advance_wall` and `calibrate` return the wall reading, the internal reading, and the signed error because those calls are the tick and the calibration.
+
+The tick, the 60-second half-life, the drift rate, and the gain are a hypothesis. No grid was run. Joordens and Becker (1997) studied short and long semantic priming in lexical decision. The token clock counts tokens. Their unit is not seconds. https://doi.org/10.1037/0278-7393.23.5.1083 Buhusi and Meck (2005) review functional and neural mechanisms of interval timing. https://doi.org/10.1038/nrn1764 Allman, Teki, Griffiths, and Meck (2014) review properties of the internal clock and of subjective time. https://doi.org/10.1146/annurev-psych-010213-115117 Crossref recorded no abstract for the 2005 or 2014 paper on 2026-10-24. The drift rate is not a dopamine dose. The gain is not a circadian phase shift.
+
+Protocol `clock-drift-v1`. Fit ids `clock-fit-000` through `clock-fit-007` are disjoint from held ids `clock-held-000` through `clock-held-049`. Bank sha256 `4aa7129121c21093d0e85e650aeb25726f5602f55e22d1e2e6dc9bbaa4395847`. The held floors are 50/50 on wall decay, frozen-wall token decay, the lower of the two clocks, entrainment, the fresh export, and the item. The held bank was not scored.
+
+The cue-triggered floors stay the merged #57/#62 rates. A cue guard rescores them once into new files and must match. The cue guard was not scored. Theta, the token half-life, lambda, fan S, and the RIF span are unchanged.
+
+Sleep gates stay the #63 record, 50/50, with the same canonical pressures. The sleep guard writes a new file. The sleep guard was not scored.
+
+Arousal gates stay the #64 record, 50/50, with the same canonical levels. The arousal guard writes a new file. The arousal guard was not scored.
+
 ## Signals exported to growbrain
 
 The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:
@@ -159,7 +177,7 @@ The per-token cue export is what generation injects. The growbrain backend that 
 - `arousal`, LC-NE scalar in `[0, 1]`
 - `interface_version` 5
 
-`source` is `cue` or `none` on the cue path. `spontaneous` is a no-cue offline tick. The same fields are exported on each offline tick. tidal only supplies these signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
+`source` is `cue` or `none` on the cue path. `spontaneous` is a no-cue offline tick. The same fields are exported on each offline tick. `decay` is `exp(-dt / tau)` when no wall time has passed since the trigger, and otherwise the lower of that factor and `exp(-elapsed / wall_tau)`. The drifted internal clock is not an exported field. The live `interface_version` is 5. tidal only supplies these signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 
 Low-level cross-sensory fusion is planned after text stage-1. The account is in [docs/architecture.md](docs/architecture.md). It has no code and adds no interface fields.
 
