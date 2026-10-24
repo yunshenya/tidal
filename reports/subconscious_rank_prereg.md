@@ -1,0 +1,50 @@
+# Rank cost
+
+Performance only. `MIX_K` stays 4 and `MIX_TEMP` stays 0.05. No gate, bank, mixture weight, or spelling rule changes. The production readout stays the strength-weighted mixture.
+
+`_rank` was about 0.014 s per continuation token in #52, against about 0.0018 s for the in-context extra forward. That `_rank` time is one query forward plus the slot read. The query forward was running every decoder layer and the output head. The pool only needs the inject layer.
+
+On the shipped causal LM the key and the query run that model's decoder forward with `num_hidden_layers` set to the inject layer plus one, and copy that block's output. The count is restored before the method returns. Later blocks and the output head do not run. Value and surprise still run the whole model, because they need the logits. A passed-in model keeps the full forward: its hidden state is whatever `output_hidden_states` returns.
+
+## Identity
+
+No absolute tolerance. Recorded before the measurement run.
+
+Identity runs with one CPU thread. Intra-op threads and inter-op threads are both 1. On the default thread pool this bfloat16 checkpoint is not bitwise stable: a repeated full forward moved one coordinate by one bfloat16 step, 128 at the sink magnitude, and moved a pooled key by as much as 1.49. Intra-op 1 with inter-op left at 4 still moved one pooled key by 0.8 after 900 strings. With both thread pools at 1, a cloned hidden state still disagreed on 4 of 3282 strings, and a second draw of that same string matched. The miss was not one-sided: one miss was the uncut forward, and the prefix matched the redraw.
+
+A comparison that misses is drawn again, up to 3 draws. A draw passes only on `torch.equal` or `np.array_equal`. There is still no absolute tolerance. The run fails when a string misses all 3 draws. The report records how many strings needed another draw.
+
+The float32 hidden state at the key layer is `torch.equal` to the full forward. The pooled key is `np.array_equal`. The mixture value and the weight vector are `np.array_equal`. The injection residual is `torch.equal`. A second forward with that same residual is the logit control. When the control is bitwise, the armed last-token logits are required to be `torch.equal` too.
+
+The strings are every fact text and every prompt in the n=50 measure banks (tone, choice, preference, and their distractors; the 50 RIF quartets; phone; birthday; prefer; avoid; toward; away; surprise) and every held bank of the locked gates (frozen, gate, direction, replay, spell, valence, circadian, relative surprise, retrieval-induced forgetting). `_rank` and the residual are compared on each of the 150 implicit probes (50 tone, 50 choice, 50 preference).
+
+## Cost
+
+Before is `_rank` with the uncut query forward (`full=True`). After is `_rank` with the decoder prefix. Same process, same prompt, same slots.
+
+The prompt is `Weigh unlabeled cadence.\nTone mqtag0:`. The good continuation is ` warm` and the bad continuation is ` harsh`. Continuation tokens are `token_ids(prompt + good)` minus `token_ids(prompt)`, plus the same difference for the bad continuation. `token_ids` is `tidal.subconscious_eval.token_ids`. Per continuation token is the median seconds divided by that count.
+
+Store sizes are 8, 16, 32, 128. Each size is filled from `numpy` Generator seed 0 with float32 normal keys and values, unique names, relation `rankcost`, and strength 1, through `store.write`. There is no language-model write. warmup 2, repeats 7, median of `perf_counter`. The scan column replaces the query vector with a cached one, so it is the slot read without the forward.
+
+Intra-op threads are `os.cpu_count()`. Inter-op threads stay 1, because PyTorch accepts that setting once per process. The model is `HuggingFaceTB/SmolLM2-135M` as loaded. This table is this CPU. It is not a reason to change `MIX_K` or `MIX_TEMP`.
+
+At the cost thread count the report also records the max absolute difference among 7 repeated pooled keys of the cost prompt: full against full, prefix against prefix, and prefix against full. That row is the noise floor. It is not a pass rule.
+
+## Result
+
+Recorded from `reports/subconscious_rank.json` at `2fdb5b99db40b78d754f9c4686c02d13f212a715`. SmolLM2-135M as loaded, on this CPU. Identity used 1 intra-op thread and 1 inter-op thread. Cost used 4 intra-op threads and 1 inter-op thread. The good and bad continuations are 2 tokens together.
+
+Identity passed. 3282 strings, 6 needed a second draw, and none missed all 3 draws. The sentinel matched. 150 of 150 implicit probes matched on the first draw, residual included. The logit control was bitwise, and the armed logits matched it. The phone spelled `+1-200-555-1000` on both paths. Two bare generations of the cost prompt matched.
+
+Per continuation token, median of 7 after warmup 2:
+
+| store | before | after | scan |
+| --- | --- | --- | --- |
+| 8 | 0.013011 | 0.006143 | 0.000073 |
+| 16 | 0.012171 | 0.005824 | 0.000083 |
+| 32 | 0.012261 | 0.005808 | 0.000109 |
+| 128 | 0.012592 | 0.005702 | 0.000272 |
+
+The scan column is one `_rank` with the query vector cached. It is the slot read, not a per-token figure. The forward is almost the whole `_rank` time. The prefix is about half the uncut forward. #52 reported about 0.014 s/token for `_rank` and about 0.0018 s for the in-context extra. On this CPU the uncut column is 0.012–0.013 s/token and the prefix column is 0.0057–0.0061 s/token.
+
+At the cost thread count, 7 pooled keys of the cost prompt moved by at most 0.1548 full against full, 0 prefix against prefix, and 0.1429 prefix against full. That row is the noise floor. It is not a pass rule. `MIX_K` stays 4 and `MIX_TEMP` stays 0.05.

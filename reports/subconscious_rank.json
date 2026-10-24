@@ -1,0 +1,152 @@
+{
+  "cost": {
+    "bad": " harsh",
+    "continuation_tokens": 2,
+    "good": " warm",
+    "interop_threads": 1,
+    "prompt": "Weigh unlabeled cadence.\nTone mqtag0:",
+    "prompt_pool_noise": {
+      "cross_max_abs": 0.1428571428571388,
+      "full_max_abs": 0.1547851562500001,
+      "prefix_max_abs": 0.0,
+      "prompt": "Weigh unlabeled cadence.\nTone mqtag0:",
+      "repeats": 7
+    },
+    "prompt_tokens": 15,
+    "repeats": 7,
+    "rows": [
+      {
+        "after": {
+          "max_s": 0.012706592999165878,
+          "median_s": 0.012285807002626825,
+          "min_s": 0.011892139998963103,
+          "n": 7
+        },
+        "after_median_s": 0.012285807002626825,
+        "after_per_continuation_token_s": 0.0061429035013134126,
+        "before": {
+          "max_s": 0.027738482000131626,
+          "median_s": 0.026021428995591123,
+          "min_s": 0.024289543995109852,
+          "n": 7
+        },
+        "before_median_s": 0.026021428995591123,
+        "before_per_continuation_token_s": 0.013010714497795561,
+        "scan": {
+          "max_s": 8.247899677371606e-05,
+          "median_s": 7.267999899340793e-05,
+          "min_s": 7.126400305423886e-05,
+          "n": 7
+        },
+        "scan_median_s": 7.267999899340793e-05,
+        "size": 8
+      },
+      {
+        "after": {
+          "max_s": 0.011851226001454052,
+          "median_s": 0.01164743400295265,
+          "min_s": 0.011257569000008516,
+          "n": 7
+        },
+        "after_median_s": 0.01164743400295265,
+        "after_per_continuation_token_s": 0.005823717001476325,
+        "before": {
+          "max_s": 0.025799286995606963,
+          "median_s": 0.024341399999684654,
+          "min_s": 0.023584603994095232,
+          "n": 7
+        },
+        "before_median_s": 0.024341399999684654,
+        "before_per_continuation_token_s": 0.012170699999842327,
+        "scan": {
+          "max_s": 8.945800072979182e-05,
+          "median_s": 8.339600026374683e-05,
+          "min_s": 8.230499952333048e-05,
+          "n": 7
+        },
+        "scan_median_s": 8.339600026374683e-05,
+        "size": 16
+      },
+      {
+        "after": {
+          "max_s": 0.011948431005293969,
+          "median_s": 0.011615252995397896,
+          "min_s": 0.011387451995688025,
+          "n": 7
+        },
+        "after_median_s": 0.011615252995397896,
+        "after_per_continuation_token_s": 0.005807626497698948,
+        "before": {
+          "max_s": 0.02658336300373776,
+          "median_s": 0.024522601001081057,
+          "min_s": 0.02407715000299504,
+          "n": 7
+        },
+        "before_median_s": 0.024522601001081057,
+        "before_per_continuation_token_s": 0.012261300500540528,
+        "scan": {
+          "max_s": 0.00012055400293320417,
+          "median_s": 0.00010919800115516409,
+          "min_s": 0.00010532700252952054,
+          "n": 7
+        },
+        "scan_median_s": 0.00010919800115516409,
+        "size": 32
+      },
+      {
+        "after": {
+          "max_s": 0.013002742998651229,
+          "median_s": 0.011404853998101316,
+          "min_s": 0.011286088993074372,
+          "n": 7
+        },
+        "after_median_s": 0.011404853998101316,
+        "after_per_continuation_token_s": 0.005702426999050658,
+        "before": {
+          "max_s": 0.025672225005109794,
+          "median_s": 0.025184046004142147,
+          "min_s": 0.024428421995253302,
+          "n": 7
+        },
+        "before_median_s": 0.025184046004142147,
+        "before_per_continuation_token_s": 0.012592023002071073,
+        "scan": {
+          "max_s": 0.00029219099815236405,
+          "median_s": 0.0002721580021898262,
+          "min_s": 0.0002670780013431795,
+          "n": 7
+        },
+        "scan_median_s": 0.0002721580021898262,
+        "size": 128
+      }
+    ],
+    "threads": 4,
+    "warmup": 2
+  },
+  "elapsed_s": 578.5953080609979,
+  "git_sha": "2fdb5b99db40b78d754f9c4686c02d13f212a715",
+  "identity": {
+    "armed_logits_equal": true,
+    "bare_generate_equal": true,
+    "draws": 3,
+    "interop_threads": 1,
+    "logit_control_equal": true,
+    "ok": true,
+    "phone_equal": true,
+    "phone_fast": "+1-200-555-1000",
+    "phone_slow": "+1-200-555-1000",
+    "phone_written": true,
+    "pool_mismatch": [],
+    "probes": 150,
+    "rank_mismatch": null,
+    "rank_redraws": 0,
+    "ranks_checked": 150,
+    "redraws": 6,
+    "residual_mismatch": null,
+    "sentinel_ok": true,
+    "strings": 3282,
+    "threads": 1
+  },
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "ok": true
+}

@@ -20,7 +20,11 @@ span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
-estimated once from a calibration set and stored with the module. With one slot the add is
+estimated once from a calibration set and stored with the module. On the
+shipped causal LM that pool runs the decoder blocks up through the inject
+layer and does not run the later blocks or the output head. The hidden state
+is the one a full forward stores for that layer. Value and surprise still run
+the whole model, because they need the logits. With one slot the add is
 
     s * u * gain * (scale(v) + MLP(scale(v)))
 
@@ -1416,6 +1420,79 @@ class LLMMemory:
             kwargs.pop("return_offsets_mapping")
             return self.tokenizer(text, **kwargs)
 
+    def _key_prefix_ok(self) -> bool:
+        """True when the key can run the decoder prefix instead of the whole model.
+
+        The prefix is embeddings, the causal mask, rotary embeddings, and
+        decoder blocks ``0 .. layer`` inclusive. That is the stack
+        ``LlamaModel.forward`` runs before the later blocks and the final
+        norm. Passed-in models that do not have that stack keep the full
+        forward. Their hidden state is whatever ``output_hidden_states``
+        returns.
+        """
+        inner = getattr(self.model, "model", None)
+        layers = getattr(inner, "layers", None)
+        if layers is not self.layers or not (0 <= int(self.layer) < len(self.layers)):
+            return False
+        if not callable(getattr(inner, "embed_tokens", None)):
+            return False
+        if not callable(getattr(inner, "rotary_emb", None)):
+            return False
+        return getattr(inner, "config", None) is not None
+
+    def _run_key_hidden(self, text: str) -> tuple:
+        """Hidden state at the inject layer, without the later blocks or the head.
+
+        The shipped stack is ``LlamaModel.forward``. That method runs
+        ``config.num_hidden_layers`` blocks and then a final norm. The key
+        pool needs the inject block's output, so this sets that count to
+        ``layer + 1``, runs the same forward, and copies the block output
+        from a hook. The final norm still runs on that prefix. The later
+        blocks and the output head do not. The count is restored before
+        return. The residual is cleared first, matching :meth:`_run_hidden`.
+        The copied tensor is the one :func:`layer_hidden` reads from a full
+        forward. A model without this stack uses that full forward instead.
+        """
+        if not isinstance(text, str) or text == "":
+            raise ValueError("text is empty")
+        if not self._key_prefix_ok():
+            hidden, enc, _logits = self._run_hidden(text)
+            del _logits
+            return hidden, enc
+        self._delta = None
+        enc = self._tokenize(text)
+        ids = _batch_ids(enc).to(self._device)
+        attn = _batch_mask(enc, self._device)
+        inner = self.model.model
+        captured: dict = {}
+
+        def _keep(_module, _args, output):
+            tensor = output[0] if isinstance(output, tuple) else output
+            copied = tensor.detach()
+            if copied.dim() == 3:
+                copied = copied[0]
+            captured["hidden"] = copied.float()
+
+        handle = self.layers[self.layer].register_forward_hook(_keep)
+        saved = inner.config.num_hidden_layers
+        inner.config.num_hidden_layers = int(self.layer) + 1
+        try:
+            kwargs = {"input_ids": ids, "use_cache": False}
+            if attn is not None:
+                kwargs["attention_mask"] = attn
+            with torch.no_grad():
+                inner(**kwargs)
+        finally:
+            inner.config.num_hidden_layers = saved
+            handle.remove()
+            self._delta = None
+        hidden = captured.get("hidden")
+        if hidden is None:
+            hidden, enc, _logits = self._run_hidden(text)
+            del _logits
+            return hidden, enc
+        return hidden, enc
+
     def _run_hidden(self, text: str) -> tuple:
         """Hidden state at the inject layer, with memory unhooked for this forward."""
         if not isinstance(text, str) or text == "":
@@ -1495,10 +1572,18 @@ class LLMMemory:
         value = pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
         return value, surprise
 
-    def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
-        """Sink-dropped mean of the key tokens, before the fixed center."""
-        hidden, enc, _logits = self._run_hidden(text)
-        del _logits
+    def _raw_key_pool(self, text: str, answer: Optional[str] = None, *, full: bool = False) -> np.ndarray:
+        """Sink-dropped mean of the key tokens, before the fixed center.
+
+        ``full`` keeps the uncut forward. The timing run uses it as the before
+        column. Production leaves it false and, on the shipped causal LM,
+        runs only the decoder blocks through the inject layer.
+        """
+        if full or not self._key_prefix_ok():
+            hidden, enc, _logits = self._run_hidden(text)
+            del _logits
+        else:
+            hidden, enc = self._run_key_hidden(text)
         content = self._content_mask(enc, hidden.shape[0])
         if answer is None:
             mask = content
