@@ -150,7 +150,17 @@ def test_choice_continuations_are_one_smollm_token():
             assert len(suffix(item["prompt"], item["update_bad"])) == 1
 
 
-def test_residual_raises_the_stored_byte():
+def _always_cue(monkeypatch):
+    import tidal.llm_memory as mod
+
+    monkeypatch.setattr(mod, "CUE_THETA", -1.0)
+    monkeypatch.setattr(mod, "CUE_A_TRIG", 1.0)
+    monkeypatch.setattr(mod, "CUE_TAU", 1.0e6)
+    monkeypatch.setattr(mod, "CUE_FLOOR", 0.0)
+
+
+def test_residual_raises_the_stored_byte(monkeypatch):
+    _always_cue(monkeypatch)
     mem = _memory()
     prompt = "Go:"
     base = score_pair(mem, prompt, "Y", "Q")
@@ -162,7 +172,8 @@ def test_residual_raises_the_stored_byte():
     mem.close()
 
 
-def test_one_query_and_spelling_follows_the_prompt():
+def test_one_query_and_spelling_follows_the_prompt(monkeypatch):
+    _always_cue(monkeypatch)
     mem = _memory()
     mem.inject.phone_on.fill_(1.0)
     assert mem.remember("Mara's favorite snack is apples.", answer="apples", name="Mara", rel="snack")

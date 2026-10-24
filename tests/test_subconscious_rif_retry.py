@@ -345,18 +345,22 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         assert mem.remember("red is Y", name="a", rel="cue")
         assert mem.remember("blue is Z", name="b", rel="cue")
         slots = mem.store._slots
-        query = np.asarray(mem._query_vector("red is Y"), dtype=np.float64)
-        slots[0].k = query.copy()
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        slots[0].k = match.copy()
         slots[0].salience = 0.0
-        orth = np.zeros_like(query)
-        denom = float(np.dot(query, query)) + 1e-12
-        for axis in np.eye(query.size):
-            proj = axis - query * (float(np.dot(axis, query)) / denom)
-            if float(np.linalg.norm(proj)) > 1e-6:
-                orth = proj
-                break
+        orth = np.zeros(width, dtype=np.float64)
+        orth[1] = 1.0
         slots[1].k = orth
         slots[1].salience = 0.0
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _fixed
         info = mem._rank("red is Y")
         assert info["gap"] is not None and float(info["gap"]) > 0.0
         assert slots[0].strength == 1.0
@@ -368,14 +372,16 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         assert slots[0].strength == 1.0
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
-        slots[1].k = query.copy()
+        slots[1].k = match.copy()
         slots[1].salience = 0.0
         mem._rank("red is Y")
         assert slots[0].strength == 1.0
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
-        assert "forget_rivals" in inspect.getsource(LLMMemory._rank)
-        assert "activation_weights" in inspect.getsource(LLMMemory._rank)
+        rank_source = inspect.getsource(LLMMemory._rank)
+        assert "forget_rivals" in rank_source
+        assert "cue_fields" in rank_source
+        assert "activation_weights" not in rank_source
     finally:
         mem.close()
 
