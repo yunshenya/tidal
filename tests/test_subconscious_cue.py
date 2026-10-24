@@ -436,13 +436,12 @@ def test_lambda_scales_the_residual_and_not_the_export(monkeypatch):
 def test_selected_schedule_matches_the_fit_cell():
     source = (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     assert "Not retuned on the held-out bank" in source
-    assert "not a selected cell" in source
     assert CUE_FLOOR == 0.05
     assert CUE_THETA == 0.32
-    assert CUE_HALF_LIFE == 20.0
-    assert CUE_TAU == pytest.approx(20.0 / math.log(2.0))
+    assert CUE_HALF_LIFE == 30.0
+    assert CUE_TAU == pytest.approx(30.0 / math.log(2.0))
     assert CUE_A_TRIG == 1.0
-    assert CUE_LAMBDA == pytest.approx(0.25)
+    assert CUE_LAMBDA == pytest.approx(0.3)
     assert CUE_FAN_S == pytest.approx(1.45)
     assert DEFAULT_GAP_TAU == 0.80
     assert VALENCE_SPAN == 1.0
@@ -477,7 +476,9 @@ def test_prereg_locks_the_schedule_and_the_citations():
         assert doi in text
     assert "HYPOTHESIS" in text
     assert "a_trig * fan_factor * decay" in text
-    assert "The amendment fit has not been scored." in text
+    assert "half-life 30" in text
+    assert "lambda 0.3" in text
+    assert "The amendment held pass has not been scored." in text
     assert "38/50" in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script

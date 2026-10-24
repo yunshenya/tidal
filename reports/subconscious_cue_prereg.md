@@ -175,4 +175,20 @@ Joordens and Becker report that semantic priming is reduced to non-significant l
 
 ## Amendment result
 
-The amendment fit has not been scored.
+One pass of the 15-cell schedule. Git of the scorer before this result was written: `1f1c6968ea923173f6c93a5b69d99c93a7a9a3d6`. Elapsed 66.3 seconds. Alpha 0.25 is the largest value that kept the clean fan trace on all 8 fit items; every smaller candidate did too. All 15 cells passed gates 1–5 and the fit fan check. The selected cell is theta 0.32, half-life 30, lambda 0.3, mean cued margin 0.479. It is the unique maximum. The module constants now match that cell. The held pass was not used to choose it.
+
+Selected cell, direction fit bank, n=8:
+
+| gate | result |
+| --- | --- |
+| cued margin up, mean positive | 7/8 positive, mean 0.479 |
+| unrelated mean absolute margin ≤ 0.05 | 0.0 |
+| false triggers ≤ 0.10 | 0/8, Wilson [0.0, 0.324] |
+| decay after the last trigger | 6/8 |
+| store 16 and 32 within 0.05 of size 8, and positive | size 8: 0.0144, size 16: 0.0132, size 32: 0.0129 |
+| quiet-token NLL increase ≤ 0.02 | 0.0 on 9 tokens |
+| fan 1 / 2 / 4 mean margin, at least 6/8 strict | 0.479 / 0.203 / 0.0, 6/8 |
+
+Fan 4 is 0 because `(1.45 - ln 4) / 1.45` is below the 0.05 floor, so that trigger clears. Inject cost at this cell, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000159, store 16 is 0.000173, store 32 is 0.000104. The armed forward is about 0.0026 seconds per token.
+
+The report is `reports/subconscious_cue_schedule_fit.json`. The amendment held pass has not been scored.

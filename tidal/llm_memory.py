@@ -149,10 +149,10 @@ DEFAULT_GAP_TAU = 0.80
 MIX_K = 4
 MIX_TEMP = 0.05
 # Cue schedule. The floor is fixed and is not fit. Theta 0.32 is frozen from
-# the fit-bank cosine bracket: the lowest grid value above the unrelated and
-# filler maxima and at or below the lowest cued-prompt maximum. It is not
-# co-swept with fan, half-life, or lambda. Half-life 20 and lambda 0.25 are
-# the centers of those sweeps. They are not a selected cell. a_trig stays 1.
+# the fit-bank cosine bracket and was not co-swept with fan, half-life, or
+# lambda. Half-life 30 and lambda 0.3 are the direction-fit cell in
+# reports/subconscious_cue_prereg.md: the largest mean cued margin among the
+# 15 cells that passed gates 1-5 and the fit fan check. a_trig stays 1.
 # Not retuned on the held-out bank. The interface names the signal ``cue``;
 # cue_dim is the hidden width of whatever layer this wrapper injects at.
 # Activation is a_trig * fan_factor * decay. interface_version 2 is that
@@ -160,10 +160,10 @@ MIX_TEMP = 0.05
 CUE_INTERFACE_VERSION = 2
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
-CUE_HALF_LIFE = 20.0
+CUE_HALF_LIFE = 30.0
 CUE_TAU = CUE_HALF_LIFE / math.log(2.0)
 CUE_A_TRIG = 1.0
-CUE_LAMBDA = 0.25
+CUE_LAMBDA = 0.3
 CUE_FAN_S = FAN_S
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
