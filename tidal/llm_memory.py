@@ -104,7 +104,9 @@ by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP).
 The checkpoint still holds linear readouts aimed at ``+1-415-555-dddd`` and
 ``Month D, YYYY``. Generation does not call them. A
 caller-supplied model, another checkpoint, or another layer keeps the zero
-last layer until :meth:`LLMMemory.load_inject`. There is no switch. This is
+last layer until :meth:`LLMMemory.load_inject`. There is no switch. Forwards,
+answer-token NLL, and the residual add go through
+:class:`tidal.backend.SmolLM2Backend`, which is the only backend. This is
 the A2s inject from
 the SmolLM study (see ``docs/llm_memory.md``). It is a different representation
 from the positional byte codes on ``Continuum.heads``; those codes stay on the
@@ -130,6 +132,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tidal.backend import SmolLM2Backend
 from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
@@ -1179,29 +1182,11 @@ def answer_surprise(logits: torch.Tensor, token_ids: Sequence[int], answer_mask:
 
     Position ``i`` is predicted by ``logits[i - 1]``. The score is the sum,
     not the mean. The first token has no predictor; if the answer is only
-    that token, the score is 0.
+    that token, the score is 0. The body is :func:`tidal.backend.answer_nll`.
     """
-    if not torch.is_tensor(logits):
-        raise TypeError("logits must be a tensor")
-    if logits.dim() == 3:
-        if int(logits.shape[0]) != 1:
-            raise ValueError("answer surprise expects one sequence")
-        logits = logits[0]
-    if logits.dim() != 2:
-        raise ValueError(f"logits rank {logits.dim()} is not a sequence")
-    ids = [int(i) for i in token_ids]
-    mask = [bool(flag) for flag in answer_mask]
-    n = int(logits.shape[0])
-    if len(ids) != n or len(mask) != n:
-        raise ValueError(f"token axis {len(ids)} / mask {len(mask)} != logits {n}")
-    idxs = [i for i, flag in enumerate(mask) if flag and i >= 1]
-    if not idxs:
-        return 0.0
-    rows = logits[[i - 1 for i in idxs]]
-    target = torch.tensor([ids[i] for i in idxs], dtype=torch.long, device=rows.device)
-    logp = torch.log_softmax(rows.float(), dim=-1)
-    taken = logp.gather(1, target.unsqueeze(1)).squeeze(1)
-    return float((-taken.sum()).detach().cpu())
+    from tidal.backend import answer_nll
+
+    return answer_nll(logits, token_ids, answer_mask)
 
 
 def rif_weight(similarity: float, closest: float) -> float:
@@ -1466,7 +1451,8 @@ class LLMMemory:
     inject in ``llm_inject_smollm2_135m.pt``. The cue interface still calls
     that width ``cue_dim``. A caller-supplied model, another checkpoint, or
     another layer keeps the zero-init MLP, so the add is ``v``, until
-    :meth:`load_inject`. There is no switch.
+    :meth:`load_inject`. There is no switch. Model calls go through
+    :class:`tidal.backend.SmolLM2Backend`. That is the only backend.
     """
 
     def __init__(
@@ -1512,6 +1498,16 @@ class LLMMemory:
         self.layer = layer
         self.n_layers = n_layers
         self.hidden = _hidden_size(self.model)
+        self.backend = SmolLM2Backend(
+            self.model,
+            self.tokenizer,
+            layer=self.layer,
+            n_layers=self.n_layers,
+            hidden=self.hidden,
+            layers=self.layers,
+            device=self._device,
+        )
+        self.backend.bind_clean(self._clean_forward)
         self.inject = InjectMLP(self.hidden, inject_hidden).to(self._device)
         self.inject.eval()
         self.store = EpisodicStore(
@@ -1539,7 +1535,7 @@ class LLMMemory:
         # Registered for the life of this wrapper. A forward that is not a
         # retrieval and is not a teacher-forced inject returns None, which
         # leaves the layer output object untouched.
-        self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
+        self._handle = self.backend.attach_inject(self._on_layer)
         self._load_shipped_inject()
         self.key_mean, self.query_mean = self._key_centers()
 
@@ -1547,6 +1543,9 @@ class LLMMemory:
         if getattr(self, "_handle", None) is not None:
             self._handle.remove()
             self._handle = None
+        backend = getattr(self, "backend", None)
+        if backend is not None:
+            backend._handle = None
         self._train_delta = None
         self._cue_live = False
 
@@ -1591,7 +1590,7 @@ class LLMMemory:
         train = self._train_delta
         if train is not None:
             self.last_added = train.detach()
-            return _add_delta(output, train)
+            return self.backend.inject_residual(output, train, broadcast=True)
         if not self._cue_live or len(self.store) == 0:
             return None
         tensor = output[0] if isinstance(output, tuple) else output
@@ -1624,13 +1623,7 @@ class LLMMemory:
         self.last_added = torch.tensor(np.asarray(add[0, -1], dtype=np.float32))
         if np.count_nonzero(add) == 0:
             return None
-        add_t = torch.tensor(add, dtype=tensor.dtype, device=tensor.device)
-        if not batched:
-            add_t = add_t[0]
-        updated = tensor + add_t
-        if torch.is_tensor(output):
-            return updated
-        return (updated,) + output[1:]
+        return self.backend.inject_residual(output, add, broadcast=False, batched=batched)
 
     def _resume_states(self, batch: int) -> list:
         state = self.cue_state
@@ -1641,106 +1634,19 @@ class LLMMemory:
         return [CueState() for _ in range(int(batch))]
 
     def _tokenize(self, text: str) -> Mapping[str, Any]:
-        kwargs = {"return_tensors": "pt", "add_special_tokens": True, "return_offsets_mapping": True}
-        try:
-            return self.tokenizer(text, **kwargs)
-        except (TypeError, ValueError):
-            kwargs.pop("return_offsets_mapping")
-            return self.tokenizer(text, **kwargs)
+        return self.backend.tokenize(text)
 
     def _key_prefix_ok(self) -> bool:
-        """True when the key can run the decoder prefix instead of the whole model.
-
-        The prefix is embeddings, the causal mask, rotary embeddings, and
-        decoder blocks ``0 .. layer`` inclusive. That is the stack
-        ``LlamaModel.forward`` runs before the later blocks and the final
-        norm. Passed-in models that do not have that stack keep the full
-        forward. Their hidden state is whatever ``output_hidden_states``
-        returns.
-        """
-        inner = getattr(self.model, "model", None)
-        layers = getattr(inner, "layers", None)
-        if layers is not self.layers or not (0 <= int(self.layer) < len(self.layers)):
-            return False
-        if not callable(getattr(inner, "embed_tokens", None)):
-            return False
-        if not callable(getattr(inner, "rotary_emb", None)):
-            return False
-        return getattr(inner, "config", None) is not None
+        """True when the key can run the decoder prefix instead of the whole model."""
+        return self.backend.key_prefix_ok()
 
     def _run_key_hidden(self, text: str) -> tuple:
-        """Hidden state at the inject layer, without the later blocks or the head.
-
-        The shipped stack is ``LlamaModel.forward``. That method runs
-        ``config.num_hidden_layers`` blocks and then a final norm. The key
-        pool needs the inject block's output, so this sets that count to
-        ``layer + 1``, runs the same forward, and copies the block output
-        from a hook. The final norm still runs on that prefix. The later
-        blocks and the output head do not. The count is restored before
-        return. The residual is cleared first, matching :meth:`_run_hidden`.
-        The copied tensor is the one :func:`layer_hidden` reads from a full
-        forward. A model without this stack uses that full forward instead.
-        """
-        if not isinstance(text, str) or text == "":
-            raise ValueError("text is empty")
-        if not self._key_prefix_ok():
-            hidden, enc, _logits = self._run_hidden(text)
-            del _logits
-            return hidden, enc
-        enc = self._tokenize(text)
-        ids = _batch_ids(enc).to(self._device)
-        attn = _batch_mask(enc, self._device)
-        inner = self.model.model
-        captured: dict = {}
-
-        def _keep(_module, _args, output):
-            tensor = output[0] if isinstance(output, tuple) else output
-            copied = tensor.detach()
-            if copied.dim() == 3:
-                copied = copied[0]
-            captured["hidden"] = copied.float()
-
-        handle = self.layers[self.layer].register_forward_hook(_keep)
-        saved = inner.config.num_hidden_layers
-        inner.config.num_hidden_layers = int(self.layer) + 1
-        try:
-            kwargs = {"input_ids": ids, "use_cache": False}
-            if attn is not None:
-                kwargs["attention_mask"] = attn
-            with self._clean_forward():
-                with torch.no_grad():
-                    inner(**kwargs)
-        finally:
-            inner.config.num_hidden_layers = saved
-            handle.remove()
-        hidden = captured.get("hidden")
-        if hidden is None:
-            hidden, enc, _logits = self._run_hidden(text)
-            del _logits
-            return hidden, enc
-        return hidden, enc
+        """Inject-layer key rows. The prefix path lives on the backend."""
+        return self.backend.encode_key_hidden(text)
 
     def _run_hidden(self, text: str) -> tuple:
-        """Hidden state at the inject layer, with memory unhooked for this forward."""
-        if not isinstance(text, str) or text == "":
-            raise ValueError("text is empty")
-        enc = self._tokenize(text)
-        ids = _batch_ids(enc).to(self._device)
-        attn = _batch_mask(enc, self._device)
-        kwargs = {"input_ids": ids, "use_cache": False, "output_hidden_states": True}
-        if attn is not None:
-            kwargs["attention_mask"] = attn
-        with self._clean_forward():
-            with torch.no_grad():
-                out = self.model(**kwargs)
-            hidden = layer_hidden(_hidden_tuple(out), self.layer, self.n_layers)
-            if hidden.dim() == 3:
-                hidden = hidden[0]
-            # Transformers may load SmolLM2 in bfloat16. Numpy cannot hold that
-            # dtype, and the key center is estimated in float32/float64.
-            hidden = hidden.detach().float()
-            logits = _logits_of(out).detach()
-        return hidden, enc, logits
+        """Inject-layer hidden, encoding, and logits from one forward."""
+        return self.backend.encode_hidden(text)
 
     def _answer_mask(self, text: str, enc, answer: str, n_tokens: int) -> list:
         offsets = _offset_pairs(enc)
@@ -1782,10 +1688,10 @@ class LLMMemory:
 
     def _value_and_surprise(self, text: str, answer: str):
         """Answer-span value and its total answer-token NLL from one forward."""
-        hidden, enc, logits = self._run_hidden(text)
+        hidden, enc, logits = self.backend.encode_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
         ids = _batch_ids(enc)[0].tolist()
-        surprise = answer_surprise(logits, ids, mask)
+        surprise = self.backend.answer_nll(logits, ids, mask)
         del logits
         if date_like(answer):
             offsets = _offset_pairs(enc)
@@ -2168,31 +2074,7 @@ class LLMMemory:
 
     def cue_hidden(self, text: str) -> np.ndarray:
         """Pre-add cue rows, ``[T, cue_dim]``. Does not inject and does not change the store."""
-        if not isinstance(text, str) or text == "":
-            raise ValueError("text is empty")
-        captured = {}
-
-        def _keep(_module, _args, output):
-            tensor = output[0] if isinstance(output, tuple) else output
-            copied = tensor.detach()
-            if copied.dim() == 3:
-                if int(copied.shape[0]) != 1:
-                    raise ValueError("cue encode expects one sequence")
-                copied = copied[0]
-            captured["hidden"] = copied.float().cpu().numpy()
-
-        handle = self.layers[self.layer].register_forward_hook(_keep)
-        try:
-            if self._key_prefix_ok():
-                self._run_key_hidden(text)
-            else:
-                self._run_hidden(text)
-        finally:
-            handle.remove()
-        hidden = captured.get("hidden")
-        if hidden is None:
-            raise RuntimeError("the cue hook did not see the residual")
-        return np.asarray(hidden, dtype=np.float64)
+        return self.backend.encode_cue(text)
 
     def advance_cue(self, state: CueState, cue) -> tuple:
         """One token from ``state``. ``cue`` is the raw hidden row, not the centered match."""
@@ -2554,22 +2436,6 @@ def _pack_cue_batch(rows: list, phase: float) -> dict:
         merged[key] = torch.cat([item[key] for item in packed], 0)
     merged["modality"] = [row for item in packed for row in item["modality"]]
     return merged
-
-
-def _add_delta(output, delta: torch.Tensor):
-    if torch.is_tensor(output):
-        return output + _broadcast(delta, output)
-    if isinstance(output, tuple) and output and torch.is_tensor(output[0]):
-        return (_add_delta(output[0], delta),) + output[1:]
-    raise TypeError(f"cannot inject into layer output of type {type(output).__name__}")
-
-
-def _broadcast(delta: torch.Tensor, hidden: torch.Tensor) -> torch.Tensor:
-    add = delta.to(device=hidden.device, dtype=hidden.dtype).reshape(-1)
-    if add.numel() != hidden.shape[-1]:
-        raise ValueError(f"inject dim {add.numel()} != hidden {hidden.shape[-1]}")
-    shape = [1] * (hidden.dim() - 1) + [add.numel()]
-    return add.view(*shape)
 
 
 def _id_list(tokenizer, text: str, add_special_tokens: bool) -> list:

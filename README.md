@@ -67,9 +67,22 @@ Winner strength after its own retrieval event is unchanged by later events in th
 
 That definition was scored once on the floor bank at git `b3726225387f7d592a89de6f0c412091a72af112`, elapsed 47.2 seconds. Every event left its own winner unscaled: 215/215 events, Wilson 95% [0.9824463845132672, 1.0], and 50/50 items, Wilson [0.9286524008666414, 1.0]. The floor is 50/50. The retired utterance-level check on the same pass is still 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. Theta, half-life, lambda, and the retrieval mechanism were not changed.
 
-## Planned interface to growbrain
+## Language-model backend
 
-The per-token cue export is what generation injects. There is still no growbrain package and no encode, NLL, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries:
+tidal calls four hooks. The memory layer still chooses the winner, the fan, the decay, and the residual. The backend runs the model and adds that residual.
+
+- `encode_hidden(text) -> (hidden, encoding, logits)`. One forward. `hidden` is the inject-layer residual, float32 `[T, H]`. `logits` are from that same forward. The forward does not add a memory residual.
+- `encode_cue(text) -> cue`. Pre-add inject-layer rows, float64 `[T, H]`. It does not inject and does not change the store. `encode_key_hidden(text) -> (hidden, encoding)` is the key-span form. When the stack matches `LlamaModel.forward`, it runs the decoder prefix through the inject layer. Otherwise it uses `encode_hidden` and drops the logits. Those rows match `encode_hidden`.
+- `answer_nll(logits, token_ids, answer_mask) -> float`. Total answer-token NLL, in nats, from logits `encode_hidden` already returned. It does not run the model. Position `i` is scored from `logits[i - 1]`. The stored value and this NLL share one forward.
+- `inject_residual(output, residual, *, broadcast=False, batched=True)`. Adds a residual into a decoder-layer output. `broadcast=False` adds a numpy residual `[batch, steps, hidden]` at the same index, in the layer output's dtype and device. `broadcast=True` adds one vector on every position. Only teacher-forced loss uses the broadcast. When the retrieval residual is all zeros, the hook returns None and does not call inject, so the layer output object stays the one the block produced.
+
+`SmolLM2Backend` is the only implementation. `LLMMemory` constructs it for the shipped SmolLM2-135M checkpoint and for a caller-supplied model. There is no switch and no environment flag. The growbrain backend is **planned**. This repository does not import growbrain and does not depend on it.
+
+Theta, half-life, lambda, fan S, the RIF span, and the floors are unchanged. This pull request is interface-only. No number is expected to change. The backend bank was not scored.
+
+## Signals exported to growbrain
+
+The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:
 
 - `memory_id`
 - `vec`

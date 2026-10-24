@@ -40,6 +40,8 @@ WORD_HELD_PATH = REPORT_DIR / "subconscious_cue_word_held.json"
 EVENT_FIT_PATH = REPORT_DIR / "subconscious_cue_event_fit.json"
 EVENT_HELD_PATH = REPORT_DIR / "subconscious_cue_event_held.json"
 WINNER_EVENT_PATH = REPORT_DIR / "subconscious_cue_winner_event.json"
+BACKEND_HELD_PATH = REPORT_DIR / "subconscious_backend_held.json"
+BACKEND_FLOORS_PATH = REPORT_DIR / "subconscious_backend_floors.json"
 COMPETITION_FIT_PATH = REPORT_DIR / "subconscious_cue_competition_fit.json"
 KWTA_KS = (1, 2, 3, 4)
 HELD_N_MIN = 50
@@ -1002,6 +1004,10 @@ def held(dest: Path = None) -> dict:
     count = _count(quartet_rows, lambda row: bool(row["fan"]["high_lower"]))
     fan = _fan_summary(fan_rows)
     fan_rate = _count(fan_rows, lambda row: bool(row["strict"]))
+    winner_events = {
+        "k": int(sum(int(row["winner_events_unchanged"]) for row in pattern)),
+        "n": int(sum(int(row["winner_events"]) for row in pattern)),
+    }
     rates = {
         "prefer_up": prefer,
         "avoid_up": avoid_up,
@@ -1043,6 +1049,7 @@ def held(dest: Path = None) -> dict:
         "fan_rows": fan_rows,
         "failures": failures,
         "pass": not failures,
+        "winner_events": winner_events,
         "means": {
             "prefer_delta": float(sum(float(row["delta"]) for row in prefer_rows) / len(prefer_rows)),
             "avoid_delta": float(sum(float(row["delta"]) for row in avoid_rows) / len(avoid_rows)),
@@ -2029,6 +2036,157 @@ def winner_event() -> dict:
     return payload
 
 
+def _same_number(got, expected) -> bool:
+    if isinstance(expected, bool) or isinstance(got, bool):
+        return bool(got) is bool(expected)
+    if isinstance(expected, int) and not isinstance(expected, bool):
+        return int(got) == int(expected)
+    return float(got) == float(expected)
+
+
+def _pr57_diffs(summary: dict, floors: dict) -> list:
+    """Compare one rescore with the merged cue-triggered reports.
+
+    Direction gates and floor means are the event-held report. The winner
+    count is the per-event item count, and the event total is the per-event
+    report. The utterance-level 16/50 in the event-held floor rates is the
+    retired check.
+    """
+    baseline = json.loads(EVENT_HELD_PATH.read_text(encoding="utf-8"))
+    winner = json.loads(WINNER_EVENT_PATH.read_text(encoding="utf-8"))
+    diffs = []
+    got_gates = summary["gates"]
+    expected_gates = baseline["direction"]["gates"]
+
+    def _check(label, got, expected):
+        if not _same_number(got, expected):
+            diffs.append({"field": label, "got": got, "expected": expected})
+
+    for name, expected in expected_gates.items():
+        got = got_gates[name]
+        for key in ("k", "n", "mean", "mean_abs", "rate"):
+            if key in expected:
+                _check(f"direction.{name}.{key}", got.get(key), expected[key])
+        if "means" in expected:
+            for size, value in expected["means"].items():
+                _check(f"direction.{name}.means.{size}", got["means"][size], value)
+    for key, value in expected_gates["store"]["means"].items():
+        _check(f"direction.store.means.{key}", got_gates["store"]["means"][key], value)
+    for name, expected in baseline["floor_rates"].items():
+        got = floors["rates"][name]
+        if name == "winner_same":
+            _check("floors.winner_same.k", got["k"], winner["items"]["k"])
+            _check("floors.winner_same.n", got["n"], winner["items"]["n"])
+            continue
+        _check(f"floors.{name}.k", got["k"], expected["k"])
+        _check(f"floors.{name}.n", got["n"], expected["n"])
+    for key, value in baseline["floor_means"].items():
+        _check(f"floors.means.{key}", floors["means"][key], value)
+    _check("winner_events.k", floors["winner_events"]["k"], winner["events"]["k"])
+    _check("winner_events.n", floors["winner_events"]["n"], winner["events"]["n"])
+    return diffs
+
+
+def backend_held() -> dict:
+    """One rescore of the word direction bank and the cue-triggered floors.
+
+    Interface only. Refuses unless that claim is already in the
+    preregistration. Does not move theta, half-life, lambda, alpha, or a floor.
+    Does not rewrite the merged cue reports.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_cue_word_data import PROTOCOL, word_bank
+
+    prereg = (REPORT_DIR / "subconscious_cue_prereg.md").read_text(encoding="utf-8")
+    for needle in (
+        "This pull request is interface-only.",
+        "No number is expected to change.",
+        "The backend bank was not scored.",
+    ):
+        if needle not in prereg:
+            raise RuntimeError("the backend interface claim is not in the preregistration")
+    if BACKEND_HELD_PATH.is_file() or BACKEND_FLOORS_PATH.is_file():
+        raise RuntimeError("the backend bank was already scored")
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = word_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        prefer = list(bank.PREFER)
+        if len(prefer) < FRESH_N_MIN or len(list(bank.NEUTRAL_CHOICE)) < FRESH_N_MIN:
+            raise RuntimeError("word bank is below 50")
+        if len(list(bank.NEUTRAL_NLL)) < FRESH_N_MIN or len(list(bank.incidental_facts())) < 31:
+            raise RuntimeError("word bank controls are short")
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        base = _baselines(mem, bank, prefer_rows)
+        scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base, FROZEN_ALPHA)
+        summary = _fresh_summary(scored)
+        cost = _cost(mem, prefer_rows + incidental_rows, prefer[0]["prompt"])
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    floors = held(dest=BACKEND_FLOORS_PATH)
+    diffs = _pr57_diffs(summary, floors)
+    payload = {
+        "kind": "backend-held",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "protocol": PROTOCOL,
+        "bank_sha256": bank.sha256(),
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "constants_changed": False,
+        "interface_only": True,
+        "direction": summary,
+        "cost": cost,
+        "floors_pass": bool(floors["pass"]),
+        "floor_failures": floors["failures"],
+        "floor_rates": floors["rates"],
+        "floor_means": floors["means"],
+        "winner_events": floors["winner_events"],
+        "matches_pr57": not diffs,
+        "diffs": diffs,
+        "pass": bool(summary["pass"] and floors["pass"] and not diffs),
+        "theta_changed": False,
+        "note": "One pass. The interface was not changed after this score.",
+    }
+    _dump(BACKEND_HELD_PATH, payload)
+    _print(
+        json.dumps(
+            {
+                "pass": payload["pass"],
+                "matches_pr57": payload["matches_pr57"],
+                "diffs": diffs,
+                "direction_pass": summary["pass"],
+                "floors_pass": payload["floors_pass"],
+                "direction": {
+                    name: {
+                        "pass": row["pass"],
+                        **{key: row[key] for key in row if key in ("k", "n", "mean", "mean_abs", "rate")},
+                    }
+                    for name, row in summary["gates"].items()
+                },
+                "floor_rates": {name: [row["k"], row["n"]] for name, row in floors["rates"].items()},
+                "winner_events": floors["winner_events"],
+                "floor_means": floors["means"],
+                "cost": cost,
+            },
+            indent=2,
+        )
+    )
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -2055,6 +2213,8 @@ def main(argv: list) -> None:
         event_held()
     elif mode == "winner-event":
         winner_event()
+    elif mode == "backend-held":
+        backend_held()
     else:
         raise SystemExit(f"unknown mode {mode}")
 
