@@ -55,7 +55,7 @@ def canonical_surfaces() -> dict:
     """Spellings this probe must produce. Identical for every id."""
     phone = residue_from_answer(PHONE)
     birthday = residue_from_answer(BIRTHDAY)
-    out = {"off_relation": None, "interface_version": 5}
+    out = {"off_relation": None, "interface_version": 6}
     for label, schedule in SCHEDULES:
         out[f"phone_{label}"] = recall_surface(phone, *schedule)
         out[f"birthday_{label}"] = recall_surface(birthday, *schedule)

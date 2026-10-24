@@ -1,14 +1,29 @@
 """Model hooks for the memory layer.
 
 The memory layer chooses the winner, the fan, the decay, and the residual.
-A backend runs the model and adds that residual. :class:`SmolLM2Backend` is
-the only implementation. It is the current causal-LM path, including a
-caller-supplied model. A growbrain backend is planned and is not imported.
+A backend runs the model and adds that residual.
+
+:class:`GrowbrainBackend` is the default. It runs the growbrain model at
+the inject layer. Text goes in through :meth:`MemoryBackend.encode_hidden`.
+That is not :class:`growbrain.tidal_adapter.TidalAdapter`'s ``encode_hidden``,
+which projects an already exported packet from ``d_model`` to ``mem_dim``.
+
+:class:`SmolLM2Backend` stays constructible for a caller-supplied model and
+for ``HuggingFaceTB/SmolLM2-135M``. It is not the default. There is no
+process flag. ``import growbrain`` is tried inside
+:func:`try_import_growbrain` and is not a requirement of importing this module.
+
+Stage0 ``e1_base_rebalance`` (no ``expand_d``) pins ``d_model`` at 192,
+``mem_dim`` at 64, ``mem_key_dim`` at 32, ``inject_layer`` at 2, ``n_layers``
+at 4, and ``head_dim`` at 48. ``d_model`` is the packet ``vec`` width and the
+episodic store width. ``mem_dim`` is the growbrain injector slot after
+``TidalAdapter.proj`` and is not the store width. A later checkpoint's
+``cfg.d_model`` replaces the 192 pin.
 """
 from __future__ import annotations
 
 from contextlib import nullcontext
-from typing import Sequence
+from typing import Mapping, Sequence
 
 import numpy as np
 import torch
@@ -102,10 +117,11 @@ class MemoryBackend:
 
 
 class SmolLM2Backend(MemoryBackend):
-    """Current causal-LM path. SmolLM2-135M when the host loaded that checkpoint.
+    """Explicit causal-LM path. SmolLM2-135M when the host loaded that checkpoint.
 
-    A caller-supplied model uses this same class. There is no second backend
-    and no switch. A growbrain backend is planned and is not imported.
+    A caller-supplied model uses this same class. It is not the default.
+    :class:`GrowbrainBackend` is the default when the host asks for one.
+    There is no process flag.
     """
 
     def __init__(self, model, tokenizer, *, layer: int, n_layers: int, hidden: int, layers, device):
@@ -279,6 +295,311 @@ class SmolLM2Backend(MemoryBackend):
             return _add_delta(output, residual)
         tensor = output[0] if isinstance(output, tuple) else output
         add_t = torch.tensor(residual, dtype=tensor.dtype, device=tensor.device)
+        if not batched:
+            add_t = add_t[0]
+        updated = tensor + add_t
+        if torch.is_tensor(output):
+            return updated
+        return (updated,) + output[1:]
+
+
+# Stage0 e1_base_rebalance ModelConfig. No expand_d.
+# Packet vec, episodic key, and episodic value use d_model.
+# mem_dim is the injector slot on the growbrain side of TidalAdapter.proj.
+GROWBRAIN_D_MODEL = 192
+GROWBRAIN_MEM_DIM = 64
+GROWBRAIN_MEM_KEY_DIM = 32
+GROWBRAIN_INJECT_LAYER = 2
+GROWBRAIN_N_LAYERS = 4
+GROWBRAIN_HEAD_DIM = 48
+GROWBRAIN_CHECKPOINT = "e1_base_rebalance"
+
+
+def _cfg_get(cfg, name: str):
+    """One field from a checkpoint cfg, or None when the field is absent."""
+    if cfg is None:
+        return None
+    if isinstance(cfg, Mapping):
+        if name not in cfg:
+            return None
+        value = cfg[name]
+    else:
+        value = getattr(cfg, name, None)
+    return None if value is None else value
+
+
+def resolve_d_model(cfg=None, model=None) -> int:
+    """Packet width. A checkpoint ``d_model`` wins. Otherwise the stage0 pin.
+
+    ``mem_dim`` is never this width. A cfg that sets ``mem_dim`` and omits
+    ``d_model`` still resolves to :data:`GROWBRAIN_D_MODEL`.
+    """
+    from_cfg = _cfg_get(cfg, "d_model")
+    from_model = None
+    if model is not None:
+        from_model = _cfg_get(getattr(model, "config", None), "d_model")
+    if from_cfg is not None and from_model is not None and int(from_cfg) != int(from_model):
+        raise ValueError(f"checkpoint cfg.d_model {int(from_cfg)} != model.config.d_model {int(from_model)}")
+    if from_cfg is not None:
+        return int(from_cfg)
+    if from_model is not None:
+        return int(from_model)
+    return int(GROWBRAIN_D_MODEL)
+
+
+def resolve_inject_layer(cfg, model, n_layers: int) -> int:
+    """Inject block. Stage0 pins layer 2. A cfg ``inject_layer`` replaces it."""
+    value = _cfg_get(cfg, "inject_layer")
+    if value is None and model is not None:
+        value = _cfg_get(getattr(model, "config", None), "inject_layer")
+    if value is None:
+        value = GROWBRAIN_INJECT_LAYER
+    layer = int(value)
+    if int(n_layers) < 1 or not 0 <= layer < int(n_layers):
+        raise ValueError(f"inject layer {layer} is outside 0..{int(n_layers) - 1}")
+    return layer
+
+
+def _cfg_int(cfg, model, name: str, default: int) -> int:
+    value = _cfg_get(cfg, name)
+    if value is None and model is not None:
+        value = _cfg_get(getattr(model, "config", None), name)
+    if value is None:
+        return int(default)
+    return int(value)
+
+
+def check_growbrain_layers(cfg, model, n_layers: int) -> None:
+    """The decoder stack must match cfg.n_layers when the cfg names one."""
+    expected = _cfg_get(cfg, "n_layers")
+    if expected is None and model is not None:
+        expected = _cfg_get(getattr(model, "config", None), "n_layers")
+    if expected is not None and int(expected) != int(n_layers):
+        raise ValueError(f"cfg.n_layers {int(expected)} != decoder blocks {int(n_layers)}")
+
+
+def try_import_growbrain():
+    """The optional package, or None. Importing this module does not import it."""
+    try:
+        import growbrain
+    except ImportError:
+        return None
+    return growbrain
+
+
+def load_growbrain_stage0(*, device, dtype=None):
+    """Load stage0 ``e1_base_rebalance`` for :class:`GrowbrainBackend`.
+
+    The package and the checkpoint were not readable from this machine.
+    This raises instead of constructing :class:`SmolLM2Backend`. It does not
+    guess a loader name from an unread source file.
+    """
+    del device, dtype
+    module = try_import_growbrain()
+    if module is None:
+        raise ImportError(
+            "LLMMemory() uses GrowbrainBackend at d_model 192 "
+            "(stage0 e1_base_rebalance, inject layer 2). "
+            "growbrain is not installed. "
+            "Pass a model and tokenizer, or "
+            "model_name='HuggingFaceTB/SmolLM2-135M', to construct SmolLM2Backend. "
+            "There is no process switch."
+        )
+    names = [name for name in dir(module) if not name.startswith("_")]
+    raise RuntimeError(
+        "growbrain imported, but e1_base_rebalance is not loaded. "
+        "No checkpoint was on this machine, and the load call was not read "
+        "from source, so it was not guessed. "
+        f"Public names: {', '.join(names) if names else '(none)'}. "
+        "Refusing a 576-d SmolLM2 shell."
+    )
+
+
+def _logits_from_model_call(out):
+    """Logits from ``model(idx)``. A layout this cannot name is an error."""
+    if torch.is_tensor(out):
+        return out.detach()
+    if hasattr(out, "logits") and torch.is_tensor(getattr(out, "logits")):
+        return out.logits.detach()
+    if isinstance(out, tuple) and out and torch.is_tensor(out[0]):
+        return out[0].detach()
+    raise TypeError(
+        f"model(idx) returned {type(out).__name__}, which has no logits tensor. "
+        "The return layout was not readable from growbrain source."
+    )
+
+
+def _as_id_list(ids) -> list:
+    if torch.is_tensor(ids):
+        ids = ids.detach().cpu().view(-1).tolist()
+    elif hasattr(ids, "tolist"):
+        ids = ids.tolist()
+    if ids and isinstance(ids[0], (list, tuple)):
+        ids = list(ids[0])
+    return [int(i) for i in ids]
+
+
+class GrowbrainBackend(MemoryBackend):
+    """Text forward on the growbrain model at the inject layer.
+
+    ``encode_hidden(text)`` calls ``model(idx)`` and copies the inject-layer
+    residual. It does not call ``TidalAdapter.encode_hidden``. The residual
+    width is ``d_model``. ``mem_dim`` is recorded for the growbrain injector
+    slot and is not the store width. A zero-width or 576-d map is not applied.
+    """
+
+    def __init__(self, model, tokenizer, *, layer: int, n_layers: int, layers, device, cfg=None):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.n_layers = int(n_layers)
+        self.layers = layers
+        self.device = device
+        self.cfg = cfg
+        self.hidden = resolve_d_model(cfg, model)
+        self.layer = int(layer)
+        if not 0 <= self.layer < self.n_layers:
+            raise ValueError(f"inject layer {self.layer} is outside 0..{self.n_layers - 1}")
+        self.mem_dim = _cfg_int(cfg, model, "mem_dim", GROWBRAIN_MEM_DIM)
+        self.mem_key_dim = _cfg_int(cfg, model, "mem_key_dim", GROWBRAIN_MEM_KEY_DIM)
+        self.head_dim = _cfg_int(cfg, model, "head_dim", GROWBRAIN_HEAD_DIM)
+        self._clean = nullcontext
+        self._handle = None
+
+    def bind_clean(self, clean) -> None:
+        self._clean = clean
+
+    def attach_inject(self, callback):
+        self._handle = self.layers[self.layer].register_forward_hook(callback)
+        return self._handle
+
+    def key_prefix_ok(self) -> bool:
+        """Char stacks do not use the Llama prefix. The full ``model(idx)`` runs."""
+        return False
+
+    def _tokenize(self, text: str) -> dict:
+        tok = self.tokenizer
+        if callable(tok):
+            try:
+                enc = tok(text, return_tensors="pt", add_special_tokens=True, return_offsets_mapping=True)
+            except TypeError:
+                enc = None
+            else:
+                if isinstance(enc, Mapping) or hasattr(enc, "keys"):
+                    return enc
+        if not hasattr(tok, "encode"):
+            raise TypeError("growbrain tokenizer has no encode and is not callable as a Hugging Face tokenizer")
+        ids = _as_id_list(tok.encode(text))
+        if not ids:
+            raise ValueError("text tokenized to an empty id sequence")
+        payload = {"input_ids": torch.tensor([ids], dtype=torch.long)}
+        # One id per character can name its own span. A shorter id list has
+        # no offsets until the growbrain tokenizer source is available.
+        if len(ids) == len(text):
+            payload["offset_mapping"] = torch.tensor([[(i, i + 1) for i in range(len(ids))]], dtype=torch.long)
+        return payload
+
+    def _call_model(self, ids: torch.Tensor):
+        """``model(idx)``. A rejected call is not rewritten into another signature."""
+        if not callable(self.model):
+            raise TypeError("growbrain model is not callable")
+        try:
+            return self.model(ids)
+        except TypeError as exc:
+            raise RuntimeError(
+                "GrowbrainBackend called model(idx) and the module rejected that call. "
+                "The e1_base_rebalance source was not readable here, so the signature "
+                "was not guessed past model(idx). This is not a SmolLM2 forward."
+            ) from exc
+
+    def _forward_ids(self, enc) -> tuple:
+        from tidal.llm_memory import _batch_ids
+
+        ids = _batch_ids(enc).to(self.device)
+        captured: dict = {}
+
+        def _keep(_module, _args, output):
+            tensor = output[0] if isinstance(output, tuple) else output
+            if not torch.is_tensor(tensor):
+                raise TypeError(f"inject layer returned {type(output).__name__}")
+            copied = tensor.detach()
+            if copied.dim() == 3:
+                if int(copied.shape[0]) != 1:
+                    raise ValueError("growbrain encode expects one sequence")
+                copied = copied[0]
+            if copied.dim() != 2:
+                raise ValueError(f"inject residual rank {copied.dim()} is not [T, d_model]")
+            captured["hidden"] = copied.float()
+
+        handle = self.layers[self.layer].register_forward_hook(_keep)
+        try:
+            with self._clean():
+                with torch.no_grad():
+                    out = self._call_model(ids)
+        finally:
+            handle.remove()
+        hidden = captured.get("hidden")
+        if hidden is None:
+            raise RuntimeError(
+                f"inject layer {self.layer} did not run. "
+                "Refusing to invent a hidden state or to reuse a 576-d vector."
+            )
+        if int(hidden.shape[-1]) != int(self.hidden):
+            raise RuntimeError(
+                f"inject residual width {int(hidden.shape[-1])} != d_model {int(self.hidden)}. "
+                "Refusing to project it to mem_dim or to 576."
+            )
+        return hidden, _logits_from_model_call(out)
+
+    def encode_hidden(self, text: str) -> tuple:
+        if not isinstance(text, str) or text == "":
+            raise ValueError("text is empty")
+        enc = self._tokenize(text)
+        hidden, logits = self._forward_ids(enc)
+        return hidden, enc, logits
+
+    def encode_key_hidden(self, text: str) -> tuple:
+        hidden, enc, _logits = self.encode_hidden(text)
+        del _logits
+        return hidden, enc
+
+    def encode_cue(self, text: str) -> np.ndarray:
+        if not isinstance(text, str) or text == "":
+            raise ValueError("text is empty")
+        captured = {}
+
+        def _keep(_module, _args, output):
+            tensor = output[0] if isinstance(output, tuple) else output
+            copied = tensor.detach()
+            if copied.dim() == 3:
+                if int(copied.shape[0]) != 1:
+                    raise ValueError("cue encode expects one sequence")
+                copied = copied[0]
+            captured["hidden"] = copied.float().cpu().numpy()
+
+        handle = self.layers[self.layer].register_forward_hook(_keep)
+        try:
+            self.encode_hidden(text)
+        finally:
+            handle.remove()
+        hidden = captured.get("hidden")
+        if hidden is None:
+            raise RuntimeError("the cue hook did not see the residual")
+        if int(np.asarray(hidden).shape[-1]) != int(self.hidden):
+            raise RuntimeError(
+                f"cue width {int(np.asarray(hidden).shape[-1])} != d_model {int(self.hidden)}"
+            )
+        return np.asarray(hidden, dtype=np.float64)
+
+    def answer_nll(self, logits, token_ids, answer_mask) -> float:
+        return answer_nll(logits, token_ids, answer_mask)
+
+    def inject_residual(self, output, residual, *, broadcast: bool = False, batched: bool = True):
+        if broadcast:
+            return _add_delta(output, residual)
+        tensor = output[0] if isinstance(output, tuple) else output
+        add_t = torch.tensor(residual, dtype=tensor.dtype, device=tensor.device)
+        if int(add_t.shape[-1]) != int(tensor.shape[-1]):
+            raise ValueError(f"inject dim {int(add_t.shape[-1])} != hidden {int(tensor.shape[-1])}")
         if not batched:
             add_t = add_t[0]
         updated = tensor + add_t

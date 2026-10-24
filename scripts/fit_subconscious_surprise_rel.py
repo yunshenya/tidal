@@ -21,6 +21,7 @@ import torch
 import tidal.episodic as episodic
 import tidal.llm_memory as llm_memory
 from tidal.llm_memory import (
+    DEFAULT_MODEL,
     LLMMemory,
     REPLAY_DECAY,
     REPLAY_EVERY,
@@ -305,7 +306,7 @@ def main():
     torch.set_num_threads(os.cpu_count() or 1)
     source_q = float(llm_memory.SURPRISE_QUANTILE)
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     bank = fit_bank()
     train = train_bank()
     rows = []

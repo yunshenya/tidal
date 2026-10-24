@@ -221,7 +221,7 @@ def main(argv=None) -> None:
     t0 = time.time()
     # float32: same weights as the default load, but CPU bfloat16 GEMM is ~50x slower
     # here. Centers shipped from the bfloat16 pass still match this geometry.
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     print(
         f"model {mem.model_name} layer {mem.layer} hidden {mem.hidden} "
         f"overwrite {mem.store.overwrite_cos} dtype {next(mem.model.parameters()).dtype} "

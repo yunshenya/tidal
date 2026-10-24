@@ -885,7 +885,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "3551a6d64f0ff852d870b0f7499e6b75de6fad1a75b3c7f01419761f20e89ce3"
+    source = "1f6bcf311d2610bcffeedcec2b3c7368984f9e1ca94a5946000df4801f03a4aa"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 
@@ -914,7 +914,7 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
     assert tuple(ckpt["inject"]["date_digit_b"].shape) == (6, 10)
 
     _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
-    mem = LLMMemory()
+    mem = LLMMemory(model_name=DEFAULT_MODEL)
     try:
         assert mem.model_name == DEFAULT_MODEL
         assert mem.n_layers == 30
@@ -937,18 +937,18 @@ def test_default_llm_memory_loads_shipped_inject(monkeypatch):
 
 
 def test_other_model_or_layer_keeps_zero_inject(monkeypatch):
-    from tidal.llm_memory import _inject_path
+    from tidal.llm_memory import DEFAULT_MODEL, _inject_path
 
     monkeypatch.setattr(LLMMemory, "_key_centers", _zero_centers)
     _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
 
-    other_layer = LLMMemory(layer=14)
+    other_layer = LLMMemory(model_name=DEFAULT_MODEL, layer=14)
     other_name = LLMMemory(model_name="other/model")
     passed = LLMMemory(_ShapeLM(30, 576), _UnusedTok())
     _install_shape_loader(monkeypatch, n_layers=4, hidden=32)
-    other_shape = LLMMemory()
+    other_shape = LLMMemory(model_name=DEFAULT_MODEL)
     _install_shape_loader(monkeypatch, n_layers=30, hidden=576)
-    narrow = LLMMemory(inject_hidden=32)
+    narrow = LLMMemory(model_name=DEFAULT_MODEL, inject_hidden=32)
     try:
         for mem in (other_layer, other_name, passed, other_shape, narrow):
             assert torch.count_nonzero(_last_weight(mem)) == 0
@@ -1019,6 +1019,7 @@ def test_phone_block_sizes_are_four_equal_parts():
     from tidal.llm_memory import phone_block_sizes
 
     assert phone_block_sizes(576) == [144, 144, 144, 144]
+    assert phone_block_sizes(192) == [48, 48, 48, 48]
     assert phone_block_sizes(32) == [8, 8, 8, 8]
     assert phone_block_sizes(260) == [65, 65, 65, 65]
     assert sum(phone_block_sizes(7)) == 7
@@ -1082,6 +1083,7 @@ def test_date_block_sizes_match_the_measured_split():
     from tidal.llm_memory import date_block_sizes
 
     assert date_block_sizes(576) == [88, 44, 88, 89, 89, 89, 89]
+    assert date_block_sizes(192) == [29, 14, 29, 30, 30, 30, 30]
     assert sum(date_block_sizes(260)) == 260
     assert sum(date_block_sizes(32)) == 32
     assert min(date_block_sizes(32)) >= 1

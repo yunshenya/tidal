@@ -101,10 +101,10 @@ def main() -> None:
         raise SystemExit("usage: eval_subconscious_softmix.py fit|held")
     import torch
 
-    from tidal.llm_memory import LLMMemory
+    from tidal.llm_memory import DEFAULT_MODEL, LLMMemory
 
     torch.set_num_threads(os.cpu_count() or 1)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     try:
         if sys.argv[1] == "fit":
             _fit(mem)

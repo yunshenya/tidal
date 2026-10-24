@@ -249,7 +249,7 @@ def main():
     print("loading SmolLM2-135M float32", flush=True)
     rss_before = _rss_kb()
     t0 = time.perf_counter()
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     load_s = time.perf_counter() - t0
     rss_after = _rss_kb()
     print(f"loaded in {load_s:.1f}s gap_tau={DEFAULT_GAP_TAU}", flush=True)

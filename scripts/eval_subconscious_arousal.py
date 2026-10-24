@@ -268,7 +268,7 @@ def _export_gate() -> dict:
         slept = float(asleep.sleep_for(3.0)["pressure_after"])
         sleep_same = asleep.arousal == level and float(SLEEP_FLOOR) < slept < woke
         passed = (
-            int(full["interface_version"]) == int(CUE_INTERFACE_VERSION) == 5
+            int(full["interface_version"]) == int(CUE_INTERFACE_VERSION) == 6
             and series_ok
             and in_range
             and "cue" in full["source"][0]

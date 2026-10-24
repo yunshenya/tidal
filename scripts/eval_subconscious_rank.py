@@ -608,9 +608,9 @@ def main() -> None:
 
     _identity_threads()
     started = time.perf_counter()
-    from tidal.llm_memory import LLMMemory
+    from tidal.llm_memory import DEFAULT_MODEL, LLMMemory
 
-    mem = LLMMemory()
+    mem = LLMMemory(model_name=DEFAULT_MODEL)
     try:
         identity = _identity(mem)
         _print(f"identity ok {identity['ok']}")

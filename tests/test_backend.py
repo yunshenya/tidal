@@ -1,4 +1,4 @@
-"""SmolLM2 is the only memory backend. The hooks do not add a second forward."""
+"""Growbrain is the default memory backend. SmolLM2 stays an explicit constructor."""
 from __future__ import annotations
 
 import ast
@@ -10,7 +10,7 @@ import pytest
 import torch
 from torch import nn
 
-from tidal.backend import MemoryBackend, SmolLM2Backend, answer_nll
+from tidal.backend import GrowbrainBackend, MemoryBackend, SmolLM2Backend, answer_nll, try_import_growbrain
 from tidal.llm_memory import ByteTokenizer, LLMMemory, answer_surprise
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -47,11 +47,12 @@ def _memory():
         LLMMemory._key_centers = centers
 
 
-def test_default_backend_is_smollm2_with_no_switch():
+def test_passed_in_model_is_smollm2_and_default_is_growbrain():
     signature = inspect.signature(LLMMemory.__init__)
     assert "backend" not in signature.parameters
     source = inspect.getsource(LLMMemory.__init__)
     assert "SmolLM2Backend(" in source
+    assert "GrowbrainBackend(" in source
     assert "environ" not in source
     text = open(os.path.join(ROOT, "tidal", "backend.py"), encoding="utf-8").read()
     tree = ast.parse(text)
@@ -64,10 +65,14 @@ def test_default_backend_is_smollm2_with_no_switch():
     assert "growbrain" not in imported
     assert "transformers" not in imported
     assert "environ" not in text
-    assert "planned" in text
+    assert "import growbrain" in text
+    assert try_import_growbrain() is None
+    with pytest.raises(ImportError, match="GrowbrainBackend"):
+        LLMMemory()
     mem = _memory()
     try:
         assert type(mem.backend) is SmolLM2Backend
+        assert not isinstance(mem.backend, GrowbrainBackend)
         assert isinstance(mem.backend, MemoryBackend)
         assert mem.model is mem.backend.model
         assert mem.layers is mem.backend.layers
@@ -178,7 +183,11 @@ def test_prereg_and_docs_lock_the_interface_only_claim():
     for name in ("README.md", "docs/architecture.md"):
         text = open(os.path.join(ROOT, name), encoding="utf-8").read()
         assert "SmolLM2Backend" in text
-        assert "planned" in text.lower() or "**planned**" in text
+        assert "GrowbrainBackend" in text
+        assert "d_model" in text
+        assert "192" in text
+        assert "The live `interface_version` is 6." in text
         assert "encode_hidden" in text
         assert "The backend bank was not scored." in text
+        assert "The held bank was not scored." in text
         assert "duplex" in text.lower()

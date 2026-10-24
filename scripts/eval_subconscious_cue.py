@@ -159,10 +159,10 @@ def _fit_bank():
 def _load_memory():
     import torch
 
-    from tidal.llm_memory import LLMMemory
+    from tidal.llm_memory import DEFAULT_MODEL, LLMMemory
 
     torch.set_num_threads(min(4, os.cpu_count() or 1))
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     _install_cue_cache(mem)
     return mem
 

@@ -244,7 +244,7 @@ def main():
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     torch.set_num_threads(os.cpu_count() or 1)
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     snap = _snapshot(mem)
     if "polarity" not in snap or float(snap["polarity"].abs().sum()) != 0.0:
         raise SystemExit("polarity must start at 0")

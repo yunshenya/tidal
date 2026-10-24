@@ -280,7 +280,7 @@ def test_offline_fields_and_interface_version():
         fields = mem.cue_fields(text)
         assert mem.store.slots[0].strength == before
         steps = hidden.shape[0]
-        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 5
+        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 6
         assert fields["modality"] == [["text"] * steps]
         assert fields["source"][0][0] == "cue"
         assert "spontaneous" not in fields["source"][0]

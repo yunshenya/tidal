@@ -415,7 +415,7 @@ def geometry():
 def main() -> None:
     import torch
 
-    from tidal.llm_memory import LLMMemory
+    from tidal.llm_memory import DEFAULT_MODEL, LLMMemory
     from tidal.subconscious_measure_data import choice_items, preference_items, tone_items
 
     torch.set_num_threads(os.cpu_count() or 1)
@@ -438,7 +438,7 @@ def main() -> None:
     if worst >= 0.5:
         raise SystemExit("fit bank is not disjoint")
     print("loading SmolLM2-135M for key geometry", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     try:
         from tidal.subconscious_eval import token_ids
 

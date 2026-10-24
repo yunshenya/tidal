@@ -259,7 +259,7 @@ def main():
     source_span = float(VALENCE_SPAN)
     source_step = float(VALENCE_STEP)
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     bank = fit_bank()
     rows = []
     try:
