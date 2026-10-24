@@ -2,14 +2,17 @@
 
 Named constants and shape helpers. Live cue export is
 :data:`tidal.llm_memory.CUE_INTERFACE_VERSION` 7. ``cue_fields`` emits
-``fingerprint`` and ``fusion_confidence``. ``fusion_weights`` is not a cue
-field; write it with :meth:`tidal.llm_memory.LLMMemory.set_fusion_weights`.
+``fingerprint`` and ``fusion_confidence``. No fusion stores 0. A known
+fusion is written with :meth:`tidal.llm_memory.LLMMemory.set_fusion_confidence`.
+``fusion_weights`` is not a cue field; write it with
+:meth:`tidal.llm_memory.LLMMemory.set_fusion_weights`.
 
 Agreed with growbrain / 两仪式 on 2026-10-25. growbrain mirrors the same
 shape in ``TIDAL_INTERFACE`` v7.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Literal, Optional, Protocol, Sequence, TypedDict
 
@@ -41,8 +44,9 @@ class CueV7Additions(TypedDict):
     ``fingerprint`` is memory-level ``(F,)``, not per-token. ``F`` is
     :data:`FINGERPRINT_DIM`. ``fusion_confidence`` is one float in ``[0, 1]``
     per sample, last-token / sample-level, the same rule as the v6 gate
-    scalars. No cross-modal fusion stores 0. ``fusion_weights`` is not a
-    cue-packet field.
+    scalars. No cross-modal fusion stores 0. A known fusion is written
+    with :meth:`tidal.llm_memory.LLMMemory.set_fusion_confidence`.
+    ``fusion_weights`` is not a cue-packet field.
     """
 
     fingerprint: Fingerprint
@@ -129,3 +133,11 @@ def check_fusion_weights(value: Sequence[float] | FusionWeights) -> FusionWeight
     if arr.shape != (FUSION_WEIGHT_DIM,):
         raise ValueError(f"fusion_weights must have shape ({FUSION_WEIGHT_DIM},)")
     return arr
+
+
+def check_fusion_confidence(value: float) -> float:
+    """Sample-level / last-token fusion confidence. Finite float in ``[0, 1]``."""
+    level = float(value)
+    if not math.isfinite(level) or level < 0.0 or level > 1.0:
+        raise ValueError("fusion_confidence must be in [0, 1]")
+    return level
