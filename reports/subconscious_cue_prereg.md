@@ -567,3 +567,33 @@ The hooks are `encode_hidden(text) -> (hidden, encoding, logits)`, `encode_cue(t
 The rescore is the word-bank direction gates and the cue-triggered floors. The rates that must match are the merged cue-triggered reports: cued 43/50, mean 0.574797535019073; unrelated absolute margin 0.0007146249711513519; false triggers 0/50; decay 50/50; store means 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597; quiet NLL −2.347582425826635e-05 on 117 tokens; fan strict 40/50, means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456; prefer up 46/50; avoid up 37/50; avoid stored down 42/50; toward up 47/50; away down 47/50; coexist 50/50; RIF competitor below 1 47/50; RIF winner per event 50/50 items and 215/215 events; outsider 50/50; interference similarity 35/50; interference count 32/50; fan strictly decreasing 45/50. Floor means must match the same report. Inject cost is reported and is not a gate. Fit banks stay disjoint from this held rescore. The backend bank was not scored.
 
 Standing rules for this pull request: one change per PR; fit and held stay disjoint; README.md and docs/architecture.md are updated in this PR; squash-merge only when every gate and floor matches.
+
+## Backend interface held result
+
+One pass, after the section above was committed. Git `167f196ccd6788579c39a882f3a9abf145d0a557`. Outer elapsed 172.05785542300146 seconds, including the floor pass. Floor elapsed 128.34025156700227 seconds. Protocol `cue-direction-word-v1`. Bank sha256 `7a8f62d244ec98b52349bf441bcc3262c9c5ff10f7148d3d79fb824e7d109110`. Theta 0.32, half-life 30, lambda 0.3, alpha 0.25. `constants_changed` is false. `interface_only` is true. `matches_pr57` is true. The direction pass is true. The floor pass is true. The overall pass is true. No constant was changed after this score. Reports: `reports/subconscious_backend_held.json` and `reports/subconscious_backend_floors.json`.
+
+| gate | count | Wilson 95% |
+| --- | --- | --- |
+| cued margin positive | 43/50, mean 0.574797535019073 | [0.7381380628941446, 0.9304916657298371] |
+| unrelated absolute margin | n=50, mean 0.0007146249711513519 |  |
+| false triggers | 0/50, rate 0 | [0.0, 0.07134759913335872] |
+| decay after the last trigger | 50/50 | [0.9286524008666414, 1.0] |
+| store 8 / 16 / 32 | n=50, means 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597 |  |
+| quiet-token NLL | -2.347582425826635e-05 on 117 tokens |  |
+| fan 1 / 2 / 4 strict | 40/50, means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456 | [0.6696289406777459, 0.887562499842239] |
+| prefer margin up | 46/50 | [0.8116175308165717, 0.968450485911407] |
+| avoid margin up | 37/50 | [0.6044684273515117, 0.8412847250644762] |
+| avoid stored down | 42/50 | [0.7148578393696501, 0.916625793219666] |
+| toward up | 47/50 | [0.8378290831116182, 0.979385029651026] |
+| away down | 47/50 | [0.8378290831116182, 0.979385029651026] |
+| coexist, at least 4 slots | 50/50 | [0.9286524008666414, 1.0] |
+| RIF competitor below 1 | 47/50 | [0.8378290831116182, 0.979385029651026] |
+| RIF winner per event | 50/50 items, 215/215 events | items [0.9286524008666414, 1.0], events [0.9824463845132672, 1.0] |
+| outsider unchanged | 50/50 | [0.9286524008666414, 1.0] |
+| interference similarity | 35/50 | [0.562496495355466, 0.8089644649911906] |
+| interference count | 32/50 | [0.501410168761127, 0.7586125034815325] |
+| fan strictly decreasing | 45/50 | [0.7863976856252035, 0.9565242350681096] |
+
+Floor means: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Median extra seconds per token, 11 tokens, warmup 2, repeats 7: store 8 is 0.00013567636382173407, store 16 is 0.00017457663489039987, store 32 is 0.00016208354579496452. Armed seconds per token are 0.002798841636500914, 0.0027643739079146394, and 0.002902572545942596.

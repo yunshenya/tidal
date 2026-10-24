@@ -83,6 +83,14 @@ tidal calls four hooks. The memory layer still chooses the winner, the fan, the 
 
 Theta, half-life, lambda, fan S, the RIF span, and the floors are unchanged. This pull request is interface-only. No number is expected to change. The backend bank was not scored.
 
+That rescore was run once after the sentence above was committed. Git `167f196ccd6788579c39a882f3a9abf145d0a557`. Protocol `cue-direction-word-v1`. Bank sha256 `7a8f62d244ec98b52349bf441bcc3262c9c5ff10f7148d3d79fb824e7d109110`. The outer elapsed time is 172.05785542300146 seconds and includes the floor pass. The floor pass itself took 128.34025156700227 seconds. `matches_pr57` is true. `constants_changed` is false. Reports: `reports/subconscious_backend_held.json` and `reports/subconscious_backend_floors.json`.
+
+Every direction gate matches the merged cue-triggered rescore: cued 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]; unrelated absolute margin 0.0007146249711513519; false triggers 0/50, Wilson [0.0, 0.07134759913335872]; decay 50/50, Wilson [0.9286524008666414, 1.0]; store means 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597; quiet NLL -2.347582425826635e-05 on 117 tokens; fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Every cue-triggered floor matches: prefer up 46/50, avoid up 37/50, avoid stored down 42/50, toward up 47/50, away down 47/50, coexist 50/50, RIF competitor below 1 on 47/50, winner per event 50/50 items and 215/215 events, outsider 50/50, interference similarity 35/50, interference count 32/50, and fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.00013567636382173407, 0.00017457663489039987, and 0.00016208354579496452. Armed seconds per token are 0.002798841636500914, 0.0027643739079146394, and 0.002902572545942596.
+
 ## Signals exported to growbrain
 
 The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. The repository still has no growbrain package. Each exported token carries `memory_id`, `vec`, `activation = a_trig * fan_factor * decay`, `strength*confidence`, `valence` as `u - 1`, `circadian`, `triggered`, `modality`, and `interface_version`. `modality` is `text` on every token, including a cleared trace. `interface_version` is 3. Version 2 was the activation formula. Version 3 adds `modality`. There is no perceptual-fingerprint field. `u - 1` is the offset in `u = 1 + tanh(valence)`, so a valence of 0 exports 0.
