@@ -441,3 +441,40 @@ Direction gates, unchanged from the pre-specified 6/8 proportion on n=50, not ta
 Previous floors, unchanged: prefer up 50/50, avoid up 39/50, avoid stored down 42/50, toward up 45/50, away down 48/50, at least 4 slots 50/50, competitor strength below 1 on 50/50, winner strength unchanged 50/50, outsider strength unchanged 50/50, similarity 42/50, count 48/50, fan strictly decreasing 38/50. Wilson 95%.
 
 Fit check only, after the mechanism change and before this held bank. Alpha was not re-selected. On the n=8 direction fit bank, cued margin is positive on 7/8, mean 0.47904670238494873, decay passes 8/8, and fan is strict on 6/8 with means 0.47904670238494873 / 0.20303821563720703 / 0.005775809288024902. On the 50-item fit bank, cued margin is positive on 41/50, mean 0.2474970944590556, decay passes 50/50, and fan is strict on 39/50 with means 0.2474970944590556 / 0.05900819488878671 / 0.0030152441367197725. Report: `reports/subconscious_cue_scope_fit.json`. These counts did not move a gate or a floor. The word bank was not scored.
+
+## Word-bank held result
+
+One pass, after the section above was committed. Git `b1884217b6d3ada635acc351bc70d8cc581858ca`. Elapsed 197.1908630290127 seconds. Protocol `cue-direction-word-v1`. Bank sha256 `7a8f62d244ec98b52349bf441bcc3262c9c5ff10f7148d3d79fb824e7d109110`. Theta 0.32, half-life 30, lambda 0.3, alpha 0.25. `constants_changed` is false. `theta_changed` is false. Fan S, the RIF span, and the floors stayed at the pre-registered values. The direction pass is true. The floor pass is false. The overall pass is false. No constant was changed after this score. Reports: `reports/subconscious_cue_word_held.json` and `reports/subconscious_cue_word_floors.json`.
+
+| gate | count | Wilson 95% | rule | pass |
+| --- | --- | --- | --- | --- |
+| cued margin positive | 43/50, mean 0.574797535019073 | [0.7381380628941446, 0.9304916657298371] | 38/50 and mean > 0 | yes |
+| unrelated absolute margin | n=50, mean 0.0007146249711513519 |  | n=50 and mean ≤ 0.05 | yes |
+| false triggers | 0/50, rate 0 | [0.0, 0.07134759913335872] | n=50 and rate ≤ 0.10 | yes |
+| decay after the last trigger | 50/50 | [0.9286524008666414, 1.0] | 38/50 | yes |
+| store 8 / 16 / 32 | n=50, means 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597 |  | means at 16 and 32 positive and within 0.05 of size 8 | yes |
+| quiet-token NLL | −2.347582425826635e-05 on 117 tokens |  | n≥50 tokens and mean ≤ 0.02 | yes |
+| fan 1 / 2 / 4 strict | 40/50, means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456 | [0.6696289406777459, 0.887562499842239] | 38/50 and strictly decreasing | yes |
+
+All 50 decay rows passed the activation definition. Logit L1 was not scored.
+
+Inject cost on this pass, median extra seconds per token, 11 tokens, warmup 2, repeats 7: store 8 is 0.00011272154436235063, store 16 is 0.0002204299089498818, store 32 is 0.00020730981883719903. Armed seconds per token are 0.003010886090289039, 0.003038886090507731, and 0.0029256822731853886.
+
+### Previous floors, rescored once on the same pass
+
+Same cell. `reports/subconscious_cue_schedule_held.json` and `reports/subconscious_cue_revision_floors.json` were not rewritten. Means: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift −0.1285090258220832, toward delta 1.7882910075116283, away delta −1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+| gate | count | Wilson 95% | floor | pass |
+| --- | --- | --- | --- | --- |
+| prefer margin up | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 | no |
+| avoid margin up | 37/50 | [0.6044684273515117, 0.8412847250644762] | 39/50 | no |
+| avoid stored down | 42/50 | [0.7148578393696501, 0.916625793219666] | 42/50 | yes |
+| toward up | 47/50 | [0.8378290831116182, 0.979385029651026] | 45/50 | yes |
+| away down | 47/50 | [0.8378290831116182, 0.979385029651026] | 48/50 | no |
+| at least 4 slots | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| competitor strength below 1 | 44/50 | [0.7619518261679701, 0.9438239984906773] | 50/50 | no |
+| winner strength unchanged | 16/50 | [0.20758216260656845, 0.45810297308144077] | 50/50 | no |
+| outsider strength unchanged | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| more similar companion lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 | no |
+| larger same-relation count lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 48/50 | no |
+| fan 1 / 2 / 4 strictly decreasing | 45/50 | [0.7863976856252035, 0.9565242350681096] | 38/50 | yes |
