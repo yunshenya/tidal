@@ -60,7 +60,7 @@ def _held() -> None:
     import torch
 
     import tidal.episodic as episodic
-    from tidal.llm_memory import LLMMemory
+    from tidal.llm_memory import DEFAULT_MODEL, LLMMemory
     from tidal.subconscious_interfere_score import dump_json, held_allowed, score_held
 
     existing = _load(HELD_PATH)
@@ -71,7 +71,7 @@ def _held() -> None:
     if not allowed:
         raise SystemExit(reason)
     torch.set_num_threads(os.cpu_count() or 1)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     try:
         seed = _load(HELD_PARTIAL)
         started = time.perf_counter()

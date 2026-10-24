@@ -86,7 +86,7 @@ def test_grade_boundaries_and_probe_spellings():
     assert surfaces["phone_emotion"] == surfaces["phone_slip"] == "+1-617-555-4862"
     assert surfaces["birthday_emotion"] == surfaces["birthday_slip"] == "April 12, 1984"
     assert surfaces["off_relation"] is None
-    assert surfaces["interface_version"] == 5
+    assert surfaces["interface_version"] == 6
     for surface in surfaces.values():
         if isinstance(surface, str):
             assert surface not in (LURE_PHONE, LURE_BIRTHDAY)
@@ -125,7 +125,7 @@ def test_reconstruct_module_has_no_switch_and_banks_are_disjoint():
     assert "slot.answer" not in spelling
     assert "recall_surface" in spelling
     assert "PHONE_TAIL" not in spelling
-    assert CUE_INTERFACE_VERSION == 5
+    assert CUE_INTERFACE_VERSION == 6
     assert set(FIT_IDS).isdisjoint(HELD_IDS)
     assert len(FIT_IDS) == 8
     assert len(HELD_IDS) == 50

@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
 import torch
 
 from tidal.llm_memory import (
+    DEFAULT_MODEL,
     DEFAULT_GAP_TAU,
     LLMMemory,
     POLARITY_SPAN,
@@ -160,7 +161,7 @@ def main():
     if fit["result"]["bank_sha256"] != bank_sha256("fit"):
         raise SystemExit("fit json does not match the fit bank")
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     result = score_spell(mem, held_bank(), progress=lambda msg: print(msg, flush=True))
     print("direction", flush=True)
     direction = score_direction(mem, replay_held_bank())

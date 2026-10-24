@@ -349,7 +349,7 @@ def _fresh_gate() -> dict:
         forbidden = not any(name in before or name in after for name in FORBIDDEN_FIELDS)
         activation_0 = float(before["activation"][0, 0])
         passed = (
-            int(before["interface_version"]) == int(after["interface_version"]) == int(CUE_INTERFACE_VERSION) == 5
+            int(before["interface_version"]) == int(after["interface_version"]) == int(CUE_INTERFACE_VERSION) == 6
             and torch.equal(before["activation"], after["activation"])
             and forbidden
             and float(late.wall_seconds) == float(ENTRAIN_SECONDS)

@@ -19,11 +19,11 @@ mem.generate("Ada's phone is")  # the number is not in this prompt
 
 空库时 hook 不改那一层的输出，贪心生成和去掉 hook 的同一只模型一致。同 `(name, rel)` 覆盖整槽，读出来的是新值。没有 `enable_*` 开关。
 
-`LLMMemory()` 自己加载默认的 `HuggingFaceTB/SmolLM2-135M`、并且注入层是默认的 `n_layers // 2`（第 15 层，隐藏维 576）时，会装上随包的 `tidal/llm_inject_smollm2_135m.pt`。这是键修复之后训的 1500 step。调用方传入自己的模型、换一个 checkpoint、或换一层，末层仍是零，加进去的是 `v`，直到调用 `load_inject`。没有把这条路径关掉的开关。
+`LLMMemory()` 默认选择 growbrain stage0 `e1_base_rebalance`。checkpoint 读不到时构造函数报错，不会改走 SmolLM2。包宽是 `d_model` 192，注入层是 2。`mem_dim` 64 不是这个宽度。growbrain 路径装 `tidal/llm_key_center_growbrain.npz` 和 `tidal/llm_inject_growbrain_192.pt`。显式传入 `model_name="HuggingFaceTB/SmolLM2-135M"`、并且注入层是 `n_layers // 2`（第 15 层，隐藏维 576）时，会装上随包的 `tidal/llm_inject_smollm2_135m.pt`。这是键修复之后训的 1500 step。调用方传入自己的模型、换一个 checkpoint、或换一层，末层仍是零，加进去的是 `v`，直到调用 `load_inject`。没有环境开关。growbrain 路径不读这份 576 权重。
 
 An empty store does not change that layer's output, so greedy tokens match the same model with the hook removed. The same `(name, rel)` replaces the slot with the new value. There is no `enable_*` switch.
 
-`LLMMemory()` loads `tidal/llm_inject_smollm2_135m.pt` when it itself loads `HuggingFaceTB/SmolLM2-135M` at the default inject layer (`n_layers // 2`, layer 15, hidden 576). That file is the 1500-step MLP trained after the key fix. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer, so the add is `v`, until `load_inject`. There is no switch that turns this off.
+`LLMMemory()` selects growbrain stage0 `e1_base_rebalance` and raises when that checkpoint cannot be loaded. The packet width is `d_model` 192 and the inject layer is 2. `mem_dim` 64 is not that width. That path loads `tidal/llm_key_center_growbrain.npz` and `tidal/llm_inject_growbrain_192.pt`. `LLMMemory(model_name="HuggingFaceTB/SmolLM2-135M")` loads `tidal/llm_inject_smollm2_135m.pt` at layer `n_layers // 2` (layer 15, hidden 576). That file is the 1500-step MLP trained after the key fix. A caller-supplied model, another checkpoint, or another layer keeps the zero last layer, so the add is `v`, until `load_inject`. There is no environment flag. The growbrain path does not read the 576-d file.
 
 ## 设计 / Design
 

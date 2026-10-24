@@ -1,0 +1,6 @@
+# Optional growbrain memory backend. Not imported by `import tidal`.
+#   pip install tidal[growbrain]
+#   pip install -r requirements-growbrain.txt
+# Local dual-checkout, when the package is checked out beside this repo:
+#   pip install -e ../growbrain
+growbrain @ git+https://origin.cursor.com/shen-yun/growbrain.git

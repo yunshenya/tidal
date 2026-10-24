@@ -75,7 +75,10 @@ exported token. ``source`` is ``cue``, ``spontaneous``, or ``none``. The cue
 path emits ``cue`` or ``none``. ``spontaneous`` is an offline tick with no
 external cue. ``sleep_pressure`` is process S in ``[0, 1]``. It is not part
 of the residual. ``interface_version`` 5 adds ``arousal`` in ``[0, 1]``.
-Arousal is not part of the residual and it is not an input to process S.
+``interface_version`` 6 keeps those fields. The default packet ``vec`` width
+is growbrain ``d_model``, pinned at 192 on stage0 ``e1_base_rebalance``.
+``mem_dim`` 64 is not that width. Arousal is not part of the residual and
+it is not an input to process S.
 There is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
@@ -107,14 +110,17 @@ and from its strength, age, and valence. It is not the stored answer
 string, not a trained prefix, and not a digit readout. A high strength, age
 0, and a calm valence can reassemble the written spelling. A continuation
 encodes the query once. When this wrapper loads
-the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
+``HuggingFaceTB/SmolLM2-135M`` at its default layer, the MLP is replaced
 by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP).
 The checkpoint still holds linear readouts aimed at ``+1-415-555-dddd`` and
 ``Month D, YYYY``. Generation does not call them. A
 caller-supplied model, another checkpoint, or another layer keeps the zero
-last layer until :meth:`LLMMemory.load_inject`. There is no switch. Forwards,
-answer-token NLL, and the residual add go through
-:class:`tidal.backend.SmolLM2Backend`, which is the only backend. This is
+last layer until :meth:`LLMMemory.load_inject`. There is no switch. The
+default constructor loads growbrain stage0 and calls
+:class:`tidal.backend.GrowbrainBackend`. Forwards, answer-token NLL, and
+the residual add go through that backend. :class:`tidal.backend.SmolLM2Backend`
+is the explicit path for a passed-in model or for ``model_name`` set to the
+SmolLM2 checkpoint. This is
 the A2s inject from
 the SmolLM study (see ``docs/llm_memory.md``). It is a different representation
 from the positional byte codes on ``Continuum.heads``; those codes stay on the
@@ -124,7 +130,9 @@ episodic path and do not go through this MLP.
 checkpoint is loaded or :func:`build_tiny_lm` is called. Core ``import tidal``
 does not load either one. Install the extra with ``pip install tidal[llm]``.
 
-Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
+Default checkpoint: growbrain stage0 ``e1_base_rebalance``, ``d_model`` 192.
+``pip install tidal[growbrain]`` is the optional package. The explicit
+SmolLM2 checkpoint remains ``HuggingFaceTB/SmolLM2-135M``.
 """
 from __future__ import annotations
 
@@ -150,7 +158,15 @@ from tidal.arousal import (
     apply_trace,
     quiet_step,
 )
-from tidal.backend import SmolLM2Backend
+from tidal.backend import (
+    GROWBRAIN_CHECKPOINT,
+    GrowbrainBackend,
+    SmolLM2Backend,
+    check_growbrain_layers,
+    load_growbrain_stage0,
+    resolve_d_model,
+    resolve_inject_layer,
+)
 from tidal.clock_drift import WALL_TAU, WALL_TICK, advance_clock, clock_activation, elapsed_since, entrain
 from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
@@ -171,6 +187,9 @@ KEY_GEOM_VERSION = "sink8-qmean-v1"
 _KEY_CENTER_FILE = "llm_key_center.npz"
 # 1500-step inject trained after the key-center fix. ``save_inject`` dict.
 _INJECT_FILE = "llm_inject_smollm2_135m.pt"
+# Stage0 growbrain retrain at d_model 192. Not the 576-d SmolLM files.
+_GROWBRAIN_KEY_CENTER_FILE = "llm_key_center_growbrain.npz"
+_GROWBRAIN_INJECT_FILE = "llm_inject_growbrain_192.pt"
 # Phone answers in ``llm_memory_data`` are ``+1-415-555-`` plus four digits.
 # Seven digits leaves ``111`` and birthdays (at most six digits) on the
 # full-span mean. Birthdays are detected by spelling, not by digit count,
@@ -204,12 +223,16 @@ MIX_TEMP = 0.05
 # formula. interface_version 3 adds modality on every stored slot and every
 # exported token. The value is "text". interface_version 4 adds
 # sleep_pressure and source. interface_version 5 adds arousal in [0, 1].
-# Wall-clock decay and the drifting internal clock are not exported, so the
-# version stays 5. Lambda is not part of the version. Process S is not part
-# of the residual. Arousal is not part of the residual and is not an input
-# to process S. The drifted clock is not an input to decay. There is no
-# perceptual-fingerprint field.
-CUE_INTERFACE_VERSION = 5
+# interface_version 6 keeps those fields and changes the default packet vec
+# width from the retired SmolLM2 hidden 576 to growbrain d_model. Stage0
+# e1_base_rebalance pins that width at 192. mem_dim 64 is the growbrain
+# injector slot after TidalAdapter.proj, not this width and not the episodic
+# key width. A later checkpoint's cfg.d_model replaces the pin. Wall-clock
+# decay and the drifting internal clock are still not exported. Lambda is
+# not part of the version. Process S is not part of the residual. Arousal
+# is not part of the residual and is not an input to process S. The drifted
+# clock is not an input to decay. There is no perceptual-fingerprint field.
+CUE_INTERFACE_VERSION = 6
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
 CUE_HALF_LIFE = 30.0
@@ -311,6 +334,7 @@ _LAYER_PATHS = (
     ("transformer", "layers"),
     ("gpt_neox", "layers"),
     ("layers",),
+    ("blocks",),
 )
 
 
@@ -357,6 +381,8 @@ def _hidden_size(model: nn.Module) -> int:
 
 
 def _logits_of(out: Any) -> torch.Tensor:
+    if torch.is_tensor(out):
+        return out
     if hasattr(out, "logits"):
         return out.logits
     if isinstance(out, tuple) and out and torch.is_tensor(out[0]):
@@ -605,6 +631,14 @@ def key_calibration() -> list:
 
 def _center_path() -> Path:
     return Path(__file__).with_name(_KEY_CENTER_FILE)
+
+
+def _growbrain_center_path() -> Path:
+    return Path(__file__).with_name(_GROWBRAIN_KEY_CENTER_FILE)
+
+
+def _growbrain_inject_path() -> Path:
+    return Path(__file__).with_name(_GROWBRAIN_INJECT_FILE)
 
 
 def _load_key_centers(path: Path, *, model_name: str, layer: int, hidden: int):
@@ -1473,13 +1507,17 @@ class LLMMemory:
     does not read the stored answer string. A zero polarity vector leaves the
     gain at 1.
 
-    Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
-    (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
-    inject in ``llm_inject_smollm2_135m.pt``. The cue interface still calls
-    that width ``cue_dim``. A caller-supplied model, another checkpoint, or
-    another layer keeps the zero-init MLP, so the add is ``v``, until
-    :meth:`load_inject`. There is no switch. Model calls go through
-    :class:`tidal.backend.SmolLM2Backend`. That is the only backend.
+    ``LLMMemory()`` loads growbrain stage0 ``e1_base_rebalance`` through
+    :class:`tidal.backend.GrowbrainBackend`. The packet width is ``d_model``,
+    pinned at 192 until a checkpoint cfg replaces it. ``mem_dim`` 64 is not
+    the store width. The inject layer is 2 of 4. Passing a model, or passing
+    ``model_name="HuggingFaceTB/SmolLM2-135M"``, uses
+    :class:`tidal.backend.SmolLM2Backend`. That SmolLM checkpoint at layer
+    ``n_layers // 2`` (layer 15, hidden 576) still installs
+    ``llm_inject_smollm2_135m.pt``. Growbrain does not load that file and
+    does not load ``llm_key_center.npz``. It loads
+    ``llm_key_center_growbrain.npz`` and ``llm_inject_growbrain_192.pt``
+    when those stage0 files are present. There is no process flag.
     ``sleep_pressure`` is process S. ``wake_for`` raises it and ``sleep_for``
     lowers it. Neither call changes the residual. ``sleep_for`` rewrites a
     slot only when prediction error clears a threshold, and the audit of that
@@ -1495,7 +1533,7 @@ class LLMMemory:
         self,
         model: Optional[nn.Module] = None,
         tokenizer=None,
-        model_name: str = DEFAULT_MODEL,
+        model_name: Optional[str] = None,
         *,
         layer: Optional[int] = None,
         capacity: int = DEFAULT_CAPACITY,
@@ -1507,7 +1545,11 @@ class LLMMemory:
         inject_hidden: Optional[int] = None,
     ):
         loaded_name = None
-        if model is None:
+        growbrain_cfg = None
+        if model is None and model_name is None:
+            model, tokenizer, growbrain_cfg = load_growbrain_stage0(device=device or "cpu", dtype=dtype)
+            loaded_name = GROWBRAIN_CHECKPOINT
+        elif model is None:
             model, tokenizer = _load_pretrained(model_name, device=device or "cpu", dtype=dtype)
             loaded_name = str(model_name)
         elif tokenizer is None:
@@ -1526,23 +1568,46 @@ class LLMMemory:
         self.tokenizer = tokenizer
         self.layers = decoder_layers(self.model)
         n_layers = len(self.layers)
-        if layer is None:
-            layer = n_layers // 2
-        layer = int(layer)
-        if not 0 <= layer < n_layers:
-            raise ValueError(f"layer {layer} is outside 0..{n_layers - 1}")
-        self.layer = layer
-        self.n_layers = n_layers
-        self.hidden = _hidden_size(self.model)
-        self.backend = SmolLM2Backend(
-            self.model,
-            self.tokenizer,
-            layer=self.layer,
-            n_layers=self.n_layers,
-            hidden=self.hidden,
-            layers=self.layers,
-            device=self._device,
-        )
+        if growbrain_cfg is not None:
+            check_growbrain_layers(growbrain_cfg, self.model, n_layers)
+            if layer is None:
+                layer = resolve_inject_layer(growbrain_cfg, self.model, n_layers)
+            layer = int(layer)
+            if not 0 <= layer < n_layers:
+                raise ValueError(f"layer {layer} is outside 0..{n_layers - 1}")
+            self.layer = layer
+            self.n_layers = n_layers
+            self.backend = GrowbrainBackend(
+                self.model,
+                self.tokenizer,
+                layer=self.layer,
+                n_layers=self.n_layers,
+                layers=self.layers,
+                device=self._device,
+                cfg=growbrain_cfg,
+            )
+            # d_model, not mem_dim. resolve_d_model ignores mem_dim.
+            self.hidden = int(self.backend.hidden)
+            if int(self.hidden) != int(resolve_d_model(growbrain_cfg, self.model)):
+                raise RuntimeError("store width left d_model")
+        else:
+            if layer is None:
+                layer = n_layers // 2
+            layer = int(layer)
+            if not 0 <= layer < n_layers:
+                raise ValueError(f"layer {layer} is outside 0..{n_layers - 1}")
+            self.layer = layer
+            self.n_layers = n_layers
+            self.hidden = _hidden_size(self.model)
+            self.backend = SmolLM2Backend(
+                self.model,
+                self.tokenizer,
+                layer=self.layer,
+                n_layers=self.n_layers,
+                hidden=self.hidden,
+                layers=self.layers,
+                device=self._device,
+            )
         self.backend.bind_clean(self._clean_forward)
         self.inject = InjectMLP(self.hidden, inject_hidden).to(self._device)
         self.inject.eval()
@@ -1602,7 +1667,7 @@ class LLMMemory:
 
     @property
     def cue_dim(self) -> int:
-        """Width of the cue. This is the inject hidden size, not a layer index."""
+        """Width of the cue packet. On growbrain this is ``d_model``, not ``mem_dim``."""
         return int(self.hidden)
 
     @contextmanager
@@ -1801,8 +1866,9 @@ class LLMMemory:
         question mean raised it to 0.072 (soft top-4 mass 0.66 to 0.83).
         """
         if self.model_name:
+            path = _growbrain_center_path() if self.model_name == GROWBRAIN_CHECKPOINT else _center_path()
             loaded = _load_key_centers(
-                _center_path(),
+                path,
                 model_name=self.model_name,
                 layer=self.layer,
                 hidden=self.hidden,
@@ -1826,9 +1892,12 @@ class LLMMemory:
         last layer (the shipped tensors would not fit a narrower MLP). There
         is no switch. :meth:`load_inject` still replaces the MLP from any path.
         """
-        if self.model_name != DEFAULT_MODEL:
+        if self.model_name == GROWBRAIN_CHECKPOINT:
+            path = _growbrain_inject_path()
+        elif self.model_name == DEFAULT_MODEL:
+            path = _inject_path()
+        else:
             return
-        path = _inject_path()
         if not path.is_file():
             return
         ckpt = _torch_load(path)
@@ -2168,7 +2237,7 @@ class LLMMemory:
         token. ``source`` is ``cue`` or ``none``, never ``spontaneous``.
         ``sleep_pressure`` repeats the current process S. ``arousal`` is the
         level after each of those steps, in ``[0, 1]``. ``interface_version``
-        is :data:`CUE_INTERFACE_VERSION`, which is 5. The trace starts empty
+        is :data:`CUE_INTERFACE_VERSION`, which is 6. The trace starts empty
         and a new winner stamps the current wall time, so seconds since boot
         do not decay this retrieval. The drifted internal clock is not read.
         No clock field is exported.

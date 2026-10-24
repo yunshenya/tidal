@@ -244,7 +244,7 @@ def score_item(item_id: str) -> dict:
         kept_answer = slot.answer == PHONE
         off = mem.scripted_continuation(OFF_PROMPT)
         fields = mem.cue_fields(PHONE_PROMPT)
-        export_ok = int(fields["interface_version"]) == int(CUE_INTERFACE_VERSION) == 5 and set(fields) == EXPORT_KEYS
+        export_ok = int(fields["interface_version"]) == int(CUE_INTERFACE_VERSION) == 6 and set(fields) == EXPORT_KEYS
         live_birthday_high = _live(mem, BIRTHDAY_PROMPT, "birthday", BIRTHDAY, HIGH)
         live_birthday_long = _live(mem, BIRTHDAY_PROMPT, "birthday", BIRTHDAY, LONG)
         kept_date = mem.store._slots[-1].answer == BIRTHDAY

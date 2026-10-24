@@ -17,6 +17,7 @@ import torch
 
 import tidal.episodic as episodic
 from tidal.llm_memory import (
+    DEFAULT_MODEL,
     DEFAULT_GAP_TAU,
     LLMMemory,
     POLARITY_SPAN,
@@ -220,7 +221,7 @@ def main():
     if float(fit["chosen"]["span"]) != float(episodic.CLOCK_SPAN):
         raise SystemExit("fit json span does not match the source constant")
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     bank = held_bank()
     result = score_bank(mem, bank, progress=lambda msg: print(msg, flush=True))
     print("replay held direction", flush=True)

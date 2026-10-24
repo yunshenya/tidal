@@ -141,7 +141,7 @@ def main():
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     torch.set_num_threads(os.cpu_count() or 1)
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     result = score_spell(mem, fit_bank(), progress=lambda msg: print(msg, flush=True))
     rows = gate_rows(result, SPELL_GATES)
     for name, ok, detail in rows:

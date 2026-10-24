@@ -8,7 +8,7 @@ import pytest
 import torch
 from torch import nn
 
-from tidal.llm_memory import ByteTokenizer, LLMMemory
+from tidal.llm_memory import DEFAULT_MODEL, ByteTokenizer, LLMMemory
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PREREG = os.path.join(ROOT, "reports", "subconscious_rank_prereg.md")
@@ -130,7 +130,7 @@ def shipped():
     except RuntimeError:
         pass
     torch.set_num_threads(1)
-    mem = LLMMemory()
+    mem = LLMMemory(model_name=DEFAULT_MODEL)
     try:
         yield mem
     finally:

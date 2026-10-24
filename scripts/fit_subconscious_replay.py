@@ -195,7 +195,7 @@ def main():
     source_every = int(REPLAY_EVERY)
     source_m = int(REPLAY_M)
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     bank = fit_bank()
     rows = []
     try:

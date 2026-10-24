@@ -20,6 +20,7 @@ import torch
 import tidal.episodic as episodic
 import tidal.llm_memory as llm_memory
 from tidal.llm_memory import (
+    DEFAULT_MODEL,
     LLMMemory,
     REPLAY_DECAY,
     REPLAY_EVERY,
@@ -292,7 +293,7 @@ def main():
         raise SystemExit("rif salience exempt is fixed at 0.5")
     bank = fit_bank()
     print("loading SmolLM2-135M float32", flush=True)
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     rows = []
     try:
         for span in GRID:

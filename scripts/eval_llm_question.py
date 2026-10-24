@@ -371,7 +371,7 @@ def main(argv=None) -> None:
     torch.set_num_threads(4)
     torch.manual_seed(0)
     t0 = time.time()
-    mem = LLMMemory(dtype=torch.float32)
+    mem = LLMMemory(model_name=DEFAULT_MODEL, dtype=torch.float32)
     print(
         f"model {mem.model_name} layer {mem.layer} hidden {mem.hidden} "
         f"dtype {next(mem.model.parameters()).dtype} soft_k {mem.store.soft_k} "

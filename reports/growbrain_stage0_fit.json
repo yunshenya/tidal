@@ -1,0 +1,122 @@
+{
+  "bank_sha256": "b1f3775055590d95da065ecdab28ac0fb1c2caf9eb2bb7b06b16da41c227e5e7",
+  "birthday": {
+    "exact": {
+      "k": 1,
+      "n": 1,
+      "wilson95": [
+        0.20654931437723745,
+        1.0
+      ]
+    },
+    "misses": [],
+    "n": 1,
+    "retrieval_hits": 1,
+    "rows": [
+      {
+        "exact": 1,
+        "gold": "April 9, 1988",
+        "id": "growbrain-fit-007",
+        "maxcos": 0.37074732780456543,
+        "retrieval_hit": 1,
+        "spelled": "April 9, 1988"
+      }
+    ]
+  },
+  "checkpoint_sha256": "1e535ca6a743b991890da4c6122ad9b643d9f78138c5b0da263426d85bf9c668",
+  "elapsed_s": 0.46320462226867676,
+  "families": {
+    "choice": {
+      "d_z": 2.7725503933601585,
+      "delta_positive": {
+        "k": 2,
+        "n": 2,
+        "wilson95": [
+          0.34238022750665303,
+          1.0
+        ]
+      },
+      "mean_delta": 0.31808309555053715,
+      "misses": [],
+      "n": 2,
+      "retrieval_hits": 2
+    },
+    "preference": {
+      "d_z": 0.6098354086843959,
+      "delta_positive": {
+        "k": 1,
+        "n": 2,
+        "wilson95": [
+          0.09453120573423074,
+          0.9054687942657693
+        ]
+      },
+      "mean_delta": 0.4839887877305351,
+      "misses": [
+        {
+          "bad": "grapes",
+          "delta": -0.0771982947985328,
+          "good": "pears",
+          "id": "growbrain-fit-005",
+          "margin_off": -0.1652721722920738,
+          "margin_on": -0.2424704670906066,
+          "maxcos": 0.3943924009799957,
+          "retrieval_hit": 1
+        }
+      ],
+      "n": 2,
+      "retrieval_hits": 2
+    },
+    "tone": {
+      "d_z": 3.4075288578856617,
+      "delta_positive": {
+        "k": 2,
+        "n": 2,
+        "wilson95": [
+          0.34238022750665303,
+          1.0
+        ]
+      },
+      "mean_delta": 0.3306977681815624,
+      "misses": [],
+      "n": 2,
+      "retrieval_hits": 2
+    }
+  },
+  "fan_s": 1.45,
+  "half_life": 30.0,
+  "hidden": 192,
+  "interface_version": 6,
+  "lambda": 0.3,
+  "layer": 2,
+  "mem_dim": 64,
+  "phone": {
+    "exact": {
+      "k": 1,
+      "n": 1,
+      "wilson95": [
+        0.20654931437723745,
+        1.0
+      ]
+    },
+    "misses": [],
+    "n": 1,
+    "retrieval_hits": 1,
+    "rows": [
+      {
+        "exact": 1,
+        "gold": "+1-415-555-2060",
+        "id": "growbrain-fit-006",
+        "maxcos": 0.34289219975471497,
+        "retrieval_hit": 1,
+        "spelled": "+1-415-555-2060"
+      }
+    ]
+  },
+  "protocol": "growbrain-stage0-v1",
+  "rif_span": 0.05,
+  "split": "fit",
+  "subconscious_score": 2.263304886643405,
+  "theta": 0.32,
+  "weight_sha256": "1ce1f23a8080272b4972f67047d189a812d3e1715d51ca15590c6888bb603cca:fc617de4486132ec9dd008e7efbfd759f5541f74965095e64cd1c6f2d8e684c3"
+}
