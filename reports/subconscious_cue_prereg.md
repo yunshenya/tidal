@@ -478,3 +478,15 @@ Same cell. `reports/subconscious_cue_schedule_held.json` and `reports/subconscio
 | more similar companion lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 | no |
 | larger same-relation count lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 48/50 | no |
 | fan 1 / 2 / 4 strictly decreasing | 45/50 | [0.7863976856252035, 0.9565242350681096] | 38/50 | yes |
+
+## Retrieval event, one competition per attempt
+
+One change, fixed before the event rescore. Theta stays 0.32, half-life stays 30, lambda stays 0.3, fan S stays 1.45, the RIF span stays 0.05, alpha stays 0.25, and the 0.05 floor stays on the decay path. No floor is lowered. No gate definition changes.
+
+RIF runs once per cue retrieval event, not per token. A retrieval event is a trigger onset: the first token where a winner fires after no open retrieval for that memory, or a winner change. Retriggers of the same winner within its active decay window do not rerun competition. The state before the first token is empty. A triggered winner opens an event when the open retrieval is not that winner. A retrigger of the open winner does not open another event, including when that trigger's activation is 0. After a trigger, the open retrieval is that winner. On a token that does not trigger, the retrieval stays open only while the carried state is an active trigger for that same winner: memory_id matches and activation is > 0. A blank token closes it, and the next firing is a new onset. Competition is still `compete_retrieved` on the same-relation theta candidates, with the same gap rule: a tie, gap 0, does not compete, and a single slot does not compete. A different relation is never scaled. The winner is not scaled. Salience at or above 0.5 stays exempt.
+
+Anderson, Bjork, and Bjork (1994) treat retrieval-induced forgetting as a consequence of a retrieval attempt. https://doi.org/10.1037/0278-7393.20.5.1063 This is not a change to their measured rates, and it is not the Norman, Newman, and Detre oscillator.
+
+Direction gates stay the pre-specified 38/50 rates. Previous floors stay prefer 50/50, avoid up 39/50, avoid stored 42/50, toward 45/50, away 48/50, at least 4 slots 50/50, competitor below 1 on 50/50, winner unchanged 50/50, outsider unchanged 50/50, similarity 42/50, count 48/50, fan 38/50. Wilson 95%. An n below 50 fails.
+
+Fit check only, after the retrieval-event change and before the event rescore. Alpha was not re-selected. On the n=8 direction fit bank, cued margin is positive on 7/8, mean 0.47904670238494873, decay passes 8/8, and fan is strict on 6/8 with means 0.47904670238494873 / 0.20303821563720703 / 0.005775809288024902. On the 50-item fit bank, cued margin is positive on 41/50, mean 0.2474970944590556, decay passes 50/50, and fan is strict on 39/50 with means 0.2474970944590556 / 0.05900819488878671 / 0.0030152441367197725. Report: `reports/subconscious_cue_event_fit.json`. These counts did not move a gate or a floor. The event bank was not scored.

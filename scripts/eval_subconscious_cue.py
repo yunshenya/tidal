@@ -37,6 +37,8 @@ KWTA_FIT_PATH = REPORT_DIR / "subconscious_cue_kwta_fit.json"
 DIRECTION_HELD_PATH = REPORT_DIR / "subconscious_cue_direction_held.json"
 REVISION_PATH = REPORT_DIR / "subconscious_cue_revision_held.json"
 WORD_HELD_PATH = REPORT_DIR / "subconscious_cue_word_held.json"
+EVENT_FIT_PATH = REPORT_DIR / "subconscious_cue_event_fit.json"
+EVENT_HELD_PATH = REPORT_DIR / "subconscious_cue_event_held.json"
 COMPETITION_FIT_PATH = REPORT_DIR / "subconscious_cue_competition_fit.json"
 KWTA_KS = (1, 2, 3, 4)
 HELD_N_MIN = 50
@@ -1705,6 +1707,57 @@ def scope_fit() -> dict:
     return payload
 
 
+def event_fit() -> dict:
+    """Shipped cell on the n=8 direction fit bank and on fit50.
+
+    Checks the retrieval-event rule without re-selecting alpha or scoring held.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_cue_fit50_data import fit50_bank
+
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        _print("event n=8")
+        small = _prefer_slice(mem, _fit_bank())
+        _print("event fit50")
+        wide = _prefer_slice(mem, fit50_bank())
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    payload = {
+        "kind": "event-fit",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "alpha_reselected": False,
+        "floors_moved": False,
+        "event": (
+            "RIF runs once per cue retrieval event, not per token. "
+            "A retrieval event is a trigger onset or a winner change. "
+            "Retriggers of the same winner within its active decay window do not rerun competition."
+        ),
+        "n8": small,
+        "fit50": wide,
+        "held_scored": False,
+        "note": "Design check only. Floors were not moved. The event bank was not scored.",
+    }
+    _dump(EVENT_FIT_PATH, payload)
+    _print(json.dumps({"n8": small, "fit50": wide}, indent=2))
+    return payload
+
+
 def word_held() -> dict:
     """One held pass of the real-word direction bank, then the previous floors.
 
@@ -1797,6 +1850,100 @@ def word_held() -> dict:
     return payload
 
 
+def event_held() -> dict:
+    """One rescore of the word direction bank and the previous floors.
+
+    Refuses unless the retrieval-event definition is already in the
+    preregistration. Does not move theta, half-life, lambda, alpha, or a floor.
+    Does not rewrite the earlier word-bank reports.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_cue_word_data import PROTOCOL, word_bank
+
+    prereg = (REPORT_DIR / "subconscious_cue_prereg.md").read_text(encoding="utf-8")
+    for needle in (
+        "RIF runs once per cue retrieval event, not per token.",
+        "Retriggers of the same winner within its active decay window do not rerun competition.",
+        "Anderson, Bjork, and Bjork (1994) treat retrieval-induced forgetting as a consequence of a retrieval attempt.",
+        "The event bank was not scored.",
+        "38/50",
+    ):
+        if needle not in prereg:
+            raise RuntimeError("event gates are not in the preregistration")
+    if EVENT_HELD_PATH.is_file():
+        raise RuntimeError("the event bank was already scored")
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = word_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        prefer = list(bank.PREFER)
+        if len(prefer) < FRESH_N_MIN or len(list(bank.NEUTRAL_CHOICE)) < FRESH_N_MIN:
+            raise RuntimeError("word bank is below 50")
+        if len(list(bank.NEUTRAL_NLL)) < FRESH_N_MIN or len(list(bank.incidental_facts())) < 31:
+            raise RuntimeError("word bank controls are short")
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        base = _baselines(mem, bank, prefer_rows)
+        scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base, FROZEN_ALPHA)
+        summary = _fresh_summary(scored)
+        cost = _cost(mem, prefer_rows + incidental_rows, prefer[0]["prompt"])
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    floors = held(dest=REPORT_DIR / "subconscious_cue_event_floors.json")
+    payload = {
+        "kind": "event-held",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "protocol": PROTOCOL,
+        "bank_sha256": bank.sha256(),
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "constants_changed": False,
+        "floors_moved": False,
+        "direction": summary,
+        "cost": cost,
+        "floors_pass": bool(floors["pass"]),
+        "floor_failures": floors["failures"],
+        "floor_rates": floors["rates"],
+        "floor_means": floors["means"],
+        "pass": bool(summary["pass"] and floors["pass"]),
+        "theta_changed": False,
+        "note": "One pass. The retrieval-event definition was not changed after this score.",
+    }
+    _dump(EVENT_HELD_PATH, payload)
+    _print(
+        json.dumps(
+            {
+                "pass": payload["pass"],
+                "direction_pass": summary["pass"],
+                "floors_pass": payload["floors_pass"],
+                "direction": {
+                    name: {
+                        "pass": row["pass"],
+                        **{key: row[key] for key in row if key in ("k", "n", "mean", "mean_abs", "rate")},
+                    }
+                    for name, row in summary["gates"].items()
+                },
+                "floor_failures": floors["failures"],
+                "cost": cost,
+            },
+            indent=2,
+        )
+    )
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1817,6 +1964,10 @@ def main(argv: list) -> None:
         scope_fit()
     elif mode == "word-held":
         word_held()
+    elif mode == "event-fit":
+        event_fit()
+    elif mode == "event-held":
+        event_held()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

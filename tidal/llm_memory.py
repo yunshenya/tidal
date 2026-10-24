@@ -9,7 +9,16 @@ read strength. The winner is the one candidate with the greatest
 ``(log(strength), cosine, -index)``. One winner is added. There is no
 mixture. Before that add, every other candidate that cleared theta and
 shares the winner's relation takes the existing retrieval-induced-forgetting
-keep. A different relation is never scaled. Similarity is key cosine
+keep, once per cue retrieval event and not once per token. A retrieval
+event is a trigger onset: the first token where a winner fires after no
+open retrieval for that memory, or a winner change. A retrigger of the
+same winner while that retrieval stays open does not run competition
+again. The retrieval stays open on a retrigger of that winner, including
+when the trigger activation is 0, and it stays open on a later token only
+while the carried state is an active trigger for that winner
+(``memory_id >= 0`` and activation ``> 0``). Anderson, Bjork, and Bjork
+(1994) treat retrieval-induced forgetting as a consequence of a retrieval
+attempt. A different relation is never scaled. Similarity is key cosine
 to the winner, so a closer companion is scaled more. The winner is not
 scaled. A slot that missed theta is not scaled. A historical strength-weighted mixture is recorded in
 ``docs/llm_memory.md`` and in :func:`activation_weights`; generation does not
@@ -77,8 +86,10 @@ A fact is written when it is salient and, once 32 accepted surprises are
 stored, its answer-token NLL is at least the quantile of that window of
 numbers. Fewer stored surprises leaves the salient fact accepted. A strict
 retrieval win then multiplies the strength of the other same-relation
-candidates that cleared theta; a different relation is left alone, the closer
-key is scaled down more, and the winner is left as read. ``gap_tau`` 0.80
+candidates that cleared theta, once for that retrieval event. A retrigger
+inside the open event does not multiply them again. A different relation
+is left alone, the closer key is scaled down more, and the winner is left
+as read. ``gap_tau`` 0.80
 still defines ``c``. The MLP weights
 are the shipped checkpoint;
 polarity does not replace them. The last layer of an untrained module is
@@ -1234,6 +1245,44 @@ def rival_indexes(slots, winner: int, max_set: int, salience_exempt: float) -> l
     return [i for i in raw if float(slots[i].salience) < float(salience_exempt)]
 
 
+def competition_onsets(triggered, memory_id, activation) -> list:
+    """True only on the token that opens a cue retrieval event.
+
+    The state before token 0 is empty, so no retrieval is open. A triggered
+    winner is an onset when the open retrieval is not that winner: the first
+    firing after no open retrieval for that memory, or a winner change. A
+    retrigger of the open winner is not an onset, including when that
+    trigger's activation is 0. The open retrieval stays that winner after a
+    trigger. On a token that does not trigger, it stays open only while the
+    carried state is an active trigger for that same winner, meaning
+    ``memory_id`` matches and activation is ``> 0``. A blank token, or a
+    carried activation that is not positive, closes it. The next firing is
+    then a new onset.
+
+    Anderson, Bjork, and Bjork (1994) treat retrieval-induced forgetting as
+    a consequence of a retrieval attempt, so competition runs at the onset
+    and not on each token of the same attempt.
+    https://doi.org/10.1037/0278-7393.20.5.1063
+    """
+    flags = [bool(item) for item in triggered]
+    memory = [int(item) for item in memory_id]
+    levels = [float(item) for item in activation]
+    if not (len(flags) == len(memory) == len(levels)):
+        raise ValueError("onset axes must have the same length")
+    open_id = -1
+    onsets = []
+    for flag, slot, level in zip(flags, memory, levels):
+        if flag and slot >= 0:
+            onsets.append(open_id != slot)
+            open_id = slot
+            continue
+        onsets.append(False)
+        if open_id >= 0 and slot == open_id and level > 0.0:
+            continue
+        open_id = -1
+    return onsets
+
+
 def compete_retrieved(slots, winner: int, competitors) -> int:
     """Scale same-relation candidates that cleared theta. Returns how many changed.
 
@@ -1397,7 +1446,8 @@ class LLMMemory:
     gain stays 1. Strength stays 1 until replay or a nonzero clock phase. A
     fact is written when it is salient and, once 32 surprises are stored, its
     answer-token NLL is at least the window quantile. A strict win scales the
-    other same-relation candidates that cleared theta; a different relation
+    other same-relation candidates that cleared theta once per retrieval
+    event, not on a retrigger of the same winner. A different relation
     is left alone, and the winner is
     not scaled. Every :data:`REPLAY_EVERY` accepted writes, decay is
     recomputed, the top :data:`REPLAY_M` salient slots are refreshed, and at
@@ -2179,9 +2229,11 @@ class LLMMemory:
     def _rank(self, prompt: str) -> dict:
         """Cue trace of ``prompt``. Competition runs after the trace and before injection.
 
-        The scoring forward is a later call. It reads the strengths this
-        method just wrote and injects only the winner. ``cue_fields`` itself
-        does not change strength.
+        Retrieval-induced forgetting runs once per cue retrieval event, at
+        the onset from :func:`competition_onsets`, not on a retrigger of the
+        same winner. The scoring forward is a later call. It reads the
+        strengths this method just wrote and injects only the winner.
+        ``cue_fields`` itself does not change strength.
         """
         info = {
             "n": len(self.store),
@@ -2202,20 +2254,18 @@ class LLMMemory:
             return info
         fields = self.cue_fields(prompt)
         forgotten = 0
-        seen = set()
         triggered = fields["triggered"][0].tolist()
         memory = fields["memory_id"][0].tolist()
         gaps = fields["gap"][0].tolist()
+        activation = fields["activation"][0].tolist()
         candidates = list(getattr(self, "_last_candidates", []))
         slots = self.store._slots
-        for token, (flag, slot_index, gap) in enumerate(zip(triggered, memory, gaps)):
-            if not flag:
+        for token, onset in enumerate(competition_onsets(triggered, memory, activation)):
+            if not onset:
                 continue
-            slot_index = int(slot_index)
-            if slot_index < 0 or slot_index in seen:
-                continue
-            seen.add(slot_index)
-            if gap == gap and float(gap) > 0.0 and len(slots) >= 2:
+            slot_index = int(memory[token])
+            gap = gaps[token]
+            if slot_index >= 0 and gap == gap and float(gap) > 0.0 and len(slots) >= 2:
                 group = candidates[token] if token < len(candidates) else []
                 forgotten += int(compete_retrieved(slots, slot_index, group))
         self.last_rif = {"n": int(forgotten)}

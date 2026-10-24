@@ -299,6 +299,40 @@ def test_background_relations_and_salience_are_not_cues():
     assert rival_indexes(lone, 0, 3, 0.5) == []
 
 
+def test_onset_is_once_per_retrieval_event_not_per_token():
+    """A retrigger inside the open event is not a new attempt.
+
+    A winner change is an onset, including a change back. Activation 0 does
+    not carry across a blank token, but consecutive triggers of the same
+    winner are still one event. After the carried trace goes inactive, the
+    same winner is a new onset.
+    """
+    from tidal.llm_memory import competition_onsets
+
+    assert competition_onsets(
+        [True, True, False, True, False, True],
+        [0, 0, 0, 0, -1, 0],
+        [1.0, 1.0, 0.2, 1.0, 0.0, 1.0],
+    ) == [True, False, False, False, False, True]
+    assert competition_onsets(
+        [True, True, True],
+        [1, 1, 1],
+        [0.0, 0.0, 0.0],
+    ) == [True, False, False]
+    assert competition_onsets(
+        [True, True, True],
+        [0, 1, 0],
+        [1.0, 1.0, 1.0],
+    ) == [True, True, True]
+    assert competition_onsets(
+        [True, False, True],
+        [0, -1, 0],
+        [0.0, 0.0, 1.0],
+    ) == [True, False, True]
+    with pytest.raises(ValueError):
+        competition_onsets([True], [0, 1], [1.0])
+
+
 def test_theta_candidates_compete_and_a_closer_companion_drops_more():
     from tidal.llm_memory import compete_retrieved
 
@@ -365,6 +399,77 @@ def test_five_theta_candidates_still_trigger_and_scale_same_relation_only():
         fields = mem.cue_fields("slot 0 is Q")
         assert bool(fields["triggered"][0, 0].item()) is True
         assert float(fields["activation"][0, 0]) == 0.0
+    finally:
+        mem.close()
+
+
+def test_rank_competes_on_a_winner_change_and_not_on_a_retrigger():
+    """Same-winner retriggers scale once. A change back scales again.
+
+    A decay that clears the carried trace also opens a new event for the
+    same winner. The shipped half-life is not the constant under test;
+    ``CUE_TAU`` is patched only in this process.
+    """
+    import tidal.llm_memory as mod
+
+    model, tok = build_tiny_lm(seed=4)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("left is A", name="left", rel="mrif")
+        assert mem.remember("right is B", name="right", rel="mrif")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        left = np.zeros(width, dtype=np.float64)
+        right = np.zeros(width, dtype=np.float64)
+        left[0] = 1.0
+        left[1] = 0.3
+        right[0] = 0.3
+        right[1] = 1.0
+        left /= np.linalg.norm(left)
+        right /= np.linalg.norm(right)
+        slots[0].k = left.copy()
+        slots[1].k = right.copy()
+        for slot in slots:
+            slot.salience = 0.0
+            slot.strength = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _rows(vectors):
+            return np.stack([vector + center for vector in vectors], 0)
+
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left: _rows([_left, _left, _left])
+        mem._rank("left is A")
+        once = rif_competitor_keep(1.0, 1.0, RIF_SPAN)
+        assert mem.last_rif == {"n": 1}
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == pytest.approx(once)
+
+        slots[0].strength = 1.0
+        slots[1].strength = 1.0
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _right=right: _rows([_left, _right, _left])
+        mem._rank("left is A")
+        assert mem.last_rif == {"n": 3}
+        assert slots[0].strength == pytest.approx(once)
+        assert slots[1].strength == pytest.approx(once * once)
+
+        slots[0].strength = 1.0
+        slots[1].strength = 1.0
+        quiet = np.zeros(width, dtype=np.float64)
+        quiet[2] = 1.0
+        monkey_tau = 1.0
+        original_tau = float(mod.CUE_TAU)
+        mod.CUE_TAU = monkey_tau
+        try:
+            mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _quiet=quiet: _rows(
+                [_left, _quiet, _quiet, _quiet, _left]
+            )
+            mem._rank("left is A")
+        finally:
+            mod.CUE_TAU = original_tau
+        assert mem.last_rif == {"n": 2}
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == pytest.approx(once * once)
+        assert float(mod.CUE_TAU) == pytest.approx(original_tau)
     finally:
         mem.close()
 
