@@ -84,6 +84,12 @@ PATH_FLAGS = (
         "varies": "recomputes decay, refreshes the top-m salient slots, merges at most m near-duplicates; no extra forward",
         "retries": False,
     },
+    {
+        "path": "experience valence",
+        "when": "a write carries an experience sign, and again on replay",
+        "varies": "adds sign * step on that slot, decays with replay, scales the residual; no extra forward and no text score",
+        "retries": False,
+    },
 )
 
 

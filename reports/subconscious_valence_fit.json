@@ -1,0 +1,670 @@
+{
+  "chosen": {
+    "span": 1.0,
+    "step": 0.25
+  },
+  "grid": [
+    {
+      "away_audit": 8,
+      "away_mean": -7.340695142745972,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": true,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 0.25,
+      "toward_audit": 8,
+      "toward_mean": 2.084659900981933,
+      "toward_n": 8,
+      "toward_pos": 6
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -9.651601791381836,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": false,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 0.5,
+      "toward_audit": 8,
+      "toward_mean": 2.0631435341201723,
+      "toward_n": 8,
+      "toward_pos": 4
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -10.289052724838257,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": false,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 1.0,
+      "step": 1.0,
+      "toward_audit": 8,
+      "toward_mean": 1.9983707196079195,
+      "toward_n": 8,
+      "toward_pos": 5
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -11.53108549118042,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": false,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 0.25,
+      "toward_audit": 8,
+      "toward_mean": 1.6361751519143581,
+      "toward_n": 8,
+      "toward_pos": 5
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -12.370909452438354,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": false,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 0.5,
+      "toward_audit": 8,
+      "toward_mean": 0.3106666449457407,
+      "toward_n": 8,
+      "toward_pos": 5
+    },
+    {
+      "away_audit": 8,
+      "away_mean": -12.41382086277008,
+      "away_n": 8,
+      "away_neg": 8,
+      "ok": false,
+      "revise_back": 8,
+      "revise_n": 8,
+      "revise_valence": 8,
+      "span": 2.0,
+      "step": 1.0,
+      "toward_audit": 8,
+      "toward_mean": -0.280491785146296,
+      "toward_n": 8,
+      "toward_pos": 5
+    }
+  ],
+  "result": {
+    "away": {
+      "mean_delta": -7.340695142745972,
+      "n": 8,
+      "n_audit": 8,
+      "n_neg": 8,
+      "n_pos": 0,
+      "rows": [
+        {
+          "audit": true,
+          "delta": -8.703320503234863,
+          "hit": 1,
+          "id": "valence-fit-away-0",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -6.971090316772461,
+          "hit": 1,
+          "id": "valence-fit-away-1",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -7.4533867835998535,
+          "hit": 1,
+          "id": "valence-fit-away-2",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -8.7225661277771,
+          "hit": 1,
+          "id": "valence-fit-away-3",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -6.275861740112305,
+          "hit": 1,
+          "id": "valence-fit-away-4",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -6.56198787689209,
+          "hit": 1,
+          "id": "valence-fit-away-5",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -5.905769348144531,
+          "hit": 1,
+          "id": "valence-fit-away-6",
+          "valence": -0.75
+        },
+        {
+          "audit": true,
+          "delta": -8.13157844543457,
+          "hit": 1,
+          "id": "valence-fit-away-7",
+          "valence": -0.75
+        }
+      ]
+    },
+    "bank_kind": "fit",
+    "bank_sha256": "44af0fcf6d10c350cb8e8861ccc5489cd09b9e0807bf8795033aa33adf941d80",
+    "cost": {
+      "buffers": 66931,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "query_forwards": 1,
+      "remember_forwards": 2,
+      "valence_step": 0.25
+    },
+    "exact": {
+      "birthday_exact": 1,
+      "birthday_off_equal": 0,
+      "birthday_off_n": 5,
+      "birthday_off_takeover": 0.0,
+      "birthday_prefix": 1,
+      "birthday_question_text": "June 7, 2011",
+      "birthday_stored": "June 7, 2011",
+      "phone_exact": 1,
+      "phone_off_equal": 0,
+      "phone_off_n": 5,
+      "phone_off_takeover": 0.0,
+      "phone_prefix": 0,
+      "phone_question_text": "+1-301-555-3809",
+      "phone_stored": "+1-301-555-3809"
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": 0.0057849884033203125,
+            "flip": 0,
+            "id": "valence-fit-choice-0",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.0020275115966796875,
+            "flip": 0,
+            "id": "valence-fit-choice-1",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.007290840148925781,
+            "flip": 0,
+            "id": "valence-fit-choice-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0062847137451171875,
+            "flip": 0,
+            "id": "valence-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.005916595458984375,
+            "flip": 0,
+            "id": "valence-fit-choice-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0005130767822265625,
+            "flip": 0,
+            "id": "valence-fit-choice-5",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.005747795104980469,
+            "flip": 0,
+            "id": "valence-fit-choice-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.010138511657714844,
+            "flip": 0,
+            "id": "valence-fit-choice-7",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8175459030205373,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Describe pharmac distinguish instituted framework.",
+            "text": "The first is the use of the term \"ph"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe handed embassy reliably pacing.",
+            "text": "The first step in the process is to determine the"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe dictionaries drawing digest mouthwash.",
+            "text": "The dictionary is a collection of words that are related"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe announce unsaturated downloaded emergent.",
+            "text": "The following are the most common ways to announce the"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe molecule integrative depicts discrep.",
+            "text": "The molecular biology of the human brain."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe handle serializers tactic variant.",
+            "text": "The following code snippet shows how to use the handle"
+          },
+          {
+            "hits": [],
+            "prompt": "Describe artist determ exemption dignity.",
+            "text": "The artist is the person who creates the work."
+          },
+          {
+            "hits": [],
+            "prompt": "Describe transporter vacuum cautions leaflets.",
+            "text": "The most common form of this is the use of"
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.002294182777404785,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 0.0060799014814934965,
+            "delta": 0.0047588348388671875,
+            "id": "valence-fit-nll-0",
+            "nll_inject": 16.78612518310547,
+            "nll_nomem": 16.7813663482666
+          },
+          {
+            "confidence": 0.002632200788902847,
+            "delta": 0.0024814605712890625,
+            "id": "valence-fit-nll-1",
+            "nll_inject": 13.676465034484863,
+            "nll_nomem": 13.673983573913574
+          },
+          {
+            "confidence": 0.0051498784232752864,
+            "delta": -0.008661270141601562,
+            "id": "valence-fit-nll-2",
+            "nll_inject": 13.693625450134277,
+            "nll_nomem": 13.702286720275879
+          },
+          {
+            "confidence": 0.0054205338226596955,
+            "delta": -0.0025424957275390625,
+            "id": "valence-fit-nll-3",
+            "nll_inject": 12.158527374267578,
+            "nll_nomem": 12.161069869995117
+          },
+          {
+            "confidence": 0.0026924054417294674,
+            "delta": -0.00125885009765625,
+            "id": "valence-fit-nll-4",
+            "nll_inject": 13.594554901123047,
+            "nll_nomem": 13.595813751220703
+          },
+          {
+            "confidence": 0.0033056137727004165,
+            "delta": -0.00395965576171875,
+            "id": "valence-fit-nll-5",
+            "nll_inject": 11.342166900634766,
+            "nll_nomem": 11.346126556396484
+          },
+          {
+            "confidence": 0.001355750145090595,
+            "delta": -0.0036573410034179688,
+            "id": "valence-fit-nll-6",
+            "nll_inject": 13.6450834274292,
+            "nll_nomem": 13.648740768432617
+          },
+          {
+            "confidence": 0.005477823833195117,
+            "delta": -0.0055141448974609375,
+            "id": "valence-fit-nll-7",
+            "nll_inject": 11.890227317810059,
+            "nll_nomem": 11.89574146270752
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Describe pharmac distinguish instituted framework.",
+            "takeover": 0,
+            "text": "Mand##############################################################"
+          },
+          {
+            "prompt": "Describe handed embassy reliably pacing.",
+            "takeover": 0,
+            "text": "Spired with purpose, Sp\ufffd package with Sp\ufffd transport with sp\ufffd transport with sp\ufffd transport with sp\ufffd transport with sp\ufffd transport with sp\ufffd transport"
+          },
+          {
+            "prompt": "Describe dictionaries drawing digest mouthwash.",
+            "takeover": 0,
+            "text": "sample research project project project research project research project research project research project research research project research research project research research sample research project research sample research project research sample research project"
+          },
+          {
+            "prompt": "Describe announce unsaturated downloaded emergent.",
+            "takeover": 0,
+            "text": "Similarly, in the same research project, we used to analyse to analyse our data, we used to analyse our data, we used to analyse our data"
+          },
+          {
+            "prompt": "What phone reaches Ciwupeho after the kiln cools?",
+            "takeover": 0,
+            "text": "Duty witness, same objective sample, dillusion produced with the necessary sample, durity with the necessary sample, durity with the necessary sample, Durity"
+          },
+          {
+            "prompt": "Birthday kept beside Ciwupeho at the granary?",
+            "takeover": 1,
+            "text": "June 7, 2011"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Describe pharmac distinguish instituted framework.",
+            "takeover": 0,
+            "text": "The first thing you need to know is that we do not know anything at all, we do not even know where we come from, we cannot even"
+          },
+          {
+            "prompt": "Describe handed embassy reliably pacing.",
+            "takeover": 0,
+            "text": "HANGS: We don\u2019t know how we get here, and we don\u2019t expect to see each other again, but we\u2019re"
+          },
+          {
+            "prompt": "Describe dictionaries drawing digest mouthwash.",
+            "takeover": 0,
+            "text": "DIGESTIVE AERAVES, DIGESTED OUTPATH, DIGESTED OUTWIPS, DIGESTED OUTW"
+          },
+          {
+            "prompt": "Describe announce unsaturated downloaded emergent.",
+            "takeover": 0,
+            "text": "The next thing you know, we're all a bit puzzled, and then we're all a bit"
+          },
+          {
+            "prompt": "What phone reaches Ciwupeho after the kiln cools?",
+            "takeover": 0,
+            "text": "+1-301-555-3809"
+          },
+          {
+            "prompt": "Birthday kept beside Ciwupeho at the granary?",
+            "takeover": 0,
+            "text": "NAOWRENZA: All right, we\u2019re talking about a hundred and thirty-nine?"
+          }
+        ],
+        "phone_question": 0,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "phases_s": {
+      "away": 3.1526058730014483,
+      "cost": 0.08585426599893253,
+      "neutral": 18.37590311099848,
+      "revise": 5.2953114840020135,
+      "toward": 3.2990000860008877
+    },
+    "protocol": "subconscious-valence-fit-v1",
+    "repeats": 3,
+    "revise": {
+      "mean_peak_delta": 2.084659900981933,
+      "mean_revised_delta": 0.0,
+      "n": 8,
+      "n_moved_back": 8,
+      "n_valence_revised": 8,
+      "rows": [
+        {
+          "id": "valence-fit-toward-0",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 2.293703570961952,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-1",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 0.1386055387556553,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-2",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": -0.3792116567492485,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-3",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 0.36163679137825966,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-4",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": -0.9299916625022888,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-5",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 4.308315634727478,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-6",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 4.660970911383629,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        },
+        {
+          "id": "valence-fit-toward-7",
+          "kinds": [
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience",
+            "experience"
+          ],
+          "moved_back": 1,
+          "peak_delta": 6.223250079900026,
+          "peak_valence": 0.75,
+          "revised_delta": 0.0,
+          "valence": 0.0,
+          "valence_revised": 1
+        }
+      ]
+    },
+    "toward": {
+      "mean_delta": 2.084659900981933,
+      "n": 8,
+      "n_audit": 8,
+      "n_neg": 2,
+      "n_pos": 6,
+      "rows": [
+        {
+          "audit": true,
+          "delta": 2.293703570961952,
+          "hit": 1,
+          "id": "valence-fit-toward-0",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 0.1386055387556553,
+          "hit": 1,
+          "id": "valence-fit-toward-1",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": -0.3792116567492485,
+          "hit": 1,
+          "id": "valence-fit-toward-2",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 0.36163679137825966,
+          "hit": 1,
+          "id": "valence-fit-toward-3",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": -0.9299916625022888,
+          "hit": 1,
+          "id": "valence-fit-toward-4",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 4.308315634727478,
+          "hit": 1,
+          "id": "valence-fit-toward-5",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 4.660970911383629,
+          "hit": 1,
+          "id": "valence-fit-toward-6",
+          "valence": 0.75
+        },
+        {
+          "audit": true,
+          "delta": 6.223250079900026,
+          "hit": 1,
+          "id": "valence-fit-toward-7",
+          "valence": 0.75
+        }
+      ]
+    },
+    "wall_s": 30.20867482000176
+  }
+}

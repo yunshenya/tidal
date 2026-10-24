@@ -33,7 +33,7 @@ and ``docs/llm_memory.md``.
 from __future__ import annotations
 
 import zlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -258,6 +258,13 @@ class Slot:
     # Exact surface written with the slot. LM spelling copies this string.
     # Continuum writes leave it empty and keep decoding the byte code.
     answer: Optional[str] = None
+    # Experience-grown preference. 0 until a stored experience adds to it.
+    # Continuum readout does not read it. Replay multiplies it by the decay.
+    valence: float = 0.0
+    # Latest audit id. 0 before any experience, replay decay, or correction.
+    episode_id: int = 0
+    # Inspectable valence changes: episode id, store step, delta, value, kind.
+    history: list = field(default_factory=list)
 
 
 class EpisodicStore:
@@ -302,6 +309,7 @@ class EpisodicStore:
         self.surprise_thr = surprise_thr
         self._slots: list[Slot] = []
         self._step = 0
+        self._episode = 0
 
     def __len__(self) -> int:
         return len(self._slots)
@@ -309,6 +317,7 @@ class EpisodicStore:
     def clear(self) -> None:
         self._slots.clear()
         self._step = 0
+        self._episode = 0
 
     @property
     def slots(self) -> Tuple[Slot, ...]:
@@ -413,6 +422,14 @@ class EpisodicStore:
         )
         hit = self._hit(kk, name, rel, group)
         if hit is not None:
+            old = self._slots[hit]
+            # Same identity keeps the preference and its audit trail. A cosine
+            # overwrite is a different fact and starts at valence 0. The stored
+            # answer is the new surface either way.
+            if old.name == name and old.rel == rel and old.group == group:
+                entry.valence = float(old.valence)
+                entry.episode_id = int(old.episode_id)
+                entry.history = list(old.history)
             self._slots[hit] = entry
             return True
         if len(self._slots) >= self.capacity:
@@ -433,6 +450,117 @@ class EpisodicStore:
         for slot in self._slots:
             slot.age = int(slot.age) + 1
             slot.strength = float(factor ** int(slot.age))
+        self.decay_valence(factor)
+
+    def next_episode(self) -> int:
+        """Mint one audit id. Fact writes, decay rows, and corrections each take one."""
+        self._episode += 1
+        return int(self._episode)
+
+    def _find(self, name: Optional[str], rel: Optional[str], group: Optional[str]) -> Optional[Slot]:
+        for slot in self._slots:
+            if slot.name == name and slot.rel == rel and slot.group == group:
+                return slot
+        return None
+
+    def _append_valence(
+        self,
+        slot: Slot,
+        delta: float,
+        updated: float,
+        *,
+        kind: str,
+        source: str,
+        episode_id: Optional[int] = None,
+    ) -> dict:
+        """Record one valence change. ``episode_id`` defaults to a new id."""
+        if episode_id is None:
+            self._episode += 1
+            episode_id = int(self._episode)
+        slot.valence = float(updated)
+        slot.episode_id = int(episode_id)
+        event = {
+            "episode_id": int(episode_id),
+            "t": int(slot.t),
+            "delta": float(delta),
+            "valence": float(updated),
+            "kind": str(kind),
+            "source": str(source),
+        }
+        slot.history.append(event)
+        return dict(event)
+
+    def add_experience(
+        self,
+        name: Optional[str],
+        rel: Optional[str],
+        sign: float,
+        step: float,
+        *,
+        source: str,
+        group: Optional[str] = None,
+        episode_id: Optional[int] = None,
+    ) -> dict:
+        """Add ``sign * step`` from a stored experience. The text is not judged."""
+        slot = self._find(name, rel, group)
+        if slot is None:
+            raise KeyError("no slot for that experience")
+        direction = 1.0 if float(sign) > 0.0 else -1.0
+        delta = direction * float(step)
+        return self._append_valence(
+            slot,
+            delta,
+            float(slot.valence) + delta,
+            kind="experience",
+            source=source,
+            episode_id=episode_id,
+        )
+
+    def set_valence(
+        self,
+        name: Optional[str],
+        rel: Optional[str],
+        value: float,
+        *,
+        source: str,
+        group: Optional[str] = None,
+        kind: str = "correction",
+    ) -> dict:
+        """Replace the scalar and append a correction the history can show."""
+        slot = self._find(name, rel, group)
+        if slot is None:
+            raise KeyError("no slot for that correction")
+        updated = float(value)
+        return self._append_valence(
+            slot,
+            updated - float(slot.valence),
+            updated,
+            kind=kind,
+            source=source,
+        )
+
+    def decay_valence(self, factor: float) -> int:
+        """Multiply every nonzero valence by ``factor`` and log the replay."""
+        changed = 0
+        for slot in self._slots:
+            before = float(slot.valence)
+            if before == 0.0:
+                continue
+            updated = before * float(factor)
+            self._append_valence(slot, updated - before, updated, kind="replay", source="replay")
+            changed += 1
+        return changed
+
+    def valence_history(
+        self,
+        name: Optional[str],
+        rel: Optional[str],
+        group: Optional[str] = None,
+    ) -> tuple:
+        slot = self._find(name, rel, group)
+        if slot is None:
+            raise KeyError("no slot for that history")
+        return tuple(dict(event) for event in slot.history)
 
     def refresh_strength(self, indices: Sequence[int]) -> None:
         """Mark the given slots as just replayed. Strength returns to 1."""
