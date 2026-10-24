@@ -717,7 +717,8 @@ def test_sink_token_does_not_collapse_distinct_facts():
         legacy = []
         fixed = []
         for text, answer, name, rel in facts:
-            hidden, enc = mem._run_hidden(text)
+            hidden, enc, _logits = mem._run_hidden(text)
+            del _logits
             content = mem._content_mask(enc, hidden.shape[0])
             answer_m = mem._answer_mask(text, enc, answer, hidden.shape[0])
             mask = [c and not a for c, a in zip(content, answer_m)]

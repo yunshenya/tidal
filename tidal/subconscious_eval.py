@@ -75,7 +75,7 @@ PATH_FLAGS = (
     {
         "path": "remember",
         "when": "each accepted fact",
-        "varies": "two full forwards (key, then value); chat and noise return before that",
+        "varies": "two full forwards when the write is kept (value, then key); chat and noise return before that",
         "retries": False,
     },
     {
@@ -94,6 +94,12 @@ PATH_FLAGS = (
         "path": "circadian clock",
         "when": "a clock angle is set or ticked, and again when decay runs",
         "varies": "scales that slot's write strength and the decay exponent; phase 0 leaves both unchanged; no extra forward and no text",
+        "retries": False,
+    },
+    {
+        "path": "relative surprise",
+        "when": "a fact write, after the value forward",
+        "varies": "rejects the write when the window is full and the answer-token NLL is below the live quantile; warmup and phase-unrelated paths unchanged; no third forward and no text in the window",
         "retries": False,
     },
 )

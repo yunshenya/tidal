@@ -54,7 +54,7 @@ BANK_SHA = "18b5e2d128fb6b626f28644b851d405581169c4befc842c96536cb84b5f6efd6"
 # Closed PR #24. Not in this tree. Disjointness still has to name it.
 TYPO_SHA = "68260c01d5f130c46285348f1ef9886f14e9aa2b47f5606c9357ecdc521f5f99"
 LLM_INJECT_SHA = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-LLM_SOURCE_SHA = "b1f98088d06abc6fd2be1be75ab386b5bea9cd106c317952ad9201e053d9dccd"
+LLM_SOURCE_SHA = "fd752dc51a4dc0b41310cd68630352214d14c7aba2528082f084c60ee15aa337"
 
 # The twelve frozen questions use addressee / interlocutor / 跟前这位 / 对面那位.
 # This bank must not.

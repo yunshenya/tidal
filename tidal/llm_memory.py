@@ -33,7 +33,10 @@ prior. ``s`` is the winning slot's strength. It stays 1 until a replay cycle
 recomputes decay or a nonzero clock phase scales the write, and a refresh
 sets it back to 1. The same cycle multiplies
 every nonzero valence by the replay decay and appends an audit row. A store
-with no experience and no replay matches the previous add. ``c`` is 1 when
+with no experience and no replay matches the previous add. A fact is written
+when it is salient and, once 32 accepted surprises are stored, its
+answer-token NLL is at least the quantile of that window of numbers. Fewer
+stored surprises leaves the salient fact accepted. ``c`` is 1 when
 the store has one slot. Otherwise
 ``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
 0.80. A tie adds nothing. The MLP weights are the shipped checkpoint;
@@ -126,6 +129,18 @@ REPLAY_DECAY = 0.5
 # fit decision floors. Not retuned on the held-out bank. 0 new parameters.
 VALENCE_SPAN = 1.0
 VALENCE_STEP = 0.25
+# Relative write gate. Surprise is the total answer-token NLL, in nats, from
+# the logits the value forward already returned. The window keeps the last
+# SURPRISE_WINDOW accepted surprises and no text. Until SURPRISE_MIN_COUNT
+# accepted surprises are stored, every salient fact is written. After that,
+# the fact is written when its surprise is at least the linear quantile of
+# the window. A rejected attempt does not enter the window. Chat and noise
+# return before any forward. The grid is the quantile in {0, 0.25, 0.5}.
+# The window length is not on the grid. 0 new parameters. Not retuned on
+# the held-out bank.
+SURPRISE_WINDOW = 32
+SURPRISE_MIN_COUNT = 32
+SURPRISE_QUANTILE = 0.0
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -1013,6 +1028,87 @@ def _mean_float(values) -> Optional[float]:
     return float(sum(float(value) for value in values) / len(values))
 
 
+def factual_salience(kind: str) -> float:
+    """1 for a fact, 0 for chat and noise. This is the existing write filter."""
+    if kind in ("chat", "noise"):
+        return 0.0
+    return 1.0
+
+
+def surprise_quantile(samples, q: float) -> float:
+    """Linear quantile of a surprise window. ``q`` is in ``[0, 1]``.
+
+    The position is ``q * (n - 1)`` on the sorted window, with linear
+    interpolation between the surrounding samples. ``q = 0`` is the minimum.
+    """
+    level = float(q)
+    if not 0.0 <= level <= 1.0:
+        raise ValueError("surprise quantile must be in [0, 1]")
+    ordered = sorted(float(value) for value in samples)
+    n = len(ordered)
+    if n == 0:
+        raise ValueError("surprise window is empty")
+    if n == 1:
+        return float(ordered[0])
+    pos = level * (n - 1)
+    lo = int(math.floor(pos))
+    hi = int(math.ceil(pos))
+    if lo == hi:
+        return float(ordered[lo])
+    weight = pos - lo
+    return float(ordered[lo] * (1.0 - weight) + ordered[hi] * weight)
+
+
+def accept_relative_write(
+    kind: str,
+    surprise: float,
+    window,
+    *,
+    quantile: float,
+    min_count: int,
+) -> bool:
+    """Write a salient fact during warmup, else when it clears the window quantile.
+
+    Warmup is ``len(window) < min_count``. Chat and noise never write.
+    """
+    if factual_salience(kind) <= 0.0:
+        return False
+    if len(window) < int(min_count):
+        return True
+    bar = surprise_quantile(window, quantile)
+    return float(surprise) >= float(bar)
+
+
+def answer_surprise(logits: torch.Tensor, token_ids: Sequence[int], answer_mask: Sequence[bool]) -> float:
+    """Total NLL, in nats, of the answer tokens under logits the forward already returned.
+
+    Position ``i`` is predicted by ``logits[i - 1]``. The score is the sum,
+    not the mean. The first token has no predictor; if the answer is only
+    that token, the score is 0.
+    """
+    if not torch.is_tensor(logits):
+        raise TypeError("logits must be a tensor")
+    if logits.dim() == 3:
+        if int(logits.shape[0]) != 1:
+            raise ValueError("answer surprise expects one sequence")
+        logits = logits[0]
+    if logits.dim() != 2:
+        raise ValueError(f"logits rank {logits.dim()} is not a sequence")
+    ids = [int(i) for i in token_ids]
+    mask = [bool(flag) for flag in answer_mask]
+    n = int(logits.shape[0])
+    if len(ids) != n or len(mask) != n:
+        raise ValueError(f"token axis {len(ids)} / mask {len(mask)} != logits {n}")
+    idxs = [i for i, flag in enumerate(mask) if flag and i >= 1]
+    if not idxs:
+        return 0.0
+    rows = logits[[i - 1 for i in idxs]]
+    target = torch.tensor([ids[i] for i in idxs], dtype=torch.long, device=rows.device)
+    logp = torch.log_softmax(rows.float(), dim=-1)
+    taken = logp.gather(1, target.unsqueeze(1)).squeeze(1)
+    return float((-taken.sum()).detach().cpu())
+
+
 def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     """Scale for the residual. One slot is unscaled. A tie adds nothing."""
     if int(n) < 2:
@@ -1038,7 +1134,9 @@ class LLMMemory:
     :func:`retrieval_confidence`, by the slot's strength, by
     :func:`valence_gain_of` on that slot, and by the polarity gain of that
     slot's key. Valence stays 0 until an experience is stored, so the gain
-    stays 1. Strength stays 1 until replay or a nonzero clock phase. Every
+    stays 1. Strength stays 1 until replay or a nonzero clock phase. A fact
+    is written when it is salient and, once 32 surprises are stored, its
+    answer-token NLL is at least the window quantile. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
     near-duplicate keys are merged. Salience reuses the polarity vector.
@@ -1112,6 +1210,9 @@ class LLMMemory:
         self._delta: Optional[torch.Tensor] = None
         self.last_added: Optional[torch.Tensor] = None
         self._accepted = 0
+        self._surprise_window: list[float] = []
+        self.last_surprise: Optional[float] = None
+        self.last_write_score: float = 0.0
         self.last_replay: Optional[dict] = None
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
@@ -1175,7 +1276,8 @@ class LLMMemory:
             # Transformers may load SmolLM2 in bfloat16. Numpy cannot hold that
             # dtype, and the key center is estimated in float32/float64.
             hidden = hidden.detach().float()
-        return hidden, enc
+            logits = _logits_of(out).detach()
+        return hidden, enc, logits
 
     def _answer_mask(self, text: str, enc, answer: str, n_tokens: int) -> list:
         offsets = _offset_pairs(enc)
@@ -1212,8 +1314,16 @@ class LLMMemory:
         and 4 year tokens falls back to the whole-span mean. A phone with
         fewer than four answer tokens falls back to the mean of those tokens.
         """
-        hidden, enc = self._run_hidden(text)
+        value, _surprise = self._value_and_surprise(text, answer)
+        return value
+
+    def _value_and_surprise(self, text: str, answer: str):
+        """Answer-span value and its total answer-token NLL from one forward."""
+        hidden, enc, logits = self._run_hidden(text)
         mask = self._answer_mask(text, enc, answer, hidden.shape[0])
+        ids = _batch_ids(enc)[0].tolist()
+        surprise = answer_surprise(logits, ids, mask)
+        del logits
         if date_like(answer):
             offsets = _offset_pairs(enc)
             if offsets is not None:
@@ -1221,12 +1331,15 @@ class LLMMemory:
                 if parts is not None:
                     month, day_rows, year_rows = parts
                     packed = assemble_date_value(month, day_rows, year_rows)
-                    return packed.detach().cpu().numpy().astype(np.float32, copy=False)
-        return pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
+                    value = packed.detach().cpu().numpy().astype(np.float32, copy=False)
+                    return value, surprise
+        value = pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
+        return value, surprise
 
     def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
         """Sink-dropped mean of the key tokens, before the fixed center."""
-        hidden, enc = self._run_hidden(text)
+        hidden, enc, _logits = self._run_hidden(text)
+        del _logits
         content = self._content_mask(enc, hidden.shape[0])
         if answer is None:
             mask = content
@@ -1327,16 +1440,39 @@ class LLMMemory:
         kind: str = "fact",
         surprise: Optional[float] = None,
     ) -> bool:
-        """Write one fact into the episodic store. Same ``(name, rel)`` overwrites."""
+        """Write one fact into the episodic store. Same ``(name, rel)`` overwrites.
+
+        Chat and noise return before any forward. A fact's surprise is the
+        total NLL of its answer tokens under the logits of the value forward.
+        Until the surprise window holds 32 accepted writes, the fact is
+        written. After that it is written when that NLL is at least the
+        window quantile. The key forward runs only when the write is kept.
+        A caller-supplied ``surprise`` does not replace the measured one.
+        """
+        # The measured answer NLL is the score. A caller value cannot bypass it.
+        del surprise
         text, answer, name, rel, key, group, kind = _parse_fact(
             fact, answer, name, rel, key, group, kind
         )
         experience = _experience_sign(fact)
-        if not self.store.gate_write(kind, surprise):
-            return False
+        self.last_surprise = None
+        self.last_write_score = 0.0
         if len(self.store) == 0:
             self._accepted = 0
-        value = self.encode_value(text, answer)
+            self._surprise_window = []
+        if factual_salience(kind) <= 0.0 or not self.store.gate_write(kind):
+            return False
+        value, measured = self._value_and_surprise(text, answer)
+        self.last_surprise = float(measured)
+        self.last_write_score = float(measured)
+        if not accept_relative_write(
+            kind,
+            measured,
+            self._surprise_window,
+            quantile=SURPRISE_QUANTILE,
+            min_count=SURPRISE_MIN_COUNT,
+        ):
+            return False
         if key is None:
             key_vec = self.encode_key(text, answer)
         else:
@@ -1348,7 +1484,6 @@ class LLMMemory:
                 name=name,
                 rel=rel,
                 kind=kind,
-                surprise=surprise,
                 group=group,
                 answer=answer,
             )
@@ -1371,10 +1506,18 @@ class LLMMemory:
                 group=group,
                 episode_id=episode_id,
             )
+        self._surprise_window.append(float(measured))
+        overflow = len(self._surprise_window) - int(SURPRISE_WINDOW)
+        if overflow > 0:
+            del self._surprise_window[:overflow]
         self._accepted += 1
         if self._accepted % int(REPLAY_EVERY) == 0:
             self._consolidate()
         return True
+
+    def surprise_window(self) -> tuple:
+        """Accepted write surprises. Numbers only, never fact text."""
+        return tuple(float(value) for value in self._surprise_window)
 
     def _salience(self, key_vec) -> float:
         """``|tanh(w · normalize(k))|``. Zero when polarity is still zero.
