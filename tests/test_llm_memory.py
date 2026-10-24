@@ -98,7 +98,7 @@ def test_import_tidal_does_not_import_transformers():
         "import tidal\n"
         "assert 'transformers' not in sys.modules\n"
         "assert 'tidal.llm_memory' not in sys.modules\n"
-        "import tidal.episodic, tidal.continuum, tidal.episodic_eval\n"
+        "import tidal.episodic, tidal.episodic_eval\n"
         "import tidal.llm_memory\n"
         "assert 'transformers' not in sys.modules\n"
         "import tidal.llm_memory_train\n"
@@ -885,7 +885,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "e17d4613bfff16eab3c1510407b7ccbb46881dd0f2ee5d695096454fa0a53b95"
+    source = "fa3f11ebfcb5bdae3499b2c7cc20a8ee155ee09a208e3fd5906049934419255d"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 

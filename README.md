@@ -255,7 +255,9 @@ Store fields at v7: existing `vec` (float32, width `d_model`; stage0 192); perce
 
 Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). On 2026-10-24 this pull request removed the duplex, turn, audio, modalities, phase5, head-training, and shadow packages that had been kept here pending handoff. Historical writeups stay in `reports/phase1.md` through `reports/phase5.md`. They are not live gates.
 
-`HEAD_DIMS` in `tidal/model.py` was left in place. `tidal/vap.py`, `tidal/continuum.py`, and `tests/test_episodic.py` still import that turn model. Those importers are not the cue/sleep/arousal/clock/reconstruct path, but deleting the constant would break the remaining episodic continuum tests. The memory inject is the cue trace above.
+This pull request removed residual turn-taking / six-head code that #71 left in place: `tidal/vap.py`, `tidal/vap_targets.py`, `tidal/continuum.py`, `scripts/demo_sixhead.py`, `scripts/demo_chat_llm.py`, and the vap-only eval/dataset/report scripts that imported them. Continuum JSON reports are historical, not live gates.
+
+`HEAD_DIMS` and `TurnModel` in `tidal/model.py` stay. They are not imported by cue/sleep/arousal/clock/reconstruct, `llm_memory*`, adapters, backends, or `GrowbrainBackend`. Remaining importers are leftover six-head train/export helpers (`tidal/train.py`, `tidal/evaluate.py`, `tidal/export.py`, `tidal/audit.py`) plus padding/ONNX tests. Deleting the constant would break those files. The memory inject is the cue trace above.
 
 ## Tests
 

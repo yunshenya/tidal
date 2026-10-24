@@ -1,22 +1,14 @@
 # 情景事实记忆 / Episodic fact memory
 
-连续体（`tidal/continuum.py`）在影子回放里始终带着一块情景事实槽（`tidal/episodic.py`）。它是 `heads` 的一部分，空库读出是零，不加载 135M 权重。冻结因果语言模型的测试时注入在 `tidal/llm_memory.py`（`pip install tidal[llm]`），设计和当年的 SmolLM 数字在 [llm_memory.md](llm_memory.md)。那条路径不进 `heads`。
+情景事实槽在 `tidal/episodic.py`。影子连续体（`tidal/continuum.py`）和六头 VAP 已从本仓库删掉；空库读出仍是零，不加载 135M 权重。冻结因果语言模型的测试时注入在 `tidal/llm_memory.py`（`pip install tidal[llm]`），设计和当年的 SmolLM 数字在 [llm_memory.md](llm_memory.md)。
 
-Continuum's shadow replay always owns an episodic slot store. Readout sits on the `heads` path and does not load a 135M checkpoint. Test-time residual inject for a frozen causal LM is `tidal/llm_memory.py` (`pip install tidal[llm]`). The design and the old SmolLM numbers are in [llm_memory.md](llm_memory.md). That path is not added into `heads`.
+The episodic slot store is `tidal/episodic.py`. Continuum shadow replay and six-head VAP were removed from this repository. An empty store still reads as zeros and does not load a 135M checkpoint. Test-time residual inject for a frozen causal LM is `tidal/llm_memory.py` (`pip install tidal[llm]`). The design and the old SmolLM numbers are in [llm_memory.md](llm_memory.md).
 
 ## 行为 / Behavior
 
-`Continuum` 一构造就有一个 `EpisodicStore`。每个头之前：
+`EpisodicStore` 是槽表。空库读出是全零。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。`read` / `recall` 的排序是原始余弦，分母是 `kn*qn + 1e-12`。
 
-```
-h_adapt = h + Σ_levels adapter(h)
-h' = h_adapt + soft_topk(h_adapt)
-```
-
-空库时 `soft_topk` 是全零。连续体那层适配器也还是零的时候（刚构造，或 `levels=()`），回放就和静态模型一样。没有 `enable_episodic`，也没有把读出乘成 0 的比例开关。调用方如果仍传入这类键，读出照样加上。`heads` / `replay` / `recall` 的排序是原始余弦，分母是 `kn*qn + 1e-12`。
-
-
-An empty store adds zeros. With zero continuum adapters (a fresh model, or `levels=()`), replay matches the static model. `heads`, `replay`, and `recall` rank by raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
+An empty store adds zeros. `read` and `recall` rank by raw cosine (`kn*qn + 1e-12`). There is no `enable_episodic` and no scale that multiplies the readout by zero.
 
 
 一条事实是一个槽 `(k, v, name, rel, group)`。
@@ -35,7 +27,7 @@ An empty store adds zeros. With zero continuum adapters (a fresh model, or `leve
 - `embed_event(feats, text_emb)`：`text_emb` 是 512 维句向量（`multilingual-e5-small` 的 384 维单位向量写在前 384 个坐标，后面是 0）。只有模型自己带 `tproj` 时才走这条文本投影。VAP 前端 `tidal.embed` 仍是另一套 bge，不是这个槽。特征行若大半能量都在常数方向上（各维差不多大），`fproj` 加偏置就是一个共享向量，比单位句向量的 `tproj` 大好几倍，原始余弦会把不同句子收成一条事实。这时丢掉该常数和特征偏置，并加上文本向量的固定符号码，幅度取剩余特征纹波和 `tproj` 里较大的那个。同一条平坦行把单位句向量记在槽的 `sentence` 上；`recall` 不读它。有对比度的稀疏行（名字/关系码）不在这个区间，编码器状态仍是原来的 `fproj + tproj`，也不记句向量。没有开关。
 - `remember(k, v, ...)` 的数值向量必须已经在 `d` 里。512 维句向量不能直接当槽。字符串或 token 列表会编成宽度 `d` 的位置字节码再写入。
 
-An empty store adds zeros. With zero adapters (a fresh model, or `levels=()`), replay matches the static model. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. Numeric keys and values are encoder states from the frozen event model; a 512-d sentence vector goes through that model's `tproj` when it exists. The VAP frontend `tidal.embed` is a different model and is not this slot. A phone, date, or token list is a positional byte code of the same width.
+An empty store adds zeros. Same-identity overwrite replaces the whole slot. Soft top-4 (temperature 0.05) is a convex combination of values. Chat and noise writes are dropped. A phone, date, or token list is a positional byte code of the same width.
 
 `embed_event(feats, text)` leaves a feature row alone when the constant direction holds at most half its energy. That is a sparse name/relation code, so those encoder states stay `fproj + tproj` and carry no sentence vector. A flat row (every coordinate the same size) is the other regime: `fproj` plus its bias is one shared vector, several times `tproj` of a unit sentence, and raw cosine then overwrites unrelated sentences at 0.9. The flat row drops that offset and the bias, and adds a fixed sign code of the 512-d text vector, scaled to the larger of the leftover feature ripple and `tproj`. The same call stores the unit sentence vector on the slot. `recall` does not read it. The code is not a learned map. There is no switch.
 
@@ -70,28 +62,15 @@ neuromem 在冻结的 SmolLM2-135M 上试过好几轮。tidal 只留下不依赖
 | SmolLM2-135M、`transformers` | 核心 `import tidal` 不 import。可选模块 `tidal/llm_memory.py`，`pip install tidal[llm]`。 |
 | 答案跨度做均值池化，或写入时 L2 归一化 | 不采用。池化分不出顺序；归一化毁掉字节码。字符串走位置字节码。 |
 
-## 影子策略 / Shadow policy
-
-连续体仍然只回放已记录的流、报告指标，不驱动线上动作。情景槽不进 `DuplexController`，不改 tick。按群写入的事实只影响该群的读出（加上全局槽），所以一条群的事实不会改另一条群的影子分数。
-
-Continuum stays shadow-only. Episodic readout is inside that replay path.
-
 ## 用法 / Usage
 
 ```python
-from tidal.continuum import Continuum, _cfg
-from tidal.vap import VAPModel
+from tidal.episodic import EpisodicStore
 
-model = VAPModel(n_feat).eval()
-cont = Continuum(model, _cfg(dict(levels=("med",))))
-k = cont.embed_event(key_feats)                 # feature row -> encoder state
-v = cont.embed_event(value_feats, sentence, surface=statement_text)
-cont.remember(k, v, name="ada", rel="city", group=group_id)
-k_phone = cont.embed_event(phone_key_feats, phone_sentence, surface=phone_text)
-cont.remember(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
-cont.recall(k_phone)                            # raw cosine, winning slot's string; no abstain
+store = EpisodicStore(capacity=256, dk=d, dv=d)
+store.write(k, v, name="ada", rel="city", group=group_id)
+store.write(k_phone, "+1-415-555-0134", name="ada", rel="phone", group=group_id)
+store.recall(k_phone)  # raw cosine, winning slot's string
 ```
 
-`episodic_cfg` 只调容量、`soft_k`、温度、覆盖余弦和可选的 surprise 阈值。它不是开关。
-
-`episodic_cfg` tunes capacity, `soft_k`, temperature, overwrite cosine, and the optional surprise threshold. It is not a switch.
+Capacity, `soft_k`, temperature, overwrite cosine, and the optional surprise threshold are constructor arguments. They are not a feature flag.
