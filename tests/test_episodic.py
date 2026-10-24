@@ -16,6 +16,25 @@ def _ortho(d=8, n=4, seed=0):
     return Q.T[:n].astype(np.float64)
 
 
+def test_write_stores_answer_and_overwrite_replaces_it():
+    store = EpisodicStore(capacity=4, dk=4, dv=4)
+    key = np.array([1.0, 0, 0, 0])
+    value = np.array([0.0, 1.0, 0, 0])
+    assert store.write(key, value, name="ada", rel="birthday", answer="October 16, 1971")
+    assert store.slots[0].answer == "October 16, 1971"
+    assert store.write(key, value, name="ada", rel="birthday", answer="June 3, 1978")
+    assert len(store) == 1
+    assert store.slots[0].answer == "June 3, 1978"
+    assert store.write(key, value, name="ada", rel="birthday")
+    assert store.slots[0].answer is None
+    assert store.write(key, value, name="ada", rel="phone")
+    assert store.slots[0].answer is None
+    wide = EpisodicStore(capacity=4, dk=4, dv=16)
+    assert wide.write(key, "5551212", name="ada", rel="phone")
+    assert wide.slots[0].answer is None
+    assert decode_span(wide.slots[0].v) == "5551212"
+
+
 def test_overwrite_same_name_rel():
     S = EpisodicStore(capacity=8, dk=4, dv=4)
     k0 = np.array([1.0, 0, 0, 0])

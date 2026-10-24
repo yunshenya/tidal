@@ -57,7 +57,7 @@ PATH_FLAGS = (
     {
         "path": "scripted phone or birthday",
         "when": "winning relation is phone or birthday and the prompt is completing that same relation",
-        "varies": "replaces the token loop; any other prompt keeps the residual path",
+        "varies": "copies the stored answer and replaces the token loop; any other prompt keeps the residual path",
         "retries": False,
     },
     {
@@ -219,7 +219,14 @@ def write_rows(mem, rows: list) -> dict:
     mem.store.clear()
     accepted = 0
     for row in rows:
-        ok = mem.store.write(row["key"], row["value"], name=row["name"], rel=row["rel"], kind="fact")
+        ok = mem.store.write(
+            row["key"],
+            row["value"],
+            name=row["name"],
+            rel=row["rel"],
+            kind="fact",
+            answer=row.get("answer"),
+        )
         accepted += int(bool(ok))
     return {"requested": len(rows), "accepted": accepted, "slots": len(mem.store)}
 
@@ -1235,10 +1242,10 @@ def render_report(result: dict) -> str:
         f"Prompts that emit one of those words: {result['neutral']['leak']['n_leak']}. "
         f"Gate: {'pass' if result['neutral']['leak']['pass'] else 'fail'}.",
         "",
-        "Scripted readout. A phone slot spells `+1-415-555-` plus four digits and never calls the LM. "
-        "A birthday slot spells `Month D, YYYY`. Unrelated prompts are the first four neutral generations. "
-        "The phone question is a positive control that the readout is on. Takeover on an unrelated prompt "
-        "is reported and is not part of the NLL gate.",
+        "Scripted readout. A phone slot copies its stored number and never calls the LM. "
+        "A birthday slot copies its stored date. Unrelated prompts stay on the residual path. "
+        "Takeover below is the `+1-415-555-` prefix check and the month-day-year check. "
+        "Takeover on an unrelated prompt is reported and is not part of the NLL gate.",
         "",
         f"Phone unrelated takeover rate {_fmt(result['scripted']['phone_unrelated'])}. "
         f"Phone question takeover {result['scripted']['phone_question']}. "

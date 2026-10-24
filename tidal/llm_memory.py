@@ -35,11 +35,13 @@ polarity does not replace them. The last layer of an untrained module is
 still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
 and ``w`` is 0. Phone and birthday
 spelling runs only when the winning relation is the one the prompt is
-completing. A continuation encodes the query once. When this wrapper loads
+completing. The emitted string is that slot's stored answer, the full
+number or the full date. It is not a trained prefix and not a digit
+readout. A continuation encodes the query once. When this wrapper loads
 the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
-by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP,
-plus linear readouts that spell ``+1-415-555-dddd`` from a phone value and
-``Month D, YYYY`` from a birthday value). A
+by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP).
+The checkpoint still holds linear readouts aimed at ``+1-415-555-dddd`` and
+``Month D, YYYY``. Generation does not call them. A
 caller-supplied model, another checkpoint, or another layer keeps the zero
 last layer until :meth:`LLMMemory.load_inject`. There is no switch. This is
 the A2s inject from
@@ -638,7 +640,11 @@ class InjectMLP(nn.Module):
         return self.polarity_gain(key) * residual
 
     def phone_digits(self, value: torch.Tensor) -> Optional[list]:
-        """Four digits read from a phone value, or None when the readout is off."""
+        """Four digits read from a phone value, or None when the readout is off.
+
+        Training still uses this head. Generation does not. The historical
+        template those digits were appended to is :data:`PHONE_TAIL`.
+        """
         if float(self.phone_on.detach().cpu()) == 0.0:
             return None
         v = value.detach().to(dtype=torch.float32, device=self.phone_mu.device).reshape(-1)
@@ -995,9 +1001,9 @@ class LLMMemory:
     There is no extra forward and no switch. ``soft_k`` and ``soft_temp`` are
     kept on the episodic store; ``generate`` does not read them. An empty store
     leaves the residual untouched, so greedy tokens match the same model
-    with the hook removed. Phone and birthday spelling runs only when the
-    prompt is completing that relation. A zero polarity vector leaves the
-    gain at 1.
+    with the hook removed. Phone and birthday spelling copies the winning
+    slot's stored answer, and only when the prompt is completing that
+    relation. A zero polarity vector leaves the gain at 1.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
@@ -1299,6 +1305,7 @@ class LLMMemory:
                 kind=kind,
                 surprise=surprise,
                 group=group,
+                answer=answer,
             )
         )
         if not wrote:
@@ -1444,6 +1451,7 @@ class LLMMemory:
                 "gap": gap,
                 "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
                 "strength": float(slots[winner].strength),
+                "answer": slots[winner].answer,
             }
         )
         return info
@@ -1479,46 +1487,40 @@ class LLMMemory:
         finally:
             self._delta = None
 
-    def _spell_ids(self, prompt: str, rank: dict, max_new_tokens: int) -> Optional[list]:
-        """Spelled ids when the prompt is completing the winning relation."""
-        if int(max_new_tokens) < 0:
-            raise ValueError("max_new_tokens must be >= 0")
-        phone_on = float(self.inject.phone_on.detach().cpu()) != 0.0
-        date_on = float(self.inject.date_on.detach().cpu()) != 0.0
-        value = rank.get("value")
+    def _stored_spelling(self, prompt: str, rank: dict) -> Optional[str]:
+        """Winning slot's phone or birthday surface, when the prompt completes it."""
         top = rank.get("top")
-        if value is None or not top or not (phone_on or date_on):
+        spelled = rank.get("answer")
+        if not top or not isinstance(spelled, str) or spelled == "":
             return None
         rel = top[1]
+        if rel not in ("phone", "birthday"):
+            return None
         if rel != completing_relation(prompt):
             return None
-        value_t = torch.as_tensor(np.asarray(value, dtype=np.float32))
-        spelled = None
-        if rel == "phone" and phone_on:
-            digits = self.inject.phone_digits(value_t)
-            if digits is not None:
-                spelled = PHONE_TAIL + "".join(str(d) for d in digits)
-        elif rel == "birthday" and date_on:
-            spelled = self.inject.date_spelling(value_t)
+        return spelled
+
+    def _spell_ids(self, prompt: str, rank: dict, max_new_tokens: int) -> Optional[list]:
+        """Ids of the stored answer when the prompt is completing that relation."""
+        if int(max_new_tokens) < 0:
+            raise ValueError("max_new_tokens must be >= 0")
+        spelled = self._stored_spelling(prompt, rank)
         if spelled is None:
             return None
         ids = _id_list(self.tokenizer, spelled, add_special_tokens=False)
         return ids[: int(max_new_tokens)]
 
     def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
-        """Token ids spelled by a linear readout, or None to use the LM.
+        """Token ids of the stored phone or birthday, or None to use the LM.
 
         Hard top-1. Spelling runs only when the winning relation is the one
-        the prompt is completing. A phone prompt spells ``+1-415-555-`` plus
-        the four digits. A birthday prompt spells ``Month D, YYYY``. An empty
-        store, a readout that is still zero, or any other prompt returns None.
+        the prompt is completing and that slot stores an answer. The ids are
+        that string. An empty store or any other prompt returns None.
         ``max_new_tokens`` truncates the id list.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
-        phone_on = float(self.inject.phone_on.detach().cpu()) != 0.0
-        date_on = float(self.inject.date_on.detach().cpu()) != 0.0
-        if len(self.store) == 0 or not (phone_on or date_on):
+        if len(self.store) == 0:
             return None
         return self._spell_ids(prompt, self._rank(prompt), max_new_tokens)
 
@@ -1555,21 +1557,39 @@ class LLMMemory:
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        A phone slot is spelled from the phone readout, and a birthday slot
-        from the date readout, only when the prompt is completing that
-        relation. Leading whitespace is
-        skipped before the stop, so
-        a natural question whose first token is a newline still yields the
-        following line. The span then ends at the next newline or at
-        sentence-ending punctuation.
+        A phone or birthday slot copies its stored answer when the prompt is
+        completing that relation. The full string is returned as stored when
+        its ids fit in ``max_new_tokens``. Any other prompt keeps the residual
+        path. Leading whitespace is skipped before the stop, so a natural
+        question whose first token is a newline still yields the following
+        line. The span then ends at the next newline or at sentence-ending
+        punctuation. The store is ranked once.
         """
+        if not isinstance(prompt, str) or prompt == "":
+            raise ValueError("prompt is empty")
+        if int(max_new_tokens) < 0:
+            raise ValueError("max_new_tokens must be >= 0")
 
         def _done(new_ids: list) -> bool:
             text = self.tokenizer.decode(new_ids, skip_special_tokens=True)
             return span_complete(text)
 
-        ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done)
-        return decode_answer(self.tokenizer, ids)
+        if len(self.store) == 0:
+            ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done, arm=False)
+            return decode_answer(self.tokenizer, ids)
+        rank = self._rank(prompt)
+        spelled = self._stored_spelling(prompt, rank)
+        if spelled is not None:
+            ids = _id_list(self.tokenizer, spelled, add_special_tokens=False)
+            if len(ids) <= int(max_new_tokens):
+                return spelled
+            return decode_answer(self.tokenizer, ids[: int(max_new_tokens)])
+        self._set_delta(rank)
+        try:
+            ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done, arm=False)
+            return decode_answer(self.tokenizer, ids)
+        finally:
+            self._delta = None
 
     def teacher_force_loss(self, prompt: str, answer: str, value, key=None, *, armed: bool = True) -> torch.Tensor:
         """Next-token cross-entropy on ``answer`` with ``value`` injected.

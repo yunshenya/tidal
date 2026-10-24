@@ -1,0 +1,467 @@
+{
+  "bank_kind": "held",
+  "bank_sha256": "fd01592f5bdb8e919c113fb0f82c01a26cc42c24c14104fb77ba5bc3bf65f635",
+  "cost": {
+    "buffers": 66931,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "query_forwards": 1,
+    "query_text": "+1-802-555-3145",
+    "remember_forwards": 2
+  },
+  "direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.32952404022216797,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-0",
+          "margin": -1.5831527709960938,
+          "nomem_margin": -1.9126768112182617,
+          "stored_lift": -0.8544893264770508,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.9636983871459961,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-1",
+          "margin": 0.9866571426391602,
+          "nomem_margin": 0.022958755493164062,
+          "stored_lift": -2.6277456283569336,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.16751575469970703,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-2",
+          "margin": 1.7334184646606445,
+          "nomem_margin": 1.5659027099609375,
+          "stored_lift": -0.5639123916625977,
+          "strength": 1.0
+        },
+        {
+          "delta": 2.1696529388427734,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-3",
+          "margin": 5.219482421875,
+          "nomem_margin": 3.0498294830322266,
+          "stored_lift": -2.1630401611328125,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.9227018356323242,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-4",
+          "margin": 1.464756965637207,
+          "nomem_margin": -0.4579448699951172,
+          "stored_lift": -1.837881088256836,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.7418718338012695,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-5",
+          "margin": 3.9559755325317383,
+          "nomem_margin": 3.2141036987304688,
+          "stored_lift": -1.415445327758789,
+          "strength": 1.0
+        },
+        {
+          "delta": 3.651744842529297,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-6",
+          "margin": 2.0893421173095703,
+          "nomem_margin": -1.5624027252197266,
+          "stored_lift": -1.3626785278320312,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.6744203567504883,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-7",
+          "margin": 3.996156692504883,
+          "nomem_margin": 2.3217363357543945,
+          "stored_lift": -1.7997827529907227,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 1.452641248703003,
+        "mean_stored_lift": -1.5781219005584717,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 8
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 27.063646214082837,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-0",
+          "margin": 23.569672482088208,
+          "nomem_margin": -3.493973731994629,
+          "stored_lift": 16.01508034951985,
+          "strength": 1.0
+        },
+        {
+          "delta": 27.008492521941662,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-1",
+          "margin": 27.419674925506115,
+          "nomem_margin": 0.4111824035644531,
+          "stored_lift": 13.871454291045666,
+          "strength": 1.0
+        },
+        {
+          "delta": 26.111989349126816,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-2",
+          "margin": 26.10615572333336,
+          "nomem_margin": -0.005833625793457031,
+          "stored_lift": 15.082558006048203,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.970106843858957,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-3",
+          "margin": 14.192668680101633,
+          "nomem_margin": -1.7774381637573242,
+          "stored_lift": 16.598287347704172,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.311187893152237,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-4",
+          "margin": 11.6376191675663,
+          "nomem_margin": -3.6735687255859375,
+          "stored_lift": 16.34810271859169,
+          "strength": 1.0
+        },
+        {
+          "delta": 14.425395665690303,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-5",
+          "margin": 14.214806256815791,
+          "nomem_margin": -0.21058940887451172,
+          "stored_lift": 14.219082532450557,
+          "strength": 1.0
+        },
+        {
+          "delta": 19.140147924423218,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-6",
+          "margin": 15.837314367294312,
+          "nomem_margin": -3.3028335571289062,
+          "stored_lift": 12.676599264144897,
+          "strength": 1.0
+        },
+        {
+          "delta": 20.96598209440708,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-7",
+          "margin": 19.958177223801613,
+          "nomem_margin": -1.0078048706054688,
+          "stored_lift": 15.476359024643898,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 20.74961856333539,
+        "mean_stored_lift": 15.035940441768616,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "exact": {
+    "birthday_exact": 1,
+    "birthday_off_equal": 0,
+    "birthday_off_n": 5,
+    "birthday_off_takeover": 0.0,
+    "birthday_prefix": 1,
+    "birthday_question_text": "July 26, 1990",
+    "birthday_stored": "July 26, 1990",
+    "phone_exact": 1,
+    "phone_off_equal": 0,
+    "phone_off_n": 5,
+    "phone_off_takeover": 0.0,
+    "phone_prefix": 0,
+    "phone_question_text": "+1-802-555-3145",
+    "phone_stored": "+1-802-555-3145"
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 1,
+      "n": 8,
+      "rows": [
+        {
+          "delta": -0.015929222106933594,
+          "flip": 1,
+          "id": "spell-held-choice-0",
+          "inject_choose": 0,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.01974964141845703,
+          "flip": 0,
+          "id": "spell-held-choice-1",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0011348724365234375,
+          "flip": 0,
+          "id": "spell-held-choice-2",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.019148826599121094,
+          "flip": 0,
+          "id": "spell-held-choice-3",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -8.106231689453125e-05,
+          "flip": 0,
+          "id": "spell-held-choice-4",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.013843536376953125,
+          "flip": 0,
+          "id": "spell-held-choice-5",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0021648406982421875,
+          "flip": 0,
+          "id": "spell-held-choice-6",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.019626617431640625,
+          "flip": 0,
+          "id": "spell-held-choice-7",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.8796059343195161,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Compile safety footnote alerts.\nLine:",
+          "text": "100"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile hacker manufacture preposition.\nLine:",
+          "text": "10000000000"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile quarantine untold quality.\nLine:",
+          "text": "100"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile plutonium antiseptic undermine.\nLine:",
+          "text": "1000"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile minimax carving educate.\nLine:",
+          "text": "10000000000"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile urgently helped contests.\nLine:",
+          "text": "10000000000"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile concurrent analysts infrast.\nLine:",
+          "text": "10000000000"
+        },
+        {
+          "hits": [],
+          "prompt": "Compile mutated evenly shutting.\nLine:",
+          "text": "100"
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": -0.013363361358642578,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.009308395834993072,
+          "delta": 0.0007429122924804688,
+          "id": "spell-held-nll-0",
+          "nll_inject": 10.963174819946289,
+          "nll_nomem": 10.962431907653809
+        },
+        {
+          "confidence": 0.019050443914686715,
+          "delta": -0.008974075317382812,
+          "id": "spell-held-nll-1",
+          "nll_inject": 13.652358055114746,
+          "nll_nomem": 13.661332130432129
+        },
+        {
+          "confidence": 0.01777443923760169,
+          "delta": -0.024474143981933594,
+          "id": "spell-held-nll-2",
+          "nll_inject": 12.764235496520996,
+          "nll_nomem": 12.78870964050293
+        },
+        {
+          "confidence": 0.010573177054337551,
+          "delta": -0.008713722229003906,
+          "id": "spell-held-nll-3",
+          "nll_inject": 15.234273910522461,
+          "nll_nomem": 15.242987632751465
+        },
+        {
+          "confidence": 0.0031041836063644412,
+          "delta": -0.0024127960205078125,
+          "id": "spell-held-nll-4",
+          "nll_inject": 12.691072463989258,
+          "nll_nomem": 12.693485260009766
+        },
+        {
+          "confidence": 0.00605788792585174,
+          "delta": -0.020298004150390625,
+          "id": "spell-held-nll-5",
+          "nll_inject": 13.883575439453125,
+          "nll_nomem": 13.903873443603516
+        },
+        {
+          "confidence": 0.017406940256841086,
+          "delta": -0.008554458618164062,
+          "id": "spell-held-nll-6",
+          "nll_inject": 12.78562068939209,
+          "nll_nomem": 12.794175148010254
+        },
+        {
+          "confidence": 0.02531108842219118,
+          "delta": -0.03422260284423828,
+          "id": "spell-held-nll-7",
+          "nll_inject": 15.713530540466309,
+          "nll_nomem": 15.747753143310547
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Compile safety footnote alerts.\nLine:",
+          "takeover": 0,
+          "text": "1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 1"
+        },
+        {
+          "prompt": "Compile hacker manufacture preposition.\nLine:",
+          "takeover": 0,
+          "text": "1                              "
+        },
+        {
+          "prompt": "Compile quarantine untold quality.\nLine:",
+          "takeover": 0,
+          "text": "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+        },
+        {
+          "prompt": "Compile plutonium antiseptic undermine.\nLine:",
+          "takeover": 0,
+          "text": ""
+        },
+        {
+          "prompt": "What phone does Keticare hold after absolute?",
+          "takeover": 0,
+          "text": "course course project project project project, which was designed by my professor, which was supported by my research project, which was designed by my research project,"
+        },
+        {
+          "prompt": "Which birthday does Keticare hold after apprent?",
+          "takeover": 1,
+          "text": "July 26, 1990"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Compile safety footnote alerts.\nLine:",
+          "takeover": 0,
+          "text": "1234E5046 ZIP: 1234"
+        },
+        {
+          "prompt": "Compile hacker manufacture preposition.\nLine:",
+          "takeover": 0,
+          "text": "12,403,696,000 SCP-4401,203601,44"
+        },
+        {
+          "prompt": "Compile quarantine untold quality.\nLine:",
+          "takeover": 0,
+          "text": "123,496,000 RCPs: 123,960,812 RCPs:"
+        },
+        {
+          "prompt": "Compile plutonium antiseptic undermine.\nLine:",
+          "takeover": 0,
+          "text": "ppls for."
+        },
+        {
+          "prompt": "What phone does Keticare hold after absolute?",
+          "takeover": 0,
+          "text": "+1-802-555-3145"
+        },
+        {
+          "prompt": "Which birthday does Keticare hold after apprent?",
+          "takeover": 0,
+          "text": "After all, no one wants to hear from you again, and you might not even know where they are, ever get, as a party, at, and"
+        }
+      ],
+      "phone_question": 0,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "protocol": "subconscious-spell-v1",
+  "wall_s": 16.38360698699762
+}
