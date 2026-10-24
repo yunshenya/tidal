@@ -32,6 +32,7 @@ and ``docs/llm_memory.md``.
 """
 from __future__ import annotations
 
+import math
 import zlib
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence, Tuple, Union
@@ -40,6 +41,24 @@ import numpy as np
 
 ArrayLike = Union[np.ndarray, Sequence[float]]
 SKIP_KINDS = frozenset({"chat", "noise"})
+# Content-free clock. phase = sin(angle). Angle 0 is the identity.
+# Write gain is 1 + CLOCK_SPAN * phase. Decay exponent rate is
+# 1 - CLOCK_SPAN * phase. The grid is span in {0.25, 0.5, 1}. Span 0.25
+# is the starting point; the fit script keeps the smallest span that
+# clears the fit floors. CLOCK_STEP is the tick and is not on the grid.
+# The angle is not read from fact text. 0 new parameters.
+CLOCK_SPAN = 0.25
+CLOCK_STEP = math.pi / 16
+
+
+def clock_write_gain(phase: float) -> float:
+    """``1 + CLOCK_SPAN * phase``. Phase 0 is exactly 1."""
+    return float(1.0 + float(CLOCK_SPAN) * float(phase))
+
+
+def clock_decay_rate(phase: float) -> float:
+    """``1 - CLOCK_SPAN * phase``. Phase 0 is exactly 1."""
+    return float(1.0 - float(CLOCK_SPAN) * float(phase))
 
 
 def _as1d(x: ArrayLike) -> np.ndarray:
@@ -249,7 +268,8 @@ class Slot:
     # recall keeps using ``k``. None on a sparse name/relation key.
     sentence: Optional[np.ndarray] = None
     # Residual scale for the LM inject. Continuum readout ignores it.
-    # 1 until replay recomputes decay. A refresh sets it back to 1.
+    # 1 until replay recomputes decay or a nonzero clock phase scales the
+    # write. A refresh sets it back to 1.
     strength: float = 1.0
     # High values are replayed first. Writers that do not stamp it leave 0.
     salience: float = 0.0
@@ -265,6 +285,8 @@ class Slot:
     episode_id: int = 0
     # Inspectable valence changes: episode id, store step, delta, value, kind.
     history: list = field(default_factory=list)
+    # Write gain at stamp time. 1 until a nonzero clock phase. Not a fact.
+    clock_gain: float = 1.0
 
 
 class EpisodicStore:
@@ -310,6 +332,8 @@ class EpisodicStore:
         self._slots: list[Slot] = []
         self._step = 0
         self._episode = 0
+        self._clock_angle = 0.0
+        self._clock_log: list = []
 
     def __len__(self) -> int:
         return len(self._slots)
@@ -318,6 +342,41 @@ class EpisodicStore:
         self._slots.clear()
         self._step = 0
         self._episode = 0
+        self._clock_angle = 0.0
+        self._clock_log = []
+
+    def clock_phase(self) -> float:
+        """``sin(angle)``. Angle 0 is 0, so the write and the decay stay put."""
+        return float(math.sin(float(self._clock_angle)))
+
+    def clock_set(self, angle: float) -> dict:
+        """Set the global angle. The argument is a number, not fact text."""
+        value = float(angle)
+        if not math.isfinite(value):
+            raise ValueError("clock angle must be finite")
+        self._clock_angle = value
+        return self._clock_record("set")
+
+    def clock_tick(self, steps: int = 1) -> dict:
+        """Advance the angle by ``steps * CLOCK_STEP``. No text argument."""
+        count = int(steps)
+        self._clock_angle = float(self._clock_angle) + count * float(CLOCK_STEP)
+        return self._clock_record("tick")
+
+    def _clock_record(self, kind: str) -> dict:
+        phase = float(self.clock_phase())
+        event = {
+            "kind": str(kind),
+            "angle": float(self._clock_angle),
+            "phase": phase,
+            "gain": float(clock_write_gain(phase)),
+        }
+        self._clock_log.append(event)
+        return dict(event)
+
+    def clock_log(self) -> tuple:
+        """Phase changes only. Each row is kind, angle, phase, and gain."""
+        return tuple(dict(event) for event in self._clock_log)
 
     @property
     def slots(self) -> Tuple[Slot, ...]:
@@ -447,9 +506,16 @@ class EpisodicStore:
         factor = float(decay)
         if not 0.0 < factor < 1.0:
             raise ValueError("replay decay must be in (0, 1)")
+        # Phase 0 keeps the integer power. A nonzero phase scales the exponent
+        # and does not scale valence decay.
+        rate = float(clock_decay_rate(self.clock_phase()))
         for slot in self._slots:
             slot.age = int(slot.age) + 1
-            slot.strength = float(factor ** int(slot.age))
+            age = int(slot.age)
+            if rate == 1.0:
+                slot.strength = float(factor ** age)
+            else:
+                slot.strength = float(factor ** (age * rate))
         self.decay_valence(factor)
 
     def next_episode(self) -> int:

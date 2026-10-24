@@ -90,6 +90,12 @@ PATH_FLAGS = (
         "varies": "adds sign * step on that slot, decays with replay, scales the residual; no extra forward and no text score",
         "retries": False,
     },
+    {
+        "path": "circadian clock",
+        "when": "a clock angle is set or ticked, and again when decay runs",
+        "varies": "scales that slot's write strength and the decay exponent; phase 0 leaves both unchanged; no extra forward and no text",
+        "retries": False,
+    },
 )
 
 

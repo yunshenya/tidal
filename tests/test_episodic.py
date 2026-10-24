@@ -804,3 +804,55 @@ def test_experience_valence_accumulates_revises_and_decays():
     assert copied[0].valence == 0.0
     assert copied[0].history == []
     assert copied[0].answer == "other"
+
+
+def test_clock_phase_zero_is_identity_and_a_nonzero_phase_scales_decay():
+    import math
+
+    import tidal.episodic as episodic
+
+    store = EpisodicStore(capacity=4, dk=4, dv=4, overwrite_cos=0.9)
+    key = np.array([1.0, 0.0, 0.0, 0.0])
+    assert store.clock_phase() == 0.0
+    assert store.write(key, np.array([1.0, 0, 0, 0]), name="ada", rel="note", answer="broom")
+    episode = store.next_episode()
+    store.add_experience("ada", "note", 1, 0.5, source="ada keeps broom.", episode_id=episode)
+    store.recompute_decay(0.5)
+    assert store.slots[0].strength == 0.5
+    assert store.slots[0].valence == 0.25
+    store.clear()
+    assert store.clock_phase() == 0.0
+    assert store.clock_log() == ()
+    high = store.clock_set(math.pi / 2)
+    assert high["kind"] == "set"
+    assert set(high) == {"kind", "angle", "phase", "gain"}
+    assert high["phase"] == 1.0
+    span = float(episodic.CLOCK_SPAN)
+    assert high["gain"] == pytest.approx(1.0 + span)
+    assert "broom" not in repr(store.clock_log())
+    assert store.write(key, np.array([1.0, 0, 0, 0]), name="ada", rel="note", answer="broom")
+    store.add_experience("ada", "note", 1, 0.5, source="ada keeps broom.", episode_id=store.next_episode())
+    store.recompute_decay(0.5)
+    assert store.slots[0].strength == pytest.approx(0.5 ** (1.0 - span))
+    # Valence decay stays the replay factor. The clock does not scale it.
+    assert store.slots[0].valence == 0.25
+    store.refresh_strength([0])
+    assert store.slots[0].strength == 1.0
+    store.clear()
+    store.clock_set(-math.pi / 2)
+    assert store.write(key, np.array([1.0, 0, 0, 0]), name="ada", rel="note", answer="ledger")
+    store.recompute_decay(0.5)
+    assert store.slots[0].strength == pytest.approx(0.5 ** (1.0 + span))
+    blob = repr(store.clock_log())
+    assert "ledger" not in blob
+    assert "broom" not in blob
+    tick = store.clock_tick()
+    assert tick["kind"] == "tick"
+    assert set(tick) == {"kind", "angle", "phase", "gain"}
+    original = float(episodic.CLOCK_SPAN)
+    episodic.CLOCK_SPAN = 1.0
+    try:
+        assert episodic.clock_decay_rate(1.0) == 0.0
+        assert episodic.clock_write_gain(-1.0) == 0.0
+    finally:
+        episodic.CLOCK_SPAN = original

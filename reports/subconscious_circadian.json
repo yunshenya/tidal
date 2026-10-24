@@ -1,0 +1,603 @@
+{
+  "bank_kind": "held",
+  "bank_sha256": "fb46f7faf4e5b995553a37f036ae77e112faeec7b9cffbe4864280df625ea7af",
+  "cost": {
+    "buffers": 66931,
+    "clock_span": 0.25,
+    "clock_tick_forwards": 0,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "query_forwards": 1,
+    "remember_forwards": 2
+  },
+  "exact": {
+    "birthday_exact": 1,
+    "birthday_off_equal": 0,
+    "birthday_off_n": 5,
+    "birthday_off_takeover": 0.0,
+    "birthday_prefix": 1,
+    "birthday_question_text": "October 23, 2013",
+    "birthday_stored": "October 23, 2013",
+    "phone_exact": 1,
+    "phone_off_equal": 0,
+    "phone_off_n": 5,
+    "phone_off_takeover": 0.0,
+    "phone_prefix": 0,
+    "phone_question_text": "+1-722-555-8424",
+    "phone_stored": "+1-722-555-8424"
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 0,
+      "n": 8,
+      "rows": [
+        {
+          "delta": 0.004872322082519531,
+          "flip": 0,
+          "id": "circadian-held-choice-0",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.011147499084472656,
+          "flip": 0,
+          "id": "circadian-held-choice-1",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0016794204711914062,
+          "flip": 0,
+          "id": "circadian-held-choice-2",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0011882781982421875,
+          "flip": 0,
+          "id": "circadian-held-choice-3",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.0009593963623046875,
+          "flip": 0,
+          "id": "circadian-held-choice-4",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0018482208251953125,
+          "flip": 0,
+          "id": "circadian-held-choice-5",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": 0.0006618499755859375,
+          "flip": 0,
+          "id": "circadian-held-choice-6",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0023355484008789062,
+          "flip": 0,
+          "id": "circadian-held-choice-7",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.868271213091396,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Chart coinage permanent integral leaflet.",
+          "text": "The 19th century was a period of"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart homologous coursework conceive natives.",
+          "text": "The essay is a good example of a good essay"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart stringent optimization popped conventional.",
+          "text": "The first thing to do is to get the data"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart spatial mentioned collision recognising.",
+          "text": "The spatial information is used to identify the location of"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart mythology enrolled surrendered foothills.",
+          "text": "The 1990s saw the emergence"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart viewpoints compliance backpack agencies.",
+          "text": "The most common types of compliance documents are:"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart cypress voyage presided propag.",
+          "text": "The first of these was the \"Cypress"
+        },
+        {
+          "hits": [],
+          "prompt": "Chart shocks micrograms derivatives hurdles.",
+          "text": "The first is the fact that the price of a"
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": -0.007207155227661133,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.0044521447044748585,
+          "delta": -0.017019271850585938,
+          "id": "circadian-held-nll-0",
+          "nll_inject": 11.987442970275879,
+          "nll_nomem": 12.004462242126465
+        },
+        {
+          "confidence": 0.0006827383340672621,
+          "delta": -0.000576019287109375,
+          "id": "circadian-held-nll-1",
+          "nll_inject": 21.95005989074707,
+          "nll_nomem": 21.95063591003418
+        },
+        {
+          "confidence": 0.003643228626680345,
+          "delta": -0.0015039443969726562,
+          "id": "circadian-held-nll-2",
+          "nll_inject": 12.869367599487305,
+          "nll_nomem": 12.870871543884277
+        },
+        {
+          "confidence": 0.002575985849482751,
+          "delta": -0.0037622451782226562,
+          "id": "circadian-held-nll-3",
+          "nll_inject": 15.087837219238281,
+          "nll_nomem": 15.091599464416504
+        },
+        {
+          "confidence": 0.0020482157470337603,
+          "delta": -0.004378318786621094,
+          "id": "circadian-held-nll-4",
+          "nll_inject": 15.149567604064941,
+          "nll_nomem": 15.153945922851562
+        },
+        {
+          "confidence": 0.00830976045796017,
+          "delta": -0.015999794006347656,
+          "id": "circadian-held-nll-5",
+          "nll_inject": 14.6608304977417,
+          "nll_nomem": 14.676830291748047
+        },
+        {
+          "confidence": 0.0071225249200680685,
+          "delta": -0.014154434204101562,
+          "id": "circadian-held-nll-6",
+          "nll_inject": 13.22237777709961,
+          "nll_nomem": 13.236532211303711
+        },
+        {
+          "confidence": 7.49393239407592e-05,
+          "delta": -0.000263214111328125,
+          "id": "circadian-held-nll-7",
+          "nll_inject": 11.617069244384766,
+          "nll_nomem": 11.617332458496094
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Chart coinage permanent integral leaflet.",
+          "takeover": 0,
+          "text": "The opposite of the opposite of the opposite of the opposite of the opposite of the opposite of the opposite of the opposite of the opposite of the opposite of"
+        },
+        {
+          "prompt": "Chart homologous coursework conceive natives.",
+          "takeover": 0,
+          "text": "The development of this paper is similar to the development of this paper is similar to the development of this paper is similar to the development of this paper is"
+        },
+        {
+          "prompt": "Chart stringent optimization popped conventional.",
+          "takeover": 0,
+          "text": "The next step is to be able to be able to be able to be able to be able to be able to be able to be able to be"
+        },
+        {
+          "prompt": "Chart spatial mentioned collision recognising.",
+          "takeover": 0,
+          "text": "In the same way, we analyse in the same way, we analyse, we analyse, we analyse, we analyse, we analyse, we analyse,"
+        },
+        {
+          "prompt": "Phone carried by Lakitifu along the quay?",
+          "takeover": 0,
+          "text": "Lakitifu?"
+        },
+        {
+          "prompt": "Birthday stored by Lakitifu above the loft?",
+          "takeover": 1,
+          "text": "October 23, 2013"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Chart coinage permanent integral leaflet.",
+          "takeover": 0,
+          "text": "The next step was to arrange for the"
+        },
+        {
+          "prompt": "Chart homologous coursework conceive natives.",
+          "takeover": 0,
+          "text": "The next step was to"
+        },
+        {
+          "prompt": "Chart stringent optimization popped conventional.",
+          "takeover": 0,
+          "text": "The next step was to make a lot of"
+        },
+        {
+          "prompt": "Chart spatial mentioned collision recognising.",
+          "takeover": 0,
+          "text": "The next step is to"
+        },
+        {
+          "prompt": "Phone carried by Lakitifu along the quay?",
+          "takeover": 0,
+          "text": "+1-722-555-8424"
+        },
+        {
+          "prompt": "Birthday stored by Lakitifu above the loft?",
+          "takeover": 0,
+          "text": "The first thing you do is find the Lakitifu, and then arrange for Lakitifu to be found by a Lak"
+        }
+      ],
+      "phone_question": 0,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "phases": {
+    "content_free": true,
+    "decay_rate_high": 0.75,
+    "decay_rate_low": 1.25,
+    "mean_decay_gap": 0.17415534987450326,
+    "mean_high": 1.9417377933859825,
+    "mean_low": -1.6769112944602966,
+    "n": 8,
+    "n_audit": 8,
+    "n_decay_order": 8,
+    "n_high_pos": 8,
+    "n_low_neg": 8,
+    "n_strength": 8,
+    "phase0_exact": true,
+    "rows": [
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 2.4944605827331543,
+        "hit": 1,
+        "id": "circadian-held-phase-0",
+        "low_delta": -1.4044322967529297,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 1.7370777130126953,
+        "hit": 1,
+        "id": "circadian-held-phase-1",
+        "low_delta": -1.5759296417236328,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 2.0631484985351562,
+        "hit": 1,
+        "id": "circadian-held-phase-2",
+        "low_delta": -1.7700634002685547,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 2.781567096710205,
+        "hit": 1,
+        "id": "circadian-held-phase-3",
+        "low_delta": -2.624368667602539,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 2.5789806246757507,
+        "hit": 1,
+        "id": "circadian-held-phase-4",
+        "low_delta": -2.074629306793213,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 0.5142173767089844,
+        "hit": 1,
+        "id": "circadian-held-phase-5",
+        "low_delta": -0.6756076812744141,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 2.5727596282958984,
+        "hit": 1,
+        "id": "circadian-held-phase-6",
+        "low_delta": -2.576107978820801,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      },
+      {
+        "audit": true,
+        "decay_high": 0.5946035575013605,
+        "decay_low": 0.42044820762685725,
+        "decay_order": true,
+        "decay_zero": 0.5,
+        "high_delta": 0.7916908264160156,
+        "hit": 1,
+        "id": "circadian-held-phase-7",
+        "low_delta": -0.7141513824462891,
+        "strength_high": 1.25,
+        "strength_low": 0.75,
+        "strength_match": true
+      }
+    ],
+    "write_gain_high": 1.25
+  },
+  "phases_s": {
+    "cost": 0.07360597899969434,
+    "neutral": 12.080804746001377,
+    "phases": 4.113256534001266
+  },
+  "protocol": "subconscious-circadian-v1",
+  "replay_direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.32952404022216797,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-0",
+          "margin": -1.5831527709960938,
+          "nomem_margin": -1.9126768112182617,
+          "stored_lift": -0.8544893264770508,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.9636983871459961,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-1",
+          "margin": 0.9866571426391602,
+          "nomem_margin": 0.022958755493164062,
+          "stored_lift": -2.6277456283569336,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.16751575469970703,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-2",
+          "margin": 1.7334184646606445,
+          "nomem_margin": 1.5659027099609375,
+          "stored_lift": -0.5639123916625977,
+          "strength": 1.0
+        },
+        {
+          "delta": 2.1696529388427734,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-3",
+          "margin": 5.219482421875,
+          "nomem_margin": 3.0498294830322266,
+          "stored_lift": -2.1630401611328125,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.9227018356323242,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-4",
+          "margin": 1.464756965637207,
+          "nomem_margin": -0.4579448699951172,
+          "stored_lift": -1.837881088256836,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.7418718338012695,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-5",
+          "margin": 3.9559755325317383,
+          "nomem_margin": 3.2141036987304688,
+          "stored_lift": -1.415445327758789,
+          "strength": 1.0
+        },
+        {
+          "delta": 3.651744842529297,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-6",
+          "margin": 2.0893421173095703,
+          "nomem_margin": -1.5624027252197266,
+          "stored_lift": -1.3626785278320312,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.6744203567504883,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-7",
+          "margin": 3.996156692504883,
+          "nomem_margin": 2.3217363357543945,
+          "stored_lift": -1.7997827529907227,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 1.452641248703003,
+        "mean_stored_lift": -1.5781219005584717,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 8
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 27.063646214082837,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-0",
+          "margin": 23.569672482088208,
+          "nomem_margin": -3.493973731994629,
+          "stored_lift": 16.01508034951985,
+          "strength": 1.0
+        },
+        {
+          "delta": 27.008492521941662,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-1",
+          "margin": 27.419674925506115,
+          "nomem_margin": 0.4111824035644531,
+          "stored_lift": 13.871454291045666,
+          "strength": 1.0
+        },
+        {
+          "delta": 26.111989349126816,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-2",
+          "margin": 26.10615572333336,
+          "nomem_margin": -0.005833625793457031,
+          "stored_lift": 15.082558006048203,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.970106843858957,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-3",
+          "margin": 14.192668680101633,
+          "nomem_margin": -1.7774381637573242,
+          "stored_lift": 16.598287347704172,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.311187893152237,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-4",
+          "margin": 11.6376191675663,
+          "nomem_margin": -3.6735687255859375,
+          "stored_lift": 16.34810271859169,
+          "strength": 1.0
+        },
+        {
+          "delta": 14.425395665690303,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-5",
+          "margin": 14.214806256815791,
+          "nomem_margin": -0.21058940887451172,
+          "stored_lift": 14.219082532450557,
+          "strength": 1.0
+        },
+        {
+          "delta": 19.140147924423218,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-6",
+          "margin": 15.837314367294312,
+          "nomem_margin": -3.3028335571289062,
+          "stored_lift": 12.676599264144897,
+          "strength": 1.0
+        },
+        {
+          "delta": 20.96598209440708,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-7",
+          "margin": 19.958177223801613,
+          "nomem_margin": -1.0078048706054688,
+          "stored_lift": 15.476359024643898,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 20.74961856333539,
+        "mean_stored_lift": 15.035940441768616,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "wall_s": 16.267667259002337
+}
