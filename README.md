@@ -239,6 +239,14 @@ The per-token cue export is what generation injects. `GrowbrainBackend.encode_hi
 
 `source` is `cue` or `none` on the cue path. `spontaneous` is a no-cue offline tick. The same fields are exported on each offline tick. `decay` is `exp(-dt / tau)` when no wall time has passed since the trigger, and otherwise the lower of that factor and `exp(-elapsed / wall_tau)`. The drifted internal clock is not an exported field. The live `interface_version` is 6. `mem_dim` 64 is not a field and is not the `vec` width. tidal only supplies these signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 
+### Packet batch and gate scalars
+
+This is the locked cross-repo contract with growbrain. `cue_fields` and growbrain `TidalPacket.from_dict` use batch `B=1`. Live dialogue is one utterance. Multi-sample evaluation uses growbrain `TidalAdapter.bundle([packet, …])`: one packet per sample. Exporters do not emit `(B, T, H)` with `B>1` on the single-packet path.
+
+The scalars growbrain's `ActionInitiationGate` consumes — `valence`, `sleep_pressure`, `arousal`, and `circadian` (phase) — are one number per sample: the last token, which is the state after the prompt. Per-token `vec`, `strength_confidence`, `activation`, and `memory_id` stay for injection.
+
+Code on both sides is unchanged by this text. growbrain implements it at e2e `@00a9edd` and will mirror the same wording in `TIDAL_INTERFACE.md`.
+
 Low-level cross-sensory fusion is planned after text stage-1. The account is in [docs/architecture.md](docs/architecture.md). It has no code and adds no interface fields.
 
 ## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
