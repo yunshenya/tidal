@@ -79,14 +79,36 @@ def test_identity_overwrite_beats_earlier_near_duplicate():
     assert np.allclose(other.v, [1, 0, 0, 0])
 
 
-def test_overwrite_by_near_duplicate_key():
+def test_close_keys_with_different_relations_coexist():
     S = EpisodicStore(capacity=8, dk=4, dv=4, overwrite_cos=0.9)
     k = np.array([1.0, 0, 0, 0])
-    S.write(k, np.ones(4), name="a", rel="r1")
-    S.write(k * 1.01, np.full(4, 2.0), name="b", rel="r2")
+    S.write(k, np.ones(4), name="a", rel="r1", text="qelvorn morvexil tundravo")
+    S.write(k * 1.01, np.full(4, 2.0), name="b", rel="r2", text="qelvorn morvexil tundravo")
+    assert len(S) == 2
+    assert {slot.name for slot in S.slots} == {"a", "b"}
+
+
+def test_same_relation_surface_repeat_overwrites_and_a_different_fact_stays():
+    from tidal.episodic import token_jaccard
+
+    shared = "qelvorn morvexil tundravo saxpenul lirvoten hendaxom"
+    extra = shared + " brontelu"
+    swapped = "qelvorn morvexil tundravo saxpenul lirvoten yivkarnox"
+    assert token_jaccard(shared, extra) == pytest.approx(6 / 7)
+    assert token_jaccard(shared, swapped) == pytest.approx(5 / 7)
+    S = EpisodicStore(capacity=8, dk=4, dv=4, repeat_jaccard=0.85)
+    k = np.array([1.0, 0, 0, 0])
+    assert S.write(k, np.ones(4), name="a", rel="r1", text=shared)
+    assert S.write(k * 1.01, np.full(4, 2.0), name="b", rel="r1", text=extra)
     assert len(S) == 1
     assert S.slots[0].name == "b"
     assert np.allclose(S.slots[0].v, 2.0)
+    assert S.write(np.array([0.0, 1, 0, 0]), np.full(4, 3.0), name="c", rel="r1", text=swapped)
+    assert len(S) == 2
+    strict = EpisodicStore(capacity=4, dk=4, dv=4, repeat_jaccard=1.0)
+    assert strict.write(k, np.ones(4), name="a", rel="r1", text=shared)
+    assert strict.write(k, np.full(4, 2.0), name="b", rel="r1", text=extra)
+    assert len(strict) == 2
 
 
 def test_anonymous_slots_do_not_share_identity():
@@ -425,16 +447,15 @@ def test_span_overwrite_leaves_no_stale_phone():
     assert np.array_equal(ada.k, k_new)
 
 
-def test_near_duplicate_replaces_span_and_close_blend_is_not_a_phone():
+def test_close_keys_keep_both_spans_and_close_blend_is_not_a_phone():
     from tidal.episodic import decode_span, encode_span
     p_old, p_new = "+1-415-555-0134", "1990-03-21"
     k = np.array([1.0, 0, 0, 0])
     S = EpisodicStore(capacity=4, dk=4, dv=32, overwrite_cos=0.9)
     assert S.write(k, p_old, name="a", rel="phone")
     assert S.write(k * 1.01, p_new, name="b", rel="birthday")
-    assert len(S) == 1
-    assert S.read_span(k) == p_new
-    assert all(decode_span(s.v) != p_old for s in S.slots)
+    assert len(S) == 2
+    assert {decode_span(slot.v) for slot in S.slots} == {p_old, p_new}
 
     k1 = np.array([1.0, 0, 0, 0])
     k2 = np.array([0.95, np.sqrt(1.0 - 0.95 ** 2), 0.0, 0.0])
@@ -744,17 +765,18 @@ def test_continuum_injects_span_code_and_empty_stays_exact():
     assert np.allclose(s4[0], row0, atol=1e-5)
 
 
-def test_replay_recomputes_decay_and_merges_a_near_duplicate():
-    store = EpisodicStore(capacity=8, dk=4, dv=4, overwrite_cos=0.9)
+def test_replay_recomputes_decay_and_merges_a_same_relation_repeat():
+    store = EpisodicStore(capacity=8, dk=4, dv=4, overwrite_cos=0.9, repeat_jaccard=0.85)
     keep = np.array([1.0, 0.0, 0.0, 0.0])
     other = np.array([0.0, 1.0, 0.0, 0.0])
     twin = np.array([0.99, 0.01, 0.0, 0.0])
-    assert store.write(keep, np.array([1.0, 0, 0, 0]), name="ann", rel="one")
-    assert store.write(other, np.array([0, 1.0, 0, 0]), name="bob", rel="two")
-    # Same identity replaces bob and leaves a key that sits on ann.
-    assert store.write(twin, np.array([0, 0, 1.0, 0]), name="bob", rel="two")
+    shared = "qelvorn morvexil tundravo"
+    assert store.write(keep, np.array([1.0, 0, 0, 0]), name="ann", rel="one", text=shared)
+    assert store.write(other, np.array([0, 1.0, 0, 0]), name="bob", rel="two", text=shared)
+    # Same identity replaces bob. The key now sits on ann, but the relation does not.
+    assert store.write(twin, np.array([0, 0, 1.0, 0]), name="bob", rel="two", text=shared)
     assert len(store) == 2
-    assert store.near_duplicate_slots() == 2
+    assert store.near_duplicate_slots() == 0
     store._slots[0].salience = 0.2
     store._slots[1].salience = 0.9
     store.recompute_decay(0.5)
@@ -766,6 +788,13 @@ def test_replay_recomputes_decay_and_merges_a_near_duplicate():
     assert store.slots[1].age == 0
     assert store.slots[0].strength == 0.5
     merged = store.merge_near_duplicates(limit=1, protect=ranked[:1])
+    assert merged == 0
+    assert len(store) == 2
+    assert {slot.name for slot in store.slots} == {"ann", "bob"}
+    # A leftover same-relation copy uses the same predicate as write.
+    store.slots[1].rel = "one"
+    assert store.near_duplicate_slots() == 2
+    merged = store.merge_near_duplicates(limit=1, protect=[1])
     assert merged == 1
     assert len(store) == 1
     assert store.slots[0].name == "bob"
@@ -809,7 +838,8 @@ def test_experience_valence_accumulates_revises_and_decays():
     assert store.write(np.array([0.0, 1.0, 0.0, 0.0]), np.array([0, 1.0, 0, 0]), name="bea", rel="note")
     assert store.slots[-1].valence == 0.0
     assert store.slots[-1].history == []
-    # A cosine overwrite of a different name starts at valence 0.
+    # A close key and a different name do not inherit ada's valence, and they
+    # do not replace ada when the surface is not a repeat.
     near = np.array([0.99, 0.01, 0.0, 0.0])
     assert store.write(near, np.array([0, 0, 1.0, 0]), name="cy", rel="note", answer="other")
     copied = [slot for slot in store.slots if slot.name == "cy"]
@@ -817,6 +847,22 @@ def test_experience_valence_accumulates_revises_and_decays():
     assert copied[0].valence == 0.0
     assert copied[0].history == []
     assert copied[0].answer == "other"
+    assert any(slot.name == "ada" for slot in store.slots)
+    repeated = "ada keeps broom within acquires."
+    assert store.write(near, np.array([0, 0, 1.0, 0]), name="dee", rel="note", text=repeated)
+    # ada has no surface text, so this is not a repeat of ada.
+    assert any(slot.name == "ada" for slot in store.slots)
+    assert store.write(
+        np.array([0.0, 0.0, 1.0, 0.0]),
+        np.array([0, 0, 0, 1.0]),
+        name="cy",
+        rel="note",
+        text=repeated,
+    )
+    assert len([slot for slot in store.slots if slot.text == repeated]) == 1
+    kept = next(slot for slot in store.slots if slot.text == repeated)
+    assert kept.name == "cy"
+    assert kept.valence == 0.0
 
 
 def test_clock_phase_zero_is_identity_and_a_nonzero_phase_scales_decay():

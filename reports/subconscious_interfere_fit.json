@@ -1,0 +1,436 @@
+{
+  "bank_sha256": "6f9530eb9a2684d258e7b2cd5714c61bb69fd6eb5950f5193e91f77d0d3130ba",
+  "cells": [
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": false,
+          "rule": "stay",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": false,
+      "threshold": 0.5
+    },
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": false,
+          "rule": "stay",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": false,
+      "threshold": 0.67
+    },
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": true,
+          "rule": "stay",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": true,
+      "threshold": 0.75
+    },
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": true,
+          "rule": "stay",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": true,
+      "threshold": 0.85
+    },
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": false,
+          "rule": "merge",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": true,
+          "rule": "stay",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": false,
+      "threshold": 0.92
+    },
+    {
+      "cases": [
+        {
+          "expect": 1,
+          "id": "exact-case",
+          "pass": true,
+          "rule": "merge",
+          "slots": 1
+        },
+        {
+          "expect": 1,
+          "id": "extra-token",
+          "pass": false,
+          "rule": "merge",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "one-word",
+          "pass": true,
+          "rule": "stay",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "disjoint-same-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "same-text-other-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "close-keys-different-text",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "empty-rel",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 2,
+          "id": "other-group",
+          "pass": true,
+          "rule": "two",
+          "slots": 2
+        },
+        {
+          "expect": 1,
+          "id": "identity-update",
+          "pass": true,
+          "rule": "one",
+          "slots": 1
+        }
+      ],
+      "pass": false,
+      "threshold": 1.0
+    }
+  ],
+  "complete": true,
+  "elapsed_s": 0.003436908998992294,
+  "git_sha": "f06f636aa55fc89ff6371ce74b0f9120e3f0f812",
+  "grid": [
+    0.5,
+    0.67,
+    0.75,
+    0.85,
+    0.92,
+    1.0
+  ],
+  "measure_bank": "0f5cbd1c3787f7cf1de93be89ee7b2b9b17a3ad5f5dc430e3d0b735d5fb97228",
+  "n_cases": 9,
+  "protocol": "subconscious-interfere-v1",
+  "selected": {
+    "threshold": 0.85
+  }
+}

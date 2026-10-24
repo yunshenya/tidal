@@ -22,7 +22,7 @@ An empty store adds zeros. With zero continuum adapters (a fresh model, or `leve
 一条事实是一个槽 `(k, v, name, rel, group)`。
 
 - 同一个 `(group, name, rel)`（`name` 非空）直接覆盖。新的键和值换上，旧键不会被补回去。
-- 身份对不上、但 `cos(k, k_i) > 0.9` 且在同一 `group` 里，当成同一事实的改写，也覆盖。身份匹配优先于这条近重复规则。
+- 身份对不上时，只有同一 `group`、同一非空关系、并且表面文本的 token Jaccard 不低于 `REPEAT_JACCARD`，才当成同一事实的重复覆盖。键余弦不再覆盖。身份匹配优先于这条重复规则。
 - 容量默认 256。满了淘汰最旧的写入时间（FIFO）。覆盖会刷新时间，刚更新的事实不会被当成旧槽丢掉。
 - 读出是 soft top-k：余弦最高的 4 个槽，温度 0.05 做 softmax，对 **value** 做凸组合（权重和为 1）。查询某个 `group` 时，能看见该群的槽和 `group is None` 的全局槽，看不见别的群。
 - 精确回忆读**赢的那个槽**里的码（`recall` / `recall_tokens`），不读混合残差。

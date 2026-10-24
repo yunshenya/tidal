@@ -176,7 +176,23 @@ def test_same_identity_overwrite_returns_new_value():
         mem.close()
 
 
-def test_replay_refreshes_the_top_slot_and_merges_the_near_duplicate(monkeypatch):
+def test_same_relation_exact_text_collapses_and_another_relation_stays():
+    mem = _byte_memory()
+    try:
+        assert mem.remember("code is Y", name="ada", rel="phone")
+        assert mem.remember("code is Y", name="bea", rel="city")
+        assert len(mem.store) == 2
+        assert mem.remember("code is Y", name="cal", rel="phone")
+        assert len(mem.store) == 2
+        assert {slot.name for slot in mem.store.slots} == {"bea", "cal"}
+        phone = next(slot for slot in mem.store.slots if slot.rel == "phone")
+        assert phone.text == "code is Y"
+        assert phone.valence == 0.0
+    finally:
+        mem.close()
+
+
+def test_replay_refreshes_the_top_slot_and_does_not_merge_across_relations(monkeypatch):
     import tidal.llm_memory as mod
 
     monkeypatch.setattr(mod, "REPLAY_EVERY", 4)
@@ -198,16 +214,17 @@ def test_replay_refreshes_the_top_slot_and_merges_the_near_duplicate(monkeypatch
         assert mem.remember("code is Y", name="bea", rel="city")
         report = mem.last_replay
         assert report is not None
-        assert report["merged"] == 1
-        assert report["control_n_slots"] - report["replay_n_slots"] == 1
-        assert report["control_near_dup_slots"] > report["replay_near_dup_slots"]
+        assert report["merged"] == 0
+        assert report["control_n_slots"] - report["replay_n_slots"] == 0
+        assert report["control_near_dup_slots"] == 0
+        assert report["replay_near_dup_slots"] == 0
         assert report["salient_gain"] >= 0.25
         assert report["replay_salient_mean"] == 1.0
-        assert len(mem.store) == 2
-        assert {slot.name for slot in mem.store.slots} == {"bea", "cal"}
+        assert len(mem.store) == 3
+        assert {slot.name for slot in mem.store.slots} == {"ada", "bea", "cal"}
         refreshed = [slot for slot in mem.store.slots if slot.strength == 1.0]
         decayed = [slot for slot in mem.store.slots if slot.strength == 0.5]
-        assert len(refreshed) == 1 and len(decayed) == 1
+        assert len(refreshed) == 1 and len(decayed) == 2
     finally:
         mem.close()
 
@@ -846,7 +863,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "f40b4a76386ac09a7e4104afc37ac965efd2725445daf7549777bf2f8f481fb3"
+    source = "c08a23fa75b5a938c4c5b6c1c891eba8ec9e8a539d711839f4bcf4ef1c62d63d"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 
