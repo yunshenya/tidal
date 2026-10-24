@@ -10,9 +10,6 @@ def test_require_names_the_extra(monkeypatch):
     # tidal.optional bound importlib at import time
     import tidal.optional as opt
     monkeypatch.setattr(opt.importlib, "import_module", boom)
-    with pytest.raises(ImportError, match=r"extra 'audio'") as e:
-        opt.require("soundfile", "audio")
-    assert "requirements-audio.txt" in str(e.value)
     with pytest.raises(ImportError, match=r"extra 'teacher'") as e:
         opt.require("sherpa_onnx", "teacher", pip_name="sherpa-onnx")
     assert "sherpa-onnx" in str(e.value) and "requirements-teacher.txt" in str(e.value)

@@ -1,63 +1,8 @@
-"""Regression coverage for data loss, split alignment, exports and causal replay."""
-import json
-import sqlite3
+"""Regression coverage for split alignment, exports and causal replay."""
 import numpy as np
 import pandas as pd
 import pytest
 import torch
-from tidal.shadow import run, store as S
-
-
-def shadow_env(tmp_path, monkeypatch):
-    monkeypatch.setattr(S, 'STATE', tmp_path / 'state')
-    monkeypatch.setattr(S, 'DB', tmp_path / 'state' / 'shadow.db')
-    monkeypatch.delenv('TIDAL_SHADOW_P4', raising=False)
-    monkeypatch.setattr(run, 'predict', lambda *args: None)
-    p = tmp_path / 'events.jsonl'
-    monkeypatch.setenv('TIDAL_SHADOW_JSONL', str(p))
-    return p
-
-
-def test_failed_ingest_rolls_back_cursor_and_events(tmp_path, monkeypatch):
-    p = shadow_env(tmp_path, monkeypatch)
-    ev = [dict(msg_id=str(i), conv='c', ts=10+i, bot_action='silent') for i in range(2)]
-    p.write_text(''.join(json.dumps(e)+'\n' for e in ev))
-    original = run.upsert_events
-    def fail_after_one(c, frame, now):
-        original(c, frame.iloc[:1], now)
-        raise RuntimeError('injected ingest failure')
-    monkeypatch.setattr(run, 'upsert_events', fail_after_one)
-    assert run.main(['--source', 'jsonl']) == 1
-    with S.connect() as c:
-        assert S.get_meta(c, 'jsonl_offset', 0) == 0
-        assert c.execute('select count(*) from events').fetchone()[0] == 0
-        assert c.execute('select status from runs').fetchone()[0] == 'error'
-    monkeypatch.setattr(run, 'upsert_events', original)
-    assert run.main(['--source', 'jsonl']) == 0
-    with S.connect() as c:
-        assert S.get_meta(c, 'jsonl_offset') == p.stat().st_size
-        assert c.execute('select count(*) from events').fetchone()[0] == 2
-
-
-def test_future_events_are_stored_but_excluded_from_labels(tmp_path, monkeypatch):
-    p = shadow_env(tmp_path, monkeypatch)
-    monkeypatch.setattr(run.time, 'time', lambda: 10000.)
-    ev = [dict(msg_id='old', conv='c', ts=100., speaker='a', bot_action='silent'),
-          dict(msg_id='future', conv='c', ts=20000., speaker='b', bot_action='speak')]
-    p.write_text(''.join(json.dumps(e)+'\n' for e in ev))
-    assert run.main(['--source', 'jsonl']) == 0
-    with S.connect() as c:
-        assert c.execute('select count(*) from events').fetchone()[0] == 2
-        # An unseen future event must not supply the old event's recheck label.
-        assert c.execute('select y_recheck from labels').fetchone()[0] == 6
-        assert c.execute('select count(*) from labels').fetchone()[0] == 1
-        conv = c.execute('select conv from events limit 1').fetchone()[0]
-        assert len(run.load_frame(c, [conv], 0., 10000.)) == 1
-    monkeypatch.setattr(run.time, 'time', lambda: 25000.)
-    assert run.main(['--source', 'jsonl']) == 0
-    with S.connect() as c:
-        assert c.execute('select count(*) from events').fetchone()[0] == 2
-        assert c.execute('select count(*) from labels').fetchone()[0] == 2
 
 
 def test_public_only_dataset_build(tmp_path, monkeypatch):
@@ -78,24 +23,6 @@ def test_public_only_dataset_build(tmp_path, monkeypatch):
     z = np.load(proc / 'p3.npz')
     assert z['W'].tolist() == [1.,1.]
     assert z['G'].shape == (2,17)
-
-
-def test_aishell_labels_share_converter_ids_and_tie_order(tmp_path, monkeypatch):
-    from tidal import phase5_data as P5
-    from tidal.public_data import convert as C
-    d = tmp_path / 'aishell4_seg'; d.mkdir()
-    def line(st, du, sp): return f'SPEAKER x 1 {st} {du} <NA> <NA> {sp} <NA> <NA>\n'
-    (d / '00_short.rttm').write_text(line(0,1,'A'))
-    segments = [(1.,1.,'B'),(0.,2.,'A')] + [(float(i*3),1.,'A' if i%2 else 'B') for i in range(2,30)]
-    (d / '01_kept.rttm').write_text(''.join(line(*s) for s in segments))
-    monkeypatch.setattr(P5,'DATA',tmp_path); monkeypatch.setattr(C,'DATA',tmp_path)
-    monkeypatch.setattr(C,'finish',lambda frames,*args,**kwargs:pd.concat(frames))
-    frame = C.aishell4(); labels = P5.aishell_labels()
-    assert set(frame.msg_id) == set(labels)
-    triples = [(s,s+du,sp) for s,du,sp in segments]
-    order = sorted(range(len(triples)),key=lambda k:(triples[k][1],triples[k][0],k))
-    yi,_ = P5.speech_interrupt([triples[i] for i in order])
-    assert np.allclose([labels[m][0] for m in frame.msg_id],yi,equal_nan=True)
 
 
 def test_bootstrap_ignores_single_class_draws():

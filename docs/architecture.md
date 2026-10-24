@@ -223,9 +223,11 @@ The cue itself is the planned reason a memory is retrieved. Tulving and Thomson 
 
 Each offline tick exports the same fields. tidal only supplies the signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 
-## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
+## Not part of tidal: brain-layer code removed (2026-10-24)
 
-`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace in the store section.
+Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). On 2026-10-24 this pull request removed the duplex, turn, audio, modalities, phase5, head-training, and shadow packages that had been kept here pending handoff. Historical writeups stay in `reports/phase1.md` through `reports/phase5.md`. They are not live gates.
+
+`HEAD_DIMS` in `tidal/model.py` was left in place. `tidal/vap.py`, `tidal/continuum.py`, and `tests/test_episodic.py` still import that turn model. Continuum `heads` still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace in the store section.
 
 ## Multimodal fusion division (PLANNED, after text stage-1)
 
@@ -253,4 +255,4 @@ The brain layer (growbrain) would form new pairings and semantic-level fusion, i
 
 Hypothesis, on weak evidence: the amygdala does fast cross-modal affect tagging.
 
-The modules in the previous section stay in the repository pending handoff or removal. This planned split leaves them there.
+The duplex, turn, audio, modalities, phase5, head-training, and shadow packages were removed on 2026-10-24. This planned split does not bring them back.

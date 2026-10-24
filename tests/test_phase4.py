@@ -76,14 +76,3 @@ def test_continuum_strictly_causal_and_static_equivalence():
     s, _, _ = replay(Continuum(m, _cfg(dict(levels=()))), H, V, ts, conv, None)
     with torch.no_grad(): ref = m.vap(torch.from_numpy(H)).numpy()
     assert np.allclose(s, ref, atol=1e-6)
-
-def test_duplex_encoder_with_emotion_and_ssm_backbone():
-    import numpy as np
-    from tidal import features_g as FG
-    from tidal.vap import VAPModel
-    from tidal.duplex import EventEncoder, Event
-    m = VAPModel(len(FG.FEAT_G) + 11, kind="mamba3_siso").eval()
-    enc = EventEncoder(m, np.zeros(FG.NB), np.ones(FG.NB))
-    emo = [0.1] * 8 + [0.3, 0.5]
-    for i in range(5): enc.push(Event(f"e{i}", 1.7e9 + i, "other" if i % 2 else "self", emotion=emo if i % 2 else None))
-    assert enc.last is not None and enc.h.shape[-1] == m.vap[0].in_features and enc.last_affect == emo
