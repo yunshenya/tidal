@@ -69,8 +69,12 @@ the whole model, because they need the logits. The per-token add into this langu
 activation and the exported value do not include it, and neither does the
 training broadcast inside ``teacher_force_loss``. Each stored slot's
 ``modality`` is ``text``, and every exported token carries that string.
-``interface_version`` 3 is the version-2 activation plus this field. There
-is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
+``interface_version`` 3 is the version-2 activation plus this field.
+``interface_version`` 4 adds ``sleep_pressure`` and ``source`` on every
+exported token. ``source`` is ``cue``, ``spontaneous``, or ``none``. The cue
+path emits ``cue`` or ``none``. ``spontaneous`` is an offline tick with no
+external cue. ``sleep_pressure`` is process S in ``[0, 1]``. It is not part
+of the residual. There is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -137,6 +141,7 @@ from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
+from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
 
 DEFAULT_MODEL = "HuggingFaceTB/SmolLM2-135M"
 DEFAULT_CAPACITY = 256
@@ -181,9 +186,10 @@ MIX_TEMP = 0.05
 # cue_dim is the hidden width of whatever layer this wrapper injects at.
 # Activation is a_trig * fan_factor * decay. interface_version 2 was that
 # formula. interface_version 3 adds modality on every stored slot and every
-# exported token. The value is "text". Lambda is not part of the version.
-# There is no perceptual-fingerprint field.
-CUE_INTERFACE_VERSION = 3
+# exported token. The value is "text". interface_version 4 adds
+# sleep_pressure and source. Lambda is not part of the version. Process S
+# is not part of the residual. There is no perceptual-fingerprint field.
+CUE_INTERFACE_VERSION = 4
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
 CUE_HALF_LIFE = 30.0
@@ -1453,6 +1459,10 @@ class LLMMemory:
     another layer keeps the zero-init MLP, so the add is ``v``, until
     :meth:`load_inject`. There is no switch. Model calls go through
     :class:`tidal.backend.SmolLM2Backend`. That is the only backend.
+    ``sleep_pressure`` is process S. ``wake_for`` raises it and ``sleep_for``
+    lowers it. Neither call changes the residual. ``sleep_for`` rewrites a
+    slot only when prediction error clears a threshold, and the audit of that
+    rewrite has no fact text. ``cue_fields`` and ``generate`` do not read it.
     """
 
     def __init__(
@@ -1530,6 +1540,11 @@ class LLMMemory:
         self.last_surprise: Optional[float] = None
         self.last_write_score: float = 0.0
         self.last_replay: Optional[dict] = None
+        # Process S. Starts at the floor, not at 0. store.clear() does not
+        # move it. Cue retrieval does not move it.
+        self._sleep_pressure = float(SLEEP_FLOOR)
+        self._offline_tick = 0
+        self._sleep_audit: list = []
         # Kept so older callers can assign it. The cue path does not read it.
         self.injection_readout = "cue"
         # Registered for the life of this wrapper. A forward that is not a
@@ -1618,7 +1633,9 @@ class LLMMemory:
             residuals.append(residual)
             new_states.append(state)
         self.cue_state = new_states[0] if int(batch) == 1 else new_states
-        self.last_cue_fields = _pack_cue_batch(packed, float(self.clock_phase()))
+        self.last_cue_fields = _pack_cue_batch(
+            packed, float(self.clock_phase()), pressure=float(self.sleep_pressure)
+        )
         add = np.stack(residuals, 0)
         self.last_added = torch.tensor(np.asarray(add[0, -1], dtype=np.float32))
         if np.count_nonzero(add) == 0:
@@ -2080,19 +2097,28 @@ class LLMMemory:
         """One token from ``state``. ``cue`` is the raw hidden row, not the centered match."""
         row = np.asarray(cue, dtype=np.float64).reshape(1, -1)
         fields, _residual, new_state = self._trace_numpy(row, state=state if state is not None else CueState())
-        return new_state, _pack_cue_fields(fields, float(self.clock_phase()))
+        return new_state, _pack_cue_fields(
+            fields, float(self.clock_phase()), pressure=float(self.sleep_pressure)
+        )
 
     def cue_fields(self, text: str) -> dict:
         """Deterministic per-token fields for ``text`` and the current store.
 
-        Slot strength is not changed. The tensors are ``[1, T]`` or
-        ``[1, T, cue_dim]``. ``memory_id`` is -1 and ``vec`` is zeros when no
-        memory is active. ``modality`` is ``text`` on every token.
-        ``interface_version`` is :data:`CUE_INTERFACE_VERSION`, which is 3.
+        Slot strength is not changed. Process S is not changed. The tensors
+        are ``[1, T]`` or ``[1, T, cue_dim]``. ``memory_id`` is -1 and ``vec``
+        is zeros when no memory is active. ``modality`` is ``text`` on every
+        token. ``source`` is ``cue`` or ``none``, never ``spontaneous``.
+        ``sleep_pressure`` repeats the current process S. ``interface_version``
+        is :data:`CUE_INTERFACE_VERSION`, which is 4.
         """
         if len(self.store) == 0:
             hidden = self.cue_hidden(text)
-            fields = _empty_cue_fields(hidden.shape[0], hidden.shape[1], float(self.clock_phase()))
+            fields = _empty_cue_fields(
+                hidden.shape[0],
+                hidden.shape[1],
+                float(self.clock_phase()),
+                pressure=float(self.sleep_pressure),
+            )
             self._last_candidates = [[] for _ in range(int(hidden.shape[0]))]
             self.cue_state = CueState()
             self.last_cue_fields = fields
@@ -2100,7 +2126,9 @@ class LLMMemory:
             return fields
         hidden = self.cue_hidden(text)
         numpy_fields, residual, state = self._trace_numpy(hidden, state=CueState())
-        packed = _pack_cue_fields(numpy_fields, float(self.clock_phase()))
+        packed = _pack_cue_fields(
+            numpy_fields, float(self.clock_phase()), pressure=float(self.sleep_pressure)
+        )
         self._last_candidates = [list(row) for row in numpy_fields["candidates"]]
         self.cue_state = state
         self.last_cue_fields = packed
@@ -2201,6 +2229,128 @@ class LLMMemory:
 
     def clock_log(self) -> tuple:
         return self.store.clock_log()
+
+    @property
+    def sleep_pressure(self) -> float:
+        """Process S in ``[SLEEP_FLOOR, 1]``. Not part of the residual."""
+        return float(self._sleep_pressure)
+
+    def wake_for(self, duration: float) -> float:
+        """Raise process S. Does not read the store and does not replay."""
+        self._sleep_pressure = float(wake_after(self._sleep_pressure, duration))
+        return self.sleep_pressure
+
+    def sleep_for(self, duration: float) -> dict:
+        """Lower process S, then reconsolidate. Does not assign 0.
+
+        Duration 0 leaves the pressure and the store alone. A positive
+        duration runs one prediction-error sweep and then ``floor(duration)``
+        offline ticks. Those ticks can be spontaneous. The sweep's audit
+        rows have no fact text.
+        """
+        before = float(self._sleep_pressure)
+        after = float(sleep_after(before, duration))
+        self._sleep_pressure = after
+        if float(duration) == 0.0:
+            return {
+                "pressure_before": before,
+                "pressure_after": after,
+                "drop": 0.0,
+                "replay": [],
+                "ticks": [],
+            }
+        replay = self._reconsolidate_store()
+        ticks = [self._one_offline_tick() for _ in range(int(math.floor(float(duration))))]
+        return {
+            "pressure_before": before,
+            "pressure_after": float(self._sleep_pressure),
+            "drop": float(before - self._sleep_pressure),
+            "replay": replay,
+            "ticks": ticks,
+        }
+
+    def offline_ticks(self, count: int) -> list:
+        """No-cue ticks. Does not change process S. May recall one slot."""
+        if isinstance(count, bool) or not isinstance(count, int):
+            raise TypeError("offline tick count must be an int")
+        if count < 0:
+            raise ValueError("offline tick count must be >= 0")
+        return [self._one_offline_tick() for _ in range(count)]
+
+    def sleep_audit(self) -> tuple:
+        """Copies of reconsolidation rows. Retrieval does not call this."""
+        return tuple(dict(row) for row in self._sleep_audit)
+
+    def _reconsolidate_store(self) -> list:
+        return [self._reconsolidate_index(index) for index in range(len(self.store._slots))]
+
+    def _reconsolidate_index(self, index: int) -> dict:
+        slot = self.store._slots[int(index)]
+        before = float(slot.strength)
+        text = slot.text
+        answer = slot.answer
+        result = reconsolidate(slot.k, slot.v, before)
+        if result["updated"]:
+            slot.v = np.asarray(result["value"], dtype=np.float64).copy()
+            slot.strength = float(result["strength"])
+        if slot.text != text or slot.answer != answer:
+            raise RuntimeError("replay changed raw text")
+        row = audit_row(
+            int(index),
+            result["error"],
+            bool(result["updated"]),
+            before,
+            float(slot.strength),
+        )
+        self._sleep_audit.append(row)
+        return dict(row)
+
+    def _spontaneous_index(self) -> int:
+        slots = self.store._slots
+        return spontaneous_winner(
+            [float(slot.salience) for slot in slots],
+            [float(slot.strength) for slot in slots],
+        )
+
+    def _one_offline_tick(self) -> dict:
+        tick = int(self._offline_tick)
+        self._offline_tick = tick + 1
+        pressure = float(self.sleep_pressure)
+        if not spontaneous_due(tick, pressure, len(self.store)):
+            return _empty_cue_fields(
+                1, int(self.cue_dim), float(self.clock_phase()), pressure=pressure
+            )
+        index = self._spontaneous_index()
+        self._reconsolidate_index(index)
+        return self._spontaneous_export(index, pressure)
+
+    def _spontaneous_export(self, index: int, pressure: float) -> dict:
+        slot = self.store._slots[int(index)]
+        if str(slot.modality) != "text":
+            raise ValueError("modality must be text")
+        width = int(self.cue_dim)
+        vec = np.asarray(slot.v, dtype=np.float32).reshape(-1)
+        if vec.shape != (width,):
+            raise RuntimeError("spontaneous value width does not match cue_dim")
+        offset = float(VALENCE_SPAN) * math.tanh(float(slot.valence))
+        phase = float(self.clock_phase())
+        level = float(pressure)
+        return {
+            "interface_version": int(CUE_INTERFACE_VERSION),
+            "cue_dim": width,
+            "memory_id": torch.tensor([[int(index)]], dtype=torch.long),
+            "vec": torch.tensor(vec, dtype=torch.float32).reshape(1, 1, width),
+            "activation": torch.tensor([[float(CUE_A_TRIG)]], dtype=torch.float32),
+            "strength_confidence": torch.tensor([[float(slot.strength)]], dtype=torch.float32),
+            "valence": torch.tensor([[offset]], dtype=torch.float32),
+            "modality": [["text"]],
+            "circadian_phase": torch.tensor([[phase]], dtype=torch.float32),
+            "triggered": torch.zeros((1, 1), dtype=torch.bool),
+            "gap": torch.full((1, 1), float("nan"), dtype=torch.float32),
+            "winner_cosine": torch.full((1, 1), float("nan"), dtype=torch.float32),
+            "sleep_pressure": torch.full((1, 1), level, dtype=torch.float32),
+            "source": [["spontaneous"]],
+        }
 
     def injection(self, prompt: str) -> np.ndarray:
         """Residual at the last prompt token. Zeros when that token is inactive."""
@@ -2373,9 +2523,31 @@ class LLMMemory:
         self.inject.to(self._device)
 
 
-def _empty_cue_fields(steps: int, cue_dim: int, phase: float) -> dict:
+def _export_pressure(pressure: float) -> float:
+    value = float(pressure)
+    if not math.isfinite(value) or value < 0.0 or value > 1.0:
+        raise ValueError("sleep_pressure must be in [0, 1]")
+    return value
+
+
+def _token_sources(memory_id, triggered) -> list:
+    """Cue-path source. ``spontaneous`` is not produced here."""
+    mids = np.asarray(memory_id).reshape(-1)
+    flags = np.asarray(triggered).reshape(-1)
+    if mids.shape[0] != flags.shape[0]:
+        raise ValueError("source length mismatch")
+    sources = []
+    for mid, flag in zip(mids.tolist(), flags.tolist()):
+        sources.append("cue" if int(mid) >= 0 or bool(flag) else "none")
+    if any(item not in ("cue", "none") for item in sources):
+        raise RuntimeError("cue path emitted a non-cue source")
+    return sources
+
+
+def _empty_cue_fields(steps: int, cue_dim: int, phase: float, *, pressure: float) -> dict:
     steps = int(steps)
     cue_dim = int(cue_dim)
+    level = _export_pressure(pressure)
     return {
         "interface_version": int(CUE_INTERFACE_VERSION),
         "cue_dim": cue_dim,
@@ -2389,15 +2561,21 @@ def _empty_cue_fields(steps: int, cue_dim: int, phase: float) -> dict:
         "triggered": torch.zeros((1, steps), dtype=torch.bool),
         "gap": torch.full((1, steps), float("nan"), dtype=torch.float32),
         "winner_cosine": torch.full((1, steps), float("nan"), dtype=torch.float32),
+        "sleep_pressure": torch.full((1, steps), level, dtype=torch.float32),
+        "source": [["none"] * steps],
     }
 
 
-def _pack_cue_fields(fields: dict, phase: float) -> dict:
+def _pack_cue_fields(fields: dict, phase: float, *, pressure: float) -> dict:
     steps = int(np.asarray(fields["memory_id"]).shape[0])
     modality = [str(item) for item in fields["modality"]]
     if len(modality) != steps or any(item != "text" for item in modality):
         raise ValueError("modality must be text on every token")
+    sources = _token_sources(fields["memory_id"], fields["triggered"])
+    if len(sources) != steps:
+        raise ValueError("source must cover every token")
     phase_row = np.full((1, steps), float(phase), dtype=np.float32)
+    level = _export_pressure(pressure)
     return {
         "interface_version": int(CUE_INTERFACE_VERSION),
         "cue_dim": int(fields["cue_dim"]),
@@ -2411,11 +2589,13 @@ def _pack_cue_fields(fields: dict, phase: float) -> dict:
         "triggered": torch.tensor(np.asarray(fields["triggered"]), dtype=torch.bool).unsqueeze(0),
         "gap": torch.tensor(np.asarray(fields["gap"]), dtype=torch.float32).unsqueeze(0),
         "winner_cosine": torch.tensor(np.asarray(fields["winner_cosine"]), dtype=torch.float32).unsqueeze(0),
+        "sleep_pressure": torch.full((1, steps), level, dtype=torch.float32),
+        "source": [sources],
     }
 
 
-def _pack_cue_batch(rows: list, phase: float) -> dict:
-    packed = [_pack_cue_fields(row, phase) for row in rows]
+def _pack_cue_batch(rows: list, phase: float, *, pressure: float) -> dict:
+    packed = [_pack_cue_fields(row, phase, pressure=pressure) for row in rows]
     if len(packed) == 1:
         return packed[0]
     merged = {
@@ -2432,9 +2612,11 @@ def _pack_cue_batch(rows: list, phase: float) -> dict:
         "triggered",
         "gap",
         "winner_cosine",
+        "sleep_pressure",
     ):
         merged[key] = torch.cat([item[key] for item in packed], 0)
     merged["modality"] = [row for item in packed for row in item["modality"]]
+    merged["source"] = [row for item in packed for row in item["source"]]
     return merged
 
 

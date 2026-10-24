@@ -1,0 +1,104 @@
+{
+  "bank_sha256": "543e679c07fade14e2b2b78272aea0f6915e76b5cad04687dd5691f0a20c6483",
+  "canonical": {
+    "formula_sleep_1": 0.25504311102289434,
+    "formula_sleep_3": 0.19403840041261516,
+    "formula_wake_4": 0.2990792952357356,
+    "replay_high_strength": 0.951229424500714,
+    "sleep_after": [
+      0.25504311102289434,
+      0.19403840041261516
+    ],
+    "sleep_before": 0.2990792952357356,
+    "sleep_drop": [
+      0.04403618421284128,
+      0.10504089482312046
+    ],
+    "spontaneous_fires": 1,
+    "spontaneous_rate": 0.0625,
+    "wake_pressures": [
+      0.15452824346787175,
+      0.20575278767386407,
+      0.2990792952357356
+    ]
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.12297316100739408,
+  "gates": {
+    "cue_source": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "replay": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "sleep": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "spontaneous": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "wake": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "git": "f8e5b48a4b77cf239a6d90d80de5d5970b5855a9",
+  "ids": [
+    "sleep-fit-000",
+    "sleep-fit-001",
+    "sleep-fit-002",
+    "sleep-fit-003",
+    "sleep-fit-004",
+    "sleep-fit-005",
+    "sleep-fit-006",
+    "sleep-fit-007"
+  ],
+  "kind": "sleep-fit",
+  "note": "Fit only. The held bank was not scored.",
+  "pass": true,
+  "protocol": "sleep-pressure-v1"
+}
