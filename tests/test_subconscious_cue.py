@@ -478,7 +478,10 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "a_trig * fan_factor * decay" in text
     assert "half-life 30" in text
     assert "lambda 0.3" in text
-    assert "The amendment held pass has not been scored." in text
+    assert "The amendment pass is false." in text
+    assert "44/50" in text
+    assert "37/50" in text
+    assert "29/50" in text
     assert "38/50" in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script

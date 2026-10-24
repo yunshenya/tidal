@@ -191,4 +191,27 @@ Selected cell, direction fit bank, n=8:
 
 Fan 4 is 0 because `(1.45 - ln 4) / 1.45` is below the 0.05 floor, so that trigger clears. Inject cost at this cell, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000159, store 16 is 0.000173, store 32 is 0.000104. The armed forward is about 0.0026 seconds per token.
 
-The report is `reports/subconscious_cue_schedule_fit.json`. The amendment held pass has not been scored.
+The report is `reports/subconscious_cue_schedule_fit.json`.
+
+## Amendment held result
+
+One pass. Git `6f7644d344b0d8a563ae07982407196b87295694`. Elapsed 115.4 seconds. The selected cell was theta 0.32, half-life 30, lambda 0.3. The amendment pass is false. The floors were not moved. The pull request stays a draft.
+
+| rate | count | Wilson 95% | floor | pass |
+| --- | --- | --- | --- | --- |
+| prefer margin up | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 | no |
+| avoid margin up | 37/50 | [0.6044684273515117, 0.8412847250644762] | 39/50 | no |
+| avoid stored logprob down | 42/50 | [0.7148578393696501, 0.916625793219666] | 42/50 | yes |
+| toward experience | 47/50 | [0.8378290831116182, 0.979385029651026] | 45/50 | yes |
+| away experience | 47/50 | [0.8378290831116182, 0.979385029651026] | 48/50 | no |
+| at least 4 slots | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| competitor strength below 1 | 15/50 | [0.19103553500880954, 0.437503504644534] | 50/50 | no |
+| winner strength unchanged | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 | no |
+| outsider strength unchanged | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| more similar companion lowers the target margin | 39/50 | [0.6475845041874634, 0.8724608402978559] | 42/50 | no |
+| three companions lower the target margin more than one | 29/50 | [0.4423344176857823, 0.7062499664528802] | 48/50 | no |
+| fan 1/2/4 strictly decreasing | 44/50 | [0.7619518261679701, 0.9438239984906773] | 38/50 | yes |
+
+Fan means, which did decrease: fan 1 is 3.035, fan 2 is 0.992, fan 4 is 0.00018. Means, not a gate: prefer delta 3.035, avoid delta 0.097, avoid stored lift -0.129, toward delta 1.788, away delta -1.094.
+
+The report is `reports/subconscious_cue_schedule_held.json`.
