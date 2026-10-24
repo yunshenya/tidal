@@ -354,3 +354,40 @@ One pass, after this section is committed. Wilson 95% intervals are reported. A 
 38/50 is the fit point rule of 6/8 on a bank of 50. It is not a number from the already-scored floors.
 
 The same pass also scores the previous n=50 floors: prefer 50/50, avoid up 39/50, avoid stored 42/50, toward 45/50, away 48/50, at least 4 slots 50/50, competitor below 1 is 50/50, winner unchanged 50/50, outsider unchanged 50/50, similarity 42/50, count 48/50, and fan strictly decreasing 38/50. Those floors are not moved. The previous schedule-held file is not rewritten. The report is `reports/subconscious_cue_revision_held.json`. Inject cost per token is reported on this pass at store sizes 8, 16, and 32.
+
+## Fresh direction result
+
+One pass. Git `143f240ed4c1fb783f3e2bab91a0c0791990bec6`. Elapsed 153.5 seconds. Protocol `cue-direction-fresh-v1`. Bank sha256 `79557eb0e1234258b6cac107a087c235ffd973c3567ca28c21b85dedc9e62dc3`. Theta 0.32, half-life 30, lambda 0.3, alpha 0.25. Theta, half-life, lambda, fan S, the RIF span, and the floors stayed at the pre-registered values. The fresh pass is false. The floor pass is false.
+
+| gate | count | Wilson 95% | rule | pass |
+| --- | --- | --- | --- | --- |
+| cued margin positive | 1/50, mean −0.146505109022061 | [0.003539259271646236, 0.10495443589637815] | 38/50 and mean > 0 | no |
+| unrelated absolute margin | n=50, mean 3.440678119659424e-06 |  | n=50 and mean ≤ 0.05 | yes |
+| false triggers | 0/50, rate 0 | [0.0, 0.07134759913335872] | n=50 and rate ≤ 0.10 | yes |
+| decay after the last trigger | 0/50 | [0.0, 0.07134759913335872] | 38/50 | no |
+| store 8 / 16 / 32 | n=50, means 0.03934888318181045 / 0.03616333728035301 / 0.035611751228571006 |  | means at 16 and 32 positive and within 0.05 of size 8 | yes |
+| quiet-token NLL | 0.0 on 150 tokens |  | n≥50 tokens and mean ≤ 0.02 | yes |
+| fan 1 / 2 / 4 strict | 0/50, means −0.146505109022061 / 0.09323377490043651 / −3.1011452277400764e-05 | [0.0, 0.07134759913335872] | 38/50 and strictly decreasing | no |
+
+All 50 decay rows failed the logit comparison. Each of those rows had a trigger, and the activation fell with distance. The report is `reports/subconscious_cue_revision_held.json`.
+
+Inject cost on this pass, median extra seconds per token, 15 tokens, warmup 2, repeats 7: store 8 is 0.00005701160019574066, store 16 is 0.00007159500043295945, store 32 is 0.00007982926666348552. Armed seconds per token are 0.0018765821999598604, 0.0018949331337353215, and 0.0019041496663703584.
+
+### Previous floors, rescored once
+
+Same cell. `reports/subconscious_cue_schedule_held.json` was not rewritten. The re-score is `reports/subconscious_cue_revision_floors.json`. Means: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift −0.1285090258220832, toward delta 1.7882910075116283, away delta −1.0943180120953668, fan 3.0352763720974325 / 0.9923981685874362 / 0.00018436904375748853.
+
+| gate | count | Wilson 95% | floor | pass |
+| --- | --- | --- | --- | --- |
+| prefer margin up | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 | no |
+| avoid margin up | 37/50 | [0.6044684273515117, 0.8412847250644762] | 39/50 | no |
+| avoid stored down | 42/50 | [0.7148578393696501, 0.916625793219666] | 42/50 | yes |
+| toward up | 47/50 | [0.8378290831116182, 0.979385029651026] | 45/50 | yes |
+| away down | 47/50 | [0.8378290831116182, 0.979385029651026] | 48/50 | no |
+| at least 4 slots | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| competitor strength below 1 | 0/50 | [0.0, 0.07134759913335872] | 50/50 | no |
+| winner strength unchanged | 48/50 | [0.8653990931249297, 0.9889611156723802] | 50/50 | no |
+| outsider strength unchanged | 46/50 | [0.8116175308165717, 0.968450485911407] | 50/50 | no |
+| more similar companion lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 | no |
+| larger same-relation count lowers the target margin | 32/50 | [0.501410168761127, 0.7586125034815325] | 48/50 | no |
+| fan 1 / 2 / 4 strictly decreasing | 44/50 | [0.7619518261679701, 0.9438239984906773] | 38/50 | yes |
