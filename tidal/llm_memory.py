@@ -114,9 +114,12 @@ PHONE_TAIL = "+1-415-555-"
 DEFAULT_GAP_TAU = 0.80
 # Strength-weighted mixture over the top cosine neighbors. The continuum
 # store still has its own soft_k and soft_temp; generate does not read those.
-# MIX_K and MIX_TEMP below are the grid corner. The fit bank selects the
-# point that is allowed to score the held-out bank. Until that selection is
-# written here, these two numbers are not a held result.
+# Fit bank 3ba1fab4559982dcf959121224de3d0be86e03a25a056dccd874c6534dcdd6aa
+# selected k=4 and temperature 0.05: the largest mean participation among
+# cells whose mixture score was at least the top-1 score and whose mean
+# participation was at least 1.05. k=8 tied that participation because each
+# fit probe has four slots, and the smaller k wins the tie. Not retuned on
+# the held-out bank.
 MIX_K = 4
 MIX_TEMP = 0.05
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest

@@ -1,10 +1,10 @@
 # Soft-mixture injection preregistration
 
-Strength-weighted soft mixture over several slots. Fit margins have not been scored. The held-out bank has not been scored.
+Strength-weighted soft mixture over several slots. Fit selected `k = 4` and temperature 0.05. The held-out bank has not been scored.
 
 This replaces the hard top-1 value that was added into the residual. With two or more slots the residual is the sum of per-slot composed values, each multiplied by its mixture weight, its strength, and its valence gain. The cosine argmax is still the winner used for phone and birthday spelling and for same-relation forgetting. `injection_readout="top1"` keeps the old arm: gap confidence times the winning value, in the same store. That arm is the baseline. The default readout is `"mixture"`. A store with fewer than two slots still uses the old one-slot add, including the unmultiplied residual when confidence, strength, and valence gain are all 1. Gap confidence is still recorded. It scales only the top-1 arm. A cosine tie splits the mixture weight. The top-1 arm still adds nothing on a tie.
 
-`MIX_K = 4` and `MIX_TEMP = 0.05` in `tidal/llm_memory.py` are the corner of the grid below. They are not a selected point and not a held result. Continuum soft top-k, `gap_tau` 0.80, polarity span 2, valence span 1, valence step 0.25, replay, the surprise gate, and retrieval-induced forgetting are unchanged. Overwrite at cosine above 0.9 is unchanged. Cutting the cost of `_rank` is not in this change.
+`MIX_K = 4` and `MIX_TEMP = 0.05` are the cell the fit bank selected. They were also the corner of the grid. The held bank was not used to choose them. Continuum soft top-k, `gap_tau` 0.80, polarity span 2, valence span 1, valence step 0.25, replay, the surprise gate, and retrieval-induced forgetting are unchanged. Overwrite at cosine above 0.9 is unchanged. Cutting the cost of `_rank` is not in this change.
 
 ## Literature
 
@@ -58,20 +58,20 @@ A cell passes when every fit probe still occupies 4 slots, the mean participatio
 
 | k | temperature | slots | participation mean | mixture score | top-1 score | pass |
 |---|---|---|---|---|---|---|
-| 2 | 0.05 | | | | | |
-| 2 | 0.10 | | | | | |
-| 2 | 0.20 | | | | | |
-| 2 | 0.40 | | | | | |
-| 4 | 0.05 | | | | | |
-| 4 | 0.10 | | | | | |
-| 4 | 0.20 | | | | | |
-| 4 | 0.40 | | | | | |
-| 8 | 0.05 | | | | | |
-| 8 | 0.10 | | | | | |
-| 8 | 0.20 | | | | | |
-| 8 | 0.40 | | | | | |
+| 2 | 0.05 | 4/4 | 1.0791815992927363 | 0.3509623062380989 | 0.32669177181175074 | yes |
+| 2 | 0.10 | 4/4 | 1.3655408980019426 | 0.302066193827238 | 0.32669177181175074 | no |
+| 2 | 0.20 | 4/4 | 1.7224461791102044 | 0.24812031998433537 | 0.32669177181175074 | no |
+| 2 | 0.40 | 4/4 | 1.9142154637233386 | 0.21060511935787854 | 0.32669177181175074 | no |
+| 4 | 0.05 | 4/4 | 1.1483859856390333 | 0.3457252840023171 | 0.32669177181175074 | yes |
+| 4 | 0.10 | 4/4 | 1.8613603867472743 | 0.27088911448089786 | 0.32669177181175074 | no |
+| 4 | 0.20 | 4/4 | 3.0220928254757915 | 0.17025946951508822 | 0.32669177181175074 | no |
+| 4 | 0.40 | 4/4 | 3.7083447777167744 | 0.0992370969296655 | 0.32669177181175074 | no |
+| 8 | 0.05 | 4/4 | 1.1483859856390333 | 0.3457252840023171 | 0.32669177181175074 | yes |
+| 8 | 0.10 | 4/4 | 1.8613603867472743 | 0.27088911448089786 | 0.32669177181175074 | no |
+| 8 | 0.20 | 4/4 | 3.0220928254757915 | 0.17025946951508822 | 0.32669177181175074 | no |
+| 8 | 0.40 | 4/4 | 3.7083447777167744 | 0.0992370969296655 | 0.32669177181175074 | no |
 
-Fit margins have not been scored.
+Three cells pass. `k = 8` matches `k = 4` on every score because each probe has four slots. The largest passing participation is 1.1483859856390333, shared by `k = 4` and `k = 8` at temperature 0.05. The smaller `k` wins, so the selected cell is `k = 4`, temperature 0.05. Its mixture score is 0.3457252840023171 and the top-1 score is 0.32669177181175074. Family `d_z` at that cell is tone -0.27173594321158195, choice 0.7880164655304455, preference 0.5208953296880879. Top-1 family `d_z` is tone -0.41125671730672914, choice 0.6792540764752735, preference 0.7120779562667078. Every fit probe kept the probe as the winner (48/48). Mean top-1 confidence was 0.21251779785971056. The participation mean here is the 48 fit probes; the geometry preview above averaged all 198 groups, which is why those two means differ. Fit took 84.62616937699931 seconds at git `46fd95fec6e2e178d5dc3678726cc4cf400b2570`. Higher temperatures mix more and fall below top-1. They were not given another grid.
 
 ## Held-out gates
 

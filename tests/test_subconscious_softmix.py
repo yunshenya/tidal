@@ -219,13 +219,17 @@ def test_fit_scorer_does_not_read_held_items():
     assert "_held" not in held_calls
 
 
-def test_prereg_is_before_scoring_and_quotes_the_intervals():
+def test_prereg_records_fit_and_waits_for_held():
     text = (ROOT / "reports" / "subconscious_softmix_prereg.md").read_text(encoding="utf-8")
     for low, high in MEASURE_INTERVALS.values():
         assert f"{low}" in text
         assert f"{high}" in text
-    assert "Fit margins have not been scored." in text
     assert "The held-out bank has not been scored." in text
     assert "3ba1fab4559982dcf959121224de3d0be86e03a25a056dccd874c6534dcdd6aa" in text
-    assert not (ROOT / "reports" / "subconscious_softmix_fit.json").exists()
+    fit = json.loads((ROOT / "reports" / "subconscious_softmix_fit.json").read_text(encoding="utf-8"))
+    assert fit["complete"] is True
+    assert fit["selected"]["k"] == 4
+    assert fit["selected"]["temperature"] == 0.05
+    assert str(fit["selected"]["soft_dz"]) in text
+    assert str(fit["selected"]["top1_dz"]) in text
     assert not (ROOT / "reports" / "subconscious_softmix_held.json").exists()
