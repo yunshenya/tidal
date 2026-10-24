@@ -36,6 +36,8 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from tidal.reconstruct import residue_from_answer
+
 ArrayLike = Union[np.ndarray, Sequence[float]]
 SKIP_KINDS = frozenset({"chat", "noise"})
 # Every stored fact is text. The field is on the slot. There is no
@@ -304,8 +306,9 @@ class Slot:
     salience: float = 0.0
     # Consolidation cycles since the last refresh.
     age: int = 0
-    # Exact surface written with the slot. LM spelling copies this string.
-    # Continuum writes leave it empty and keep decoding the byte code.
+    # Durable surface for the reconsolidation identity check. Spelling does
+    # not read this string. Continuum writes leave it empty and keep decoding
+    # the byte code.
     answer: Optional[str] = None
     # Fact surface used for repeat detection. None when the writer passed none.
     # Key cosine is not this string.
@@ -321,6 +324,9 @@ class Slot:
     clock_gain: float = 1.0
     # Record modality. Every write stores "text".
     modality: str = MEMORY_MODALITY
+    # Phone or birthday parts. Not the raw string. None for every other answer.
+    # Spelling reads this with strength, age, and valence.
+    residue: Optional[tuple] = None
 
     def __post_init__(self) -> None:
         if self.modality != MEMORY_MODALITY:
@@ -516,9 +522,10 @@ class EpisodicStore:
         ``v`` may be a numeric vector, a string, or a list of strings. A string
         or token list becomes a positional byte code of width ``dv`` (see
         ``encode_span``). Same-identity overwrite replaces that code; it is
-        not added to the previous value. ``answer`` is the surface copied by
-        LM spelling. Overwrite replaces it. A write that omits ``answer``
-        stores none.
+        not added to the previous value. ``answer`` is stored for the
+        reconsolidation identity check. Spelling does not read it. A phone or
+        a birthday also stores a residue of its parts. Overwrite replaces both.
+        A write that omits ``answer`` stores none.
         """
         if not self.gate_write(kind, surprise):
             return False
@@ -548,6 +555,7 @@ class EpisodicStore:
             answer=stored,
             text=stored_text,
             modality=MEMORY_MODALITY,
+            residue=residue_from_answer(stored),
         )
         hit_id, content_ids = self._locate(name, rel, group, stored_text)
         if hit_id is None and content_ids:
