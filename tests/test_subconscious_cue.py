@@ -280,8 +280,12 @@ def test_offline_fields_and_interface_version():
         fields = mem.cue_fields(text)
         assert mem.store.slots[0].strength == before
         steps = hidden.shape[0]
-        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 3
+        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 4
         assert fields["modality"] == [["text"] * steps]
+        assert fields["source"][0][0] == "cue"
+        assert "spontaneous" not in fields["source"][0]
+        assert tuple(fields["sleep_pressure"].shape) == (1, steps)
+        assert float(fields["sleep_pressure"][0, 0]) == pytest.approx(mem.sleep_pressure)
         assert mem.store.slots[0].modality == "text"
         assert "fingerprint" not in fields
         assert fields["cue_dim"] == mem.cue_dim
