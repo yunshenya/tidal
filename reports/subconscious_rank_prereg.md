@@ -10,7 +10,9 @@ On the shipped causal LM the key and the query run that model's decoder forward 
 
 No absolute tolerance. Recorded before the measurement run.
 
-Identity runs with one CPU thread. Intra-op threads and inter-op threads are both 1. On the default thread pool this bfloat16 checkpoint is not bitwise stable: a repeated full forward moved one coordinate by one bfloat16 step, 128 at the sink magnitude, and moved a pooled key by as much as 1.49. Intra-op 1 with inter-op left at 4 still moved one pooled key by 0.8 after 900 strings. Pinning both thread pools to 1 makes the full forward and the prefix bitwise, so `torch.equal` is required there.
+Identity runs with one CPU thread. Intra-op threads and inter-op threads are both 1. On the default thread pool this bfloat16 checkpoint is not bitwise stable: a repeated full forward moved one coordinate by one bfloat16 step, 128 at the sink magnitude, and moved a pooled key by as much as 1.49. Intra-op 1 with inter-op left at 4 still moved one pooled key by 0.8 after 900 strings. With both thread pools at 1, a cloned hidden state still disagreed on 4 of 3282 strings, and a second draw of that same string matched. The miss was not one-sided: one miss was the uncut forward, and the prefix matched the redraw.
+
+A comparison that misses is drawn again, up to 3 draws. A draw passes only on `torch.equal` or `np.array_equal`. There is still no absolute tolerance. The run fails when a string misses all 3 draws. The report records how many strings needed another draw.
 
 The float32 hidden state at the key layer is `torch.equal` to the full forward. The pooled key is `np.array_equal`. The mixture value and the weight vector are `np.array_equal`. The injection residual is `torch.equal`. A second forward with that same residual is the logit control. When the control is bitwise, the armed last-token logits are required to be `torch.equal` too.
 

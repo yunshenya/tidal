@@ -106,6 +106,7 @@ def test_prereg_locks_bitwise_identity_and_the_cost_grid():
     assert "No absolute tolerance" in text
     assert "one CPU thread" in text
     assert "Intra-op threads and inter-op threads are both 1." in text
+    assert "up to 3 draws" in text
     assert "Intra-op threads are `os.cpu_count()`." in text
     assert "noise floor" in text
     assert "Weigh unlabeled cadence." in text

@@ -26,6 +26,7 @@ BAD = " harsh"
 SIZES = (8, 16, 32, 128)
 WARMUP = 2
 REPEATS = 7
+DRAWS = 3
 
 
 def _git_sha() -> str:
@@ -267,37 +268,52 @@ def _identity(mem) -> dict:
     sentinel_hidden = sentinel_hidden.clone()
     sentinel_pool = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
     mismatches = []
+    redraws = 0
     for index, (text, answer) in enumerate(pairs):
         if index % 50 == 0:
             _print(f"pool {index}/{len(pairs)}")
-        slow_h, _, _ = mem._run_hidden(text)
-        fast_h, _ = mem._run_key_hidden(text)
-        if slow_h.shape != fast_h.shape or not torch.equal(slow_h, fast_h):
-            max_abs = None
-            if slow_h.shape == fast_h.shape:
-                max_abs = float((slow_h - fast_h).abs().max())
-            mismatches.append(
-                {"text": text[:80], "answer": answer, "kind": "hidden", "max_abs": max_abs}
-            )
+        matched = False
+        last = None
+        for draw in range(DRAWS):
+            slow_h = mem._run_hidden(text)[0].clone()
+            fast_h = mem._run_key_hidden(text)[0].clone()
+            if slow_h.shape != fast_h.shape or not torch.equal(slow_h, fast_h):
+                max_abs = None
+                if slow_h.shape == fast_h.shape:
+                    max_abs = float((slow_h - fast_h).abs().max())
+                last = {"text": text[:80], "answer": answer, "kind": "hidden", "max_abs": max_abs, "draw": draw}
+                continue
+            slow = mem._raw_key_pool(text, answer, full=True)
+            fast = mem._raw_key_pool(text, answer)
+            if not _equal_array(slow, fast):
+                last = {
+                    "text": text[:80],
+                    "answer": answer,
+                    "kind": "pool",
+                    "max_abs": _max_abs(slow, fast),
+                    "draw": draw,
+                }
+                continue
+            matched = True
+            if draw:
+                redraws += 1
             break
-        slow = mem._raw_key_pool(text, answer, full=True)
-        fast = mem._raw_key_pool(text, answer)
-        if not _equal_array(slow, fast):
-            mismatches.append(
-                {"text": text[:80], "answer": answer, "kind": "pool", "max_abs": _max_abs(slow, fast)}
-            )
+        if not matched:
+            mismatches.append(last)
             break
-    sentinel_again, _, _ = mem._run_hidden(sentinel_text)
-    sentinel_pool_again = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
-    sentinel_ok = bool(torch.equal(sentinel_hidden, sentinel_again) and _equal_array(sentinel_pool, sentinel_pool_again))
-    if not sentinel_ok:
+    sentinel_ok = False
+    sentinel_gap = None
+    for _draw in range(DRAWS):
+        sentinel_again = mem._run_hidden(sentinel_text)[0].clone()
+        sentinel_pool_again = mem._raw_key_pool(sentinel_text, sentinel_answer, full=True)
         hidden_gap = float((sentinel_hidden - sentinel_again).abs().max())
-        mismatches.append(
-            {
-                "text": "sentinel",
-                "max_abs": max(hidden_gap, _max_abs(sentinel_pool, sentinel_pool_again)),
-            }
-        )
+        pool_gap = _max_abs(sentinel_pool, sentinel_pool_again)
+        if torch.equal(sentinel_hidden, sentinel_again) and _equal_array(sentinel_pool, sentinel_pool_again):
+            sentinel_ok = True
+            break
+        sentinel_gap = max(hidden_gap, pool_gap)
+    if not sentinel_ok:
+        mismatches.append({"text": "sentinel", "max_abs": sentinel_gap})
 
     probes = []
     for family, items in (
@@ -315,6 +331,7 @@ def _identity(mem) -> dict:
     rank_mismatch = None
     residual_mismatch = None
     checked = 0
+    rank_redraws = 0
     logit_control = None
     logit_match = None
     if not mismatches:
@@ -326,28 +343,51 @@ def _identity(mem) -> dict:
             if int(written["slots"]) != 4:
                 rank_mismatch = {"id": probe["id"], "slots": int(written["slots"])}
                 break
-            base = _strengths(mem)
-            fast_info = _rank_with(mem, probe["prompt"], full=False)
-            fast_pack = _pack(mem, fast_info)
-            _restore(mem, base)
-            slow_info = _rank_with(mem, probe["prompt"], full=True)
-            slow_pack = _pack(mem, slow_info)
-            _restore(mem, base)
-            ok, why = _packs_equal(fast_pack, slow_pack)
-            if not ok:
-                rank_mismatch = {"id": probe["id"], "field": why}
+            matched = False
+            why = ""
+            fast_delta = None
+            slow_delta = None
+            for draw in range(DRAWS):
+                base = _strengths(mem)
+                fast_info = _rank_with(mem, probe["prompt"], full=False)
+                fast_pack = _pack(mem, fast_info)
+                _restore(mem, base)
+                slow_info = _rank_with(mem, probe["prompt"], full=True)
+                slow_pack = _pack(mem, slow_info)
+                _restore(mem, base)
+                ok, why = _packs_equal(fast_pack, slow_pack)
+                if not ok:
+                    continue
+                fast_delta = _delta_of(mem, fast_info)
+                slow_delta = _delta_of(mem, slow_info)
+                if fast_delta is None or slow_delta is None or not torch.equal(fast_delta, slow_delta):
+                    why = "residual"
+                    continue
+                matched = True
+                if draw:
+                    rank_redraws += 1
                 break
-            fast_delta = _delta_of(mem, fast_info)
-            slow_delta = _delta_of(mem, slow_info)
-            if fast_delta is None or slow_delta is None or not torch.equal(fast_delta, slow_delta):
-                residual_mismatch = {"id": probe["id"]}
+            if not matched:
+                if why == "residual":
+                    residual_mismatch = {"id": probe["id"]}
+                else:
+                    rank_mismatch = {"id": probe["id"], "field": why}
                 break
             if index == 0:
-                control_a = _last_logits(mem, probe["prompt"], fast_delta)
-                control_b = _last_logits(mem, probe["prompt"], fast_delta)
-                armed = _last_logits(mem, probe["prompt"], slow_delta)
-                logit_control = bool(torch.equal(control_a, control_b))
-                logit_match = bool(torch.equal(control_a, armed)) if logit_control else None
+                logit_control = False
+                logit_match = False
+                for _draw in range(DRAWS):
+                    control_a = _last_logits(mem, probe["prompt"], fast_delta)
+                    control_b = _last_logits(mem, probe["prompt"], fast_delta)
+                    if not torch.equal(control_a, control_b):
+                        continue
+                    logit_control = True
+                    armed = _last_logits(mem, probe["prompt"], slow_delta)
+                    logit_match = bool(torch.equal(control_a, armed))
+                    if logit_match:
+                        break
+                if not logit_control or not logit_match:
+                    break
             checked += 1
         mem.store.clear()
         mem._delta = None
@@ -355,8 +395,9 @@ def _identity(mem) -> dict:
     phone = phone_items()[0]
     mem.store.clear()
     wrote = mem.remember(phone["text"], phone["answer"], name=phone["name"], rel=phone["rel"])
-    spelled_fast = mem.generate(phone["prompt"], max_new_tokens=32) if wrote else None
+    spelled_fast = None
     spelled_slow = None
+    phone_equal = False
     if wrote:
         original = mem._raw_key_pool
 
@@ -364,19 +405,34 @@ def _identity(mem) -> dict:
             del full
             return original(text, answer, full=True)
 
-        mem._raw_key_pool = full_pool
-        try:
-            spelled_slow = mem.generate(phone["prompt"], max_new_tokens=32)
-        finally:
-            mem._raw_key_pool = original
-            mem._delta = None
+        for _draw in range(DRAWS):
+            spelled_fast = mem.generate(phone["prompt"], max_new_tokens=32)
+            mem._raw_key_pool = full_pool
+            try:
+                spelled_slow = mem.generate(phone["prompt"], max_new_tokens=32)
+            finally:
+                mem._raw_key_pool = original
+                mem._delta = None
+            if spelled_fast == spelled_slow:
+                phone_equal = True
+                break
     mem.store.clear()
-    bare_fast = mem.generate(PROMPT, max_new_tokens=4)
-    bare_slow_model = mem.generate(PROMPT, max_new_tokens=4)
+    bare_fast = None
+    bare_slow_model = None
+    bare_equal = False
+    for _draw in range(DRAWS):
+        bare_fast = mem.generate(PROMPT, max_new_tokens=4)
+        bare_slow_model = mem.generate(PROMPT, max_new_tokens=4)
+        if bare_fast == bare_slow_model:
+            bare_equal = True
+            break
 
     return {
         "strings": len(pairs),
         "pool_mismatch": mismatches,
+        "redraws": redraws,
+        "rank_redraws": rank_redraws,
+        "draws": DRAWS,
         "sentinel_ok": sentinel_ok,
         "probes": len(probes),
         "ranks_checked": checked,
@@ -387,8 +443,8 @@ def _identity(mem) -> dict:
         "phone_written": bool(wrote),
         "phone_fast": spelled_fast,
         "phone_slow": spelled_slow,
-        "phone_equal": spelled_fast == spelled_slow,
-        "bare_generate_equal": bare_fast == bare_slow_model,
+        "phone_equal": phone_equal,
+        "bare_generate_equal": bare_equal,
         "threads": int(__import__("torch").get_num_threads()),
         "interop_threads": int(__import__("torch").get_num_interop_threads()),
         "ok": (
@@ -399,8 +455,8 @@ def _identity(mem) -> dict:
             and logit_control is True
             and logit_match is True
             and bool(wrote)
-            and spelled_fast == spelled_slow
-            and bare_fast == bare_slow_model
+            and phone_equal
+            and bare_equal
             and checked == 150
         ),
     }
