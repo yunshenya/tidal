@@ -247,7 +247,9 @@ The scalars growbrain's `ActionInitiationGate` consumes — `valence`, `sleep_pr
 
 Code on both sides is unchanged by this text. growbrain implements it at e2e `@00a9edd` and will mirror the same wording in `TIDAL_INTERFACE.md`.
 
-Low-level cross-sensory fusion is planned after text stage-1. The account is in [docs/architecture.md](docs/architecture.md). It has no code and adds no interface fields.
+Low-level cross-sensory fusion is planned after text stage-1. The v7 multimodal packet contract is frozen in [docs/architecture.md](docs/architecture.md) and stubbed in `tidal/interface_v7.py`. Live export stays `interface_version` 6. This pull request does not emit `fingerprint` or `fusion_confidence`, does not put `fusion_weights` on the cue packet, and does not bump `CUE_INTERFACE_VERSION`. growbrain mirrors the same shape in `TIDAL_INTERFACE` v7.
+
+Store fields at v7: existing `vec` (float32, width `d_model`; stage0 192); perceptual fingerprint float32 `(F,)` with `F=32` (aligned with `mem_key_dim`; hypothesis until trained); modality enum `text | audio | image | fused | none`. `fused` is a memory after tidal low-level auto-fusion. Live writes stay `text`. Unknown is `none`. growbrain encoders produce the fingerprint; tidal stores and returns it at memory grain, not per-token. Cue additions at v7: winner `fingerprint` `(F,)`, and `fusion_confidence` in `[0, 1]` one per sample (last-token, same rule as #69 gate scalars; 0 when no fusion). `fusion_weights` is float32 `(M,)` with `M=3`, order `text, audio, image`, on a separate growbrain → tidal write API. Not in scope: raw encoder tensors, per-token fingerprint, `B>1` on the single-packet path, changing `TIDAL_DIM`, reserving empty keys on live v6, or implementing fusion/sleep/pairing.
 
 ## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
 

@@ -231,7 +231,11 @@ MIX_TEMP = 0.05
 # decay and the drifting internal clock are still not exported. Lambda is
 # not part of the version. Process S is not part of the residual. Arousal
 # is not part of the residual and is not an input to process S. The drifted
-# clock is not an input to decay. There is no perceptual-fingerprint field.
+# clock is not an input to decay. There is no perceptual-fingerprint field
+# on this live export. The frozen v7 multimodal packet contract is
+# tidal.interface_v7. That module is stubs only. cue_fields does not emit
+# fingerprint or fusion_confidence. This constant stays 6 until a later
+# wiring pull request.
 CUE_INTERFACE_VERSION = 6
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
