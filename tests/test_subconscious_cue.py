@@ -548,6 +548,10 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "closer to 4" in text
     assert "The widened half-life fit selected half-life 30 and lambda 0.3." in text
     assert "Held was not scored again." in text
+    assert "10.1037/0033-295X.114.4.887" in text
+    assert "No k was selected." in text
+    assert "Token AUC is 0.797." in text
+    assert "Theta was not changed." in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script

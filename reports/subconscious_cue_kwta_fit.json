@@ -1,0 +1,174 @@
+{
+  "alpha": {
+    "selected": 0.25,
+    "tried": [
+      {
+        "alpha": 0.25,
+        "pass": true
+      },
+      {
+        "alpha": 0.125,
+        "pass": true
+      },
+      {
+        "alpha": 0.0625,
+        "pass": true
+      },
+      {
+        "alpha": 0.03125,
+        "pass": true
+      },
+      {
+        "alpha": 0.015625,
+        "pass": true
+      }
+    ]
+  },
+  "bank": "direction-fit",
+  "columns": [
+    {
+      "decay_n": 8,
+      "decay_pass": 6,
+      "false_trigger_n": 8,
+      "false_triggers": 0,
+      "fan_k": 6,
+      "fan_means": {
+        "1": 0.47904670238494873,
+        "2": 0.20303821563720703,
+        "4": 0.0
+      },
+      "fan_n": 8,
+      "fan_pass": true,
+      "gate1_pass": true,
+      "gate2_pass": true,
+      "gate3_pass": true,
+      "gate4_pass": true,
+      "gate5_pass": true,
+      "k": 1,
+      "mean_cued_delta": 0.47904670238494873,
+      "mean_positive_slots": null,
+      "n_cued_pos": 7,
+      "pass": true,
+      "quiet_nll_mean": 0.0,
+      "quiet_nll_n": 9,
+      "store_means": {
+        "16": 0.013150215148925781,
+        "32": 0.01293957233428955,
+        "8": 0.014412999153137207
+      },
+      "unrelated_abs_mean": 0.0
+    },
+    {
+      "decay_n": 8,
+      "decay_pass": 6,
+      "false_trigger_n": 8,
+      "false_triggers": 0,
+      "fan_k": 7,
+      "fan_means": {
+        "1": 0.47904670238494873,
+        "2": 0.09730124473571777,
+        "4": 0.0
+      },
+      "fan_n": 8,
+      "fan_pass": true,
+      "gate1_pass": true,
+      "gate2_pass": true,
+      "gate3_pass": true,
+      "gate4_pass": true,
+      "gate5_pass": true,
+      "k": 2,
+      "mean_cued_delta": 0.47904670238494873,
+      "mean_positive_slots": 1.3323353293413174,
+      "n_cued_pos": 7,
+      "pass": true,
+      "quiet_nll_mean": 0.0,
+      "quiet_nll_n": 9,
+      "store_means": {
+        "16": 0.012602567672729492,
+        "32": 0.012524008750915527,
+        "8": 0.01773679256439209
+      },
+      "unrelated_abs_mean": 0.0
+    },
+    {
+      "decay_n": 8,
+      "decay_pass": 6,
+      "false_trigger_n": 8,
+      "false_triggers": 0,
+      "fan_k": 7,
+      "fan_means": {
+        "1": 0.47904670238494873,
+        "2": 0.09730124473571777,
+        "4": 0.0
+      },
+      "fan_n": 8,
+      "fan_pass": true,
+      "gate1_pass": true,
+      "gate2_pass": true,
+      "gate3_pass": true,
+      "gate4_pass": true,
+      "gate5_pass": true,
+      "k": 3,
+      "mean_cued_delta": 0.47904670238494873,
+      "mean_positive_slots": 1.5104790419161678,
+      "n_cued_pos": 7,
+      "pass": true,
+      "quiet_nll_mean": 0.0,
+      "quiet_nll_n": 9,
+      "store_means": {
+        "16": 0.012317776679992676,
+        "32": 0.012537479400634766,
+        "8": 0.016237974166870117
+      },
+      "unrelated_abs_mean": 0.0
+    },
+    {
+      "decay_n": 8,
+      "decay_pass": 6,
+      "false_trigger_n": 8,
+      "false_triggers": 0,
+      "fan_k": 7,
+      "fan_means": {
+        "1": 0.47904670238494873,
+        "2": 0.09730124473571777,
+        "4": 0.0
+      },
+      "fan_n": 8,
+      "fan_pass": true,
+      "gate1_pass": true,
+      "gate2_pass": true,
+      "gate3_pass": true,
+      "gate4_pass": true,
+      "gate5_pass": true,
+      "k": 4,
+      "mean_cued_delta": 0.47904670238494873,
+      "mean_positive_slots": 1.6968562874251496,
+      "n_cued_pos": 7,
+      "pass": true,
+      "quiet_nll_mean": 0.0,
+      "quiet_nll_n": 9,
+      "store_means": {
+        "16": 0.012521147727966309,
+        "32": 0.01250922679901123,
+        "8": 0.016288161277770996
+      },
+      "unrelated_abs_mean": 0.0
+    }
+  ],
+  "elapsed_s": 20.546205208003812,
+  "git": "8e085f31e5841405832fd374e931ad31f0378918",
+  "half_life": 30.0,
+  "held_scored": false,
+  "kind": "kwta-fit",
+  "ks": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "lambda": 0.3,
+  "note": "Diagnostic only. Floors were not moved and no k was selected.",
+  "selected_k": null,
+  "theta": 0.32,
+  "theta_changed": false
+}

@@ -263,3 +263,26 @@ The scored gates are gates 1–5 and the fit fan check, at the shipped cell thet
 ## Cue cosine anisotropy
 
 Cue-key cosine is computed after the shipped centers in `tidal/llm_key_center.npz`. The stored key has `key_mean` subtracted. The cue row has `query_mean` subtracted. No other center is estimated. Related cues are the tokens of each direction-fit prefer prompt against that fact's key. Unrelated cues are the tokens of each direction-fit neutral choice prompt against that same key. AUC is the probability a related cosine exceeds an unrelated cosine. A tie counts half. The same AUC is also reported on the per-prompt maximum. This report does not change theta. Theta stays 0.32.
+
+## Single-winner diagnostic result
+
+One pass. Git `8e085f31e5841405832fd374e931ad31f0378918`. Elapsed 20.5 seconds. Alpha 0.25. All four columns passed gates 1–5 and the fit fan check. No k was selected. Held was not scored. The floors were not moved. The pull request stays a draft.
+
+Mean cued margin is 0.479 at k=1, 2, 3, and 4, because that gate stores one slot. Unrelated absolute margin is 0.0. False triggers are 0/8. Decay is 6/8. Quiet NLL is 0.0 on 9 tokens.
+
+Store-size mean cued margin at 8 / 16 / 32:
+
+| k | 8 | 16 | 32 | fan 1 / 2 / 4 | strict | mean positive slots |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0.0144 | 0.0132 | 0.0129 | 0.479 / 0.203 / 0.0 | 6/8 | shipped one winner |
+| 2 | 0.0177 | 0.0126 | 0.0125 | 0.479 / 0.097 / 0.0 | 7/8 | 1.332 |
+| 3 | 0.0162 | 0.0123 | 0.0125 | 0.479 / 0.097 / 0.0 | 7/8 | 1.510 |
+| 4 | 0.0163 | 0.0125 | 0.0125 | 0.479 / 0.097 / 0.0 | 7/8 | 1.697 |
+
+k=2 is higher at store size 8. At 16 and 32 every k above 1 is slightly below k=1. The fit bank does not show a k that should replace the shipped winner. The report is `reports/subconscious_cue_kwta_fit.json`.
+
+## Cue cosine anisotropy result
+
+One pass. Git `8e085f31e5841405832fd374e931ad31f0378918`. Elapsed 0.495 seconds. Centers were `key_mean` and `query_mean` from `tidal/llm_key_center.npz`. Theta before and after was 0.32. Theta was not changed.
+
+Related prompt tokens, n=80: min −0.191, median 0.223, mean 0.216, max 0.582. Unrelated prompt tokens, n=368: min −0.192, median 0.036, mean 0.032, max 0.303. Token AUC is 0.797. Per-prompt maximum AUC is 1.0. The lowest related maximum is 0.436 and the highest unrelated maximum is 0.303. The report is `reports/subconscious_cue_anisotropy.json`.

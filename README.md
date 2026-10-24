@@ -37,6 +37,10 @@ The score is only implicit influence: the continuation margin against no memory,
 
 The cue schedule is in `reports/subconscious_cue_prereg.md`. On the direction fit bank the selected cell is theta 0.32, half-life 30, lambda 0.3, mean cued margin 0.479. The held pass is false: prefer 46/50, avoid up 37/50, away 47/50, competitor below 1 is 15/50, winner unchanged 46/50, similarity 39/50, count 29/50, and fan 1/2/4 decreasing 44/50. The floors were not moved. `interface_version` is 3. Version 2 was the activation `a_trig * fan_factor * decay`. Version 3 adds `modality` on every stored slot and every exported token. The value is `text`. There is no perceptual-fingerprint field.
 
+A fit-only diagnostic compared that one winner with a k-winner-take-all mix at k=2, 3, and 4 (Norman, Newman, and Detre 2007). It did not select a k. Mean cued margin stayed 0.479. Store-size means at 8/16/32 were 0.0144/0.0132/0.0129 for k=1 and 0.0163/0.0125/0.0125 for k=4. Held was not rescored.
+
+Cue-key cosine after `tidal/llm_key_center.npz`, on the direction fit bank: token AUC 0.797 (related n=80, unrelated n=368). The per-prompt maximum AUC is 1.0. Theta stays 0.32.
+
 ## Planned interface to growbrain
 
 The per-token cue export is what generation injects. There is still no growbrain package and no encode, NLL, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries:
