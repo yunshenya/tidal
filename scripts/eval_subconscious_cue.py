@@ -1,9 +1,9 @@
 """Fit and held scoring for cue-triggered injection.
 
 ``histogram`` and ``fit`` read the direction fit bank only. Held banks are
-imported inside ``held`` and nowhere else. Theta, tau, and a_trig are applied
-by writing the module globals that the cue trace reads at call time. The floor
-stays 0.05.
+imported inside ``held`` and nowhere else. The amendment fit freezes theta,
+then sweeps half-life and lambda. It does not co-sweep theta. The floor
+stays 0.05. Lambda scales only the residual this wrapper adds to the model.
 
 The add is the same-token add documented on ``LLMMemory``: the cue is copied
 from the inject-layer residual, then the residual is written at that index.
@@ -29,16 +29,24 @@ REPORT_DIR = ROOT / "reports"
 HISTOGRAM_PATH = REPORT_DIR / "subconscious_cue_histogram.json"
 FIT_PATH = REPORT_DIR / "subconscious_cue_fit.json"
 HELD_PATH = REPORT_DIR / "subconscious_cue_held.json"
+SCHEDULE_FIT_PATH = REPORT_DIR / "subconscious_cue_schedule_fit.json"
+SCHEDULE_HELD_PATH = REPORT_DIR / "subconscious_cue_schedule_held.json"
 
-# Bracketed by the fit-bank cosine histogram before any cell was scored.
-# Unrelated-prompt max cosine is 0.303 and filler max is 0.294, so 0.32 is
-# the low end. The lowest cued-prompt max is 0.436, so 0.43 is the high end.
-# Tau and a_trig are not chosen from a margin.
-GRID = tuple(
+# First schedule, already scored. fit() does not iterate this.
+HISTORICAL_GRID = tuple(
     {"theta": theta, "tau": tau, "a_trig": a_trig}
     for theta in (0.32, 0.35, 0.40, 0.43)
     for tau in (2.0, 4.0, 8.0)
     for a_trig in (0.5, 1.0)
+)
+
+# Theta is frozen at the low end of the cosine bracket. Half-life is the
+# hypothesis sweep in tokens. Lambda is the injection scale. a_trig stays 1.
+FROZEN_THETA = 0.32
+SCHEDULE = tuple(
+    {"theta": FROZEN_THETA, "half_life": half_life, "lambda": lam, "a_trig": 1.0}
+    for half_life in (10.0, 20.0, 30.0)
+    for lam in (0.10, 0.15, 0.20, 0.25, 0.30)
 )
 
 FILLER = "\nLater the clerk filed the spare form and left the room quietly today."
@@ -53,6 +61,11 @@ STORE_SIZES = (8, 16, 32)
 COST_WARMUP = 2
 COST_REPEATS = 7
 WILSON_Z = 1.959963984540054
+FAN_ALPHAS = (0.25, 0.125, 0.0625, 0.03125, 0.015625)
+FAN_STRENGTH = 0.5
+FAN_RELATION = "fan-norm"
+FAN_FIT_MIN = 6
+HELD_FAN_MIN = 38
 
 # Point counts from the merged interfere held pass (#54). Not worse means
 # the cue pass is at least this many successes. n is 50.
@@ -135,18 +148,14 @@ def _install_cue_cache(mem) -> None:
     mem.cue_hidden = cached
 
 
-def _bind(theta: float, tau: float, a_trig: float) -> None:
+def _bind(theta: float, half_life: float, lam: float, a_trig: float = 1.0) -> None:
     import tidal.llm_memory as mod
 
     mod.CUE_THETA = float(theta)
-    mod.CUE_TAU = float(tau)
+    mod.CUE_HALF_LIFE = float(half_life)
+    mod.CUE_TAU = float(half_life) / math.log(2.0)
+    mod.CUE_LAMBDA = float(lam)
     mod.CUE_A_TRIG = float(a_trig)
-
-
-def _clear_bind() -> None:
-    import tidal.llm_memory as mod
-
-    _bind(mod.CUE_THETA, mod.CUE_TAU, mod.CUE_A_TRIG)
 
 
 def _encode(mem, facts) -> list:
@@ -345,7 +354,168 @@ def _continuation_logps(mem, prompt: str, continuation: str, *, live: bool) -> t
     return values, len(prompt_ids)
 
 
-def _score_cell(mem, bank, prefer_rows, incidental_rows, base) -> dict:
+def _write_target(mem, row) -> None:
+    mem.store.clear()
+    ok = mem.store.write(
+        row["key"],
+        row["value"],
+        name=row["name"],
+        rel=row["rel"],
+        kind="fact",
+        answer=row.get("answer"),
+    )
+    if not ok or len(mem.store) != 1:
+        raise RuntimeError("fan target was not written")
+
+
+def _add_companions(mem, row, match, n_extra: int, alpha: float) -> None:
+    import numpy as np
+
+    key = np.asarray(row["key"], dtype=np.float64).reshape(-1)
+    match = np.asarray(match, dtype=np.float64).reshape(-1)
+    unit = match / max(float(np.linalg.norm(match)), 1e-12)
+    scale = float(np.linalg.norm(key))
+    value = np.zeros_like(np.asarray(row["value"], dtype=np.float32))
+    for index in range(int(n_extra)):
+        mixed = (1.0 - float(alpha)) * key + float(alpha) * unit * scale
+        mixed = np.array(mixed, dtype=np.float64, copy=True)
+        mixed[(index + 1) % mixed.shape[0]] += 1e-4 * scale
+        mixed = mixed / max(float(np.linalg.norm(mixed)), 1e-12) * scale
+        wrote = mem.store.write(
+            mixed,
+            value,
+            name=f"fan-{index}",
+            rel=FAN_RELATION,
+            kind="fact",
+            answer=f"fan-{index}",
+        )
+        if not wrote:
+            raise RuntimeError("fan companion was not written")
+        mem.store._slots[-1].strength = float(FAN_STRENGTH)
+
+
+def _trigger_match(mem, prompt: str):
+    import numpy as np
+
+    fields = mem.cue_fields(prompt)
+    triggered = fields["triggered"][0].tolist()
+    hits = [index for index, flag in enumerate(triggered) if flag]
+    if not hits:
+        return None, None
+    hit = int(hits[-1])
+    rows = np.asarray(mem._last_cue_rows, dtype=np.float64)
+    match = rows[hit] - np.asarray(mem.query_mean, dtype=np.float64)
+    return hit, match
+
+
+def _fan2_ok(mem, prompt: str, hit: int, expected: float) -> bool:
+    fields = mem.cue_fields(prompt)
+    activation = fields["activation"][0].tolist()
+    triggered = [bool(flag) for flag in fields["triggered"][0].tolist()]
+    memory = fields["memory_id"][0].tolist()
+    if hit >= len(activation) or not triggered[hit]:
+        return False
+    if int(memory[hit]) != 0:
+        return False
+    if any(triggered[hit + 1 :]):
+        return False
+    if abs(float(activation[hit]) - float(expected)) > 1e-5:
+        return False
+    if abs(float(fields["strength_confidence"][0, hit]) - 1.0) > 1e-5:
+        return False
+    return True
+
+
+def _fan4_ok(mem, prompt: str, hit: int) -> bool:
+    fields = mem.cue_fields(prompt)
+    activation = fields["activation"][0].tolist()
+    triggered = [bool(flag) for flag in fields["triggered"][0].tolist()]
+    if any(triggered[hit:]):
+        return False
+    return all(abs(float(value)) <= 1e-8 for value in activation[hit:])
+
+
+def _alpha_works(mem, items, rows, alpha: float) -> bool:
+    from tidal.cue_inject import fan_factor
+    import tidal.llm_memory as mod
+
+    expected = float(mod.CUE_A_TRIG) * fan_factor(2, float(mod.CUE_FAN_S))
+    for item, row in zip(items, rows):
+        _write_target(mem, row)
+        hit, match = _trigger_match(mem, item["prompt"])
+        if hit is None or match is None:
+            return False
+        _add_companions(mem, row, match, 1, alpha)
+        if not _fan2_ok(mem, item["prompt"], hit, expected):
+            return False
+        _write_target(mem, row)
+        _add_companions(mem, row, match, 3, alpha)
+        if not _fan4_ok(mem, item["prompt"], hit):
+            return False
+    mem.store.clear()
+    return True
+
+
+def _freeze_alpha(mem, items, rows) -> dict:
+    """Largest alpha whose clean trace keeps fan 2 on the fan-1 trigger.
+
+    Fan 4 must clear from that trigger onward, because ``S - ln 4`` puts the
+    product under the floor. This check does not read a continuation margin.
+    """
+    tried = []
+    selected = None
+    for alpha in FAN_ALPHAS:
+        ok = _alpha_works(mem, items, rows, float(alpha))
+        tried.append({"alpha": float(alpha), "pass": bool(ok)})
+        _print(f"fan alpha {alpha}: {ok}")
+        if ok and selected is None:
+            selected = float(alpha)
+    mem.store.clear()
+    return {"selected": selected, "tried": tried}
+
+
+def _fan_effects(mem, item, row, empty: float, alpha: float) -> dict:
+    _write_target(mem, row)
+    first = float(_margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"]) - empty)
+    _hit, match = _trigger_match(mem, item["prompt"])
+    if match is None:
+        return {"fan1": first, "fan2": None, "fan4": None, "strict": False}
+    _add_companions(mem, row, match, 1, alpha)
+    second = float(_margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"]) - empty)
+    _write_target(mem, row)
+    _add_companions(mem, row, match, 3, alpha)
+    fourth = float(_margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"]) - empty)
+    return {
+        "fan1": first,
+        "fan2": second,
+        "fan4": fourth,
+        "strict": bool(first > second > fourth),
+    }
+
+
+def _fan_summary(rows: list) -> dict:
+    usable = [row for row in rows if row["fan2"] is not None and row["fan4"] is not None]
+    if not usable:
+        return {
+            "n": 0,
+            "k": 0,
+            "means": {"1": None, "2": None, "4": None},
+            "pass_means": False,
+            "rows": rows,
+        }
+    means = {}
+    for key, label in (("fan1", "1"), ("fan2", "2"), ("fan4", "4")):
+        means[label] = float(sum(float(row[key]) for row in usable) / len(usable))
+    return {
+        "n": len(rows),
+        "k": int(sum(bool(row["strict"]) for row in rows)),
+        "means": means,
+        "pass_means": bool(means["1"] > means["2"] > means["4"]),
+        "rows": rows,
+    }
+
+
+def _score_cell(mem, bank, prefer_rows, incidental_rows, base, alpha) -> dict:
     import torch
 
     prefer = list(bank.PREFER)
@@ -465,7 +635,27 @@ def _score_cell(mem, bank, prefer_rows, incidental_rows, base) -> dict:
     n_quiet = len(quiet_deltas)
     mean_quiet = float(sum(quiet_deltas) / n_quiet) if n_quiet else None
     gate5 = bool(n_quiet > 0 and mean_quiet is not None and mean_quiet <= QUIET_NLL_MAX)
-    passed = bool(gate1 and gate2 and gate3 and gate4 and gate5)
+    if alpha is None:
+        fan = {"n": 0, "k": 0, "means": {"1": None, "2": None, "4": None}, "pass_means": False, "rows": []}
+    else:
+        fan_rows = []
+        for item, row, effect, empty in zip(prefer, prefer_rows, cued, base["cued_empty"]):
+            measured = _fan_effects(mem, item, row, float(empty), float(alpha))
+            measured["id"] = item["id"]
+            measured["fan1"] = float(effect)
+            if measured["fan2"] is None or measured["fan4"] is None:
+                measured["strict"] = False
+            else:
+                measured["strict"] = bool(float(effect) > float(measured["fan2"]) > float(measured["fan4"]))
+            fan_rows.append(measured)
+        fan = _fan_summary(fan_rows)
+    fan_pass = bool(
+        alpha is not None
+        and fan["pass_means"]
+        and int(fan["k"]) >= FAN_FIT_MIN
+        and int(fan["n"]) >= FAN_FIT_MIN
+    )
+    passed = bool(gate1 and gate2 and gate3 and gate4 and gate5 and fan_pass)
     return {
         "pass": passed,
         "mean_cued_delta": mean_cued,
@@ -487,6 +677,11 @@ def _score_cell(mem, bank, prefer_rows, incidental_rows, base) -> dict:
         "quiet_nll_mean": mean_quiet,
         "quiet_nll_n": int(n_quiet),
         "gate5_pass": gate5,
+        "fan_k": int(fan["k"]),
+        "fan_n": int(fan["n"]),
+        "fan_means": fan["means"],
+        "fan_pass": fan_pass,
+        "fan_rows": fan["rows"],
     }
 
 
@@ -519,25 +714,27 @@ def _baselines(mem, bank, prefer_rows) -> dict:
 def _select(cells: list) -> dict:
     passing = [cell for cell in cells if cell.get("pass")]
     if not passing:
-        return {"selected": None, "reason": "no cell passed gates 1-5"}
+        return {"selected": None, "reason": "no cell passed gates 1-5 and the fit fan check"}
 
     def key(cell):
         return (
             float(cell["mean_cued_delta"]),
-            float(cell["theta"]),
-            float(cell["tau"]),
-            -float(cell["a_trig"]),
+            -abs(float(cell["half_life"]) - 20.0),
+            -abs(float(cell["lambda"]) - 0.25),
         )
 
     best = max(passing, key=key)
     return {
         "selected": {
             "theta": best["theta"],
-            "tau": best["tau"],
+            "half_life": best["half_life"],
+            "tau": float(best["half_life"]) / math.log(2.0),
+            "lambda": best["lambda"],
             "a_trig": best["a_trig"],
             "mean_cued_delta": best["mean_cued_delta"],
+            "fan_means": best["fan_means"],
         },
-        "reason": "largest mean cued margin; ties prefer higher theta, then larger tau, then smaller a_trig",
+        "reason": "largest mean cued margin; ties prefer half-life closer to 20, then lambda closer to 0.25",
     }
 
 
@@ -597,67 +794,90 @@ def _cost(mem, rows, prompt: str) -> dict:
 
 
 def fit() -> dict:
-    """Gates 1-5 on the direction fit bank. Does not score a held bank."""
+    """Gates 1-5 and the fit fan check. Does not score a held bank.
+
+    Theta stays at the frozen cosine-bracket value. The loop is half-life
+    by lambda, from SCHEDULE.
+    """
     import tidal.llm_memory as mod
 
-    original = (float(mod.CUE_THETA), float(mod.CUE_TAU), float(mod.CUE_A_TRIG))
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
     bank = _fit_bank()
     mem = _load_memory()
     started = time.perf_counter()
+    cells = []
+    alpha_report = {"selected": None, "tried": []}
     try:
         prefer = list(bank.PREFER)
         prefer_rows = _encode(mem, [_fact(item) for item in prefer])
         incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(mod.CUE_HALF_LIFE), float(mod.CUE_LAMBDA), 1.0)
+        alpha_report = _freeze_alpha(mem, prefer, prefer_rows)
         _print("baselines")
         base = _baselines(mem, bank, prefer_rows)
-        cells = []
-        for index, cell in enumerate(GRID):
-            _bind(cell["theta"], cell["tau"], cell["a_trig"])
-            _print(f"cell {index + 1}/{len(GRID)} theta={cell['theta']} tau={cell['tau']} a_trig={cell['a_trig']}")
-            scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base)
-            scored.update(cell)
-            cells.append(scored)
-            _print(
-                "  "
-                + " ".join(
-                    [
-                        f"pass={scored['pass']}",
-                        f"cued={scored['mean_cued_delta']:.4f}",
-                        f"false={scored['false_triggers']}/{scored['false_trigger_n']}",
-                        f"decay={scored['decay_pass']}/{scored['decay_n']}",
-                        f"store={scored['store_means']}",
-                        f"quiet={scored['quiet_nll_mean']}",
-                    ]
+        if alpha_report["selected"] is None:
+            _print("no fan alpha kept the clean trace; cells are not scored")
+        else:
+            for index, cell in enumerate(SCHEDULE):
+                _bind(cell["theta"], cell["half_life"], cell["lambda"], cell["a_trig"])
+                _print(
+                    f"cell {index + 1}/{len(SCHEDULE)} "
+                    f"half_life={cell['half_life']} lambda={cell['lambda']}"
                 )
-            )
+                scored = _score_cell(
+                    mem, bank, prefer_rows, incidental_rows, base, alpha_report["selected"]
+                )
+                scored.update(cell)
+                cells.append(scored)
+                _print(
+                    "  "
+                    + " ".join(
+                        [
+                            f"pass={scored['pass']}",
+                            f"cued={scored['mean_cued_delta']:.4f}",
+                            f"false={scored['false_triggers']}/{scored['false_trigger_n']}",
+                            f"decay={scored['decay_pass']}/{scored['decay_n']}",
+                            f"store={scored['store_means']}",
+                            f"quiet={scored['quiet_nll_mean']}",
+                            f"fan={scored['fan_k']}/{scored['fan_n']}",
+                        ]
+                    )
+                )
         choice = _select(cells)
         chosen = choice["selected"]
         if chosen is None:
             _bind(*original)
         else:
-            _bind(chosen["theta"], chosen["tau"], chosen["a_trig"])
+            _bind(chosen["theta"], chosen["half_life"], chosen["lambda"], chosen["a_trig"])
         cost_rows = prefer_rows + incidental_rows
         cost = _cost(mem, cost_rows, prefer[0]["prompt"])
         mem.store.clear()
     finally:
         mem.close()
     payload = {
-        "kind": "fit",
+        "kind": "schedule-fit",
         "git": _git_sha(),
         "elapsed_s": time.perf_counter() - started,
         "bank": "direction-fit",
-        "grid": list(GRID),
+        "theta": FROZEN_THETA,
+        "grid": list(SCHEDULE),
+        "alpha": alpha_report,
         "cells": cells,
         "choice": choice,
         "cost": cost,
         "held_scored": False,
     }
-    _dump(FIT_PATH, payload)
+    _dump(SCHEDULE_FIT_PATH, payload)
     return payload
 
 
 def held() -> dict:
-    """Gate 6 on the n=50 banks. Refuses to run unless fit selected a cell."""
+    """Gates 6 and 7 on the n=50 banks. Refuses to run unless the schedule fit selected a cell."""
     from tidal.subconscious_interfere_score import score_quartet
     from tidal.subconscious_measure_data import (
         RifMeasure,
@@ -671,13 +891,14 @@ def held() -> dict:
     from tidal.subconscious_valence_data import REPEATS
     from tidal.subconscious_valence_score import score_signed
 
-    if not FIT_PATH.is_file():
-        raise RuntimeError("fit report is missing")
-    fit_report = json.loads(FIT_PATH.read_text(encoding="utf-8"))
+    if not SCHEDULE_FIT_PATH.is_file():
+        raise RuntimeError("schedule fit report is missing")
+    fit_report = json.loads(SCHEDULE_FIT_PATH.read_text(encoding="utf-8"))
     chosen = (fit_report.get("choice") or {}).get("selected")
-    if not chosen:
+    alpha = (fit_report.get("alpha") or {}).get("selected")
+    if not chosen or alpha is None:
         raise RuntimeError("fit did not select a cell; held is not scored")
-    _bind(chosen["theta"], chosen["tau"], chosen["a_trig"])
+    _bind(chosen["theta"], chosen["half_life"], chosen["lambda"], chosen.get("a_trig", 1.0))
 
     class _Bank:
         def __init__(self, prefer, avoid):
@@ -711,6 +932,20 @@ def held() -> dict:
             _print(f"away {index + 1}/50")
             part = score_signed(mem, [item], -1.0, int(REPEATS))
             away_rows.append(part["rows"][0])
+        fan_rows = []
+        prefer_list = list(prefer_items())
+        encoded = _encode(mem, [_fact(item) for item in prefer_list])
+        mem.store.clear()
+        empties = [
+            _margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"])
+            for item in prefer_list
+        ]
+        for index, (item, row, empty) in enumerate(zip(prefer_list, encoded, empties)):
+            _print(f"fan {index + 1}/{len(prefer_list)}")
+            measured = _fan_effects(mem, item, row, float(empty), float(alpha))
+            measured["id"] = item["id"]
+            fan_rows.append(measured)
+        mem.store.clear()
     finally:
         mem.close()
 
@@ -736,6 +971,8 @@ def held() -> dict:
     sim_rows = [row for row in quartet_rows if row["similarity"].get("included")]
     similarity = _count(sim_rows, lambda row: bool(row["similarity"]["high_lower"]))
     count = _count(quartet_rows, lambda row: bool(row["fan"]["high_lower"]))
+    fan = _fan_summary(fan_rows)
+    fan_rate = _count(fan_rows, lambda row: bool(row["strict"]))
     rates = {
         "prefer_up": prefer,
         "avoid_up": avoid_up,
@@ -748,19 +985,33 @@ def held() -> dict:
         "outsider_same": outsider,
         "similarity": similarity,
         "count": count,
+        "fan_monotonic": fan_rate,
     }
     failures = []
     for name, floor in HELD_FLOORS.items():
         row = rates[name]
         if int(row["n"]) < 50 or int(row["k"]) < int(floor):
             failures.append({"gate": name, "k": row["k"], "n": row["n"], "floor": int(floor)})
+    if int(fan_rate["n"]) < 50 or int(fan_rate["k"]) < HELD_FAN_MIN or not fan["pass_means"]:
+        failures.append(
+            {
+                "gate": "fan_monotonic",
+                "k": fan_rate["k"],
+                "n": fan_rate["n"],
+                "floor": HELD_FAN_MIN,
+                "means": fan["means"],
+            }
+        )
     payload = {
-        "kind": "held",
+        "kind": "schedule-held",
         "git": _git_sha(),
         "elapsed_s": time.perf_counter() - started,
         "selected": chosen,
+        "alpha": alpha,
         "rates": rates,
-        "floors": HELD_FLOORS,
+        "floors": {**HELD_FLOORS, "fan_monotonic": HELD_FAN_MIN},
+        "fan_means": fan["means"],
+        "fan_rows": fan_rows,
         "failures": failures,
         "pass": not failures,
         "means": {
@@ -769,9 +1020,12 @@ def held() -> dict:
             "avoid_stored_lift": float(sum(float(row["stored_lift"]) for row in avoid_rows) / len(avoid_rows)),
             "toward_delta": float(sum(float(row["delta"]) for row in toward_rows) / len(toward_rows)),
             "away_delta": float(sum(float(row["delta"]) for row in away_rows) / len(away_rows)),
+            "fan1": fan["means"].get("1"),
+            "fan2": fan["means"].get("2"),
+            "fan4": fan["means"].get("4"),
         },
     }
-    _dump(HELD_PATH, payload)
+    _dump(SCHEDULE_HELD_PATH, payload)
     _print(json.dumps({"pass": payload["pass"], "failures": failures, "rates": {k: [v["k"], v["n"]] for k, v in rates.items()}}, indent=2))
     return payload
 

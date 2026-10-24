@@ -156,6 +156,7 @@ def _always_cue(monkeypatch):
     monkeypatch.setattr(mod, "CUE_THETA", -1.0)
     monkeypatch.setattr(mod, "CUE_A_TRIG", 1.0)
     monkeypatch.setattr(mod, "CUE_TAU", 1.0e6)
+    monkeypatch.setattr(mod, "CUE_LAMBDA", 1.0)
     monkeypatch.setattr(mod, "CUE_FLOOR", 0.0)
 
 

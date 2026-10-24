@@ -8,11 +8,16 @@ A candidate must clear ``theta`` on cosine alone. Among those candidates the
 winner is the greatest ``(log(strength), cosine, -index)``. Cosine is only
 the tie break. One winner is injected. There is no average across neighbors.
 
-On the trigger token, ``dt`` is 0 and ``a = a_trig``. A later token that does
-not trigger uses ``a = a_trig * exp(-dt / tau)``, where ``dt`` is the number
-of tokens after the trigger. A new winner resets ``dt``. ``a`` below
-``floor`` clears the trace. The same-token add is applied after the cue is
-copied, so the cue does not depend on the add and no earlier position sees it.
+On the trigger token, ``dt`` is 0 and the exported activation is
+``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
+``theta``. ``fan_factor`` is ``max(0, (S - ln n) / S)`` with ``S`` fixed at
+1.45, so fan 1 leaves ``a_trig`` unchanged. A later token that does not
+trigger keeps that fan factor and uses
+``a = a_trig * fan_factor * exp(-dt / tau)``. ``dt`` is the number of tokens
+after the trigger. A new winner resets ``dt`` and recomputes the fan factor.
+``a`` below ``floor`` clears the trace. The same-token add is applied after
+the cue is copied, so the cue does not depend on the add and no earlier
+position sees it. This module does not apply the language-model gain.
 """
 from __future__ import annotations
 
@@ -24,6 +29,22 @@ import numpy as np
 
 from tidal.episodic import cosine_scores
 
+# Anderson & Reder 1999 estimated S = 1.45 for the Anderson 1974 fan data.
+# Not a fitted knob. fan_factor divides by S so one candidate stays 1.
+FAN_S = 1.45
+
+
+def fan_factor(n: int, s: float = FAN_S) -> float:
+    """``max(0, (S - ln n) / S)``. Decreases in ``n``. Fan 1 is exactly 1."""
+    if int(n) < 1:
+        return 0.0
+    if not math.isfinite(float(s)) or float(s) <= 0.0:
+        raise ValueError("fan S must be positive")
+    raw = (float(s) - math.log(float(n))) / float(s)
+    if raw <= 0.0:
+        return 0.0
+    return float(min(1.0, raw))
+
 
 @dataclass
 class CueState:
@@ -31,8 +52,8 @@ class CueState:
 
     ``memory_id`` is the slot index chosen at the trigger, or -1 when nothing
     is active. ``a`` is the activation in ``[0, 1]``. ``dt`` is tokens since
-    the trigger. Strength, confidence, valence offset, and the stored value
-    are frozen at the trigger.
+    the trigger. ``fan_factor`` is frozen at the trigger. Strength,
+    confidence, valence offset, and the stored value are frozen there too.
     """
 
     a: float = 0.0
@@ -43,6 +64,7 @@ class CueState:
     valence: float = 0.0
     gap: float = float("nan")
     winner_cosine: float = float("nan")
+    fan_factor: float = 1.0
     vec: Optional[np.ndarray] = None
 
     def inactive(self) -> bool:
@@ -77,12 +99,14 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
     best = None
     best_index = None
     positive = []
+    n_candidates = 0
     for index, (cos, level) in enumerate(zip(cosine.tolist(), strength.tolist())):
         if not math.isfinite(float(level)) or float(level) <= 0.0:
             continue
         positive.append(index)
         if not math.isfinite(float(cos)) or float(cos) < float(theta):
             continue
+        n_candidates += 1
         key = (math.log(float(level)), float(cos), -int(index))
         if best is None or key > best:
             best = key
@@ -113,6 +137,7 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
         "gap": gap,
         "strength": float(strength[best_index]),
         "tied": bool(tied),
+        "n": int(n_candidates),
     }
 
 
@@ -171,6 +196,7 @@ def step_cue(
     floor: float,
     gap_tau: float,
     valence_span: float,
+    fan_s: float = FAN_S,
 ) -> tuple:
     """Advance one token. Returns ``(new_state, row)`` and does not mutate ``state``."""
     _check_schedule(tau, a_trig, floor)
@@ -182,7 +208,8 @@ def step_cue(
         raise ValueError("cue_dim must be positive")
     choice = select_cue_winner(cosines, strengths, theta)
     if choice is not None:
-        activation = float(a_trig)
+        factor = fan_factor(int(choice["n"]), fan_s)
+        activation = float(a_trig) * factor
         if activation < float(floor):
             return CueState(), _blank(cue_dim)
         index = int(choice["index"])
@@ -207,13 +234,15 @@ def step_cue(
             valence=offset,
             gap=float("nan") if gap is None else float(gap),
             winner_cosine=float(choice["cosine"]),
+            fan_factor=factor,
             vec=vec,
         )
         return new, _row_from_state(new, cue_dim, triggered=True)
     if state.inactive():
         return CueState(), _blank(cue_dim)
     dt = int(state.dt) + 1
-    activation = float(a_trig) * math.exp(-float(dt) / float(tau))
+    factor = float(state.fan_factor)
+    activation = float(a_trig) * factor * math.exp(-float(dt) / float(tau))
     if activation < float(floor):
         return CueState(), _blank(cue_dim)
     new = CueState(
@@ -225,6 +254,7 @@ def step_cue(
         valence=float(state.valence),
         gap=float(state.gap),
         winner_cosine=float(state.winner_cosine),
+        fan_factor=factor,
         vec=None if state.vec is None else np.asarray(state.vec, dtype=np.float32).copy(),
     )
     return new, _row_from_state(new, cue_dim, triggered=False)
@@ -245,6 +275,7 @@ def trace_sequence(
     gap_tau: float,
     valence_span: float,
     state: Optional[CueState] = None,
+    fan_s: float = FAN_S,
 ) -> tuple:
     """Left-to-right trace. ``cues`` is ``[T, cue_dim]`` before the query center.
 
@@ -295,6 +326,7 @@ def trace_sequence(
             floor=floor,
             gap_tau=gap_tau,
             valence_span=valence_span,
+            fan_s=fan_s,
         )
         memory_id[index] = int(row["memory_id"])
         vec[index] = row["vec"]

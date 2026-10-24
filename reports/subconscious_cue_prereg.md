@@ -123,3 +123,56 @@ One pass. Git `9f4ea6184ff3018317bd019b9dd20d0b61acba8c`. Elapsed 120.0 seconds.
 Means, not a gate: prefer delta 9.892, avoid delta 0.262, avoid stored lift -0.356, toward delta 1.935, away delta -4.943.
 
 The report is `reports/subconscious_cue_held.json`.
+
+## Amendment
+
+This section supersedes the activation formula, the grid, and the selection rule above. The fit and held numbers above are the first schedule. They are not used to choose theta, half-life, lambda, or the fan constant.
+
+### Fan
+
+`n` is the number of candidates with `cos(cue, key) >= theta`. Theta still does not read strength. The winner is unchanged: greatest `(log strength, cosine, -index)`. One winner. No average.
+
+`fan_factor(n) = max(0, (S - ln n) / S)`. `S` is 1.45, the value Anderson and Reder estimated for the 1974 fan experiment. It is not fit. Dividing by `S` makes fan 1 a factor of 1. The factor decreases in `n`. Fan 4 is `(1.45 - ln 4) / 1.45`, which is below the 0.05 floor, so a fan-4 trigger clears.
+
+Exported activation is `a_trig * fan_factor * decay`. `decay` is `exp(-dt / tau)`. The fan factor is frozen at the trigger and kept while the trace decays. A new trigger recomputes it. `interface_version` is 2.
+
+### Two timescales
+
+The fast timescale is the per-token decay above. The slow timescale is the slot strength and the existing replay update. No new state is added.
+
+The half-life sweep is 10, 20, and 30 tokens. `tau = half_life / ln 2`, so the activation is half of `a_trig * fan_factor` after that many tokens. This range is a HYPOTHESIS. Joordens and Becker measured items, not tokens, and there is no direct conversion. The value is fit on the direction fit bank only.
+
+`a_trig` stays 1. It is not swept again.
+
+### Lambda
+
+Lambda is a global scale on the residual this wrapper adds to SmolLM2. The sweep is 0.10, 0.15, 0.20, 0.25, 0.30. The center 0.25 is the reference point of that range. Lambda is not part of the exported activation, the exported value, or the training broadcast in `teacher_force_loss`.
+
+### Fit order
+
+Theta is frozen before any half-life or lambda cell is scored. The freeze rule uses the cosine histogram only: the lowest value in {0.32, 0.35, 0.40, 0.43} that is above both the unrelated max (0.303) and the filler max (0.294), and at or below the lowest cued-prompt max (0.436). That value is theta 0.32. Fan tests use this theta and do not co-sweep it. `n` is discontinuous in theta.
+
+The fit-bank fan manipulation is not a margin. Companions have strength 0.5, relation `fan-norm`, and a key mixed from the target key toward the match vector at the fan-1 last trigger. Alpha is tried in {0.25, 0.125, 0.0625, 0.03125, 0.015625}. The largest alpha that, on all 8 fit prefer items, keeps the fan-2 clean trace on that same last trigger with confidence 1, and clears the fan-4 trace from that trigger on, is frozen. If no alpha does that, cells are not scored and held is not scored. The same alpha is used for every cell and for the held fan gate. It is not chosen again on held.
+
+Among cells that pass gates 1–5 and the fit fan check, pick the largest mean cued margin. Ties go to the half-life closer to 20, then the lambda closer to 0.25. The fit fan check is: mean effect at fan 1, 2, and 4 is strictly decreasing, and at least 6 of 8 items are strictly decreasing. The effect is the continuation margin minus the empty-store margin. If no cell passes, held is not scored.
+
+### Gate 7, held
+
+With the frozen theta and the frozen alpha, fan 1, 2, and 4 on the 50 held prefer items. Pass when at least 38/50 items are strictly decreasing and the three means are strictly decreasing. n below 50 fails. Wilson is reported on the item count. This gate is not used to select the cell.
+
+Gates 1–6 are otherwise unchanged. Gate 6 still uses the #54 floors.
+
+### Literature added with this amendment
+
+Verified before this section was used to score a cell. No other citation is included.
+
+- Anderson, J. R., & Reder, L. M. (1999). The fan effect: New results and new theories. Journal of Experimental Psychology: General, 128(2), 186–197. https://doi.org/10.1037/0096-3445.128.2.186
+- Anderson, J. R. (1974). Retrieval of propositional information from long-term memory. Cognitive Psychology, 6(4), 451–474. https://doi.org/10.1016/0010-0285(74)90021-8
+- Joordens, S., & Becker, S. (1997). The long and short of semantic priming effects in lexical decision. Journal of Experimental Psychology: Learning, Memory, and Cognition, 23(5), 1083–1105. https://doi.org/10.1037/0278-7393.23.5.1083
+- Tulving, E., Schacter, D. L., & Stark, H. A. (1982). Priming effects in word-fragment completion are independent of recognition memory. Journal of Experimental Psychology: Learning, Memory, and Cognition, 8(4), 336–342. https://doi.org/10.1037/0278-7393.8.4.336
+
+Joordens and Becker report that semantic priming is reduced to non-significant levels if as few as one or two items intervene between a related prime and the target. Tulving, Schacter, and Stark report that word-fragment priming was unchanged from one hour to seven days while recognition fell. That slow effect is the strength and replay state already in the store.
+
+## Amendment result
+
+The amendment fit has not been scored.

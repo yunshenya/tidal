@@ -16,10 +16,15 @@ The add at token ``t`` uses the cue copied from the inject-layer residual
 before the add, and the add is written at that same index. The cue does not
 depend on the add, and no earlier position sees it. The logit at ``t``, which
 is the distribution for token ``t+1``, does see it. On a trigger, ``dt`` is 0
-and ``a = a_trig``. A later token that does not trigger uses
-``a = a_trig * exp(-dt / tau)`` with ``dt`` the number of tokens after the
-trigger. A new winner resets the clock. ``a`` below :data:`CUE_FLOOR` clears
-the trace. The shipped generator re-forwards the whole prefix and recomputes
+and ``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
+theta, and ``fan_factor`` is ``max(0, (S - ln n) / S)`` with ``S`` fixed.
+A later token that does not trigger keeps that fan factor and uses
+``a = a_trig * fan_factor * exp(-dt / tau)`` with ``dt`` the number of tokens
+after the trigger. ``tau = half_life / ln 2``. A new winner resets the clock
+and the fan factor. ``a`` below :data:`CUE_FLOOR` clears the trace. The fast
+timescale is this per-token decay. The slow timescale is the strength and
+replay update already on the slot. This schedule adds no second memory.
+The shipped generator re-forwards the whole prefix and recomputes
 that recurrence; ``cue_state`` after the forward is the state after the last
 token. A caller that forwards only the new token sets ``_cue_resume`` and
 passes that state, the same way a key-value cache carries the past.
@@ -40,11 +45,14 @@ estimated once from a calibration set and stored with the module. On the
 shipped causal LM that pool runs the decoder blocks up through the inject
 layer and does not run the later blocks or the output head. The hidden state
 is the one a full forward stores for that layer. Value and surprise still run
-the whole model, because they need the logits. The per-token add is
+the whole model, because they need the logits. The per-token add into this language model is
 
-    a * s * c * u * gain * (scale(v) + MLP(scale(v)))
+    lambda * a * s * c * u * gain * (scale(v) + MLP(scale(v)))
 
-``a`` is the decay above. ``s`` is the winner's strength frozen at the
+``a = a_trig * fan_factor * decay`` is the exported activation. ``decay`` is
+``exp(-dt / tau)``. ``lambda`` scales only this residual. The exported
+activation and the exported value do not include it, and neither does the
+training broadcast inside ``teacher_force_loss``. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -101,7 +109,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tidal.cue_inject import CueState, trace_sequence
+from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
@@ -140,16 +148,23 @@ DEFAULT_GAP_TAU = 0.80
 # the held-out bank.
 MIX_K = 4
 MIX_TEMP = 0.05
-# Cue schedule. The floor is fixed and is not fit. Theta 0.32, tau 8, and
-# a_trig 1 are the direction-fit cell in reports/subconscious_cue_prereg.md:
-# the largest mean cued margin among the 24 cells that passed gates 1-5.
+# Cue schedule. The floor is fixed and is not fit. Theta 0.32 is frozen from
+# the fit-bank cosine bracket: the lowest grid value above the unrelated and
+# filler maxima and at or below the lowest cued-prompt maximum. It is not
+# co-swept with fan, half-life, or lambda. Half-life 20 and lambda 0.25 are
+# the centers of those sweeps. They are not a selected cell. a_trig stays 1.
 # Not retuned on the held-out bank. The interface names the signal ``cue``;
 # cue_dim is the hidden width of whatever layer this wrapper injects at.
-CUE_INTERFACE_VERSION = 1
+# Activation is a_trig * fan_factor * decay. interface_version 2 is that
+# formula. Lambda is not part of it.
+CUE_INTERFACE_VERSION = 2
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
-CUE_TAU = 8.0
+CUE_HALF_LIFE = 20.0
+CUE_TAU = CUE_HALF_LIFE / math.log(2.0)
 CUE_A_TRIG = 1.0
+CUE_LAMBDA = 0.25
+CUE_FAN_S = FAN_S
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
@@ -1312,10 +1327,12 @@ class LLMMemory:
     ``remember`` writes one fact. ``generate`` answers from the store. The
     prompt is the only text the LM sees. Each token's cue is the inject-layer
     residual before the add. One slot whose cosine with that cue clears
-    :data:`CUE_THETA` is the winner, ranked by log strength. The residual is
-    that slot's composed value times activation, strength, confidence, and
-    valence gain, at that token only. It then decays until the floor or until
-    another token wins. Valence stays 0 until an experience is stored, so the
+    :data:`CUE_THETA` is the winner, ranked by log strength. The exported
+    activation is ``a_trig * fan_factor * decay``. The residual added to this
+    model is that activation times :data:`CUE_LAMBDA`, strength, confidence,
+    and valence gain, at that token only. Lambda is not copied into the
+    exported activation or value. The trace then decays until the floor or
+    until another token wins. Valence stays 0 until an experience is stored, so the
     gain stays 1. Strength stays 1 until replay or a nonzero clock phase. A
     fact is written when it is salient and, once 32 surprises are stored, its
     answer-token NLL is at least the window quantile. A strict win scales at
@@ -2001,6 +2018,7 @@ class LLMMemory:
             gap_tau=float(DEFAULT_GAP_TAU),
             valence_span=float(VALENCE_SPAN),
             state=state,
+            fan_s=float(CUE_FAN_S),
         )
         residual = self._residual_from_fields(fields, values, keys)
         return fields, residual, final
@@ -2018,7 +2036,7 @@ class LLMMemory:
             level = float(activation[index])
             if slot < 0 or level == 0.0:
                 continue
-            scale = level * float(scale_sc[index]) * (1.0 + float(valence[index]))
+            scale = float(CUE_LAMBDA) * level * float(scale_sc[index]) * (1.0 + float(valence[index]))
             if scale == 0.0:
                 continue
             if slot not in cache:
