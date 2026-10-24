@@ -1294,7 +1294,8 @@ class LLMMemory:
     share the winner's relation; the winner is not scaled. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
-    near-duplicate keys are merged. Salience reuses the polarity vector.
+    same-relation surface repeats are merged. Key cosine does not merge
+    slots. Salience reuses the polarity vector.
     There is no extra query forward. ``soft_k`` and ``soft_temp`` are kept
     on the episodic store; ``generate`` does not read them.
     ``injection_readout`` ``"top1"`` is the paired baseline (gap confidence
@@ -1644,6 +1645,7 @@ class LLMMemory:
                 kind=kind,
                 group=group,
                 answer=answer,
+                text=text,
             )
         )
         if not wrote:
@@ -1709,7 +1711,7 @@ class LLMMemory:
         raise RuntimeError("accepted write did not leave a slot")
 
     def _consolidate(self) -> None:
-        """Recompute decay, refresh the top-m salient slots, merge near-dups.
+        """Recompute decay, refresh the top-m salient slots, merge surface repeats.
 
         The no-replay control is the store after decay and before the refresh
         and the merge. Production always continues into both. The competitive

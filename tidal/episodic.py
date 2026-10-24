@@ -29,6 +29,7 @@ and ``docs/llm_memory.md``.
 from __future__ import annotations
 
 import math
+import re
 import zlib
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence, Tuple, Union
@@ -45,6 +46,13 @@ SKIP_KINDS = frozenset({"chat", "noise"})
 # The angle is not read from fact text. 0 new parameters.
 CLOCK_SPAN = 0.25
 CLOCK_STEP = math.pi / 16
+# Strictest corner of the fit grid (0.50, 0.67, 0.75, 0.85, 0.92, 1.0).
+# A different identity is overwritten only when the group matches, the
+# relation is the same non-empty string, and the surface token Jaccard is
+# at least this value. Key cosine does not merge slots. This corner is not
+# the selected cell: the fit bank has not been scored.
+REPEAT_JACCARD = 1.0
+_TOKEN_RE = re.compile(r"[\u4e00-\u9fff]|[A-Za-z0-9]+(?:'[A-Za-z]+)?")
 
 
 def clock_write_gain(phase: float) -> float:
@@ -64,6 +72,27 @@ def _as1d(x: ArrayLike) -> np.ndarray:
     if not np.isfinite(a).all():
         raise ValueError("non-finite vector")
     return a
+
+
+def content_tokens(text: str) -> frozenset:
+    """Surface tokens. CJK characters stay; other tokens are lowercased."""
+    out = set()
+    for match in _TOKEN_RE.finditer(str(text)):
+        seg = match.group(0)
+        if "\u4e00" <= seg[0] <= "\u9fff":
+            out.add(seg)
+        else:
+            out.add(seg.lower())
+    return frozenset(out)
+
+
+def token_jaccard(left: str, right: str) -> float:
+    """Jaccard of :func:`content_tokens`. Empty text is 0."""
+    a = content_tokens(left)
+    b = content_tokens(right)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
 
 
 def _cos(a: np.ndarray, b: np.ndarray) -> float:
@@ -274,6 +303,9 @@ class Slot:
     # Exact surface written with the slot. LM spelling copies this string.
     # Continuum writes leave it empty and keep decoding the byte code.
     answer: Optional[str] = None
+    # Fact surface used for repeat detection. None when the writer passed none.
+    # Key cosine is not this string.
+    text: Optional[str] = None
     # Experience-grown preference. 0 until a stored experience adds to it.
     # Continuum readout does not read it. Replay multiplies it by the decay.
     valence: float = 0.0
@@ -291,9 +323,13 @@ class EpisodicStore:
     Parameters
     ----------
     capacity : max slots. At capacity the oldest ``t`` is evicted (FIFO).
-    overwrite_cos : also overwrite when ``cos(k, slot.k)`` is strictly above
-        this and the identity does not match (paraphrase of the same fact).
-        ``1`` disables that path. Identity match always wins over cosine.
+    overwrite_cos : accepted so existing callers keep working. Key cosine
+        does not overwrite. Same-identity overwrite and the surface repeat
+        rule do not read it.
+    repeat_jaccard : overwrite a different identity when the surface token
+        Jaccard is at least this value, the relation is the same non-empty
+        string, and the group matches. ``None`` reads :data:`REPEAT_JACCARD`
+        at call time. Identity match still wins over that repeat.
     soft_k, soft_temp : softmax over the top-``soft_k`` cosines (4 and 0.05).
     surprise_thr : when set, ``write(..., surprise=s)`` skips ``s < thr``.
         A missing ``surprise`` does not block the write.
@@ -306,6 +342,7 @@ class EpisodicStore:
         dk: Optional[int] = None,
         dv: Optional[int] = None,
         overwrite_cos: float = 0.9,
+        repeat_jaccard: Optional[float] = None,
         soft_k: int = 4,
         soft_temp: float = 0.05,
         surprise_thr: Optional[float] = None,
@@ -314,6 +351,10 @@ class EpisodicStore:
             raise ValueError("capacity must be >= 1")
         if not 0.0 < float(overwrite_cos) <= 1.0:
             raise ValueError("overwrite_cos must be in (0, 1]")
+        if repeat_jaccard is None:
+            repeat_jaccard = REPEAT_JACCARD
+        if not 0.0 < float(repeat_jaccard) <= 1.0:
+            raise ValueError("repeat_jaccard must be in (0, 1]")
         if int(soft_k) < 1:
             raise ValueError("soft_k must be >= 1")
         if float(soft_temp) <= 0.0:
@@ -322,6 +363,7 @@ class EpisodicStore:
         self.dk = None if dk is None else int(dk)
         self.dv = None if dv is None else int(dv)
         self.overwrite_cos = float(overwrite_cos)
+        self.repeat_jaccard = float(repeat_jaccard)
         self.soft_k = int(soft_k)
         self.soft_temp = float(soft_temp)
         self.surprise_thr = surprise_thr
@@ -408,24 +450,42 @@ class EpisodicStore:
         if self.dv is None:
             self.dv = int(v.size)
 
-    def _hit(self, kk: np.ndarray, name: Optional[str], rel: Optional[str], group: Optional[str]) -> Optional[int]:
-        """Identity match first, else the first in-scope near-duplicate key.
+    def _content_repeat(self, slot: Slot, rel: Optional[str], group: Optional[str], text: Optional[str]) -> bool:
+        """Same group, same non-empty relation, surface Jaccard at least the threshold."""
+        if slot.group != group:
+            return False
+        if not isinstance(rel, str) or rel == "" or slot.rel != rel:
+            return False
+        if not isinstance(text, str) or text == "":
+            return False
+        if not isinstance(slot.text, str) or slot.text == "":
+            return False
+        return token_jaccard(text, slot.text) >= float(self.repeat_jaccard)
 
-        Cosine does not cross groups, and it does not override a same-identity
-        slot that happens to sit later in the list. The stored key is replaced
-        on hit — nothing writes the previous key back.
+    def _locate(
+        self,
+        name: Optional[str],
+        rel: Optional[str],
+        group: Optional[str],
+        text: Optional[str],
+    ) -> tuple:
+        """Identity index, then other slots whose surface repeats ``text``.
+
+        Key cosine is not a hit. A repeat does not cross groups or relations.
         """
         hit_id = None
-        hit_cos = None
-        for i, s in enumerate(self._slots):
-            if s.group != group:
+        for i, slot in enumerate(self._slots):
+            if slot.group != group:
                 continue
-            if name is not None and (s.name, s.rel) == (name, rel):
+            if name is not None and (slot.name, slot.rel) == (name, rel):
                 hit_id = i
                 break
-            if hit_cos is None and self.overwrite_cos < 1.0 and _cos(kk, s.k) > self.overwrite_cos:
-                hit_cos = i
-        return hit_id if hit_id is not None else hit_cos
+        content_ids = [
+            i
+            for i, slot in enumerate(self._slots)
+            if i != hit_id and self._content_repeat(slot, rel, group, text)
+        ]
+        return hit_id, content_ids
 
     def write(
         self,
@@ -439,6 +499,7 @@ class EpisodicStore:
         group: Optional[str] = None,
         sentence: Optional[np.ndarray] = None,
         answer: Optional[str] = None,
+        text: Optional[str] = None,
     ) -> bool:
         """Insert or overwrite one slot. Returns True iff a write happened.
 
@@ -465,6 +526,7 @@ class EpisodicStore:
         self._step += 1
         sent = None if sentence is None else _as1d(sentence).copy()
         stored = answer if isinstance(answer, str) and answer != "" else None
+        stored_text = text if isinstance(text, str) and text != "" else None
         entry = Slot(
             k=kk.copy(),
             v=vv.copy(),
@@ -474,18 +536,26 @@ class EpisodicStore:
             group=group,
             sentence=sent,
             answer=stored,
+            text=stored_text,
         )
-        hit = self._hit(kk, name, rel, group)
-        if hit is not None:
-            old = self._slots[hit]
-            # Same identity keeps the preference and its audit trail. A cosine
-            # overwrite is a different fact and starts at valence 0. The stored
+        hit_id, content_ids = self._locate(name, rel, group, stored_text)
+        if hit_id is None and content_ids:
+            hit_id = content_ids[0]
+            content_ids = content_ids[1:]
+        for index in reversed(content_ids):
+            self._slots.pop(index)
+            if hit_id is not None and index < hit_id:
+                hit_id -= 1
+        if hit_id is not None:
+            old = self._slots[hit_id]
+            # Same identity keeps the preference and its audit trail. A surface
+            # repeat of a different identity starts at valence 0. The stored
             # answer is the new surface either way.
             if old.name == name and old.rel == rel and old.group == group:
                 entry.valence = float(old.valence)
                 entry.episode_id = int(old.episode_id)
                 entry.history = list(old.history)
-            self._slots[hit] = entry
+            self._slots[hit_id] = entry
             return True
         if len(self._slots) >= self.capacity:
             oldest = min(range(len(self._slots)), key=lambda i: (self._slots[i].t, i))
@@ -639,21 +709,23 @@ class EpisodicStore:
             reverse=True,
         )
 
-    def near_duplicate_slots(self) -> int:
-        """How many slots share a same-group key above ``overwrite_cos``.
+    def _repeat_pair(self, left: Slot, right: Slot) -> bool:
+        """Same group, same non-empty relation, surface Jaccard at the threshold."""
+        return self._content_repeat(right, left.rel if isinstance(left.rel, str) else None, left.group, left.text)
 
-        The write path already overwrites a new key that close to an existing
-        one. Two slots can still both sit above that cosine after a
-        same-identity replace, which does not scan the rest of the store.
+    def near_duplicate_slots(self) -> int:
+        """How many slots are in a same-relation surface repeat.
+
+        The write path already collapses a new surface that repeats an
+        existing one. A same-identity replace does not scan other slots
+        before this count, so a leftover pair can still be here for replay.
+        Key cosine is not a repeat.
         """
         hit: set[int] = set()
         slots = self._slots
         for i in range(len(slots)):
             for j in range(i + 1, len(slots)):
-                left, right = slots[i], slots[j]
-                if left.group != right.group:
-                    continue
-                if _cos(left.k, right.k) > self.overwrite_cos:
+                if self._repeat_pair(slots[i], slots[j]):
                     hit.add(i)
                     hit.add(j)
         return len(hit)
@@ -661,11 +733,12 @@ class EpisodicStore:
     def merge_near_duplicates(self, *, limit: int, protect: Sequence[int] = ()) -> int:
         """Drop up to ``limit`` near-duplicate slots. Keep the stronger trace.
 
-        A pair qualifies when ``cos(k, k)`` is strictly above ``overwrite_cos``
-        and the slots share a group. The higher-salience slot is kept; a tie
-        keeps the newer ``t``. A protected index is dropped only when its
-        partner is protected too. Values are not blended. Cost is bounded by
-        ``limit`` scans of the current slots.
+        A pair qualifies when the slots share a group, share a non-empty
+        relation, and their surface token Jaccard is at least
+        ``repeat_jaccard``. Key cosine does not qualify. The higher-salience
+        slot is kept; a tie keeps the newer ``t``. A protected index is
+        dropped only when its partner is protected too. Values are not
+        blended. Cost is bounded by ``limit`` scans of the current slots.
         """
         budget = int(limit)
         if budget < 1 or len(self._slots) < 2:
@@ -689,9 +762,7 @@ class EpisodicStore:
         for i in range(len(slots)):
             for j in range(i + 1, len(slots)):
                 left, right = slots[i], slots[j]
-                if left.group != right.group:
-                    continue
-                if _cos(left.k, right.k) <= self.overwrite_cos:
+                if not self._repeat_pair(left, right):
                     continue
                 key = (
                     max(float(left.salience), float(right.salience)),
