@@ -30,13 +30,17 @@ stored experience adds ``sign * step`` on that slot, so ``u = 1`` and the add
 matches the replay formula. The sign is the experience field on the write.
 The fact text is not scored, and the language model does not supply a group
 prior. ``s`` is the winning slot's strength. It stays 1 until a replay cycle
-recomputes decay or a nonzero clock phase scales the write, and a refresh
-sets it back to 1. The same cycle multiplies
-every nonzero valence by the replay decay and appends an audit row. A store
+recomputes decay, a nonzero clock phase scales the write, or a same-relation
+retrieval scales a competitor. A refresh sets the replayed slot back to 1.
+The same cycle multiplies every nonzero valence by the replay decay and
+appends an audit row. A store
 with no experience and no replay matches the previous add. A fact is written
 when it is salient and, once 32 accepted surprises are stored, its
 answer-token NLL is at least the quantile of that window of numbers. Fewer
-stored surprises leaves the salient fact accepted. ``c`` is 1 when
+stored surprises leaves the salient fact accepted. A strict retrieval win
+then multiplies the strength of at most three other slots that share the
+winner's relation; the closer key is scaled down more, and the winner is
+left as read. ``c`` is 1 when
 the store has one slot. Otherwise
 ``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
 0.80. A tie adds nothing. The MLP weights are the shipped checkpoint;
@@ -141,6 +145,18 @@ VALENCE_STEP = 0.25
 SURPRISE_WINDOW = 32
 SURPRISE_MIN_COUNT = 32
 SURPRISE_QUANTILE = 0.0
+# Retrieval-induced forgetting. After a strict win, other slots that share
+# the winner's relation are competitors when there are 1..RIF_MAX_SET of
+# them. A larger shared relation is background (the note stores) and is not
+# a cue. A slot whose salience reaches RIF_SALIENCE_EXEMPT is a polarity
+# carrier and is not scaled. The keep is 1 - span * weight. Weight is 1 for
+# the competitor whose key is closest to the winner and at least 1/2 for
+# every other competitor in that set. The winner is not scaled. The grid is
+# the span in {0.05, 0.10, 0.20}. The set size and the salience exempt are
+# not on the grid. 0 new parameters. Not retuned on the held-out bank.
+RIF_SPAN = 0.05
+RIF_MAX_SET = 3
+RIF_SALIENCE_EXEMPT = 0.5
 _PHONE_WORD = re.compile(r"\bphone\b", re.IGNORECASE)
 _BIRTHDAY_WORD = re.compile(r"\bbirthday\b", re.IGNORECASE)
 _PHONE_KEYS = ("phone_on", "phone_mu", "phone_sd", "phone_w", "phone_b")
@@ -1109,6 +1125,71 @@ def answer_surprise(logits: torch.Tensor, token_ids: Sequence[int], answer_mask:
     return float((-taken.sum()).detach().cpu())
 
 
+def rif_weight(similarity: float, closest: float) -> float:
+    """1 for the closest same-cue key, and at least 1/2 for every other one.
+
+    ``closest`` is the highest key cosine in the competitor set. A set with
+    no positive cosine still takes half a span, so the cue is not a no-op.
+    """
+    nearest = float(closest)
+    if nearest <= 1e-8:
+        return 0.5
+    ratio = max(0.0, float(similarity)) / nearest
+    if ratio > 1.0:
+        ratio = 1.0
+    return 0.5 + 0.5 * ratio
+
+
+def rif_competitor_keep(similarity: float, closest: float, span: float) -> float:
+    """Strength multiplier for one same-relation competitor. The winner is not passed here."""
+    level = float(span)
+    if not 0.0 <= level < 1.0:
+        raise ValueError("rif span must be in [0, 1)")
+    return 1.0 - level * rif_weight(similarity, closest)
+
+
+def rival_indexes(slots, winner: int, max_set: int, salience_exempt: float) -> list:
+    """Other slots that share the winner's relation, when that set is small.
+
+    More than ``max_set`` siblings means the relation is background, not a
+    cue. A slot at or above ``salience_exempt`` is left out of the list
+    after that size check, so a polarity carrier inside a real cue is kept.
+    """
+    if winner < 0 or winner >= len(slots):
+        raise IndexError("rif winner is outside the store")
+    rel = slots[winner].rel
+    if not isinstance(rel, str) or rel == "":
+        return []
+    raw = [i for i, slot in enumerate(slots) if i != winner and slot.rel == rel]
+    if not raw or len(raw) > int(max_set):
+        return []
+    return [i for i in raw if float(slots[i].salience) < float(salience_exempt)]
+
+
+def forget_rivals(slots, winner: int) -> int:
+    """Scale same-cue competitors. Returns how many strengths changed.
+
+    The span, the set cap, and the salience exempt are the module globals,
+    read at call time. Keys already in the slots are the only vectors used.
+    """
+    rivals = rival_indexes(slots, winner, RIF_MAX_SET, RIF_SALIENCE_EXEMPT)
+    if not rivals:
+        return 0
+    winner_key = np.asarray(slots[winner].k, dtype=np.float64)
+    keys = np.stack([np.asarray(slots[i].k, dtype=np.float64) for i in rivals], 0)
+    sims = cosine_scores(keys, winner_key)
+    closest = float(np.max(sims))
+    changed = 0
+    for index, sim in zip(rivals, sims.tolist()):
+        keep = rif_competitor_keep(float(sim), closest, RIF_SPAN)
+        before = float(slots[index].strength)
+        updated = before * float(keep)
+        if updated != before:
+            changed += 1
+        slots[index].strength = updated
+    return changed
+
+
 def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     """Scale for the residual. One slot is unscaled. A tie adds nothing."""
     if int(n) < 2:
@@ -1136,7 +1217,9 @@ class LLMMemory:
     slot's key. Valence stays 0 until an experience is stored, so the gain
     stays 1. Strength stays 1 until replay or a nonzero clock phase. A fact
     is written when it is salient and, once 32 surprises are stored, its
-    answer-token NLL is at least the window quantile. Every
+    answer-token NLL is at least the window quantile. A strict win scales
+    at most three other slots that share the winner's relation; the winner
+    is not scaled. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
     near-duplicate keys are merged. Salience reuses the polarity vector.
@@ -1665,6 +1748,13 @@ class LLMMemory:
                 "valence": float(slots[winner].valence),
             }
         )
+        # The strength above is the one this retrieval uses. Forgetting runs
+        # after that read. A tie adds nothing and forgets nothing. The key
+        # cosines are the slot keys already stored; there is no extra forward.
+        forgotten = 0
+        if gap is not None and float(gap) > 0.0 and n >= 2:
+            forgotten = forget_rivals(slots, winner)
+        self.last_rif = {"n": int(forgotten)}
         return info
 
     def _set_delta(self, rank: dict) -> None:

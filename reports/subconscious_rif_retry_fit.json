@@ -1,0 +1,517 @@
+{
+  "chosen": {
+    "span": 0.05
+  },
+  "circadian_fit_pass": true,
+  "constants": {
+    "clock_span": 0.25,
+    "replay_decay": 0.5,
+    "replay_every": 32,
+    "replay_m": 1,
+    "rif_max_set": 3,
+    "rif_salience_exempt": 0.5,
+    "rif_span": 0.05,
+    "surprise_quantile": 0.0,
+    "surprise_window": 32,
+    "valence_span": 1.0,
+    "valence_step": 0.25
+  },
+  "floors": {
+    "circadian fit": [
+      {
+        "detail": "8/8 > 0, mean 2.341",
+        "name": "high phase",
+        "ok": true
+      },
+      {
+        "detail": "8/8 < 0, mean -2.140",
+        "name": "low phase",
+        "ok": true
+      },
+      {
+        "detail": "8/8 high > phase0 > low, phase0 exact 1, gap 0.174",
+        "name": "decay order",
+        "ok": true
+      },
+      {
+        "detail": "8/8 match the clock gain",
+        "name": "write gain",
+        "ok": true
+      },
+      {
+        "detail": "equal gains 1, audit 8/8",
+        "name": "content-free",
+        "ok": true
+      },
+      {
+        "detail": "mean -0.009, above 0.5: 0",
+        "name": "neutral NLL",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "choice flips",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "leak",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "phone off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "birthday off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "'+1-278-555-0989' vs '+1-278-555-0989'",
+        "name": "phone exact",
+        "ok": true
+      },
+      {
+        "detail": "'August 25, 2009' vs 'August 25, 2009'",
+        "name": "birthday exact",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "phone off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "birthday off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "32 slots, written 32/32",
+        "name": "incidental slots",
+        "ok": true
+      }
+    ],
+    "surprise fit": [
+      {
+        "detail": "0/8 written, mean surprise 2.541414961218834",
+        "name": "low surprise not written",
+        "ok": true
+      },
+      {
+        "detail": "8/8 written, mean surprise 16.595247268676758",
+        "name": "high surprise written",
+        "ok": true
+      },
+      {
+        "detail": "written 32/32, slots 32, window 32, bar 9.955883026123047",
+        "name": "seed window",
+        "ok": true
+      },
+      {
+        "detail": "mean -0.004, above 0.5: 0",
+        "name": "neutral NLL",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "choice flips",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "leak",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "phone off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "birthday off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "'+1-939-555-2791' vs '+1-939-555-2791'",
+        "name": "phone exact",
+        "ok": true
+      },
+      {
+        "detail": "'January 6, 2013' vs 'January 6, 2013'",
+        "name": "birthday exact",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "phone off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "birthday off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "32 slots, written 32/32",
+        "name": "incidental slots",
+        "ok": true
+      },
+      {
+        "detail": "new 0, chat 0, below 1/0, above 2/1",
+        "name": "cost",
+        "ok": true
+      }
+    ],
+    "valence fit": [
+      {
+        "detail": "6/8 > 0, mean 2.085, audit 8/8",
+        "name": "toward experiences",
+        "ok": true
+      },
+      {
+        "detail": "8/8 < 0, mean -7.341, audit 8/8",
+        "name": "away experiences",
+        "ok": true
+      },
+      {
+        "detail": "margin back 8/8, valence back 8/8, peak 2.085 revised 0.000",
+        "name": "contrary revises",
+        "ok": true
+      },
+      {
+        "detail": "mean -0.002, above 0.5: 0",
+        "name": "neutral NLL",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "choice flips",
+        "ok": true
+      },
+      {
+        "detail": "0/8",
+        "name": "leak",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "phone off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "0.000",
+        "name": "birthday off-relation takeover",
+        "ok": true
+      },
+      {
+        "detail": "'+1-301-555-3809' vs '+1-301-555-3809'",
+        "name": "phone exact",
+        "ok": true
+      },
+      {
+        "detail": "'June 7, 2011' vs 'June 7, 2011'",
+        "name": "birthday exact",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "phone off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "0",
+        "name": "birthday off-relation not stored",
+        "ok": true
+      },
+      {
+        "detail": "32 slots, written 32/32",
+        "name": "incidental slots",
+        "ok": true
+      }
+    ]
+  },
+  "grid": [
+    {
+      "competitor_drop_mean": 0.39403172334035236,
+      "competitor_drop_min": 0.24924278259277344,
+      "geometry_ok": true,
+      "noncompetitor_abs_drop_max": 0.0,
+      "ok": true,
+      "span": 0.05,
+      "winner_abs_drop_max": 0.0
+    }
+  ],
+  "result": {
+    "bank_kind": "fit",
+    "bank_sha256": "3a88dd1f8e3c98b8c2fd96fed96b0903608adc4f6ab6161b28c4daf4aaf3c0ad",
+    "cost": {
+      "buffers": 66931,
+      "clock_span": 0.25,
+      "gap_tau": 0.8,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "polarity_span": 2.0,
+      "rank_forwards": 1,
+      "replay_decay": 0.5,
+      "replay_every": 32,
+      "replay_m": 1,
+      "rif_has_text": 0,
+      "rif_max_set": 3,
+      "rif_n": 3,
+      "rif_salience_exempt": 0.5,
+      "rif_span": 0.05,
+      "surprise_quantile": 0.0,
+      "surprise_window": 32,
+      "valence_span": 1.0,
+      "valence_step": 0.25
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "phases_s": {
+      "cost": 0.29668362800293835,
+      "quartets": 2.648357522004517
+    },
+    "protocol": "subconscious-rif-retry-fit-v1",
+    "quartets": {
+      "competitor_drop_mean": 0.39403172334035236,
+      "competitor_drop_min": 0.24924278259277344,
+      "geometry_ok": true,
+      "noncompetitor_abs_drop_max": 0.0,
+      "quartets": [
+        {
+          "competitor_drops": [
+            0.4565458297729492,
+            0.24924278259277344,
+            0.33751344680786133
+          ],
+          "decay_confidence": 0.22716287326455642,
+          "decay_gap": 0.18173029861164514,
+          "decay_top": [
+            "Xokohipe",
+            "zqfit0"
+          ],
+          "forgotten": 3,
+          "geometry_ok": true,
+          "index": 0,
+          "items": [
+            {
+              "control_delta": 2.302541732788086,
+              "drop": 0.0,
+              "gap": 0.18173029861164514,
+              "hit": 1,
+              "id": "rif-retry-fit-q0-0",
+              "name": "Xokohipe",
+              "rel": "zqfit0",
+              "role": "target",
+              "strength": 1.0,
+              "top": [
+                "Xokohipe",
+                "zqfit0"
+              ],
+              "treated_delta": 2.302541732788086
+            },
+            {
+              "control_delta": 8.195925235748291,
+              "drop": 0.4565458297729492,
+              "gap": 0.20414413500136197,
+              "hit": 1,
+              "id": "rif-retry-fit-q0-1",
+              "name": "Gifudili",
+              "rel": "zqfit0",
+              "role": "competitor",
+              "strength": 0.9513698107780697,
+              "top": [
+                "Gifudili",
+                "zqfit0"
+              ],
+              "treated_delta": 7.739379405975342
+            },
+            {
+              "control_delta": 5.2276458740234375,
+              "drop": 0.24924278259277344,
+              "gap": 0.1849816229258926,
+              "hit": 1,
+              "id": "rif-retry-fit-q0-2",
+              "name": "Woximiho",
+              "rel": "zqfit0",
+              "role": "competitor",
+              "strength": 0.95,
+              "top": [
+                "Woximiho",
+                "zqfit0"
+              ],
+              "treated_delta": 4.978403091430664
+            },
+            {
+              "control_delta": 4.46824312210083,
+              "drop": 0.33751344680786133,
+              "gap": 0.2021242642937232,
+              "hit": 1,
+              "id": "rif-retry-fit-q0-3",
+              "name": "Diteturo",
+              "rel": "zqfit0",
+              "role": "competitor",
+              "strength": 0.9512386959636737,
+              "top": [
+                "Diteturo",
+                "zqfit0"
+              ],
+              "treated_delta": 4.130729675292969
+            },
+            {
+              "control_delta": 2.0194053649902344,
+              "drop": 0.0,
+              "gap": 0.1933056675471937,
+              "hit": 1,
+              "id": "rif-retry-fit-q0-4",
+              "name": "Zicibohu",
+              "rel": "zqfit0x",
+              "role": "outsider",
+              "strength": 1.0,
+              "top": [
+                "Zicibohu",
+                "zqfit0x"
+              ],
+              "treated_delta": 2.0194053649902344
+            }
+          ],
+          "max_key_cosine": 0.7999207766268182,
+          "noncompetitor_drops": [
+            0.0
+          ],
+          "slots": 5,
+          "strengths": [
+            1.0,
+            0.9513698107780697,
+            0.95,
+            0.9512386959636737,
+            1.0
+          ],
+          "winner_drop": 0.0
+        },
+        {
+          "competitor_drops": [
+            0.6157176494598389,
+            0.38722896575927734,
+            0.31794166564941406
+          ],
+          "decay_confidence": 0.25819154542406825,
+          "decay_gap": 0.2065532363392546,
+          "decay_top": [
+            "Jocuhoco",
+            "zqfit1"
+          ],
+          "forgotten": 3,
+          "geometry_ok": true,
+          "index": 1,
+          "items": [
+            {
+              "control_delta": 0.8016633987426758,
+              "drop": 0.0,
+              "gap": 0.2065532363392546,
+              "hit": 1,
+              "id": "rif-retry-fit-q1-0",
+              "name": "Jocuhoco",
+              "rel": "zqfit1",
+              "role": "target",
+              "strength": 1.0,
+              "top": [
+                "Jocuhoco",
+                "zqfit1"
+              ],
+              "treated_delta": 0.8016633987426758
+            },
+            {
+              "control_delta": 7.4398486614227295,
+              "drop": 0.6157176494598389,
+              "gap": 0.20134073970573496,
+              "hit": 1,
+              "id": "rif-retry-fit-q1-1",
+              "name": "Rosufeci",
+              "rel": "zqfit1",
+              "role": "competitor",
+              "strength": 0.9502142809802332,
+              "top": [
+                "Rosufeci",
+                "zqfit1"
+              ],
+              "treated_delta": 6.824131011962891
+            },
+            {
+              "control_delta": 4.458652496337891,
+              "drop": 0.38722896575927734,
+              "gap": 0.28891024210645594,
+              "hit": 1,
+              "id": "rif-retry-fit-q1-2",
+              "name": "Senodava",
+              "rel": "zqfit1",
+              "role": "competitor",
+              "strength": 0.9549888151805301,
+              "top": [
+                "Senodava",
+                "zqfit1"
+              ],
+              "treated_delta": 4.071423530578613
+            },
+            {
+              "control_delta": 3.670210838317871,
+              "drop": 0.31794166564941406,
+              "gap": 0.20781079895046783,
+              "hit": 1,
+              "id": "rif-retry-fit-q1-3",
+              "name": "Wigajivu",
+              "rel": "zqfit1",
+              "role": "competitor",
+              "strength": 0.95,
+              "top": [
+                "Wigajivu",
+                "zqfit1"
+              ],
+              "treated_delta": 3.352269172668457
+            },
+            {
+              "control_delta": -0.3183403015136719,
+              "drop": 0.0,
+              "gap": 0.20611151481297874,
+              "hit": 1,
+              "id": "rif-retry-fit-q1-4",
+              "name": "Yuwepipu",
+              "rel": "zqfit1x",
+              "role": "outsider",
+              "strength": 1.0,
+              "top": [
+                "Yuwepipu",
+                "zqfit1x"
+              ],
+              "treated_delta": -0.3183403015136719
+            }
+          ],
+          "max_key_cosine": 0.7804255417449747,
+          "noncompetitor_drops": [
+            0.0
+          ],
+          "slots": 5,
+          "strengths": [
+            1.0,
+            0.9502142809802332,
+            0.9549888151805301,
+            0.95,
+            1.0
+          ],
+          "winner_drop": 0.0
+        }
+      ],
+      "winner_abs_drop_max": 0.0
+    },
+    "wall_s": 2.945041150007455
+  },
+  "surprise_fit_pass": true,
+  "valence_fit_pass": true
+}
