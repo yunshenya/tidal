@@ -32,6 +32,9 @@ HELD_PATH = REPORT_DIR / "subconscious_cue_held.json"
 SCHEDULE_FIT_PATH = REPORT_DIR / "subconscious_cue_schedule_fit.json"
 SCHEDULE_HELD_PATH = REPORT_DIR / "subconscious_cue_schedule_held.json"
 HALFLIFE_FIT_PATH = REPORT_DIR / "subconscious_cue_halflife_fit.json"
+ANISOTROPY_PATH = REPORT_DIR / "subconscious_cue_anisotropy.json"
+KWTA_FIT_PATH = REPORT_DIR / "subconscious_cue_kwta_fit.json"
+KWTA_KS = (1, 2, 3, 4)
 
 # First schedule, already scored. fit() does not iterate this.
 HISTORICAL_GRID = tuple(
@@ -1037,6 +1040,269 @@ def held() -> dict:
     return payload
 
 
+def _mix_kwta_residual(mem, cues, fields, k: int):
+    """Replace the one-winner residual while the shipped trace is active.
+
+    The on/off gate, the activation, and the winner's confidence stay the
+    shipped trace. The vector becomes the k-winner-take-all mix. ``k`` of 1
+    is not routed here; the caller keeps the shipped residual.
+    """
+    import numpy as np
+
+    import tidal.llm_memory as mod
+    from tidal.cue_inject import kwta_weights
+    from tidal.episodic import cosine_scores
+
+    keys, strengths, valences, values, _modalities = mem._slot_arrays()
+    rows = np.asarray(cues, dtype=np.float64)
+    center = np.asarray(mem.query_mean, dtype=np.float64).reshape(-1)
+    activation = np.asarray(fields["activation"], dtype=np.float64).reshape(-1)
+    confidence_scale = np.asarray(fields["strength_confidence"], dtype=np.float64).reshape(-1)
+    memory = np.asarray(fields["memory_id"]).reshape(-1)
+    steps, width = int(activation.shape[0]), int(mem.hidden)
+    out = np.zeros((steps, width), dtype=np.float32)
+    cache = {}
+    active_tokens = 0
+    positive_slots = 0
+    for index in range(steps):
+        level = float(activation[index])
+        winner = int(memory[index])
+        if winner < 0 or level == 0.0 or keys.shape[0] == 0:
+            continue
+        winner_strength = float(strengths[winner]) if 0 <= winner < strengths.shape[0] else 0.0
+        if winner_strength <= 0.0:
+            continue
+        confidence = float(confidence_scale[index]) / winner_strength
+        scores = cosine_scores(keys, rows[index] - center)
+        weights = kwta_weights(scores, strengths, int(k))
+        active_tokens += 1
+        positive_slots += int(np.count_nonzero(weights > 0.0))
+        for slot, weight in enumerate(weights.tolist()):
+            if float(weight) == 0.0:
+                continue
+            offset = float(mod.VALENCE_SPAN) * math.tanh(float(valences[slot]))
+            scale = (
+                float(mod.CUE_LAMBDA)
+                * level
+                * confidence
+                * float(weight)
+                * float(strengths[slot])
+                * (1.0 + offset)
+            )
+            if scale == 0.0:
+                continue
+            if slot not in cache:
+                cache[slot] = (
+                    mem._compose(values[slot], key=keys[slot], grad=False)
+                    .detach()
+                    .float()
+                    .cpu()
+                    .numpy()
+                    .astype(np.float32, copy=False)
+                )
+            out[index] = out[index] + cache[slot] * np.float32(scale)
+    return out, active_tokens, positive_slots
+
+
+def _install_kwta(mem, k: int):
+    original = mem._trace_numpy
+    stats = {"tokens": 0, "positive": 0}
+
+    def wrapped(cues, state=None, _original=original, _k=int(k), _stats=stats):
+        fields, residual, final = _original(cues, state)
+        if _k == 1:
+            return fields, residual, final
+        mixed, tokens, positive = _mix_kwta_residual(mem, cues, fields, _k)
+        _stats["tokens"] += int(tokens)
+        _stats["positive"] += int(positive)
+        return fields, mixed, final
+
+    mem._trace_numpy = wrapped
+    return original, stats
+
+
+def anisotropy() -> dict:
+    """Related versus unrelated cue cosines after the shipped key centers.
+
+    Fit bank only. Does not write theta.
+    """
+    import numpy as np
+
+    import tidal.llm_memory as mod
+    from tidal.cue_inject import rank_auc
+    from tidal.llm_memory import _center_path, _load_key_centers
+
+    bank = _fit_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    theta_before = float(mod.CUE_THETA)
+    related = []
+    unrelated = []
+    related_max = []
+    unrelated_max = []
+    try:
+        loaded = _load_key_centers(
+            _center_path(),
+            model_name=mem.model_name,
+            layer=mem.layer,
+            hidden=mem.hidden,
+        )
+        if loaded is None:
+            raise RuntimeError("llm_key_center.npz does not match this model")
+        key_mean, query_mean = loaded
+        if not np.allclose(mem.key_mean, key_mean) or not np.allclose(mem.query_mean, query_mean):
+            raise RuntimeError("the memory centers are not llm_key_center.npz")
+        prefer = list(bank.PREFER)
+        neutrals = list(bank.NEUTRAL_CHOICE)
+        encoded = _encode(mem, [_fact(item) for item in prefer])
+        for item, row in zip(prefer, encoded):
+            _write(mem, [row])
+            key = mem.store._slots[0].k
+            prompt_cos = _cosines(mem, item["prompt"], key)
+            related.extend(prompt_cos)
+            related_max.append(max(prompt_cos))
+            for prompt in neutrals:
+                other = _cosines(mem, prompt["prompt"], key)
+                unrelated.extend(other)
+                unrelated_max.append(max(other))
+            _print(f"anisotropy {item['id']} related_max={related_max[-1]:.4f}")
+        mem.store.clear()
+        theta_after = float(mod.CUE_THETA)
+        if theta_after != theta_before:
+            raise RuntimeError("anisotropy changed theta")
+    finally:
+        mem.close()
+    payload = {
+        "kind": "anisotropy",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "bank": "direction-fit",
+        "centering": "tidal/llm_key_center.npz",
+        "key_center": "key_mean",
+        "cue_center": "query_mean",
+        "theta_before": theta_before,
+        "theta_after": theta_after,
+        "theta_changed": False,
+        "related_tokens": _percentiles(related),
+        "unrelated_tokens": _percentiles(unrelated),
+        "related_max": _percentiles(related_max),
+        "unrelated_max": _percentiles(unrelated_max),
+        "auc_tokens": rank_auc(related, unrelated),
+        "auc_max": rank_auc(related_max, unrelated_max),
+        "note": "Distribution only. Theta was not changed.",
+    }
+    _dump(ANISOTROPY_PATH, payload)
+    _print(json.dumps({k: payload[k] for k in ("auc_tokens", "auc_max", "related_tokens", "unrelated_tokens", "theta_changed")}, indent=2))
+    return payload
+
+
+def compete() -> dict:
+    """Winners=1 versus k-winner-take-all on the direction fit bank only.
+
+    Does not import a held bank and does not select a k.
+    """
+    import tidal.llm_memory as mod
+
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = _fit_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    columns = []
+    alpha_report = {"selected": None, "tried": []}
+    try:
+        prefer = list(bank.PREFER)
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(mod.CUE_HALF_LIFE), float(mod.CUE_LAMBDA), 1.0)
+        alpha_report = _freeze_alpha(mem, prefer, prefer_rows)
+        _print("baselines")
+        base = _baselines(mem, bank, prefer_rows)
+        if alpha_report["selected"] is None:
+            _print("no fan alpha kept the clean trace; columns are not scored")
+        else:
+            for k in KWTA_KS:
+                _print(f"kwta k={k}")
+                restore, stats = _install_kwta(mem, k)
+                try:
+                    scored = _score_cell(
+                        mem, bank, prefer_rows, incidental_rows, base, alpha_report["selected"]
+                    )
+                finally:
+                    mem._trace_numpy = restore
+                tokens = int(stats["tokens"])
+                scored["k"] = int(k)
+                scored["mean_positive_slots"] = (
+                    None if tokens == 0 else float(stats["positive"]) / float(tokens)
+                )
+                columns.append(scored)
+                _print(
+                    "  "
+                    + " ".join(
+                        [
+                            f"pass={scored['pass']}",
+                            f"cued={scored['mean_cued_delta']:.4f}",
+                            f"store={scored['store_means']}",
+                            f"fan={scored['fan_means']}",
+                            f"active={scored['mean_positive_slots']}",
+                        ]
+                    )
+                )
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    payload = {
+        "kind": "kwta-fit",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "bank": "direction-fit",
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "ks": list(KWTA_KS),
+        "alpha": alpha_report,
+        "columns": [
+            {
+                "k": row["k"],
+                "pass": row["pass"],
+                "mean_cued_delta": row["mean_cued_delta"],
+                "n_cued_pos": row["n_cued_pos"],
+                "unrelated_abs_mean": row["unrelated_abs_mean"],
+                "false_triggers": row["false_triggers"],
+                "false_trigger_n": row["false_trigger_n"],
+                "decay_pass": row["decay_pass"],
+                "decay_n": row["decay_n"],
+                "store_means": row["store_means"],
+                "quiet_nll_mean": row["quiet_nll_mean"],
+                "quiet_nll_n": row["quiet_nll_n"],
+                "fan_k": row["fan_k"],
+                "fan_n": row["fan_n"],
+                "fan_means": row["fan_means"],
+                "gate1_pass": row["gate1_pass"],
+                "gate2_pass": row["gate2_pass"],
+                "gate3_pass": row["gate3_pass"],
+                "gate4_pass": row["gate4_pass"],
+                "gate5_pass": row["gate5_pass"],
+                "fan_pass": row["fan_pass"],
+                "mean_positive_slots": row["mean_positive_slots"],
+            }
+            for row in columns
+        ],
+        "selected_k": None,
+        "held_scored": False,
+        "theta_changed": False,
+        "note": "Diagnostic only. Floors were not moved and no k was selected.",
+    }
+    _dump(KWTA_FIT_PATH, payload)
+    _print(json.dumps({"columns": payload["columns"], "selected_k": None}, indent=2))
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1045,6 +1311,10 @@ def main(argv: list) -> None:
         fit()
     elif mode == "held":
         held()
+    elif mode == "anisotropy":
+        anisotropy()
+    elif mode == "compete":
+        compete()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

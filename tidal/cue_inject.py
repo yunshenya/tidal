@@ -142,6 +142,74 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
     }
 
 
+def kwta_weights(cosines, strengths, k: int) -> np.ndarray:
+    """Keep the top ``k`` positive-strength slots and inhibit the rest.
+
+    Rank is ``(log strength, cosine, -index)``, the same order as one winner.
+    The threshold is the cosine of the first excluded positive-strength slot.
+    A kept slot's raw weight is ``max(0, cosine - threshold)``. The weights
+    then sum to 1. When every positive slot is kept, the threshold is
+    ``min(0, lowest kept cosine)``, so a positive cosine is not cancelled by
+    the absence of a loser. A raw-weight sum of 0 shares the weight equally
+    across the kept slots. This is a k-winner-take-all diagnostic. It is not
+    an oscillating network, and :func:`step_cue` does not call it.
+    """
+    cosine = np.asarray(cosines, dtype=np.float64).reshape(-1)
+    strength = np.asarray(strengths, dtype=np.float64).reshape(-1)
+    if cosine.shape != strength.shape:
+        raise ValueError("cosines and strengths must have the same shape")
+    if int(k) < 1:
+        raise ValueError("k must be >= 1")
+    weights = np.zeros(cosine.shape[0], dtype=np.float64)
+    ranked = []
+    for index, (cos, level) in enumerate(zip(cosine.tolist(), strength.tolist())):
+        if not math.isfinite(float(level)) or float(level) <= 0.0:
+            continue
+        if not math.isfinite(float(cos)):
+            continue
+        ranked.append((math.log(float(level)), float(cos), -int(index), int(index)))
+    if not ranked:
+        return weights
+    ranked.sort(reverse=True)
+    active = [item[3] for item in ranked[: int(k)]]
+    if len(ranked) > len(active):
+        threshold = float(ranked[len(active)][1])
+    else:
+        threshold = min(0.0, min(float(cosine[index]) for index in active))
+    for index in active:
+        raw = float(cosine[index]) - threshold
+        if raw > 0.0:
+            weights[index] = raw
+    total = float(weights.sum())
+    if total <= 0.0:
+        share = 1.0 / float(len(active))
+        for index in active:
+            weights[index] = share
+        return weights
+    weights /= total
+    return weights
+
+
+def rank_auc(related, unrelated) -> float:
+    """Probability a related score exceeds an unrelated score. Ties count half."""
+    left = [float(value) for value in related]
+    right = [float(value) for value in unrelated]
+    if not left or not right:
+        raise ValueError("auc needs both classes")
+    if any(not math.isfinite(value) for value in left + right):
+        raise ValueError("auc scores must be finite")
+    wins = 0.0
+    total = 0
+    for good in left:
+        for bad in right:
+            total += 1
+            if good > bad:
+                wins += 1.0
+            elif good == bad:
+                wins += 0.5
+    return float(wins / total)
+
+
 def _check_schedule(tau: float, a_trig: float, floor: float) -> None:
     if not math.isfinite(float(tau)) or float(tau) <= 0.0:
         raise ValueError("tau must be positive")

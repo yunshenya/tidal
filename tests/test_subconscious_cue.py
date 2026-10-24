@@ -6,6 +6,7 @@ time. This file does not force theta to -1.
 from __future__ import annotations
 
 import ast
+import inspect
 import math
 from pathlib import Path
 
@@ -14,7 +15,16 @@ import pytest
 import torch
 from torch import nn
 
-from tidal.cue_inject import FAN_S, CueState, fan_factor, select_cue_winner, step_cue, trace_sequence
+from tidal.cue_inject import (
+    FAN_S,
+    CueState,
+    fan_factor,
+    kwta_weights,
+    rank_auc,
+    select_cue_winner,
+    step_cue,
+    trace_sequence,
+)
 from tidal.episodic import MEMORY_MODALITY, Slot, cosine_scores
 from tidal.llm_memory import (
     CUE_A_TRIG,
@@ -156,6 +166,23 @@ def test_stepwise_advance_matches_the_full_trace():
     assert state.dt == final.dt
     assert state.a == pytest.approx(final.a)
     assert state.fan_factor == pytest.approx(final.fan_factor)
+
+
+def test_kwta_keeps_the_top_k_and_generation_does_not_call_it():
+    weights = kwta_weights([0.50, 0.40, 0.10], [1.0, 1.0, 1.0], 2)
+    assert weights[2] == 0.0
+    assert weights[0] > weights[1] > 0.0
+    assert float(weights.sum()) == pytest.approx(1.0)
+    # Higher log strength outranks a higher cosine. k=1 is that one slot.
+    stronger = kwta_weights([0.90, 0.40], [0.2, 1.0], 1)
+    assert stronger.tolist() == pytest.approx([0.0, 1.0])
+    # A tie on log strength and cosine keeps the lower index.
+    tied = kwta_weights([0.5, 0.5], [1.0, 1.0], 1)
+    assert tied.tolist() == pytest.approx([1.0, 0.0])
+    assert "kwta_weights" not in inspect.getsource(step_cue)
+    assert rank_auc([2.0, 1.0], [0.0]) == 1.0
+    assert rank_auc([0.0], [1.0]) == 0.0
+    assert rank_auc([1.0], [1.0]) == 0.5
 
 
 def test_modality_rejects_anything_but_text():
@@ -542,7 +569,12 @@ def test_fit_script_keeps_held_banks_out_of_fit_and_histogram():
     tree = ast.parse(source)
     banned = ("held_bank", "prefer_items", "avoid_items", "toward_items", "away_items", "RifMeasure")
     for node in tree.body:
-        if not isinstance(node, ast.FunctionDef) or node.name not in ("histogram", "fit"):
+        if not isinstance(node, ast.FunctionDef) or node.name not in (
+            "histogram",
+            "fit",
+            "anisotropy",
+            "compete",
+        ):
             continue
         blob = ast.get_source_segment(source, node)
         for name in banned:

@@ -247,3 +247,19 @@ The report is `reports/subconscious_cue_halflife_fit.json`.
 This section does not rescore a cell and does not move theta, half-life, lambda, or the floors.
 
 Every stored slot has `modality`. Every write sets it to `text`. A slot constructed with any other value is rejected. Each exported token carries `modality`, and the value is `text` on every token, including a cleared trace. `interface_version` is 3. Version 2 was `a_trig * fan_factor * decay`. That formula is unchanged. Version 3 adds this field. There is no perceptual-fingerprint field.
+
+## Single-winner diagnostic
+
+[#53](https://github.com/yunshenya/tidal/pull/53) reported a four-slot mixture score of 1.152 against a top-1 score of 0.598. [#55](https://github.com/yunshenya/tidal/pull/55) kept `MIX_K` 4. One winner may miss the floors. The floors stay the counts already stated in this file: the #54 held counts, plus fan 1/2/4 strictly decreasing on at least 38/50. The held pass is already false. This pull request does not merge, and this diagnostic does not move a floor.
+
+The measurement is the direction fit bank only. `anisotropy` and `compete` do not import a held bank. They do not change theta, half-life, lambda, or fan S. The shipped path stays one winner.
+
+The shipped column is `k=1`, the residual the code injects. The competitive columns are `k=2`, `k=3`, and `k=4`. While the shipped trace is active, those columns replace the injected vector with a k-winner-take-all mix. Rank is `(log strength, cosine, -index)` over positive-strength slots. The threshold is the cosine of the first excluded slot. A kept slot's raw weight is `max(0, cosine - threshold)`, then the weights sum to 1. A raw-weight sum of 0 shares the weight equally across the kept slots. When every positive slot is kept, the threshold is `min(0, lowest kept cosine)`. Each kept slot is composed with its own key and scaled by its own strength and valence. The shipped activation and the shipped winner's confidence multiply the whole mix, so the time gate stays the one-winner trace. `k=1` does not use this mix. It is the shipped residual.
+
+Norman, Newman, and Detre (2007) describe oscillating k-winner-take-all feedback inhibition. This diagnostic is that kind of competition. It is not their oscillator and not their learning rule. https://doi.org/10.1037/0033-295X.114.4.887
+
+The scored gates are gates 1–5 and the fit fan check, at the shipped cell theta 0.32, half-life 30, lambda 0.3. The comparison does not select a k.
+
+## Cue cosine anisotropy
+
+Cue-key cosine is computed after the shipped centers in `tidal/llm_key_center.npz`. The stored key has `key_mean` subtracted. The cue row has `query_mean` subtracted. No other center is estimated. Related cues are the tokens of each direction-fit prefer prompt against that fact's key. Unrelated cues are the tokens of each direction-fit neutral choice prompt against that same key. AUC is the probability a related cosine exceeds an unrelated cosine. A tie counts half. The same AUC is also reported on the per-prompt maximum. This report does not change theta. Theta stays 0.32.
