@@ -321,7 +321,7 @@ def test_fresh_export_ignores_wall_time_and_adds_no_field():
         assert after.wall_seconds == 8.0
         assert after.internal_seconds == 10.0
         late = after.cue_fields(text)
-        assert int(early["interface_version"]) == int(late["interface_version"]) == CUE_INTERFACE_VERSION == 6
+        assert int(early["interface_version"]) == int(late["interface_version"]) == CUE_INTERFACE_VERSION == 7
         assert torch.equal(early["activation"], late["activation"])
         for fields in (early, late):
             for name in ("clock_error", "wall_seconds", "internal_seconds", "internal"):
@@ -353,7 +353,7 @@ def test_clock_module_has_no_switch_and_banks_are_disjoint():
     residual = memory.split("def _residual_from_fields")[1].split("def cue_hidden")[0]
     assert "wall" not in residual
     assert "clock" not in residual
-    assert CUE_INTERFACE_VERSION == 6
+    assert CUE_INTERFACE_VERSION == 7
     assert AROUSAL_BASELINE == 0.2
     assert AROUSAL_TAU == 8.0
     assert W_SURPRISE == 0.35

@@ -79,7 +79,9 @@ of the residual. ``interface_version`` 5 adds ``arousal`` in ``[0, 1]``.
 is growbrain ``d_model``, pinned at 192 on stage0 ``e1_base_rebalance``.
 ``mem_dim`` 64 is not that width. Arousal is not part of the residual and
 it is not an input to process S.
-There is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
+``interface_version`` 7 adds a memory-level ``fingerprint`` of width 32 on
+the cue winner and a sample-level ``fusion_confidence`` in ``[0, 1]``.
+``fusion_weights`` is not a cue field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -149,6 +151,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tidal.interface_v7 import (
+    check_fingerprint,
+    check_fusion_weights,
+    check_modality,
+    empty_fusion_weights,
+    zero_fingerprint,
+)
 from tidal.arousal import (
     AROUSAL_BASELINE,
     AROUSAL_WINDOW,
@@ -231,12 +240,10 @@ MIX_TEMP = 0.05
 # decay and the drifting internal clock are still not exported. Lambda is
 # not part of the version. Process S is not part of the residual. Arousal
 # is not part of the residual and is not an input to process S. The drifted
-# clock is not an input to decay. There is no perceptual-fingerprint field
-# on this live export. The frozen v7 multimodal packet contract is
-# tidal.interface_v7. That module is stubs only. cue_fields does not emit
-# fingerprint or fusion_confidence. This constant stays 6 until a later
-# wiring pull request.
-CUE_INTERFACE_VERSION = 6
+# clock is not an input to decay. interface_version 7 adds fingerprint
+# (F,) on the cue winner and fusion_confidence as a last-token scalar.
+# fusion_weights is a separate write, not a cue field. Live is 7.
+CUE_INTERFACE_VERSION = 7
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
 CUE_HALF_LIFE = 30.0
@@ -1530,7 +1537,7 @@ class LLMMemory:
     decays a carried trace by wall seconds since its trigger. ``calibrate``
     moves only the internal clock. Neither call is the store's circadian
     angle, and neither call changes theta, the token half-life, lambda,
-    process S, or arousal. The cue export does not grow a field.
+    process S, or arousal. The cue export is ``interface_version`` 7.
     """
 
     def __init__(
@@ -1650,6 +1657,11 @@ class LLMMemory:
         # and not the store's circadian angle.
         self._wall_seconds = 0.0
         self._internal_seconds = 0.0
+        # growbrain → tidal fusion control. Not a cue-packet field.
+        # fusion_confidence stays 0 until a fusion algorithm writes it.
+        self._fusion_weights = empty_fusion_weights()
+        self._fusion_pair = None
+        self._fusion_confidence = 0.0
         # Kept so older callers can assign it. The cue path does not read it.
         self.injection_readout = "cue"
         # Registered for the life of this wrapper. A forward that is not a
@@ -1673,6 +1685,26 @@ class LLMMemory:
     def cue_dim(self) -> int:
         """Width of the cue packet. On growbrain this is ``d_model``, not ``mem_dim``."""
         return int(self.hidden)
+
+    @property
+    def fusion_weights(self):
+        """Last ``set_fusion_weights`` payload, float32 ``(3,)``. Not in cue_fields."""
+        return np.asarray(self._fusion_weights, dtype=np.float32).copy()
+
+    @property
+    def fusion_pair(self):
+        """Optional pairing object stored with the last fusion-weight write."""
+        return self._fusion_pair
+
+    def set_fusion_weights(self, weights, *, pair=None) -> None:
+        """Store growbrain fusion weights. Not a cue-packet field.
+
+        ``weights`` is float32 ``(3,)`` in order text, audio, image.
+        Sleep replay and low-level fusion may read :attr:`fusion_weights`.
+        This method does not run fusion or pairing.
+        """
+        self._fusion_weights = check_fusion_weights(weights)
+        self._fusion_pair = pair
 
     @contextmanager
     def _clean_forward(self):
@@ -1747,6 +1779,7 @@ class LLMMemory:
             float(self.clock_phase()),
             pressure=float(self.sleep_pressure),
             arousal=float(self.arousal),
+            fusion_confidence=float(self._fusion_confidence),
         )
         add = np.stack(residuals, 0)
         self.last_added = torch.tensor(np.asarray(add[0, -1], dtype=np.float32))
@@ -1949,6 +1982,8 @@ class LLMMemory:
         group: Optional[str] = None,
         kind: str = "fact",
         surprise: Optional[float] = None,
+        fingerprint: Optional[np.ndarray] = None,
+        modality: Optional[str] = None,
     ) -> bool:
         """Write one fact into the episodic store. Same ``(name, rel)`` overwrites.
 
@@ -1958,6 +1993,8 @@ class LLMMemory:
         written. After that it is written when that NLL is at least the
         window quantile. The key forward runs only when the write is kept.
         A caller-supplied ``surprise`` does not replace the measured one.
+        ``fingerprint`` and ``modality`` are optional growbrain store fields.
+        Omitted writes store a zero fingerprint and modality ``text``.
         """
         # The measured answer NLL is the score. A caller value cannot bypass it.
         del surprise
@@ -1997,6 +2034,8 @@ class LLMMemory:
                 group=group,
                 answer=answer,
                 text=text,
+                fingerprint=fingerprint,
+                modality=modality,
             )
         )
         if not wrote:
@@ -2146,13 +2185,18 @@ class LLMMemory:
                 np.zeros(0, dtype=np.float64),
                 np.zeros((0, width), dtype=np.float32),
                 [],
+                [],
             )
         keys = np.stack([np.asarray(slot.k, dtype=np.float64).reshape(-1) for slot in slots], 0)
         strengths = np.asarray([float(slot.strength) for slot in slots], dtype=np.float64)
         valences = np.asarray([float(slot.valence) for slot in slots], dtype=np.float64)
         values = np.stack([np.asarray(slot.v, dtype=np.float32).reshape(-1) for slot in slots], 0)
         modalities = [str(slot.modality) for slot in slots]
-        return keys, strengths, valences, values, modalities
+        fingerprints = [
+            zero_fingerprint() if getattr(slot, "fingerprint", None) is None else slot.fingerprint
+            for slot in slots
+        ]
+        return keys, strengths, valences, values, modalities, fingerprints
 
     def _trace_numpy(self, cues, state=None) -> tuple:
         """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token.
@@ -2163,7 +2207,7 @@ class LLMMemory:
         rows = np.asarray(cues, dtype=np.float64)
         if rows.ndim != 2:
             raise ValueError("cues must be [tokens, cue_dim]")
-        keys, strengths, valences, values, modalities = self._slot_arrays()
+        keys, strengths, valences, values, modalities, fingerprints = self._slot_arrays()
         fields, final = trace_sequence(
             rows,
             keys,
@@ -2180,6 +2224,7 @@ class LLMMemory:
             state=state,
             fan_s=float(CUE_FAN_S),
             modalities=modalities,
+            fingerprints=fingerprints,
             now=float(self._wall_seconds),
             wall_tau=float(WALL_TAU),
         )
@@ -2228,6 +2273,7 @@ class LLMMemory:
             float(self.clock_phase()),
             pressure=float(self.sleep_pressure),
             arousal=series,
+            fusion_confidence=float(self._fusion_confidence),
         )
 
     def cue_fields(self, text: str) -> dict:
@@ -2240,8 +2286,12 @@ class LLMMemory:
         is zeros when no memory is active. ``modality`` is ``text`` on every
         token. ``source`` is ``cue`` or ``none``, never ``spontaneous``.
         ``sleep_pressure`` repeats the current process S. ``arousal`` is the
-        level after each of those steps, in ``[0, 1]``. ``interface_version``
-        is :data:`CUE_INTERFACE_VERSION`, which is 6. The trace starts empty
+        level after each of those steps, in ``[0, 1]``. ``fingerprint`` is
+        float32 ``(32,)`` on the cue winner, zeros when none is active.
+        ``fusion_confidence`` is one float in ``[0, 1]`` (last-token /
+        sample-level). No fusion stores 0. ``fusion_weights`` is not
+        exported. ``interface_version`` is
+        :data:`CUE_INTERFACE_VERSION`, which is 7. The trace starts empty
         and a new winner stamps the current wall time, so seconds since boot
         do not decay this retrieval. The drifted internal clock is not read.
         No clock field is exported.
@@ -2255,6 +2305,7 @@ class LLMMemory:
                 float(self.clock_phase()),
                 pressure=float(self.sleep_pressure),
                 arousal=series,
+                fusion_confidence=float(self._fusion_confidence),
             )
             self._last_candidates = [[] for _ in range(int(hidden.shape[0]))]
             self.cue_state = CueState()
@@ -2269,6 +2320,7 @@ class LLMMemory:
             float(self.clock_phase()),
             pressure=float(self.sleep_pressure),
             arousal=series,
+            fusion_confidence=float(self._fusion_confidence),
         )
         self._last_candidates = [list(row) for row in numpy_fields["candidates"]]
         self.cue_state = state
@@ -2581,6 +2633,7 @@ class LLMMemory:
                 float(self.clock_phase()),
                 pressure=pressure,
                 arousal=float(self.arousal),
+                fusion_confidence=float(self._fusion_confidence),
             )
         index = self._spontaneous_index()
         self._reconsolidate_index(index)
@@ -2588,8 +2641,7 @@ class LLMMemory:
 
     def _spontaneous_export(self, index: int, pressure: float) -> dict:
         slot = self.store._slots[int(index)]
-        if str(slot.modality) != "text":
-            raise ValueError("modality must be text")
+        label = check_modality(str(slot.modality))
         width = int(self.cue_dim)
         vec = np.asarray(slot.v, dtype=np.float32).reshape(-1)
         if vec.shape != (width,):
@@ -2605,7 +2657,7 @@ class LLMMemory:
             "activation": torch.tensor([[float(CUE_A_TRIG)]], dtype=torch.float32),
             "strength_confidence": torch.tensor([[float(slot.strength)]], dtype=torch.float32),
             "valence": torch.tensor([[offset]], dtype=torch.float32),
-            "modality": [["text"]],
+            "modality": [[label]],
             "circadian_phase": torch.tensor([[phase]], dtype=torch.float32),
             "triggered": torch.zeros((1, 1), dtype=torch.bool),
             "gap": torch.full((1, 1), float("nan"), dtype=torch.float32),
@@ -2613,6 +2665,8 @@ class LLMMemory:
             "sleep_pressure": torch.full((1, 1), level, dtype=torch.float32),
             "arousal": torch.full((1, 1), float(self.arousal), dtype=torch.float32),
             "source": [["spontaneous"]],
+            "fingerprint": _export_fingerprint(getattr(slot, "fingerprint", None)),
+            "fusion_confidence": _export_fusion_confidence(self._fusion_confidence),
         }
 
     def injection(self, prompt: str) -> np.ndarray:
@@ -2838,7 +2892,28 @@ def _token_sources(memory_id, triggered) -> list:
     return sources
 
 
-def _empty_cue_fields(steps: int, cue_dim: int, phase: float, *, pressure: float, arousal) -> dict:
+def _export_fusion_confidence(value) -> float:
+    level = float(value)
+    if not math.isfinite(level) or level < 0.0 or level > 1.0:
+        raise ValueError("fusion_confidence must be in [0, 1]")
+    return level
+
+
+def _export_fingerprint(value) -> np.ndarray:
+    if value is None:
+        return zero_fingerprint()
+    return check_fingerprint(value)
+
+
+def _empty_cue_fields(
+    steps: int,
+    cue_dim: int,
+    phase: float,
+    *,
+    pressure: float,
+    arousal,
+    fusion_confidence: float = 0.0,
+) -> dict:
     steps = int(steps)
     cue_dim = int(cue_dim)
     level = _export_pressure(pressure)
@@ -2858,14 +2933,23 @@ def _empty_cue_fields(steps: int, cue_dim: int, phase: float, *, pressure: float
         "sleep_pressure": torch.full((1, steps), level, dtype=torch.float32),
         "arousal": _arousal_tensor(arousal, steps),
         "source": [["none"] * steps],
+        "fingerprint": zero_fingerprint(),
+        "fusion_confidence": _export_fusion_confidence(fusion_confidence),
     }
 
 
-def _pack_cue_fields(fields: dict, phase: float, *, pressure: float, arousal) -> dict:
+def _pack_cue_fields(
+    fields: dict,
+    phase: float,
+    *,
+    pressure: float,
+    arousal,
+    fusion_confidence: float = 0.0,
+) -> dict:
     steps = int(np.asarray(fields["memory_id"]).shape[0])
-    modality = [str(item) for item in fields["modality"]]
-    if len(modality) != steps or any(item != "text" for item in modality):
-        raise ValueError("modality must be text on every token")
+    modality = [check_modality(str(item)) for item in fields["modality"]]
+    if len(modality) != steps:
+        raise ValueError("modality must cover every token")
     sources = _token_sources(fields["memory_id"], fields["triggered"])
     if len(sources) != steps:
         raise ValueError("source must cover every token")
@@ -2887,12 +2971,28 @@ def _pack_cue_fields(fields: dict, phase: float, *, pressure: float, arousal) ->
         "sleep_pressure": torch.full((1, steps), level, dtype=torch.float32),
         "arousal": _arousal_tensor(arousal, steps),
         "source": [sources],
+        "fingerprint": _export_fingerprint(fields.get("fingerprint")),
+        "fusion_confidence": _export_fusion_confidence(fusion_confidence),
     }
 
 
-def _pack_cue_batch(rows: list, phase: float, *, pressure: float, arousal: float) -> dict:
+def _pack_cue_batch(
+    rows: list,
+    phase: float,
+    *,
+    pressure: float,
+    arousal: float,
+    fusion_confidence: float = 0.0,
+) -> dict:
     packed = [
-        _pack_cue_fields(row, phase, pressure=pressure, arousal=float(arousal)) for row in rows
+        _pack_cue_fields(
+            row,
+            phase,
+            pressure=pressure,
+            arousal=float(arousal),
+            fusion_confidence=float(fusion_confidence),
+        )
+        for row in rows
     ]
     if len(packed) == 1:
         return packed[0]
@@ -2916,6 +3016,12 @@ def _pack_cue_batch(rows: list, phase: float, *, pressure: float, arousal: float
         merged[key] = torch.cat([item[key] for item in packed], 0)
     merged["modality"] = [row for item in packed for row in item["modality"]]
     merged["source"] = [row for item in packed for row in item["source"]]
+    merged["fingerprint"] = np.stack(
+        [np.asarray(item["fingerprint"], dtype=np.float32) for item in packed], 0
+    )
+    merged["fusion_confidence"] = np.asarray(
+        [float(item["fusion_confidence"]) for item in packed], dtype=np.float32
+    )
     return merged
 
 

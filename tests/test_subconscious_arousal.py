@@ -200,7 +200,7 @@ def test_cue_export_steps_and_the_generate_hook_does_not():
             assert any(flags)
             assert len(exported) == len(expected)
             assert all(math.isclose(got, want, abs_tol=1e-6) for got, want in zip(exported, expected))
-            assert fields["interface_version"] == CUE_INTERFACE_VERSION == 6
+            assert fields["interface_version"] == CUE_INTERFACE_VERSION == 7
             assert torch.equal(fields["activation"], moved["activation"])
             assert torch.equal(mem.last_added, other.last_added)
             assert mem.sleep_pressure == pressure
@@ -265,7 +265,7 @@ def test_arousal_module_has_no_switch_and_banks_are_disjoint():
     residual = memory.split("def _residual_from_fields")[1].split("def cue_hidden")[0]
     assert "arousal" not in residual
     assert "sleep_pressure" not in residual
-    assert CUE_INTERFACE_VERSION == 6
+    assert CUE_INTERFACE_VERSION == 7
     assert CUE_THETA == 0.32
     assert CUE_HALF_LIFE == 30.0
     assert CUE_LAMBDA == 0.3

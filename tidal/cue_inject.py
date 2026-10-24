@@ -36,6 +36,7 @@ import numpy as np
 
 from tidal.clock_drift import WALL_TAU, clock_activation, elapsed_since
 from tidal.episodic import MEMORY_MODALITY, cosine_scores
+from tidal.interface_v7 import check_fingerprint, check_modality, zero_fingerprint
 
 # Anderson & Reder 1999 estimated S = 1.45 for the Anderson 1974 fan data.
 # Not a fitted knob. fan_factor divides by S so one candidate stays 1.
@@ -77,6 +78,7 @@ class CueState:
     fan_factor: float = 1.0
     modality: str = MEMORY_MODALITY
     vec: Optional[np.ndarray] = None
+    fingerprint: Optional[np.ndarray] = None
     trigger_wall: float = 0.0
 
     def inactive(self) -> bool:
@@ -237,16 +239,32 @@ def _check_schedule(tau: float, a_trig: float, floor: float) -> None:
 
 
 def _modality_of(modalities, index: int, n: int) -> str:
-    """The stored label. The only accepted value is ``text``."""
+    """The stored label. Accepted values are the v7 modality enum."""
     if modalities is None:
         return MEMORY_MODALITY
     mods = list(modalities)
     if len(mods) != int(n):
         raise ValueError("modalities must align with slots")
     value = mods[int(index)]
-    if not isinstance(value, str) or value != MEMORY_MODALITY:
-        raise ValueError("modality must be text")
-    return value
+    if not isinstance(value, str):
+        raise ValueError("unknown modality; use none")
+    return check_modality(value)
+
+
+def _fingerprint_of(fingerprints, index: int, n: int) -> np.ndarray:
+    """The stored ``(F,)`` fingerprint, or zeros when the writer omitted it."""
+    if fingerprints is None:
+        return zero_fingerprint()
+    rows = list(fingerprints)
+    if len(rows) != int(n):
+        raise ValueError("fingerprints must align with slots")
+    return check_fingerprint(rows[int(index)])
+
+
+def _state_fingerprint(state: CueState) -> np.ndarray:
+    if state.inactive() or state.fingerprint is None:
+        return zero_fingerprint()
+    return check_fingerprint(state.fingerprint)
 
 
 def _blank(cue_dim: int) -> dict:
@@ -261,6 +279,7 @@ def _blank(cue_dim: int) -> dict:
         "gap": float("nan"),
         "winner_cosine": float("nan"),
         "candidates": [],
+        "fingerprint": zero_fingerprint(),
     }
 
 
@@ -272,8 +291,7 @@ def _row_from_state(state: CueState, cue_dim: int, *, triggered: bool) -> dict:
         vec = np.asarray(vec, dtype=np.float32).reshape(-1)
         if vec.shape != (int(cue_dim),):
             raise ValueError(f"carried value dim {vec.shape[0]} != cue_dim {cue_dim}")
-    if str(state.modality) != MEMORY_MODALITY:
-        raise ValueError("modality must be text")
+    check_modality(str(state.modality))
     return {
         "memory_id": int(state.memory_id),
         "vec": vec.copy(),
@@ -285,6 +303,7 @@ def _row_from_state(state: CueState, cue_dim: int, *, triggered: bool) -> dict:
         "gap": float(state.gap),
         "winner_cosine": float(state.winner_cosine),
         "candidates": [],
+        "fingerprint": _state_fingerprint(state),
     }
 
 
@@ -303,6 +322,7 @@ def step_cue(
     valence_span: float,
     fan_s: float = FAN_S,
     modalities=None,
+    fingerprints=None,
     now=None,
     wall_tau: float = WALL_TAU,
 ) -> tuple:
@@ -347,6 +367,7 @@ def step_cue(
             fan_factor=factor,
             modality=_modality_of(modalities, index, int(values.shape[0])),
             vec=vec,
+            fingerprint=_fingerprint_of(fingerprints, index, int(values.shape[0])),
             trigger_wall=0.0 if now is None else float(now),
         )
         row = _row_from_state(new, cue_dim, triggered=True)
@@ -375,6 +396,7 @@ def step_cue(
         fan_factor=factor,
         modality=str(state.modality),
         vec=None if state.vec is None else np.asarray(state.vec, dtype=np.float32).copy(),
+        fingerprint=None if state.fingerprint is None else np.asarray(state.fingerprint, dtype=np.float32).copy(),
         trigger_wall=float(state.trigger_wall),
     )
     return new, _row_from_state(new, cue_dim, triggered=False)
@@ -397,6 +419,7 @@ def trace_sequence(
     state: Optional[CueState] = None,
     fan_s: float = FAN_S,
     modalities=None,
+    fingerprints=None,
     now=None,
     wall_tau: float = WALL_TAU,
 ) -> tuple:
@@ -453,6 +476,7 @@ def trace_sequence(
             valence_span=valence_span,
             fan_s=fan_s,
             modalities=modalities,
+            fingerprints=fingerprints,
             now=now,
             wall_tau=wall_tau,
         )
@@ -478,4 +502,5 @@ def trace_sequence(
         "modality": modality,
         "candidates": candidates,
         "cue_dim": int(cue_dim),
+        "fingerprint": _state_fingerprint(current),
     }, current

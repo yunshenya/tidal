@@ -186,7 +186,7 @@ def test_prereg_and_docs_lock_the_interface_only_claim():
         assert "GrowbrainBackend" in text
         assert "d_model" in text
         assert "192" in text
-        assert "The live `interface_version` is 6." in text
+        assert "The live `interface_version` is 7." in text
         assert "encode_hidden" in text
         assert "The backend bank was not scored." in text
         assert "The held bank was not scored." in text
