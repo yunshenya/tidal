@@ -350,10 +350,65 @@ class _OneQuartet:
 
 
 def _rif_summary(groups) -> dict:
+    """Geometry and slot counts. Drop rates only when the five-slot check holds.
+
+    ``score_quartets`` zips facts onto surviving slots. Cosine overwrite
+    shortens that zip, so a leftover competitor row is not one trial of a
+    150-row sample. Rates stay unset unless at least one quartet is
+    ``geometry_ok``. ``max_key_cosine`` is 0 when fewer than two slots remain;
+    that sentinel is left out of the survivor summary.
+    """
+    n = len(groups)
+    geometry_groups = [group for group in groups if group["geometry_ok"]]
+    geometry = len(geometry_groups)
+    slot_counts = {}
+    forgotten_counts = {}
+    emitted = {"target": 0, "competitor": 0, "outsider": 0}
+    for group in groups:
+        slot_key = str(int(group["slots"]))
+        slot_counts[slot_key] = slot_counts.get(slot_key, 0) + 1
+        forgotten_key = str(int(group["forgotten"]))
+        forgotten_counts[forgotten_key] = forgotten_counts.get(forgotten_key, 0) + 1
+        for item in group["items"]:
+            role = item["role"]
+            if role in emitted:
+                emitted[role] += 1
+    survivor = [
+        float(group["max_key_cosine"])
+        for group in groups
+        if int(group["slots"]) >= 2
+    ]
+    survivor_summary = {
+        "n": len(survivor),
+        "min": None if not survivor else float(min(survivor)),
+        "median": None if not survivor else float(np.median(np.asarray(survivor, dtype=np.float64))),
+        "max": None if not survivor else float(max(survivor)),
+    }
+    summary = {
+        "n_quartets": n,
+        "geometry_ok": rate_row(geometry, n) if n else None,
+        "slot_counts": slot_counts,
+        "forgotten_counts": forgotten_counts,
+        "emitted_role_counts": emitted,
+        "rates_estimated": geometry > 0,
+        "survivor_max_key_cosine": survivor_summary,
+        "competitor_drop_pos": None,
+        "winner_not_weakened": None,
+        "outsider_unaffected": None,
+        "competitor_drop_mean": None,
+        "competitor_drop_min": None,
+        "competitor_drop_sd": None,
+        "winner_drop_mean": None,
+        "winner_abs_max": None,
+        "outsider_abs_max": None,
+        "groups": groups,
+    }
+    if geometry == 0:
+        return summary
     competitors = []
     winners = []
     outsiders = []
-    for group in groups:
+    for group in geometry_groups:
         for item in group["items"]:
             drop = float(item["drop"])
             if item["role"] == "competitor":
@@ -362,21 +417,20 @@ def _rif_summary(groups) -> dict:
                 winners.append(drop)
             elif item["role"] == "outsider":
                 outsiders.append(drop)
-    geometry = int(sum(bool(group["geometry_ok"]) for group in groups))
-    return {
-        "n_quartets": len(groups),
-        "geometry_ok": rate_row(geometry, len(groups)) if groups else None,
-        "competitor_drop_pos": rate_row(int(sum(v > 0.0 for v in competitors)), len(competitors)) if competitors else None,
-        "winner_not_weakened": rate_row(int(sum(v <= 0.0 for v in winners)), len(winners)) if winners else None,
-        "outsider_unaffected": rate_row(int(sum(abs(v) <= OUTSIDER_EPS for v in outsiders)), len(outsiders)) if outsiders else None,
-        "competitor_drop_mean": _mean(competitors),
-        "competitor_drop_min": None if not competitors else float(min(competitors)),
-        "competitor_drop_sd": _sd(competitors),
-        "winner_drop_mean": _mean(winners),
-        "winner_abs_max": None if not winners else float(max(abs(v) for v in winners)),
-        "outsider_abs_max": None if not outsiders else float(max(abs(v) for v in outsiders)),
-        "groups": groups,
-    }
+    summary.update(
+        {
+            "competitor_drop_pos": rate_row(int(sum(v > 0.0 for v in competitors)), len(competitors)) if competitors else None,
+            "winner_not_weakened": rate_row(int(sum(v <= 0.0 for v in winners)), len(winners)) if winners else None,
+            "outsider_unaffected": rate_row(int(sum(abs(v) <= OUTSIDER_EPS for v in outsiders)), len(outsiders)) if outsiders else None,
+            "competitor_drop_mean": _mean(competitors),
+            "competitor_drop_min": None if not competitors else float(min(competitors)),
+            "competitor_drop_sd": _sd(competitors),
+            "winner_drop_mean": _mean(winners),
+            "winner_abs_max": None if not winners else float(max(abs(v) for v in winners)),
+            "outsider_abs_max": None if not outsiders else float(max(abs(v) for v in outsiders)),
+        }
+    )
+    return summary
 
 
 def score_rif(mem, *, progress=None, save=None, seed=None) -> dict:

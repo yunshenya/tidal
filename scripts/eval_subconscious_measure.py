@@ -325,28 +325,68 @@ def render_report(result: dict) -> str:
     lines.append("### Retrieval-induced forgetting\n")
     lines.append(
         "Fifty quartets, each a target, three same-relation competitors, and "
-        "one outsider. `score_quartets` is the shipped comparison of one "
-        "top-1 against a strength-1 control. A competitor counts when its "
-        "margin drop is positive. A winner counts as not weakened when its "
-        "drop is ≤ 0. An outsider counts as unaffected when the absolute drop "
-        "is ≤ 1e-6. `geometry_ok` is the scorer’s own check that the winner "
-        "was the target and exactly three competitors were scaled.\n"
+        "one outsider. `score_quartets` compares one top-1 with a strength-1 "
+        "control. `geometry_ok` requires five slots, the target first, three "
+        "competitors, one outsider, a strict win, a hit on every row, winner "
+        "and outsider strength 1, every competitor below 1, and `forgotten` "
+        "equal to 3.\n\n"
+        "`score_quartets` zips the written facts onto the surviving slots. "
+        "When cosine overwrite leaves fewer than five slots, later roles drop "
+        "out of that zip. The rows that remain are not a competitor or "
+        "outsider sample. Drop rates are reported only when `geometry_ok` is "
+        "nonzero.\n"
     )
     lines.append(f"Geometry ok: {_rate(rif.get('geometry_ok'))}.\n")
-    lines.append(
-        f"Competitor drop > 0: {_rate(rif.get('competitor_drop_pos'))}. "
-        f"Mean {_fmt(rif.get('competitor_drop_mean'), 4)}. "
-        f"Min {_fmt(rif.get('competitor_drop_min'), 4)}.\n"
-    )
-    lines.append(
-        f"Winner not weakened: {_rate(rif.get('winner_not_weakened'))}. "
-        f"Mean winner drop {_fmt(rif.get('winner_drop_mean'), 4)}. "
-        f"Max absolute winner drop {_fmt(rif.get('winner_abs_max'), 4)}.\n"
-    )
-    lines.append(
-        f"Outsider unaffected: {_rate(rif.get('outsider_unaffected'))}. "
-        f"Max absolute outsider drop {_fmt(rif.get('outsider_abs_max'), 4)}.\n"
-    )
+    counts = rif.get("slot_counts") or {}
+    if counts:
+        lines.append("| slots left | quartets |")
+        lines.append("| --- | --- |")
+        for nslot in range(1, 6):
+            lines.append(f"| {nslot} | {int(counts.get(str(nslot), 0))} |")
+        lines.append("")
+    survivor = rif.get("survivor_max_key_cosine") or {}
+    if survivor.get("n"):
+        lines.append(
+            f"Quartets with at least two slots: max key cosine "
+            f"n={survivor.get('n')}, min {_fmt(survivor.get('min'))}, "
+            f"median {_fmt(survivor.get('median'))}, max {_fmt(survivor.get('max'))}. "
+            "A one-slot quartet records max key cosine 0. That 0 is the "
+            "scorer’s n<2 sentinel.\n"
+        )
+    emitted = rif.get("emitted_role_counts") or {}
+    if emitted:
+        lines.append(
+            f"The zip emitted target {emitted.get('target', 0)}, "
+            f"competitor {emitted.get('competitor', 0)}, outsider "
+            f"{emitted.get('outsider', 0)}. Those counts are not a rate "
+            "denominator.\n"
+        )
+    forgotten = rif.get("forgotten_counts") or {}
+    if forgotten:
+        parts = ", ".join(
+            f"{key}: {forgotten[key]}" for key in sorted(forgotten, key=lambda item: int(item))
+        )
+        lines.append(f"Forgotten counter by quartet: {parts}.\n")
+    if rif.get("rates_estimated"):
+        lines.append(
+            f"Competitor drop > 0, geometry-ok quartets only: {_rate(rif.get('competitor_drop_pos'))}. "
+            f"Mean {_fmt(rif.get('competitor_drop_mean'), 4)}. "
+            f"Min {_fmt(rif.get('competitor_drop_min'), 4)}.\n"
+        )
+        lines.append(
+            f"Winner not weakened: {_rate(rif.get('winner_not_weakened'))}. "
+            f"Mean winner drop {_fmt(rif.get('winner_drop_mean'), 4)}. "
+            f"Max absolute winner drop {_fmt(rif.get('winner_abs_max'), 4)}.\n"
+        )
+        lines.append(
+            f"Outsider unaffected: {_rate(rif.get('outsider_unaffected'))}. "
+            f"Max absolute outsider drop {_fmt(rif.get('outsider_abs_max'), 4)}.\n"
+        )
+    elif rif:
+        lines.append(
+            "Competitor and outsider rates are not estimated. No quartet kept "
+            "the five-slot geometry the scorer requires.\n"
+        )
     lines.append("## Implicit influence\n")
     lines.append(
         "The subconscious score is the unweighted mean of three paired "
@@ -406,31 +446,39 @@ def render_report(result: dict) -> str:
     lines.append("")
     lines.append("## Added compute per token\n")
     lines.append(
-        "Wall clock on this CPU, median over the repeats below. The residual "
-        "row is the armed forward minus the empty forward, divided by the "
-        "sequence length, then averaged over lengths 16, 32, and 64. That "
-        f"difference is the broadcast of one {cost.get('hidden')}-d vector, "
-        f"{cost.get('residual_adds_per_token')} scalar adds at each position, "
-        "plus the hook. Retrieval is not inside that forward.\n\n"
-        "Inject’s retrieval is one `_rank` (the query forward and the top-1 "
-        "read) plus one `InjectMLP` evaluation. Those seconds are divided by "
-        "the continuation-token count of one implicit pair (good plus bad). "
-        "The inject total adds that amortized retrieval to the per-token residual.\n\n"
-        "In-context is the longer forward minus the short forward, divided by "
-        "the same kind of continuation-token count, averaged over one tone, "
-        "one choice, and one preference item. RAG adds one uncached BGE "
-        "top-1 over the 50 tone lines on top of that longer-prompt cost.\n"
+        "Wall clock on this CPU, median over the repeats below. An armed "
+        "forward minus an empty forward at lengths 16, 32, and 64 changes "
+        "sign and stays under a millisecond. That difference is timer noise, "
+        "not a measured speedup and not a measured residual cost. The "
+        f"structural cost inside the noise is one {cost.get('hidden')}-d add "
+        f"at every position ({cost.get('residual_adds_per_token')} scalar "
+        "adds) and one InjectMLP "
+        f"({cost.get('inject_parameters')} parameters) once per prompt. "
+        "Retrieval is not inside that forward.\n\n"
+        "The added time that clears the noise is one `_rank` (the query "
+        "forward and the top-1 read) plus one `InjectMLP` evaluation. Those "
+        "seconds are also divided by the continuation-token count of one "
+        "implicit pair (good plus bad). The inject total uses that amortized "
+        "retrieval. It does not add the noisy residual mean.\n\n"
+        "In-context is the longer forward minus the short forward. The table "
+        "below keeps the undivided extra seconds, the added prompt tokens, "
+        "and the continuation-token count. The summary row averages the "
+        "per-continuation-token extras of one tone, one choice, and one "
+        "preference item. RAG adds one uncached BGE top-1 over the 50 tone "
+        "lines on top of that longer-prompt cost.\n"
     )
     retrieval = cost.get("retrieval") or {}
     bge = cost.get("bge") or {}
     lines.append(
         f"Repeats {cost.get('repeats')}, warmup {cost.get('warmup')}. "
-        f"Inject MLP parameters {cost.get('inject_parameters')}.\n"
+        f"Signed mean residual extra per token across 16/32/64: "
+        f"{_fmt(cost.get('residual_extra_per_token_s'), 6)} s. "
+        "The sign flips with length.\n"
     )
     lines.append("| piece | seconds | per continuation token |")
     lines.append("| --- | --- | --- |")
     lines.append(
-        f"| residual add (mean over 16/32/64) |  | {_fmt(cost.get('residual_extra_per_token_s'), 6)} |"
+        "| residual add | within timer noise | within timer noise |"
     )
     lines.append(
         f"| `_rank` | {_fmt(retrieval.get('rank_median_s'), 6)} | "
@@ -440,9 +488,11 @@ def render_report(result: dict) -> str:
         f"| InjectMLP | {_fmt(retrieval.get('compose_median_s'), 6)} | "
         f"{_fmt(retrieval.get('compose_per_continuation_token_s'), 6)} |"
     )
+    rank_tok = retrieval.get("rank_per_continuation_token_s")
+    compose_tok = retrieval.get("compose_per_continuation_token_s")
+    inject_tok = None if rank_tok is None or compose_tok is None else float(rank_tok) + float(compose_tok)
     lines.append(
-        f"| inject total (rank + MLP + residual per token) |  | "
-        f"{_fmt(retrieval.get('inject_added_per_continuation_token_s'), 6)} |"
+        f"| inject total (`_rank` + InjectMLP) |  | {_fmt(inject_tok, 6)} |"
     )
     lines.append(
         f"| in-context extra forward |  | {_fmt(cost.get('context_extra_per_continuation_token_s'), 6)} |"
@@ -456,6 +506,13 @@ def render_report(result: dict) -> str:
         f"{_fmt(cost.get('rag_added_per_continuation_token_s'), 6)} |"
     )
     lines.append("")
+    if retrieval.get("inject_added_per_continuation_token_s") is not None:
+        lines.append(
+            "The JSON field `inject_added_per_continuation_token_s` "
+            f"({_fmt(retrieval.get('inject_added_per_continuation_token_s'), 6)}) "
+            "adds the signed residual mean onto the inject total. The table "
+            "leaves the residual out.\n"
+        )
     forwards = cost.get("forward_by_length") or {}
     if forwards:
         lines.append("| length | empty s | armed s | extra s | extra per token s |")
@@ -466,6 +523,22 @@ def render_report(result: dict) -> str:
                 f"| {length} | {_fmt(row.get('empty_median_s'), 6)} | "
                 f"{_fmt(row.get('armed_median_s'), 6)} | {_fmt(row.get('extra_s'), 6)} | "
                 f"{_fmt(row.get('extra_per_token_s'), 6)} |"
+            )
+        lines.append("")
+    prompts = cost.get("prompt_length") or []
+    if prompts:
+        lines.append(
+            "| family | short tokens | long tokens | added prompt tokens | "
+            "continuation tokens | extra s | extra per added prompt token s | "
+            "extra per continuation token s |"
+        )
+        lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
+        for row in prompts:
+            lines.append(
+                f"| {row.get('family')} | {row.get('short_tokens')} | {row.get('long_tokens')} | "
+                f"{row.get('added_prompt_tokens')} | {row.get('continuation_tokens')} | "
+                f"{_fmt(row.get('extra_s'), 6)} | {_fmt(row.get('extra_per_added_prompt_token_s'), 6)} | "
+                f"{_fmt(row.get('extra_per_continuation_token_s'), 6)} |"
             )
         lines.append("")
     lines.append("## Explicit recall\n")

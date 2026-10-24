@@ -222,6 +222,40 @@ def test_cosine_distribution_reports_the_threshold():
     assert sum(mixed["hist_counts"]) == mixed["n_pairs"]
 
 
+def test_collapsed_rif_does_not_publish_a_competitor_rate():
+    from tidal.subconscious_measure_score import _rif_summary
+
+    groups = []
+    for slots, drops in ((1, []), (2, [0.01]), (3, [0.0, 0.0005])):
+        items = [{"role": "target", "drop": 0.0}]
+        items.extend({"role": "competitor", "drop": drop} for drop in drops)
+        groups.append(
+            {
+                "slots": slots,
+                "geometry_ok": False,
+                "max_key_cosine": 0.0 if slots < 2 else 0.9,
+                "forgotten": 1 if slots == 3 else 0,
+                "items": items,
+                "winner_drop": 0.0,
+                "competitor_drops": list(drops),
+            }
+        )
+    summary = _rif_summary(groups)
+    assert summary["rates_estimated"] is False
+    assert summary["geometry_ok"]["k"] == 0
+    assert summary["geometry_ok"]["n"] == 3
+    assert summary["competitor_drop_pos"] is None
+    assert summary["winner_not_weakened"] is None
+    assert summary["outsider_unaffected"] is None
+    assert summary["slot_counts"] == {"1": 1, "2": 1, "3": 1}
+    assert summary["emitted_role_counts"]["competitor"] == 3
+    assert summary["survivor_max_key_cosine"]["n"] == 2
+    assert summary["survivor_max_key_cosine"]["min"] == 0.9
+    text = _eval_module().render_report({"banks": {"rif": summary}})
+    assert "not estimated" in text
+    assert "Competitor drop > 0" not in text
+
+
 def test_quotes_and_citations_match_the_shipped_path():
     module = _eval_module()
     quotes = module.injection_quotes()
