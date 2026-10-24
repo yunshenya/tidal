@@ -20,7 +20,10 @@ span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
-estimated once from a calibration set and stored with the module. With one slot the add is
+estimated once from a calibration set and stored with the module. On the
+shipped causal LM that pool reads the inject layer and then stops. The hidden
+state is the one a full forward stores for that layer. Value and surprise
+still run the whole model, because they need the logits. With one slot the add is
 
     s * u * gain * (scale(v) + MLP(scale(v)))
 
@@ -1278,6 +1281,10 @@ def valence_gain_of(valence: float) -> float:
     return float(1.0 + float(VALENCE_SPAN) * math.tanh(float(valence)))
 
 
+class _KeyLayerStop(Exception):
+    """The inject layer has written its residual. Later blocks are not part of the key."""
+
+
 class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
@@ -1416,6 +1423,60 @@ class LLMMemory:
             kwargs.pop("return_offsets_mapping")
             return self.tokenizer(text, **kwargs)
 
+    def _key_layer_stop_ok(self) -> bool:
+        """True when a forward hook on the inject layer sees the real residual.
+
+        Passed-in test models do not use this path. Their hidden state is
+        whatever ``output_hidden_states`` returns, which can differ from the
+        layer output.
+        """
+        inner = getattr(self.model, "model", None)
+        layers = getattr(inner, "layers", None)
+        return layers is self.layers and 0 <= int(self.layer) < len(self.layers)
+
+    def _run_key_hidden(self, text: str) -> tuple:
+        """Hidden state at the inject layer, without the later blocks or the head.
+
+        The hook runs after the inject hook. With the residual cleared, that
+        hook returns None, so the captured tensor is the layer output. That is
+        the tensor :func:`layer_hidden` reads from a full forward. If the
+        forward does not reach the layer, this falls back to that full forward.
+        """
+        if not isinstance(text, str) or text == "":
+            raise ValueError("text is empty")
+        self._delta = None
+        enc = self._tokenize(text)
+        ids = _batch_ids(enc).to(self._device)
+        attn = _batch_mask(enc, self._device)
+        captured: dict = {}
+
+        def _stop(_module, _args, output):
+            tensor = output[0] if isinstance(output, tuple) else output
+            copied = tensor.detach().float()
+            if copied.dim() == 3:
+                copied = copied[0]
+            captured["hidden"] = copied
+            raise _KeyLayerStop
+
+        handle = self.layers[self.layer].register_forward_hook(_stop)
+        kwargs = {"input_ids": ids, "use_cache": False}
+        if attn is not None:
+            kwargs["attention_mask"] = attn
+        stopped = False
+        try:
+            with torch.no_grad():
+                self.model(**kwargs)
+        except _KeyLayerStop:
+            stopped = True
+        finally:
+            handle.remove()
+            self._delta = None
+        if not stopped:
+            hidden, enc, _logits = self._run_hidden(text)
+            del _logits
+            return hidden, enc
+        return captured["hidden"], enc
+
     def _run_hidden(self, text: str) -> tuple:
         """Hidden state at the inject layer, with memory unhooked for this forward."""
         if not isinstance(text, str) or text == "":
@@ -1495,10 +1556,18 @@ class LLMMemory:
         value = pool_answer(hidden, mask, answer).detach().cpu().numpy().astype(np.float32, copy=False)
         return value, surprise
 
-    def _raw_key_pool(self, text: str, answer: Optional[str] = None) -> np.ndarray:
-        """Sink-dropped mean of the key tokens, before the fixed center."""
-        hidden, enc, _logits = self._run_hidden(text)
-        del _logits
+    def _raw_key_pool(self, text: str, answer: Optional[str] = None, *, full: bool = False) -> np.ndarray:
+        """Sink-dropped mean of the key tokens, before the fixed center.
+
+        ``full`` keeps the uncut forward. The timing run uses it as the before
+        column. Production leaves it false and stops at the inject layer when
+        that layer is the real decoder block.
+        """
+        if full or not self._key_layer_stop_ok():
+            hidden, enc, _logits = self._run_hidden(text)
+            del _logits
+        else:
+            hidden, enc = self._run_key_hidden(text)
         content = self._content_mask(enc, hidden.shape[0])
         if answer is None:
             mask = content
