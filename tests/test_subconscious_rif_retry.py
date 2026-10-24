@@ -375,7 +375,7 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
         assert "forget_rivals" in inspect.getsource(LLMMemory._rank)
-        assert 'mode="top1"' in inspect.getsource(LLMMemory._rank)
+        assert "activation_weights" in inspect.getsource(LLMMemory._rank)
     finally:
         mem.close()
 

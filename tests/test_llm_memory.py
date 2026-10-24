@@ -14,9 +14,11 @@ import torch.nn as nn
 
 from tidal.llm_memory import (
     LLMMemory,
+    activation_weights,
     answer_span,
     decode_answer,
     greedy_continuation,
+    participation_ratio,
     span_complete,
 )
 from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
@@ -337,16 +339,18 @@ def test_other_identity_is_kept_and_readout_is_top1():
         assert mix.remember("red is Y", name="a", rel="p", key="query")
         assert mix.remember("blue is Z", name="b", rel="c", key="query")
         assert len(mix.store) == 2
-        # Tied keys: hard top-1 still names the first slot, not a soft blend.
-        # The gap is 0, so the residual scale is 0 and nothing is added.
+        # Tied keys: the store's own top-1 read still names the first slot.
+        # The mixture splits that tie. The paired top-1 readout still adds nothing.
         value, info = mix.store.read(mix._query_vector("query"), mode="top1")
         assert info["top"] == ("a", "p")
         assert np.allclose(value, v1, atol=1e-5)
         assert not np.allclose(value, 0.5 * (v1 + v2), atol=1e-5)
-        got = mix.injection("query")
-        assert np.allclose(got, 0.0, atol=1e-5)
+        blend = mix.injection("query")
+        assert np.allclose(blend, 0.5 * (v1 + v2), atol=1e-5)
+        mix.injection_readout = "top1"
+        assert np.allclose(mix.injection("query"), 0.0, atol=1e-5)
         assert "self.store.write" in inspect.getsource(LLMMemory.remember)
-        assert 'mode="top1"' in inspect.getsource(LLMMemory._rank)
+        assert "activation_weights" in inspect.getsource(LLMMemory._rank)
     finally:
         mem.close()
         if mix is not None:
@@ -364,6 +368,24 @@ def _legacy_v22(tok, ids) -> str:
         if s.rstrip().endswith((".", "?", "!")) and len(s.strip()) > 1:
             break
     return tok.decode(out, skip_special_tokens=True)
+
+
+def test_activation_weights_follow_strength_and_cosine():
+    tied = activation_weights([0.4, 0.4], [1.0, 1.0], temperature=0.2, k=4)
+    assert np.allclose(tied, [0.5, 0.5])
+    assert participation_ratio(tied) == pytest.approx(2.0)
+    # Equal cosine: weight proportional to strength ** (1/T). T=1 leaves strength.
+    scaled = activation_weights([0.2, 0.2], [1.0, 0.5], temperature=1.0, k=2)
+    assert scaled[0] == pytest.approx(2.0 / 3.0)
+    assert scaled[1] == pytest.approx(1.0 / 3.0)
+    peaked = activation_weights([0.9, 0.2, 0.1], [1.0, 1.0, 1.0], temperature=0.05, k=1)
+    assert np.allclose(peaked, [1.0, 0.0, 0.0])
+    dead = activation_weights([0.9, 0.8], [0.0, 1.0], temperature=0.2, k=2)
+    assert np.allclose(dead, [0.0, 1.0])
+    with pytest.raises(ValueError):
+        activation_weights([0.1], [1.0], temperature=0.0, k=1)
+    with pytest.raises(ValueError):
+        activation_weights([0.1], [1.0], temperature=0.2, k=0)
 
 
 def test_answer_span_skips_leading_newline_then_stops():
@@ -824,7 +846,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "0fb206668bc26ed6d0c2d7bf43b0f3b5070e0ca112bad4a8cb3c2ed357c2b36f"
+    source = "98c3c2b7713371360af67cb40399845276269ddded639dc3ce078149a0e65ea1"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 

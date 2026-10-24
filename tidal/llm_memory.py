@@ -1,11 +1,12 @@
 """Test-time memory for a frozen causal language model.
 
 Facts are written into :class:`tidal.episodic.EpisodicStore` (one slot, same
-identity overwrites). At generation the top slot's value is added to one
-decoder layer's residual, so the fact text is not copied into the prompt.
-Readout is hard top-1. A soft top-4 mix at temperature 0.05 tied top-1 on the
-answer-stripped prefix and lost two question hits at N32; temperature 0.20
-lost many more. See ``docs/llm_memory.md``.
+identity overwrites). At generation a strength-weighted mixture of the top
+cosine slots is added to one decoder layer's residual, so the fact text is
+not copied into the prompt. Several slots can be partly active at once. The
+winner is still the cosine argmax: spelling and retrieval-induced forgetting
+use that slot, not the blend. A historical cosine-only soft top-4 is recorded
+in ``docs/llm_memory.md``; this mixture is a different rule.
 
 The value is an answer-span pool of that layer's hidden state. It is not
 L2-normalized: magnitude is what the identity copy-through needs. A phone-like
@@ -19,31 +20,33 @@ span. The key is
 not that pool. On SmolLM2-135M the first token is an attention sink (one
 hidden dim near 2e4), and a mean over tokens collapses every fact onto one
 direction. Keys and queries drop sink tokens, then subtract a fixed center
-estimated once from a calibration set and stored with the module. The add is
+estimated once from a calibration set and stored with the module. With one slot the add is
 
-    c * s * u * gain * (scale(v) + MLP(scale(v)))
+    s * u * gain * (scale(v) + MLP(scale(v)))
 
-with ``scale`` fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))``. ``w`` is a
-polarity vector and ``k`` is the winning slot's key. ``w = 0`` leaves
-``gain = 1``. ``u = 1 + span * tanh(valence)``. Valence stays 0 until a
-stored experience adds ``sign * step`` on that slot, so ``u = 1`` and the add
-matches the replay formula. The sign is the experience field on the write.
-The fact text is not scored, and the language model does not supply a group
-prior. ``s`` is the winning slot's strength. It stays 1 until a replay cycle
-recomputes decay, a nonzero clock phase scales the write, or a same-relation
-retrieval scales a competitor. A refresh sets the replayed slot back to 1.
-The same cycle multiplies every nonzero valence by the replay decay and
-appends an audit row. A store
-with no experience and no replay matches the previous add. A fact is written
-when it is salient and, once 32 accepted surprises are stored, its
+With two or more slots the add is the sum of that term over the top ``MIX_K``
+cosine neighbors, each multiplied by its mixture weight. ``scale`` is fixed
+at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that slot's own key.
+``w = 0`` leaves ``gain = 1``. ``u = 1 + span * tanh(valence)`` uses that
+slot's valence. Valence stays 0 until a stored experience adds ``sign * step``
+on that slot, so ``u = 1`` and a one-slot add matches the replay formula.
+The sign is the experience field on the write. The fact text is not scored,
+and the language model does not supply a group prior. ``s`` is that slot's
+strength. It stays 1 until a replay cycle recomputes decay, a nonzero clock
+phase scales the write, or a same-relation retrieval scales a competitor. A
+refresh sets the replayed slot back to 1. The same cycle multiplies every
+nonzero valence by the replay decay and appends an audit row. A store with
+no experience and no replay matches the previous one-slot add. A fact is
+written when it is salient and, once 32 accepted surprises are stored, its
 answer-token NLL is at least the quantile of that window of numbers. Fewer
 stored surprises leaves the salient fact accepted. A strict retrieval win
 then multiplies the strength of at most three other slots that share the
 winner's relation; the closer key is scaled down more, and the winner is
-left as read. ``c`` is 1 when
-the store has one slot. Otherwise
-``c = clip((top1 cosine - top2 cosine) / gap_tau, 0, 1)`` and ``gap_tau`` is
-0.80. A tie adds nothing. The MLP weights are the shipped checkpoint;
+left as read. The mixture weight is the analogue of Lebiere's chunk-choice
+softmax, ``exp((log(strength) + cosine) / MIX_TEMP)``, over those neighbors.
+A cosine tie splits the weight instead of adding nothing. ``gap_tau`` 0.80
+still defines the recorded confidence and still scales the paired top-1
+baseline; it does not scale the mixture. The MLP weights are the shipped checkpoint;
 polarity does not replace them. The last layer of an untrained module is
 still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
 and ``w`` is 0. Phone and birthday
@@ -109,6 +112,13 @@ PHONE_TAIL = "+1-415-555-"
 # bound on fit bank 20b7cb3f9742709d320dc5913cf62675316673d7b457c55b6c78cf4de587e5ce
 # at N=8 and N=32. Not retuned on the frozen bank or on this PR's held-out.
 DEFAULT_GAP_TAU = 0.80
+# Strength-weighted mixture over the top cosine neighbors. The continuum
+# store still has its own soft_k and soft_temp; generate does not read those.
+# MIX_K and MIX_TEMP below are the grid corner. The fit bank selects the
+# point that is allowed to score the held-out bank. Until that selection is
+# written here, these two numbers are not a held result.
+MIX_K = 4
+MIX_TEMP = 0.05
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
@@ -1201,6 +1211,65 @@ def retrieval_confidence(n: int, gap: Optional[float], tau: float) -> float:
     return float(min(1.0, max(0.0, float(gap) / float(tau))))
 
 
+def activation_weights(cosines, strengths, *, temperature: float, k: int) -> np.ndarray:
+    """Normalized weights for a strength-weighted soft mixture.
+
+    The match score is ``log(strength) + cosine``. The weight is
+    ``exp(match / temperature)`` on the ``k`` largest cosines whose strength
+    is positive, then divided by the sum. This is an analogue of the ACT-R
+    chunk-choice rule in Lebiere (1999): probability proportional to
+    ``exp(match / t)``. Our strength is a multiplicative trace in ``(0, 1]``,
+    not ACT-R base-level log odds, so ``log(strength)`` is the stand-in for
+    that base level. Cosine is the stand-in for the context match. Slots
+    outside the cosine neighborhood, and slots with nonpositive strength,
+    get weight 0.
+    """
+    if float(temperature) <= 0.0:
+        raise ValueError("mixture temperature must be positive")
+    take = int(k)
+    if take < 1:
+        raise ValueError("mixture k must be >= 1")
+    cosine = np.asarray(cosines, dtype=np.float64).reshape(-1)
+    strength = np.asarray(strengths, dtype=np.float64).reshape(-1)
+    if cosine.shape != strength.shape:
+        raise ValueError("cosines and strengths must have the same shape")
+    weights = np.zeros(cosine.shape[0], dtype=np.float64)
+    if cosine.size == 0:
+        return weights
+    neighbors = min(take, int(cosine.size))
+    if neighbors == int(cosine.size):
+        order = np.arange(cosine.size)
+    else:
+        order = np.argpartition(-cosine, neighbors - 1)[:neighbors]
+    chosen = []
+    logits = []
+    temp = float(temperature)
+    for index in order:
+        slot_strength = float(strength[int(index)])
+        if slot_strength <= 0.0:
+            continue
+        logits.append((math.log(slot_strength) + float(cosine[int(index)])) / temp)
+        chosen.append(int(index))
+    if not chosen:
+        return weights
+    shifted = np.asarray(logits, dtype=np.float64)
+    shifted -= shifted.max()
+    raw = np.exp(shifted)
+    raw /= raw.sum()
+    for index, weight in zip(chosen, raw):
+        weights[index] = float(weight)
+    return weights
+
+
+def participation_ratio(weights) -> float:
+    """``1 / sum(w^2)`` over positive weights. One active slot returns 1."""
+    active = np.asarray(weights, dtype=np.float64).reshape(-1)
+    active = active[active > 0.0]
+    if active.size == 0:
+        return 0.0
+    return float(1.0 / np.sum(active * active))
+
+
 def valence_gain_of(valence: float) -> float:
     """``1 + VALENCE_SPAN * tanh(valence)``. Zero valence is exactly 1."""
     return float(1.0 + float(VALENCE_SPAN) * math.tanh(float(valence)))
@@ -1210,21 +1279,23 @@ class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
-    prompt is the only text the LM sees. The armed value is the top slot
-    (hard top-1 on raw cosine), not a soft mixture, multiplied by
-    :func:`retrieval_confidence`, by the slot's strength, by
-    :func:`valence_gain_of` on that slot, and by the polarity gain of that
-    slot's key. Valence stays 0 until an experience is stored, so the gain
-    stays 1. Strength stays 1 until replay or a nonzero clock phase. A fact
-    is written when it is salient and, once 32 surprises are stored, its
-    answer-token NLL is at least the window quantile. A strict win scales
-    at most three other slots that share the winner's relation; the winner
-    is not scaled. Every
+    prompt is the only text the LM sees. With one slot the armed value is
+    that slot. With more than one slot the armed value is the sum of
+    per-slot residuals, weighted by :func:`activation_weights` at
+    :data:`MIX_K` and :data:`MIX_TEMP`. The cosine argmax is still the
+    winner used for spelling and for rival forgetting. Valence stays 0 until
+    an experience is stored, so the gain stays 1. Strength stays 1 until
+    replay or a nonzero clock phase. A fact is written when it is salient
+    and, once 32 surprises are stored, its answer-token NLL is at least the
+    window quantile. A strict win scales at most three other slots that
+    share the winner's relation; the winner is not scaled. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
     near-duplicate keys are merged. Salience reuses the polarity vector.
-    There is no extra forward and no switch. ``soft_k`` and ``soft_temp`` are
-    kept on the episodic store; ``generate`` does not read them. An empty store
+    There is no extra query forward. ``soft_k`` and ``soft_temp`` are kept
+    on the episodic store; ``generate`` does not read them.
+    ``injection_readout`` ``"top1"`` is the paired baseline (gap confidence
+    times the winning value). The default is ``"mixture"``. An empty store
     leaves the residual untouched, so greedy tokens match the same model
     with the hook removed. Phone and birthday spelling copies the winning
     slot's stored answer, and only when the prompt is completing that
@@ -1297,6 +1368,7 @@ class LLMMemory:
         self.last_surprise: Optional[float] = None
         self.last_write_score: float = 0.0
         self.last_replay: Optional[dict] = None
+        self.injection_readout = "mixture"
         # Registered for the life of this wrapper. A missing delta returns
         # None, which leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
@@ -1705,8 +1777,14 @@ class LLMMemory:
         with torch.no_grad():
             return self.inject(v, key_t).detach()
 
+    def _readout(self) -> str:
+        readout = getattr(self, "injection_readout", "mixture")
+        if readout not in ("mixture", "top1"):
+            raise ValueError(f"unknown injection readout {readout!r}")
+        return readout
+
     def _rank(self, prompt: str) -> dict:
-        """One query. Hard top-1, plus the gap to the runner-up."""
+        """One query. The winner is cosine argmax. The injected value may be a mixture."""
         info = {
             "n": len(self.store),
             "value": None,
@@ -1715,41 +1793,64 @@ class LLMMemory:
             "maxcos": None,
             "gap": None,
             "confidence": 0.0,
+            "readout": self._readout(),
+            "weights": None,
+            "parts": None,
+            "participation": None,
         }
         if len(self.store) == 0:
             return info
         query = self._query_vector(prompt)
-        # Hard top-1. Soft top-4 at T=0.05 matched this on prefix free-gen and
-        # trailed it on natural questions; T=0.20 mixed neighbors and dropped
-        # N32 questions from 36/48 to 19/48. Measured in docs/llm_memory.md.
-        value, read_info = self.store.read(query, mode="top1")
         slots = self.store.slots
         keys = np.stack([np.asarray(slot.k, dtype=np.float64) for slot in slots], 0)
         scores = cosine_scores(keys, np.asarray(query, dtype=np.float64))
-        top_i = int(np.argmax(scores))
+        winner = int(np.argmax(scores))
         gap = None
         if scores.size >= 2:
-            rest = float(np.max(np.delete(scores, top_i)))
-            gap = float(scores[top_i] - rest)
-        top = read_info.get("top") if isinstance(read_info, dict) else None
+            rest = float(np.max(np.delete(scores, winner)))
+            gap = float(scores[winner] - rest)
         n = len(slots)
-        winner = int(read_info.get("top_i", top_i)) if isinstance(read_info, dict) else top_i
+        strengths = [float(slot.strength) for slot in slots]
+        weights = activation_weights(scores, strengths, temperature=MIX_TEMP, k=MIX_K)
+        top_slot = slots[winner]
         info.update(
             {
                 "n": n,
-                "value": value,
-                "key": np.asarray(slots[winner].k, dtype=np.float32).copy(),
-                "top": top,
-                "maxcos": float(scores[top_i]),
+                "key": np.asarray(top_slot.k, dtype=np.float32).copy(),
+                "top": (top_slot.name, top_slot.rel),
+                "maxcos": float(scores[winner]),
                 "gap": gap,
                 "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
-                "strength": float(slots[winner].strength),
-                "answer": slots[winner].answer,
-                "valence": float(slots[winner].valence),
+                "strength": float(top_slot.strength),
+                "answer": top_slot.answer,
+                "valence": float(top_slot.valence),
+                "weights": [float(weight) for weight in weights],
+                "participation": participation_ratio(weights),
             }
         )
-        # The strength above is the one this retrieval uses. Forgetting runs
-        # after that read. A tie adds nothing and forgets nothing. The key
+        if info["readout"] == "top1" or n < 2:
+            info["value"] = np.asarray(top_slot.v, dtype=np.float32).copy()
+        else:
+            parts = []
+            mixed = np.zeros(self.hidden, dtype=np.float64)
+            for index, slot in enumerate(slots):
+                weight = float(weights[index])
+                if weight == 0.0:
+                    continue
+                value = np.asarray(slot.v, dtype=np.float32).copy()
+                mixed = mixed + weight * np.asarray(value, dtype=np.float64)
+                parts.append(
+                    {
+                        "weight": weight,
+                        "value": value,
+                        "key": np.asarray(slot.k, dtype=np.float32).copy(),
+                        "strength": float(slot.strength),
+                        "valence": float(slot.valence),
+                    }
+                )
+            info["value"] = mixed.astype(np.float32, copy=False)
+            info["parts"] = parts
+        # Forgetting runs after the read. A tie adds no suppression. The key
         # cosines are the slot keys already stored; there is no extra forward.
         forgotten = 0
         if gap is not None and float(gap) > 0.0 and n >= 2:
@@ -1758,23 +1859,39 @@ class LLMMemory:
         return info
 
     def _set_delta(self, rank: dict) -> None:
-        value = rank.get("value")
-        conf = float(rank.get("confidence") or 0.0)
-        strength = float(rank.get("strength", 1.0))
-        if value is None or conf <= 0.0 or strength <= 0.0:
-            self._delta = None
+        parts = rank.get("parts")
+        if not parts:
+            value = rank.get("value")
+            conf = float(rank.get("confidence") or 0.0)
+            strength = float(rank.get("strength", 1.0))
+            if value is None or conf <= 0.0 or strength <= 0.0:
+                self._delta = None
+                return
+            composed = self._compose(value, key=rank.get("key"), grad=False)
+            # Valence 0 is gain 1. Full confidence and strength 1 then leave the
+            # composed residual unmultiplied, matching the replay inject.
+            scale = conf * strength * valence_gain_of(float(rank.get("valence", 0.0)))
+            if scale == 1.0:
+                self._delta = composed
+                return
+            if scale == 0.0:
+                self._delta = None
+                return
+            self._delta = composed * scale
             return
-        composed = self._compose(value, key=rank.get("key"), grad=False)
-        # Valence 0 is gain 1. Full confidence and strength 1 then leave the
-        # composed residual unmultiplied, matching the replay inject.
-        scale = conf * strength * valence_gain_of(float(rank.get("valence", 0.0)))
-        if scale == 1.0:
-            self._delta = composed
-            return
-        if scale == 0.0:
-            self._delta = None
-            return
-        self._delta = composed * scale
+        total = None
+        for part in parts:
+            weight = float(part["weight"])
+            strength = float(part["strength"])
+            if weight == 0.0 or strength <= 0.0:
+                continue
+            composed = self._compose(part["value"], key=part["key"], grad=False)
+            scale = weight * strength * valence_gain_of(float(part["valence"]))
+            if scale == 0.0:
+                continue
+            term = composed if scale == 1.0 else composed * scale
+            total = term if total is None else total + term
+        self._delta = total
 
     def correct_valence(self, name: str, value: float, *, rel: str, group: Optional[str] = None, reason: str = "correction") -> dict:
         """Set one slot's valence and append an audit row. Does not write a fact."""

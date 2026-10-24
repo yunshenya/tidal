@@ -1,7 +1,8 @@
 """Subconscious-style metrics for the shipped ``LLMMemory`` inject path.
 
 Log-prob scoring arms the prompt once and compares two continuations under
-that vector. The residual is scaled by the top-1 gap and by polarity gain.
+that vector. One slot, and the top-1 baseline, scale the residual by the gap.
+The mixture sums per-slot residuals and does not.
 ``generate`` encodes
 the query once: spelling replaces the token loop only when the prompt is
 completing the winning relation. This module does not import ``transformers``.
@@ -171,7 +172,7 @@ def _cosine(a, b) -> float:
 
 
 def _arm_info(mem, prompt: str) -> dict:
-    """One query, hard top-1, residual scaled by the gap. Empty store arms nothing."""
+    """One query on the memory's injection readout. Empty store arms nothing."""
     rank = mem._rank(prompt)
     mem._set_delta(rank)
     top = rank.get("top")
@@ -182,6 +183,9 @@ def _arm_info(mem, prompt: str) -> dict:
         "gap": rank.get("gap"),
         "confidence": float(rank.get("confidence") or 0.0),
         "hit": 0,
+        "participation": rank.get("participation"),
+        "weights": rank.get("weights"),
+        "readout": rank.get("readout"),
     }
 
 
