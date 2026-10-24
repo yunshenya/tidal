@@ -1,0 +1,750 @@
+{
+  "away": {
+    "mean_delta": -10.241691587114474,
+    "n": 8,
+    "n_audit": 8,
+    "n_neg": 8,
+    "n_pos": 0,
+    "rows": [
+      {
+        "audit": true,
+        "delta": -13.350152492523193,
+        "hit": 1,
+        "id": "valence-held-away-0",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -8.791660967981443,
+        "hit": 1,
+        "id": "valence-held-away-1",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -7.3780247354879975,
+        "hit": 1,
+        "id": "valence-held-away-2",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -11.94932222366333,
+        "hit": 1,
+        "id": "valence-held-away-3",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -7.2447381019592285,
+        "hit": 1,
+        "id": "valence-held-away-4",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -12.3251953125,
+        "hit": 1,
+        "id": "valence-held-away-5",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -11.356169939041138,
+        "hit": 1,
+        "id": "valence-held-away-6",
+        "valence": -0.75
+      },
+      {
+        "audit": true,
+        "delta": -9.53826892375946,
+        "hit": 1,
+        "id": "valence-held-away-7",
+        "valence": -0.75
+      }
+    ]
+  },
+  "bank_kind": "held",
+  "bank_sha256": "017d1386329cff64df4cbac7ad07c2cc69beae813b237c2f8c8ed9b069d029d5",
+  "cost": {
+    "buffers": 66931,
+    "mlp_parameters": 664704,
+    "parameters": 665280,
+    "parameters_new": 0,
+    "polarity_parameters": 576,
+    "query_forwards": 1,
+    "remember_forwards": 2,
+    "valence_step": 0.25
+  },
+  "exact": {
+    "birthday_exact": 1,
+    "birthday_off_equal": 0,
+    "birthday_off_n": 5,
+    "birthday_off_takeover": 0.0,
+    "birthday_prefix": 1,
+    "birthday_question_text": "April 4, 1996",
+    "birthday_stored": "April 4, 1996",
+    "phone_exact": 1,
+    "phone_off_equal": 0,
+    "phone_off_n": 5,
+    "phone_off_takeover": 0.0,
+    "phone_prefix": 0,
+    "phone_question_text": "+1-610-555-5746",
+    "phone_stored": "+1-610-555-5746"
+  },
+  "hidden": 576,
+  "layer": 15,
+  "model_name": "HuggingFaceTB/SmolLM2-135M",
+  "neutral": {
+    "choice": {
+      "flips": 0,
+      "n": 8,
+      "rows": [
+        {
+          "delta": 0.0011034011840820312,
+          "flip": 0,
+          "id": "valence-held-choice-0",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.00373077392578125,
+          "flip": 0,
+          "id": "valence-held-choice-1",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.002208709716796875,
+          "flip": 0,
+          "id": "valence-held-choice-2",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        },
+        {
+          "delta": -0.01690387725830078,
+          "flip": 0,
+          "id": "valence-held-choice-3",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.028873443603515625,
+          "flip": 0,
+          "id": "valence-held-choice-4",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.00031185150146484375,
+          "flip": 0,
+          "id": "valence-held-choice-5",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": -0.0044307708740234375,
+          "flip": 0,
+          "id": "valence-held-choice-6",
+          "inject_choose": 1,
+          "nomem_choose": 1
+        },
+        {
+          "delta": 0.0019140243530273438,
+          "flip": 0,
+          "id": "valence-held-choice-7",
+          "inject_choose": 0,
+          "nomem_choose": 0
+        }
+      ]
+    },
+    "incidental_max_key_cosine": 0.8612534820449488,
+    "incidental_n": 32,
+    "incidental_slots": 32,
+    "incidental_written": 32,
+    "leak": {
+      "n": 8,
+      "n_leak": 0,
+      "rows": [
+        {
+          "hits": [],
+          "prompt": "Outline inserted accepts diversified retrieving.",
+          "text": "The following is a list of the most common types"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline elective pasture occupations resent.",
+          "text": "The first of these is the one that is most"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline saline steamer sighted interviewing.",
+          "text": "The steamer was a small, single-decker"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline revolution equates miserable closes.",
+          "text": "The first of these is the \"The Great Depression"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline vaccines comprehens therapeutics evangelical.",
+          "text": "The vaccine is a vaccine that is used to prevent"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline blindness overcrow trivia orphan.",
+          "text": "The first thing to note is that the first thing"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline clinics exception following totalitarian.",
+          "text": "The first of these was the 193"
+        },
+        {
+          "hits": [],
+          "prompt": "Outline hemisphere richness identity exemplifies.",
+          "text": "The first of these is the \"Homo sapiens"
+        }
+      ]
+    },
+    "nll": {
+      "mean_delta": -0.004181504249572754,
+      "n_bad": 0,
+      "rows": [
+        {
+          "confidence": 0.003280696249650661,
+          "delta": -0.008318901062011719,
+          "id": "valence-held-nll-0",
+          "nll_inject": 13.017809867858887,
+          "nll_nomem": 13.026128768920898
+        },
+        {
+          "confidence": 0.0028859092352814114,
+          "delta": -0.00028896331787109375,
+          "id": "valence-held-nll-1",
+          "nll_inject": 10.45168685913086,
+          "nll_nomem": 10.45197582244873
+        },
+        {
+          "confidence": 0.007183026225639905,
+          "delta": -0.016643524169921875,
+          "id": "valence-held-nll-2",
+          "nll_inject": 15.965632438659668,
+          "nll_nomem": 15.98227596282959
+        },
+        {
+          "confidence": 0.002655511646163372,
+          "delta": -0.003864288330078125,
+          "id": "valence-held-nll-3",
+          "nll_inject": 11.961669921875,
+          "nll_nomem": 11.965534210205078
+        },
+        {
+          "confidence": 0.008392329288167064,
+          "delta": 0.008350372314453125,
+          "id": "valence-held-nll-4",
+          "nll_inject": 11.576460838317871,
+          "nll_nomem": 11.568110466003418
+        },
+        {
+          "confidence": 0.0063048634817635535,
+          "delta": 0.0034227371215820312,
+          "id": "valence-held-nll-5",
+          "nll_inject": 11.07370376586914,
+          "nll_nomem": 11.070281028747559
+        },
+        {
+          "confidence": 0.0027170950427503338,
+          "delta": 0.0018787384033203125,
+          "id": "valence-held-nll-6",
+          "nll_inject": 16.401805877685547,
+          "nll_nomem": 16.399927139282227
+        },
+        {
+          "confidence": 0.008250685868299579,
+          "delta": -0.017988204956054688,
+          "id": "valence-held-nll-7",
+          "nll_inject": 13.316293716430664,
+          "nll_nomem": 13.334281921386719
+        }
+      ]
+    },
+    "scripted": {
+      "birthday": [
+        {
+          "prompt": "Outline inserted accepts diversified retrieving.",
+          "takeover": 0,
+          "text": "cover cover development: overview, vision search abstracts transcript shots: overview, vision search artifacts: vision search artifacts: vision search artifacts: vision search artifacts: vision search"
+        },
+        {
+          "prompt": "Outline elective pasture occupations resent.",
+          "takeover": 0,
+          "text": ""
+        },
+        {
+          "prompt": "Outline saline steamer sighted interviewing.",
+          "takeover": 0,
+          "text": "we visited scott veeza, we visit scott veaza, we visit scado veaza, we visit scado vea"
+        },
+        {
+          "prompt": "Outline revolution equates miserable closes.",
+          "takeover": 0,
+          "text": "cover the same publication cover the same publication, we cover the same publication, we cover the same publication, we cover the same publication, we cover the"
+        },
+        {
+          "prompt": "Which phone does Rixukace hold once the orchard settles?",
+          "takeover": 0,
+          "text": "e 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 "
+        },
+        {
+          "prompt": "Where is the birthday listed for Rixukace along the meadow?",
+          "takeover": 1,
+          "text": "April 4, 1996"
+        }
+      ],
+      "birthday_question": 1,
+      "birthday_written": true,
+      "date_unrelated": 0.0,
+      "phone": [
+        {
+          "prompt": "Outline inserted accepts diversified retrieving.",
+          "takeover": 0,
+          "text": "The following are the requirements for a good data source:"
+        },
+        {
+          "prompt": "Outline elective pasture occupations resent.",
+          "takeover": 0,
+          "text": "The next step is to find out what they are, and then decide what they are, and then ask them to do what they are, and then"
+        },
+        {
+          "prompt": "Outline saline steamer sighted interviewing.",
+          "takeover": 0,
+          "text": "The next day, the steamer was called off, and the passengers were taken to"
+        },
+        {
+          "prompt": "Outline revolution equates miserable closes.",
+          "takeover": 0,
+          "text": "The revolution is the most important thing in life, and the most important thing in life is to be"
+        },
+        {
+          "prompt": "Which phone does Rixukace hold once the orchard settles?",
+          "takeover": 0,
+          "text": "+1-610-555-5746"
+        },
+        {
+          "prompt": "Where is the birthday listed for Rixukace along the meadow?",
+          "takeover": 0,
+          "text": "Answer: The birthday of a birthday party is in the month of May and is called \"Mai-May\""
+        }
+      ],
+      "phone_question": 0,
+      "phone_unrelated": 0.0,
+      "phone_written": true
+    }
+  },
+  "phases_s": {
+    "away": 3.5836771249996673,
+    "cost": 0.12388696600100957,
+    "neutral": 20.092032128999563,
+    "revise": 7.466338025002187,
+    "toward": 5.232071811999049
+  },
+  "protocol": "subconscious-valence-v1",
+  "repeats": 3,
+  "replay_direction": {
+    "avoid": {
+      "rows": [
+        {
+          "delta": 0.32952404022216797,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-0",
+          "margin": -1.5831527709960938,
+          "nomem_margin": -1.9126768112182617,
+          "stored_lift": -0.8544893264770508,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.9636983871459961,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-1",
+          "margin": 0.9866571426391602,
+          "nomem_margin": 0.022958755493164062,
+          "stored_lift": -2.6277456283569336,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.16751575469970703,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-2",
+          "margin": 1.7334184646606445,
+          "nomem_margin": 1.5659027099609375,
+          "stored_lift": -0.5639123916625977,
+          "strength": 1.0
+        },
+        {
+          "delta": 2.1696529388427734,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-3",
+          "margin": 5.219482421875,
+          "nomem_margin": 3.0498294830322266,
+          "stored_lift": -2.1630401611328125,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.9227018356323242,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-4",
+          "margin": 1.464756965637207,
+          "nomem_margin": -0.4579448699951172,
+          "stored_lift": -1.837881088256836,
+          "strength": 1.0
+        },
+        {
+          "delta": 0.7418718338012695,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-5",
+          "margin": 3.9559755325317383,
+          "nomem_margin": 3.2141036987304688,
+          "stored_lift": -1.415445327758789,
+          "strength": 1.0
+        },
+        {
+          "delta": 3.651744842529297,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-6",
+          "margin": 2.0893421173095703,
+          "nomem_margin": -1.5624027252197266,
+          "stored_lift": -1.3626785278320312,
+          "strength": 1.0
+        },
+        {
+          "delta": 1.6744203567504883,
+          "family": "avoid",
+          "hit": 1,
+          "id": "replay-held-avoid-7",
+          "margin": 3.996156692504883,
+          "nomem_margin": 2.3217363357543945,
+          "stored_lift": -1.7997827529907227,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 1.452641248703003,
+        "mean_stored_lift": -1.5781219005584717,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 8
+      }
+    },
+    "prefer": {
+      "rows": [
+        {
+          "delta": 27.063646214082837,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-0",
+          "margin": 23.569672482088208,
+          "nomem_margin": -3.493973731994629,
+          "stored_lift": 16.01508034951985,
+          "strength": 1.0
+        },
+        {
+          "delta": 27.008492521941662,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-1",
+          "margin": 27.419674925506115,
+          "nomem_margin": 0.4111824035644531,
+          "stored_lift": 13.871454291045666,
+          "strength": 1.0
+        },
+        {
+          "delta": 26.111989349126816,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-2",
+          "margin": 26.10615572333336,
+          "nomem_margin": -0.005833625793457031,
+          "stored_lift": 15.082558006048203,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.970106843858957,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-3",
+          "margin": 14.192668680101633,
+          "nomem_margin": -1.7774381637573242,
+          "stored_lift": 16.598287347704172,
+          "strength": 1.0
+        },
+        {
+          "delta": 15.311187893152237,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-4",
+          "margin": 11.6376191675663,
+          "nomem_margin": -3.6735687255859375,
+          "stored_lift": 16.34810271859169,
+          "strength": 1.0
+        },
+        {
+          "delta": 14.425395665690303,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-5",
+          "margin": 14.214806256815791,
+          "nomem_margin": -0.21058940887451172,
+          "stored_lift": 14.219082532450557,
+          "strength": 1.0
+        },
+        {
+          "delta": 19.140147924423218,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-6",
+          "margin": 15.837314367294312,
+          "nomem_margin": -3.3028335571289062,
+          "stored_lift": 12.676599264144897,
+          "strength": 1.0
+        },
+        {
+          "delta": 20.96598209440708,
+          "family": "prefer",
+          "hit": 1,
+          "id": "replay-held-prefer-7",
+          "margin": 19.958177223801613,
+          "nomem_margin": -1.0078048706054688,
+          "stored_lift": 15.476359024643898,
+          "strength": 1.0
+        }
+      ],
+      "summary": {
+        "mean_delta": 20.74961856333539,
+        "mean_stored_lift": 15.035940441768616,
+        "n": 8,
+        "n_delta_pos": 8,
+        "n_stored_down": 0
+      }
+    }
+  },
+  "revise": {
+    "mean_peak_delta": 1.8649091915576719,
+    "mean_revised_delta": 0.0,
+    "n": 8,
+    "n_moved_back": 8,
+    "n_valence_revised": 8,
+    "rows": [
+      {
+        "id": "valence-held-toward-0",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 1.6161069571971893,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-1",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 2.6710477429442108,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-2",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": -0.6210323162376881,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-3",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 6.959848403930664,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-4",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": -0.6917980909347534,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-5",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 1.6949779763817787,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-6",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 1.0109485313296318,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      },
+      {
+        "id": "valence-held-toward-7",
+        "kinds": [
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience",
+          "experience"
+        ],
+        "moved_back": 1,
+        "peak_delta": 2.279174327850342,
+        "peak_valence": 0.75,
+        "revised_delta": 0.0,
+        "valence": 0.0,
+        "valence_revised": 1
+      }
+    ]
+  },
+  "toward": {
+    "mean_delta": 1.8649091915576719,
+    "n": 8,
+    "n_audit": 8,
+    "n_neg": 2,
+    "n_pos": 6,
+    "rows": [
+      {
+        "audit": true,
+        "delta": 1.6161069571971893,
+        "hit": 1,
+        "id": "valence-held-toward-0",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": 2.6710477429442108,
+        "hit": 1,
+        "id": "valence-held-toward-1",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": -0.6210323162376881,
+        "hit": 1,
+        "id": "valence-held-toward-2",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": 6.959848403930664,
+        "hit": 1,
+        "id": "valence-held-toward-3",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": -0.6917980909347534,
+        "hit": 1,
+        "id": "valence-held-toward-4",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": 1.6949779763817787,
+        "hit": 1,
+        "id": "valence-held-toward-5",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": 1.0109485313296318,
+        "hit": 1,
+        "id": "valence-held-toward-6",
+        "valence": 0.75
+      },
+      {
+        "audit": true,
+        "delta": 2.279174327850342,
+        "hit": 1,
+        "id": "valence-held-toward-7",
+        "valence": 0.75
+      }
+    ]
+  },
+  "wall_s": 36.498006057001476
+}
