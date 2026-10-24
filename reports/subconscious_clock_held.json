@@ -1,0 +1,165 @@
+{
+  "bank_sha256": "4aa7129121c21093d0e85e650aeb25726f5602f55e22d1e2e6dc9bbaa4395847",
+  "canonical": {
+    "calibrated_activation": 0.9117224885582168,
+    "error_once": 1.0,
+    "error_open": 2.0,
+    "error_twice": 0.5,
+    "fresh_activation_0": 1.0,
+    "fresh_token": 0.9771599684342459,
+    "interface_version": 5,
+    "live_4": 0.9548416039104165,
+    "live_internal": 5.0,
+    "token_0": 1.0,
+    "token_1": 0.9771599684342459,
+    "token_4": 0.9117224885582168,
+    "token_strong": 0.8312378961427878,
+    "wall_0": 1.0,
+    "wall_1": 0.9885140203528962,
+    "wall_4": 0.9548416039104165,
+    "wall_clear": 0.03125,
+    "wall_strong": 0.7071067811865476
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.513421332987491,
+  "failures": [],
+  "fit_canonical": {
+    "calibrated_activation": 0.9117224885582168,
+    "error_once": 1.0,
+    "error_open": 2.0,
+    "error_twice": 0.5,
+    "fresh_activation_0": 1.0,
+    "fresh_token": 0.9771599684342459,
+    "interface_version": 5,
+    "live_4": 0.9548416039104165,
+    "live_internal": 5.0,
+    "token_0": 1.0,
+    "token_1": 0.9771599684342459,
+    "token_4": 0.9117224885582168,
+    "token_strong": 0.8312378961427878,
+    "wall_0": 1.0,
+    "wall_1": 0.9885140203528962,
+    "wall_4": 0.9548416039104165,
+    "wall_clear": 0.03125,
+    "wall_strong": 0.7071067811865476
+  },
+  "gates": {
+    "both": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "entrain": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "fresh": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "token": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "wall": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "git": "27fdf54864b619ff5c4bc0349003df3ce32724cf",
+  "ids": [
+    "clock-held-000",
+    "clock-held-001",
+    "clock-held-002",
+    "clock-held-003",
+    "clock-held-004",
+    "clock-held-005",
+    "clock-held-006",
+    "clock-held-007",
+    "clock-held-008",
+    "clock-held-009",
+    "clock-held-010",
+    "clock-held-011",
+    "clock-held-012",
+    "clock-held-013",
+    "clock-held-014",
+    "clock-held-015",
+    "clock-held-016",
+    "clock-held-017",
+    "clock-held-018",
+    "clock-held-019",
+    "clock-held-020",
+    "clock-held-021",
+    "clock-held-022",
+    "clock-held-023",
+    "clock-held-024",
+    "clock-held-025",
+    "clock-held-026",
+    "clock-held-027",
+    "clock-held-028",
+    "clock-held-029",
+    "clock-held-030",
+    "clock-held-031",
+    "clock-held-032",
+    "clock-held-033",
+    "clock-held-034",
+    "clock-held-035",
+    "clock-held-036",
+    "clock-held-037",
+    "clock-held-038",
+    "clock-held-039",
+    "clock-held-040",
+    "clock-held-041",
+    "clock-held-042",
+    "clock-held-043",
+    "clock-held-044",
+    "clock-held-045",
+    "clock-held-046",
+    "clock-held-047",
+    "clock-held-048",
+    "clock-held-049"
+  ],
+  "kind": "clock-held",
+  "note": "One pass. Constants were not changed after the fit lock.",
+  "pass": true,
+  "protocol": "clock-drift-v1"
+}

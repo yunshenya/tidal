@@ -1,0 +1,102 @@
+{
+  "bank_sha256": "4aa7129121c21093d0e85e650aeb25726f5602f55e22d1e2e6dc9bbaa4395847",
+  "canonical": {
+    "calibrated_activation": 0.9117224885582168,
+    "error_once": 1.0,
+    "error_open": 2.0,
+    "error_twice": 0.5,
+    "fresh_activation_0": 1.0,
+    "fresh_token": 0.9771599684342459,
+    "interface_version": 5,
+    "live_4": 0.9548416039104165,
+    "live_internal": 5.0,
+    "token_0": 1.0,
+    "token_1": 0.9771599684342459,
+    "token_4": 0.9117224885582168,
+    "token_strong": 0.8312378961427878,
+    "wall_0": 1.0,
+    "wall_1": 0.9885140203528962,
+    "wall_4": 0.9548416039104165,
+    "wall_clear": 0.03125,
+    "wall_strong": 0.7071067811865476
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.08675143199798185,
+  "gates": {
+    "both": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "entrain": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "fresh": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "token": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "wall": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "git": "8f4664a49c27994c026b31cbb95a216e4d08007d",
+  "ids": [
+    "clock-fit-000",
+    "clock-fit-001",
+    "clock-fit-002",
+    "clock-fit-003",
+    "clock-fit-004",
+    "clock-fit-005",
+    "clock-fit-006",
+    "clock-fit-007"
+  ],
+  "kind": "clock-fit",
+  "note": "Fit only. The held bank was not scored.",
+  "pass": true,
+  "protocol": "clock-drift-v1"
+}
