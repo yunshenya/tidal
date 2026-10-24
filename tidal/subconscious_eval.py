@@ -62,9 +62,9 @@ COST_NEW_TOKENS = 8
 # Fixed per call. No retry loop and no second retrieval as tokens grow.
 PATH_FLAGS = (
     {
-        "path": "query encode",
+        "path": "cue encode",
         "when": "once, inside continuation_ids, before any new token",
-        "varies": "skipped when the store is empty",
+        "varies": "skipped when the store is empty; the per-token decay is recomputed on each full prefix",
         "retries": False,
     },
     {
@@ -150,14 +150,18 @@ def continuation_logprobs(mem, prompt: str, continuation: str) -> dict:
     if not cont or not prompt_ids:
         raise RuntimeError("continuation produced no predictable token")
     ids = torch.tensor([full_ids], dtype=torch.long, device=mem._device)
-    with torch.no_grad():
-        logits = _logits_of(mem.model(input_ids=ids, use_cache=False))
-        pos = [len(prompt_ids) - 1 + i for i in range(len(cont))]
-        pred = logits[0, pos].float()
-        logp = torch.log_softmax(pred, dim=-1)
-        target = torch.tensor(cont, dtype=torch.long, device=logp.device)
-        taken = logp.gather(1, target.unsqueeze(-1)).squeeze(-1)
-        vals = [float(x) for x in taken.detach().cpu().tolist()]
+    mem._cue_live = True
+    try:
+        with torch.no_grad():
+            logits = _logits_of(mem.model(input_ids=ids, use_cache=False))
+            pos = [len(prompt_ids) - 1 + i for i in range(len(cont))]
+            pred = logits[0, pos].float()
+            logp = torch.log_softmax(pred, dim=-1)
+            target = torch.tensor(cont, dtype=torch.long, device=logp.device)
+            taken = logp.gather(1, target.unsqueeze(-1)).squeeze(-1)
+            vals = [float(x) for x in taken.detach().cpu().tolist()]
+    finally:
+        mem._cue_live = False
     return {
         "sum": float(sum(vals)),
         "mean": float(sum(vals) / len(vals)),
@@ -172,9 +176,8 @@ def _cosine(a, b) -> float:
 
 
 def _arm_info(mem, prompt: str) -> dict:
-    """One query on the memory's injection readout. Empty store arms nothing."""
+    """One cue trace. The scoring forward injects from that same rule. Empty store arms nothing."""
     rank = mem._rank(prompt)
-    mem._set_delta(rank)
     top = rank.get("top")
     return {
         "n": int(rank["n"]),
@@ -382,7 +385,7 @@ def _rss_kb() -> dict:
 def _count_path(mem, prompt: str, n_tokens: int) -> dict:
     queries = {"n": 0}
     forwards = {"n": 0}
-    orig = mem._query_vector
+    orig = mem.cue_fields
 
     def wrapped(text, _orig=orig):
         queries["n"] += 1
@@ -392,13 +395,13 @@ def _count_path(mem, prompt: str, n_tokens: int) -> dict:
         forwards["n"] += 1
 
     handle = mem.model.register_forward_hook(_hook)
-    mem._query_vector = wrapped
+    mem.cue_fields = wrapped
     try:
         ids = mem.continuation_ids(prompt, max_new_tokens=n_tokens, done=lambda _ids: False)
     finally:
-        mem._query_vector = orig
+        mem.cue_fields = orig
         handle.remove()
-        mem._delta = None
+        mem._cue_live = False
     return {"queries": int(queries["n"]), "forwards": int(forwards["n"]), "new_tokens": len(ids)}
 
 
@@ -444,19 +447,18 @@ def measure_cost(mem, incidental: list, normal: dict, phone: dict, *, repeats: i
         key_t = torch.tensor(np.asarray(key_np, dtype=np.float32))
         mlp_bench = _bench(lambda: mem.inject(value, key_t), repeats, warmup)
 
-    delta = mem._compose(normal["value"], grad=False).detach()
     forwards = {}
     for length in (16, 32, 64):
         ids = torch.tensor([_ids_exact(mem, length)], dtype=torch.long, device=mem._device)
 
-        def step(armed, _ids=ids, _delta=delta):
-            mem._delta = _delta if armed else None
+        def step(armed, _ids=ids):
+            mem._cue_live = bool(armed)
             try:
                 with torch.no_grad():
                     logits = _logits_of(mem.model(input_ids=_ids, use_cache=False))
                     float(logits[0, -1, 0])
             finally:
-                mem._delta = None
+                mem._cue_live = False
 
         empty_s = _bench(lambda: step(False), repeats, warmup)
         armed_s = _bench(lambda: step(True), repeats, warmup)

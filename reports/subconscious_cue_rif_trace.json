@@ -1,0 +1,8212 @@
+{
+  "competitor_any_changed": [
+    "measure-rif-5-0",
+    "measure-rif-6-0",
+    "measure-rif-20-0",
+    "measure-rif-30-0",
+    "measure-rif-33-0",
+    "measure-rif-35-0",
+    "measure-rif-38-0",
+    "measure-rif-39-0",
+    "measure-rif-41-0",
+    "measure-rif-42-0",
+    "measure-rif-44-0",
+    "measure-rif-47-0"
+  ],
+  "competitor_down": 0,
+  "competitor_instances": 150,
+  "competitor_instances_past_theta": 150,
+  "constants": {
+    "a_trig": 1.0,
+    "fan_s": 1.45,
+    "floor": 0.05,
+    "half_life": 30.0,
+    "lambda": 0.3,
+    "rif_span": 0.05,
+    "salience_exempt": 0.5,
+    "tau": 43.2808512266689,
+    "theta": 0.32
+  },
+  "constants_changed": false,
+  "elapsed_s": 11.99881271400227,
+  "git": "490d06eee07a33ba242f687dc07800953265d5d6",
+  "kind": "rif-trace",
+  "n": 50,
+  "outsider_changed": [
+    "measure-rif-20-0",
+    "measure-rif-26-0",
+    "measure-rif-35-0",
+    "measure-rif-39-0"
+  ],
+  "outsider_entered_items": 4,
+  "outsider_same": 46,
+  "path": "score_quartet reads strength after LLMMemory._rank. _rank calls cue_fields, which does not change strength, then compete_retrieved. forget_rivals is not on this path.",
+  "rows": [
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7416367805732832,
+        0.7478558364922068,
+        0.7463448609155727
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-0-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7259919824456359,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Wafababa pufaba qufaba rufaba sufaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif0",
+          "mrif0",
+          "mrif0"
+        ],
+        "outsider": "mrifx0",
+        "target": "mrif0"
+      },
+      "salience": [
+        0.07883887512079571,
+        0.1812245688627532,
+        0.14764194910151973,
+        0.18072019355428082,
+        0.12974558832135452
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7639262644205116,
+        0.7782277884455201,
+        0.7157869005849093
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-1-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7552698629349943,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Cefababa zagaba begaba cegaba degaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif1",
+          "mrif1",
+          "mrif1"
+        ],
+        "outsider": "mrifx1",
+        "target": "mrif1"
+      },
+      "salience": [
+        0.13085386149133274,
+        0.28605690279266344,
+        0.192858483298607,
+        0.12081494871257717,
+        0.051839025324228544
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.730565886916223,
+        0.7578498971787854,
+        0.766176429985652
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-2-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7288401954409279,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Jefababa ligaba migaba nigaba pigaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif2",
+          "mrif2",
+          "mrif2"
+        ],
+        "outsider": "mrifx2",
+        "target": "mrif2"
+      },
+      "salience": [
+        0.15007735313314577,
+        0.24945746523880044,
+        0.20840761515933415,
+        0.17431441251018612,
+        0.2594973368420346
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            1
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 1,
+          "winner": 1
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.778622570193104,
+        0.7483742930551505,
+        0.7698692918065136
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-3-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7241462798603449,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Pefababa wogaba xogaba yogaba zogaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif3",
+          "mrif3",
+          "mrif3"
+        ],
+        "outsider": "mrifx3",
+        "target": "mrif3"
+      },
+      "salience": [
+        0.16930368637896825,
+        0.15913940734021223,
+        0.1636043980711759,
+        0.11669513897360308,
+        0.14477362971912636
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7442355712691572,
+        0.6922025209388138,
+        0.7308439213828795
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-4-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7329460157206241,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Vefababa hahaba jahaba kahaba lahaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif4",
+          "mrif4",
+          "mrif4"
+        ],
+        "outsider": "mrifx4",
+        "target": "mrif4"
+      },
+      "salience": [
+        0.26896142398903466,
+        0.2501943610493638,
+        0.2071741297130631,
+        0.03374127155213425,
+        0.06514726482417824
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            3
+          ],
+          "changed": 1,
+          "fired": true,
+          "scaled": [
+            3
+          ],
+          "token": 4,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7301840246634747,
+        0.7315085162418973,
+        0.7428144926056507
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        0.95
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.22897699975063807,
+            "1": -0.3090647579857922,
+            "2": -0.2912019785167606,
+            "3": -0.27556034891053194,
+            "4": -0.29940369040477344
+          },
+          "gap": null,
+          "text": "B",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.3152781677898661,
+            "1": 0.26054725492824576,
+            "2": 0.24910568595826002,
+            "3": 0.26978887591994194,
+            "4": 0.23306698944247958
+          },
+          "gap": null,
+          "text": "if",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4668673825411046,
+            "1": 0.41238478537538725,
+            "2": 0.3937133247286206,
+            "3": 0.40399514975436496,
+            "4": 0.36343742234274845
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5154362540504673,
+            "1": 0.46564728660551824,
+            "2": 0.4485427966563363,
+            "3": 0.47668209578481513,
+            "4": 0.44154763794349483
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            3
+          ],
+          "cosines": {
+            "0": 0.4280066281794744,
+            "1": 0.3098612773168404,
+            "2": 0.3094131736816025,
+            "3": 0.34071102346525434,
+            "4": 0.31801865246850003
+          },
+          "gap": 0.08729560673236847,
+          "text": " se",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.4280066192150116
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6746434812716878,
+            "1": 0.6386226241236536,
+            "2": 0.5873663120982361,
+            "3": 0.563733107422463,
+            "4": 0.5424104319047247
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6579171263955627,
+            "1": 0.6036446717517802,
+            "2": 0.5973546338066154,
+            "3": 0.5755434598526081,
+            "4": 0.5648003612515855
+          },
+          "gap": null,
+          "text": "a",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5743586348179038,
+            "1": 0.49474441115293555,
+            "2": 0.47674552140620413,
+            "3": 0.4780000821291436,
+            "4": 0.4622691458919811
+          },
+          "gap": null,
+          "text": " te",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7624889414585471,
+            "1": 0.7301840246634747,
+            "2": 0.7039400596442017,
+            "3": 0.6912128448899407,
+            "4": 0.6634925831601384
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7031178520508218,
+            "1": 0.6699875493426268,
+            "2": 0.7017522536188288,
+            "3": 0.6907952471356097,
+            "4": 0.6843058450127694
+          },
+          "gap": null,
+          "text": "a",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6268596324701383,
+            "1": 0.5352871101944033,
+            "2": 0.5277789068270313,
+            "3": 0.5151179889120684,
+            "4": 0.5314772598749549
+          },
+          "gap": null,
+          "text": " veh",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7785294572952999,
+            "1": 0.7280167182981739,
+            "2": 0.7315085162418973,
+            "3": 0.7428144926056507,
+            "4": 0.7146436723860795
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.47688819509980934,
+            "1": 0.34652035016933436,
+            "2": 0.37883942203669607,
+            "3": 0.3980757217764788,
+            "4": 0.41406792531830344
+          },
+          "gap": null,
+          "text": " we",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7538833164868223,
+            "1": 0.7200323256103659,
+            "2": 0.704196142497931,
+            "3": 0.6978136421014255,
+            "4": 0.6886655223359144
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.710386087288428,
+            "1": 0.6899765701557216,
+            "2": 0.71477792798899,
+            "3": 0.731803777931383,
+            "4": 0.7359469294747967
+          },
+          "gap": null,
+          "text": "a",
+          "token": 14,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 1,
+      "id": "measure-rif-5-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7359469294747967,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "prompt": "Bifababa sehaba tehaba vehaba wehaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif5",
+          "mrif5",
+          "mrif5"
+        ],
+        "outsider": "mrifx5",
+        "target": "mrif5"
+      },
+      "salience": [
+        0.037388020811165795,
+        0.08781173502290344,
+        0.0702056546039792,
+        0.012407448423943009,
+        0.08912021346113548
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            2
+          ],
+          "changed": 1,
+          "fired": true,
+          "scaled": [
+            2
+          ],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        true,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.75592679631011,
+        0.7408847502206,
+        0.739432436768439
+      ],
+      "competitor_strength": [
+        1.0,
+        0.95,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.2171755493953521,
+            "1": -0.24994195602355046,
+            "2": -0.24703452464126366,
+            "3": -0.24419900473918735,
+            "4": -0.30514324173960905
+          },
+          "gap": null,
+          "text": "H",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            2
+          ],
+          "cosines": {
+            "0": 0.3679321954973774,
+            "1": 0.2912876961556899,
+            "2": 0.33431414722476616,
+            "3": 0.25716855293392926,
+            "4": 0.3005075638304651
+          },
+          "gap": 0.03361804783344269,
+          "text": "if",
+          "token": 1,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.36793220043182373
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5379978932759732,
+            "1": 0.4910175432199163,
+            "2": 0.5192029590815208,
+            "3": 0.4774200795222382,
+            "4": 0.4954462629296539
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.46869154250839823,
+            "1": 0.4453371056776548,
+            "2": 0.4604020256344012,
+            "3": 0.42746738446960925,
+            "4": 0.41282657642989873
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.45160927676466883,
+            "1": 0.396490126815642,
+            "2": 0.3831593643606994,
+            "3": 0.34446404640309614,
+            "4": 0.3503490227760315
+          },
+          "gap": null,
+          "text": " do",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7007842309178491,
+            "1": 0.6156191686584924,
+            "2": 0.635842611704343,
+            "3": 0.6182675824580874,
+            "4": 0.5955072633461254
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6205994148231653,
+            "1": 0.5872541933136284,
+            "2": 0.5757961719736527,
+            "3": 0.5896029474200992,
+            "4": 0.5962495773362353
+          },
+          "gap": null,
+          "text": "a",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5496842884373812,
+            "1": 0.5135069506071421,
+            "2": 0.4942745211555522,
+            "3": 0.48294179671867865,
+            "4": 0.5333116057101139
+          },
+          "gap": null,
+          "text": " f",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6782081884211077,
+            "1": 0.6364506168183671,
+            "2": 0.603214558517088,
+            "3": 0.560971959020855,
+            "4": 0.5712814487600055
+          },
+          "gap": null,
+          "text": "oh",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7474213213590578,
+            "1": 0.75592679631011,
+            "2": 0.7294250332775873,
+            "3": 0.739432436768439,
+            "4": 0.716913942340068
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5996283422423078,
+            "1": 0.5397419763297591,
+            "2": 0.517385556952697,
+            "3": 0.4906844363958344,
+            "4": 0.49750293621202046
+          },
+          "gap": null,
+          "text": " go",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7446259060530671,
+            "1": 0.6893704653355931,
+            "2": 0.6956735248606769,
+            "3": 0.7038595006143118,
+            "4": 0.6869514554707726
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6728757053906513,
+            "1": 0.6571875194372722,
+            "2": 0.6325701616158187,
+            "3": 0.6738407786400543,
+            "4": 0.6706451202746198
+          },
+          "gap": null,
+          "text": "a",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6208014149904182,
+            "1": 0.5914823000717129,
+            "2": 0.5731447612064966,
+            "3": 0.5439164316288636,
+            "4": 0.6105362770623465
+          },
+          "gap": null,
+          "text": " h",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.640259897331921,
+            "1": 0.6065984080596011,
+            "2": 0.5840394545186823,
+            "3": 0.5265359661454018,
+            "4": 0.5398574764898005
+          },
+          "gap": null,
+          "text": "oh",
+          "token": 14,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7292958894680865,
+            "1": 0.7499580510550115,
+            "2": 0.7408847502206,
+            "3": 0.7182624695868938,
+            "4": 0.7144884005289484
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 15,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 1,
+      "id": "measure-rif-6-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.716913942340068,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        0.95,
+        1.0,
+        1.0
+      ],
+      "prompt": "Hifababa dohaba fohaba gohaba hohaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif6",
+          "mrif6",
+          "mrif6"
+        ],
+        "outsider": "mrifx6",
+        "target": "mrif6"
+      },
+      "salience": [
+        0.17550312872603016,
+        0.167814111507005,
+        0.11206692701331974,
+        0.0957958020439945,
+        0.10340041381864691
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        0.95,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7251654102903476,
+        0.6656169575630304,
+        0.6731166679673947
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-7-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6795063133393021,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Nifababa puhaba quhaba ruhaba suhaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif7",
+          "mrif7",
+          "mrif7"
+        ],
+        "outsider": "mrifx7",
+        "target": "mrif7"
+      },
+      "salience": [
+        0.10862582819733907,
+        0.11180443238410513,
+        0.14799169507302146,
+        0.15590685824978495,
+        0.21314724999634616
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7604399837082272,
+        0.7379457305520758,
+        0.7427644252473476
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-8-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7506032532381927,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Tifababa zajaba bejaba cejaba dejaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif8",
+          "mrif8",
+          "mrif8"
+        ],
+        "outsider": "mrifx8",
+        "target": "mrif8"
+      },
+      "salience": [
+        0.12456732747342236,
+        0.18527926154991847,
+        0.17877654776517504,
+        0.10659596820826964,
+        0.12000124624740785
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7207645580769588,
+        0.7040461609934772,
+        0.7068994211747327
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-9-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7279665656597203,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Zifababa lijaba mijaba nijaba pijaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif9",
+          "mrif9",
+          "mrif9"
+        ],
+        "outsider": "mrifx9",
+        "target": "mrif9"
+      },
+      "salience": [
+        0.19467160742364917,
+        0.14203027303371377,
+        0.14523888702149246,
+        0.28137353489822553,
+        0.18890556992268537
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.6889420644838121,
+        0.7105414274000741,
+        0.7016264090284752
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-10-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6961637478582107,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Gofababa wojaba xojaba yojaba zojaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif10",
+          "mrif10",
+          "mrif10"
+        ],
+        "outsider": "mrifx10",
+        "target": "mrif10"
+      },
+      "salience": [
+        0.18313996500814275,
+        0.21556718804343503,
+        0.2105742758975486,
+        0.208019179157852,
+        0.1681354591419228
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7600259765088366,
+        0.7415969828415605,
+        0.7342486429552855
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-11-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7428139041746484,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Mofababa hakaba jakaba kakaba lakaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif11",
+          "mrif11",
+          "mrif11"
+        ],
+        "outsider": "mrifx11",
+        "target": "mrif11"
+      },
+      "salience": [
+        0.320075640193601,
+        0.2268130725775239,
+        0.2110300481480777,
+        0.19685265669074412,
+        0.1312321647203316
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.716922249219838,
+        0.7055677570290805,
+        0.7108675553561341
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-12-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6968624054780987,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Sofababa sekaba tekaba vekaba wekaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif12",
+          "mrif12",
+          "mrif12"
+        ],
+        "outsider": "mrifx12",
+        "target": "mrif12"
+      },
+      "salience": [
+        0.10538654575332804,
+        0.1551652513339267,
+        0.26604675554305474,
+        0.19742150052074747,
+        0.17157967941507307
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7205501629279338,
+        0.7660883016542666,
+        0.7369700141146563
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-13-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7311633811178162,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Yofababa dokaba fokaba gokaba hokaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif13",
+          "mrif13",
+          "mrif13"
+        ],
+        "outsider": "mrifx13",
+        "target": "mrif13"
+      },
+      "salience": [
+        0.15879566500559592,
+        0.1996436318537987,
+        0.11748968878559989,
+        0.2347225349182836,
+        0.3500186910695239
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7147947343062279,
+        0.7605793068542314,
+        0.7403277987243408
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-14-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7265009690913744,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Fufababa pukaba qukaba rukaba sukaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif14",
+          "mrif14",
+          "mrif14"
+        ],
+        "outsider": "mrifx14",
+        "target": "mrif14"
+      },
+      "salience": [
+        0.24092134493853795,
+        0.21000075469741936,
+        0.2691109539072935,
+        0.2938977846070298,
+        0.11522505343597504
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7470429522585539,
+        0.7497672989176412,
+        0.7174910641879437
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-15-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6970294538800018,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Lufababa zalaba belaba celaba delaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif15",
+          "mrif15",
+          "mrif15"
+        ],
+        "outsider": "mrifx15",
+        "target": "mrif15"
+      },
+      "salience": [
+        0.3100654845926948,
+        0.2099908852093215,
+        0.15729793048941706,
+        0.2171676469588657,
+        0.23521763275022173
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.753969277871787,
+        0.7559156835633605,
+        0.7272327899124302
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-16-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7585825693881969,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Rufababa lilaba milaba nilaba pilaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif16",
+          "mrif16",
+          "mrif16"
+        ],
+        "outsider": "mrifx16",
+        "target": "mrif16"
+      },
+      "salience": [
+        0.18192594126603134,
+        0.1403779942591577,
+        0.23299630057249515,
+        0.3501740617450176,
+        0.15783015864926045
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7141416617713526,
+        0.7129707975572013,
+        0.7523175930879944
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-17-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7186785141357733,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Xufababa wolaba xolaba yolaba zolaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif17",
+          "mrif17",
+          "mrif17"
+        ],
+        "outsider": "mrifx17",
+        "target": "mrif17"
+      },
+      "salience": [
+        0.23065139471840299,
+        0.16246519901348638,
+        0.1821566877018182,
+        0.2568703522924983,
+        0.12302787438414665
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7684416571563402,
+        0.7304557203962716,
+        0.7729628822125415
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-18-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.733105753899298,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Dagababa hamaba jamaba kamaba lamaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif18",
+          "mrif18",
+          "mrif18"
+        ],
+        "outsider": "mrifx18",
+        "target": "mrif18"
+      },
+      "salience": [
+        0.15215322097557224,
+        0.1566615866945661,
+        0.1453482561486006,
+        0.1188674944043798,
+        0.12384118075568966
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            3
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 1,
+          "winner": 3
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7073880068821545,
+        0.6954783208245343,
+        0.7312424922525812
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-19-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7053510103187857,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Kagababa semaba temaba vemaba wemaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif19",
+          "mrif19",
+          "mrif19"
+        ],
+        "outsider": "mrifx19",
+        "target": "mrif19"
+      },
+      "salience": [
+        0.1260034950041762,
+        0.16057781749339656,
+        0.2800500235964136,
+        0.15907579327750856,
+        0.1135842612053853
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            1,
+            4
+          ],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7800449449556734,
+        0.7451281310910546,
+        0.7488890513518748
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.26027441726315065,
+            "1": -0.1831159750374654,
+            "2": -0.24192451050195488,
+            "3": -0.262558197809849,
+            "4": -0.24912933508530638
+          },
+          "gap": null,
+          "text": "Q",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "cosines": {
+            "0": 0.37246513458769615,
+            "1": 0.34507826259727115,
+            "2": 0.3035836192722596,
+            "3": 0.2587705376051422,
+            "4": 0.3258879213744992
+          },
+          "gap": 0.027386872097849846,
+          "text": "ag",
+          "token": 1,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.3724651336669922
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5707761060525525,
+            "1": 0.5395219686726944,
+            "2": 0.4912672756594102,
+            "3": 0.48960628395811845,
+            "4": 0.5442738399632173
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5272362042221077,
+            "1": 0.5698030887297239,
+            "2": 0.49901137335193346,
+            "3": 0.46252676717156316,
+            "4": 0.49183400881589184
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5326849840946778,
+            "1": 0.4892682812546888,
+            "2": 0.4670701749448575,
+            "3": 0.4192395133906368,
+            "4": 0.4068857553371094
+          },
+          "gap": null,
+          "text": " dom",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7084119737157837,
+            "1": 0.7324022383142339,
+            "2": 0.6892791294071601,
+            "3": 0.6601330560979494,
+            "4": 0.6424454412775902
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5405454668413946,
+            "1": 0.4428520117087841,
+            "2": 0.43278761106129177,
+            "3": 0.4768602522688886,
+            "4": 0.4431748245791088
+          },
+          "gap": null,
+          "text": " f",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5562355965245154,
+            "1": 0.4667308912224803,
+            "2": 0.5125317382058834,
+            "3": 0.42559162942465717,
+            "4": 0.4100144834309649
+          },
+          "gap": null,
+          "text": "om",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7601040925570436,
+            "1": 0.7800449449556734,
+            "2": 0.7353445864473882,
+            "3": 0.725614932219276,
+            "4": 0.7078374244853955
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5838285449746626,
+            "1": 0.46157902407931317,
+            "2": 0.4785558410724382,
+            "3": 0.5415741755556588,
+            "4": 0.5342391687981027
+          },
+          "gap": null,
+          "text": " g",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.658907604970544,
+            "1": 0.6174754476211392,
+            "2": 0.6060454682295169,
+            "3": 0.543000698492719,
+            "4": 0.5786951478455099
+          },
+          "gap": null,
+          "text": "om",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7627485395008857,
+            "1": 0.777660842121072,
+            "2": 0.7451281310910546,
+            "3": 0.7488890513518748,
+            "4": 0.7273583978493083
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5600054766218039,
+            "1": 0.4700064637990344,
+            "2": 0.49097913481652894,
+            "3": 0.4338930655045877,
+            "4": 0.4572992352525726
+          },
+          "gap": null,
+          "text": " hom",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7427656321052375,
+            "1": 0.7500563877141211,
+            "2": 0.7280016216657755,
+            "3": 0.7172798639948834,
+            "4": 0.6921677192811393
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-20-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": true,
+      "outsider_max_cosine": 0.7273583978493083,
+      "outsider_same": false,
+      "outsider_strength": 0.9506978559801844,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9506978559801844
+      ],
+      "prompt": "Qagababa domaba fomaba gomaba homaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif20",
+          "mrif20",
+          "mrif20"
+        ],
+        "outsider": "mrifx20",
+        "target": "mrif20"
+      },
+      "salience": [
+        0.09939071964833429,
+        0.0062139443198573644,
+        0.16337315519388046,
+        0.15443573473629324,
+        0.26995992390385704
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9506978559801844
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7190286254860129,
+        0.7080441432563256,
+        0.7472349304466382
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-21-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7341354035023588,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Wagababa pumaba qumaba rumaba sumaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif21",
+          "mrif21",
+          "mrif21"
+        ],
+        "outsider": "mrifx21",
+        "target": "mrif21"
+      },
+      "salience": [
+        0.11445920792392747,
+        0.09629751127438062,
+        0.115325165756243,
+        0.19520465180389704,
+        0.20696395865184647
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7470444689619584,
+        0.7779939284695542,
+        0.7457078655190094
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-22-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7236604480520528,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Cegababa zanaba benaba cenaba denaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif22",
+          "mrif22",
+          "mrif22"
+        ],
+        "outsider": "mrifx22",
+        "target": "mrif22"
+      },
+      "salience": [
+        0.14613550994436664,
+        0.24754312636636808,
+        0.1769171784084928,
+        0.15444546806929316,
+        0.12034678092252536
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7965591866322811,
+        0.7586799129917358,
+        0.7258807275201343
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-23-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.746783977369268,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Jegababa linaba minaba ninaba pinaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif23",
+          "mrif23",
+          "mrif23"
+        ],
+        "outsider": "mrifx23",
+        "target": "mrif23"
+      },
+      "salience": [
+        0.14790144247171733,
+        0.0985168514849461,
+        0.1608704699872992,
+        0.2847995963700258,
+        0.19647583914514813
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.738454169109854,
+        0.7578251141500889,
+        0.7427922380675754
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-24-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7522756724150544,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Pegababa wonaba xonaba yonaba zonaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif24",
+          "mrif24",
+          "mrif24"
+        ],
+        "outsider": "mrifx24",
+        "target": "mrif24"
+      },
+      "salience": [
+        0.12411149366534227,
+        0.11207292358470079,
+        0.16205654804771255,
+        0.18285419793882854,
+        0.14625495515557568
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7955256406890965,
+        0.7363905302286264,
+        0.7394188273498108
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-25-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7395519454372482,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Vegababa hapaba japaba kapaba lapaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif25",
+          "mrif25",
+          "mrif25"
+        ],
+        "outsider": "mrifx25",
+        "target": "mrif25"
+      },
+      "salience": [
+        0.23962040766093304,
+        0.10627485641880026,
+        0.18942480359124306,
+        0.10844586117718591,
+        0.14714809495843933
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            0,
+            4
+          ],
+          "token": 1,
+          "winner": 1
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7268283347351202,
+        0.7531968389434283,
+        0.7264644806840787
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.23087068071446254,
+            "1": -0.23750528675566432,
+            "2": -0.23047512138671142,
+            "3": -0.26262478641880244,
+            "4": -0.2358624807502066
+          },
+          "gap": null,
+          "text": "Big",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "cosines": {
+            "0": 0.3236056594271165,
+            "1": 0.35383078414528996,
+            "2": 0.31483685408379963,
+            "3": 0.30906520420151157,
+            "4": 0.3475093603477627
+          },
+          "gap": 0.006321423687040806,
+          "text": "ab",
+          "token": 1,
+          "triggered": true,
+          "winner": 1,
+          "winner_cosine": 0.3538307845592499
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.417051939218015,
+            "1": 0.4127775062322502,
+            "2": 0.392645440988213,
+            "3": 0.4032207473314518,
+            "4": 0.4038160945081826
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5262942009783739,
+            "1": 0.45676458174434453,
+            "2": 0.43462324105303207,
+            "3": 0.49539846070431043,
+            "4": 0.4365042019773033
+          },
+          "gap": null,
+          "text": " sep",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7129797273006762,
+            "1": 0.6840498786498338,
+            "2": 0.6794127810593467,
+            "3": 0.657814195024891,
+            "4": 0.6708255108285072
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5204093933895323,
+            "1": 0.45063690733435796,
+            "2": 0.44397251106877433,
+            "3": 0.4189018554563689,
+            "4": 0.45200323871289627
+          },
+          "gap": null,
+          "text": " t",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6537089219450237,
+            "1": 0.5975867442158141,
+            "2": 0.5684416666214412,
+            "3": 0.5829014583939649,
+            "4": 0.5623096206437456
+          },
+          "gap": null,
+          "text": "ep",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7855397542816597,
+            "1": 0.7268283347351202,
+            "2": 0.7531968389434283,
+            "3": 0.7264644806840787,
+            "4": 0.7520185016621151
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6212513144075533,
+            "1": 0.5073621356457261,
+            "2": 0.4863753290550142,
+            "3": 0.4835514033767244,
+            "4": 0.5006315266413108
+          },
+          "gap": null,
+          "text": " ve",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6964166181371864,
+            "1": 0.6270478889913098,
+            "2": 0.610055371209914,
+            "3": 0.6043391906666968,
+            "4": 0.6310636311239342
+          },
+          "gap": null,
+          "text": "p",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7699268677644009,
+            "1": 0.7001461135386152,
+            "2": 0.718919125666453,
+            "3": 0.7068284181737057,
+            "4": 0.7265820012709031
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4637069882948838,
+            "1": 0.3280012819651552,
+            "2": 0.3769764821564368,
+            "3": 0.3575849463854443,
+            "4": 0.3754268113510563
+          },
+          "gap": null,
+          "text": " we",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6493209166338155,
+            "1": 0.5679803888236687,
+            "2": 0.5840267372997037,
+            "3": 0.5764544830071422,
+            "4": 0.5959327596997289
+          },
+          "gap": null,
+          "text": "p",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7580643161235517,
+            "1": 0.6864217735507842,
+            "2": 0.7136279256966683,
+            "3": 0.6910402551268211,
+            "4": 0.7163539046754797
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-26-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": true,
+      "outsider_max_cosine": 0.7520185016621151,
+      "outsider_same": false,
+      "outsider_strength": 0.95,
+      "predicted_strength": [
+        0.950871622899107,
+        1.0,
+        1.0,
+        1.0,
+        0.95
+      ],
+      "prompt": "Bigababa sepaba tepaba vepaba wepaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif26",
+          "mrif26",
+          "mrif26"
+        ],
+        "outsider": "mrifx26",
+        "target": "mrif26"
+      },
+      "salience": [
+        0.004799058205895269,
+        0.19136881697461033,
+        0.2692361950050789,
+        0.12100684461919628,
+        0.21756511717697383
+      ],
+      "strength_after": [
+        0.950871622899107,
+        1.0,
+        1.0,
+        1.0,
+        0.95
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 0.950871622899107,
+      "winner_same": false
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7573361137903076,
+        0.758292193037897,
+        0.75064090621149
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-27-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7146745222226076,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Higababa dopaba fopaba gopaba hopaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif27",
+          "mrif27",
+          "mrif27"
+        ],
+        "outsider": "mrifx27",
+        "target": "mrif27"
+      },
+      "salience": [
+        0.15387241458583262,
+        0.1362979129029085,
+        0.10440702150421335,
+        0.17092810353381496,
+        0.2208082727643005
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.752019396860553,
+        0.6779290169743339,
+        0.7387651061142447
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-28-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7244989513186869,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Nigababa pupaba qupaba rupaba supaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif28",
+          "mrif28",
+          "mrif28"
+        ],
+        "outsider": "mrifx28",
+        "target": "mrif28"
+      },
+      "salience": [
+        0.20177797794912067,
+        0.12241245601002194,
+        0.2204969600554664,
+        0.12094339008282645,
+        0.23011090629104872
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7719549331188622,
+        0.7465666451726182,
+        0.7360685872365779
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-29-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.768425206074008,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Tigababa zaqaba beqaba ceqaba deqaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif29",
+          "mrif29",
+          "mrif29"
+        ],
+        "outsider": "mrifx29",
+        "target": "mrif29"
+      },
+      "salience": [
+        0.09533678338264884,
+        0.2140070739625721,
+        0.10247257850519517,
+        0.11005668150799526,
+        0.12103699253837277
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            3
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            1,
+            3
+          ],
+          "token": 4,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7520225329323033,
+        0.7119528557808035,
+        0.7453030338959513
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        0.9513058563369813
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.22306145031783636,
+            "1": -0.2660973069874205,
+            "2": -0.2967161805903766,
+            "3": -0.25074855902584064,
+            "4": -0.26058423967495703
+          },
+          "gap": null,
+          "text": "Z",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.3024852776735951,
+            "1": 0.23833762158077607,
+            "2": 0.23039692657928798,
+            "3": 0.1719479276729376,
+            "4": 0.19626408913673216
+          },
+          "gap": null,
+          "text": "ig",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5319283846895325,
+            "1": 0.5041990506247906,
+            "2": 0.4922936912373029,
+            "3": 0.4041773494886199,
+            "4": 0.4488378406117956
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4996201120669174,
+            "1": 0.49154880813893426,
+            "2": 0.45617703906726464,
+            "3": 0.4368249524434985,
+            "4": 0.4395463072376876
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            3
+          ],
+          "cosines": {
+            "0": 0.4115113891920908,
+            "1": 0.33569475162201085,
+            "2": 0.28229604036280753,
+            "3": 0.34740848394422386,
+            "4": 0.273372663523865
+          },
+          "gap": 0.064102903008461,
+          "text": " li",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.4115113914012909
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6688783790936887,
+            "1": 0.6123901039449449,
+            "2": 0.5874682860840534,
+            "3": 0.5448006930840512,
+            "4": 0.5717501587684272
+          },
+          "gap": null,
+          "text": "q",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7102074042295834,
+            "1": 0.6838543102349279,
+            "2": 0.6432679711230617,
+            "3": 0.661112333336003,
+            "4": 0.6428769358178114
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5954665362937961,
+            "1": 0.5304223618921751,
+            "2": 0.4653495321063299,
+            "3": 0.51490928194793,
+            "4": 0.45548606574391093
+          },
+          "gap": null,
+          "text": " mi",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7783216072497744,
+            "1": 0.7406303450712036,
+            "2": 0.6801804810344647,
+            "3": 0.638143730402136,
+            "4": 0.6846739789662062
+          },
+          "gap": null,
+          "text": "q",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7729307219136028,
+            "1": 0.7520225329323033,
+            "2": 0.7119528557808035,
+            "3": 0.7453030338959513,
+            "4": 0.7508324259533855
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.46216613948487734,
+            "1": 0.4348859019434756,
+            "2": 0.3876030067240807,
+            "3": 0.40370017317646056,
+            "4": 0.40374950926533454
+          },
+          "gap": null,
+          "text": " n",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7403310943060332,
+            "1": 0.6868568917324406,
+            "2": 0.6520612551896434,
+            "3": 0.5892995973492967,
+            "4": 0.6169218527680943
+          },
+          "gap": null,
+          "text": "iq",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.740533774163887,
+            "1": 0.7079608794782161,
+            "2": 0.6740799153584763,
+            "3": 0.7020480606443233,
+            "4": 0.7126181972148944
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.655945493576608,
+            "1": 0.5953604939313392,
+            "2": 0.5526150591228942,
+            "3": 0.5543322593936149,
+            "4": 0.576460667813676
+          },
+          "gap": null,
+          "text": " pi",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7540474255954203,
+            "1": 0.726257240692082,
+            "2": 0.699264031954058,
+            "3": 0.6421523365480049,
+            "4": 0.7169296954332476
+          },
+          "gap": null,
+          "text": "q",
+          "token": 14,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7487851006395863,
+            "1": 0.7219182142053292,
+            "2": 0.6905194809750471,
+            "3": 0.7104328090047934,
+            "4": 0.7381033225238056
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 15,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-30-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7508324259533855,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        0.9513058563369813,
+        1.0
+      ],
+      "prompt": "Zigababa liqaba miqaba niqaba piqaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif30",
+          "mrif30",
+          "mrif30"
+        ],
+        "outsider": "mrifx30",
+        "target": "mrif30"
+      },
+      "salience": [
+        0.12247509382444959,
+        0.1829232925034669,
+        0.15285543113752664,
+        0.22903747361849022,
+        0.1823372587479032
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        0.9513058563369813,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7537216070154577,
+        0.7622347164724858,
+        0.7746578073802991
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-31-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7706395735607521,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Gogababa woqaba xoqaba yoqaba zoqaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif31",
+          "mrif31",
+          "mrif31"
+        ],
+        "outsider": "mrifx31",
+        "target": "mrif31"
+      },
+      "salience": [
+        0.17264688058925415,
+        0.14288676603587044,
+        0.16078853020295653,
+        0.12732091959972733,
+        0.21999448022870202
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7629241266504502,
+        0.7627336777997292,
+        0.7671101826540102
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-32-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7609636002894508,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Mogababa haraba jaraba karaba laraba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif32",
+          "mrif32",
+          "mrif32"
+        ],
+        "outsider": "mrifx32",
+        "target": "mrif32"
+      },
+      "salience": [
+        0.31408637162064496,
+        0.3398559747379512,
+        0.3208364209793061,
+        0.1702901154165608,
+        0.11969215746562696
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1
+          ],
+          "changed": 1,
+          "fired": true,
+          "scaled": [
+            1
+          ],
+          "token": 4,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7321371430730907,
+        0.7242012547304496,
+        0.7043015257465634
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.26936693689803803,
+            "1": -0.26929667228243354,
+            "2": -0.28700498082333686,
+            "3": -0.2804268054405773,
+            "4": -0.26102146110296576
+          },
+          "gap": null,
+          "text": "S",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.24423247425992495,
+            "1": 0.20559106078984085,
+            "2": 0.1593738591701785,
+            "3": 0.16426279791346132,
+            "4": 0.16808883483685522
+          },
+          "gap": null,
+          "text": "og",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4942067052089923,
+            "1": 0.4790027765273648,
+            "2": 0.4517240689408106,
+            "3": 0.41545318364824085,
+            "4": 0.4380419790236686
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.45605840716496565,
+            "1": 0.45809252364261094,
+            "2": 0.42742522201403405,
+            "3": 0.4589237604662965,
+            "4": 0.4545920622418218
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1
+          ],
+          "cosines": {
+            "0": 0.4766049580636707,
+            "1": 0.3202057370605438,
+            "2": 0.26605304582790734,
+            "3": 0.30209689467494494,
+            "4": 0.28274862402437695
+          },
+          "gap": 0.1563992202281952,
+          "text": " ser",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.47660496830940247
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6434629140807188,
+            "1": 0.536592568046669,
+            "2": 0.4627338405426497,
+            "3": 0.45940831805489385,
+            "4": 0.468236186479295
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6396343310536936,
+            "1": 0.5035234408378664,
+            "2": 0.4349540234245636,
+            "3": 0.4111985423732087,
+            "4": 0.4184072022782117
+          },
+          "gap": null,
+          "text": " ter",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.770495217401874,
+            "1": 0.7321371430730907,
+            "2": 0.6897819013294287,
+            "3": 0.6320497729392831,
+            "4": 0.6448295669054382
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5968132537940164,
+            "1": 0.430096416893283,
+            "2": 0.40513034180065505,
+            "3": 0.38044928388106597,
+            "4": 0.4088227444620355
+          },
+          "gap": null,
+          "text": " ver",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.749626068026863,
+            "1": 0.6904892563997936,
+            "2": 0.6811894475803268,
+            "3": 0.6357581915796886,
+            "4": 0.6639929039443129
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5457028391663143,
+            "1": 0.4975462594028846,
+            "2": 0.4941632959097738,
+            "3": 0.4947430986853566,
+            "4": 0.5273390088962603
+          },
+          "gap": null,
+          "text": " w",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5886567413238066,
+            "1": 0.45317030049818985,
+            "2": 0.4398859116712034,
+            "3": 0.44986112298530656,
+            "4": 0.41755946789587023
+          },
+          "gap": null,
+          "text": "er",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7396778092983012,
+            "1": 0.7162507490150799,
+            "2": 0.7242012547304496,
+            "3": 0.7043015257465634,
+            "4": 0.7112743529129915
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 1,
+      "id": "measure-rif-33-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7112743529129915,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Sogababa seraba teraba veraba weraba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif33",
+          "mrif33",
+          "mrif33"
+        ],
+        "outsider": "mrifx33",
+        "target": "mrif33"
+      },
+      "salience": [
+        0.1577366357830359,
+        0.160951952910639,
+        0.35440814727265574,
+        0.1737610042407852,
+        0.24622816301497802
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7622650207454515,
+        0.7872671127981252,
+        0.7416123877297586
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-34-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7300606827203849,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Yogababa doraba foraba goraba horaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif34",
+          "mrif34",
+          "mrif34"
+        ],
+        "outsider": "mrifx34",
+        "target": "mrif34"
+      },
+      "salience": [
+        0.19083919764708343,
+        0.2605921309151393,
+        0.22005131260276786,
+        0.16418182381405733,
+        0.3040103857801064
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            1,
+            4
+          ],
+          "token": 4,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7329881926912953,
+        0.7479496814563565,
+        0.7534514820294284
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.2685777253080099,
+            "1": -0.2809883140850728,
+            "2": -0.22365482926310565,
+            "3": -0.22809123456209807,
+            "4": -0.23913931531395283
+          },
+          "gap": null,
+          "text": "F",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.29263079449135093,
+            "1": 0.21521603910033332,
+            "2": 0.2417075057912266,
+            "3": 0.20190007649615296,
+            "4": 0.2041827260299784
+          },
+          "gap": null,
+          "text": "ug",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4902167863597336,
+            "1": 0.46510301943778853,
+            "2": 0.4923145975101652,
+            "3": 0.4189805904807136,
+            "4": 0.4604371566579671
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4884627869364115,
+            "1": 0.4386604485168949,
+            "2": 0.5601831333459626,
+            "3": 0.5373914699939221,
+            "4": 0.5201775322805022
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "cosines": {
+            "0": 0.5118310333589172,
+            "1": 0.3762821422878834,
+            "2": 0.31172185115814555,
+            "3": 0.2993409839158782,
+            "4": 0.3321555021167857
+          },
+          "gap": 0.1355488896369934,
+          "text": " pur",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.5118310451507568
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6624743843304102,
+            "1": 0.6001437696001161,
+            "2": 0.6742847316275252,
+            "3": 0.6611286880885087,
+            "4": 0.667654731959093
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6343502392802484,
+            "1": 0.5923067816532538,
+            "2": 0.5353153751309172,
+            "3": 0.47996120517559954,
+            "4": 0.545868057326452
+          },
+          "gap": null,
+          "text": " q",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.694538020896285,
+            "1": 0.5855497274078442,
+            "2": 0.4892057324314363,
+            "3": 0.42655772009378873,
+            "4": 0.4897177547851659
+          },
+          "gap": null,
+          "text": "ur",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7444911805852245,
+            "1": 0.6469491145360128,
+            "2": 0.7127989750334692,
+            "3": 0.6870764024384838,
+            "4": 0.6938755036405825
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5928232230987538,
+            "1": 0.5872275184362195,
+            "2": 0.43553472847173125,
+            "3": 0.399959229158755,
+            "4": 0.479034078532569
+          },
+          "gap": null,
+          "text": " r",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6941579418278353,
+            "1": 0.6489550989436027,
+            "2": 0.4985010450485719,
+            "3": 0.5008915777741015,
+            "4": 0.5324232352219426
+          },
+          "gap": null,
+          "text": "ur",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7685662585947328,
+            "1": 0.7329881926912953,
+            "2": 0.7402021017785916,
+            "3": 0.7475502588964787,
+            "4": 0.7509989074711253
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6365722806188499,
+            "1": 0.5347353172450736,
+            "2": 0.4717967824551101,
+            "3": 0.48615804154581327,
+            "4": 0.49487231078731686
+          },
+          "gap": null,
+          "text": " sur",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7536317286178005,
+            "1": 0.7070583130274235,
+            "2": 0.7479496814563565,
+            "3": 0.7534514820294284,
+            "4": 0.7586840402733681
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-35-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": true,
+      "outsider_max_cosine": 0.7586840402733681,
+      "outsider_same": false,
+      "outsider_strength": 0.9510882429695716,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9510882429695716
+      ],
+      "prompt": "Fugababa puraba quraba ruraba suraba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif35",
+          "mrif35",
+          "mrif35"
+        ],
+        "outsider": "mrifx35",
+        "target": "mrif35"
+      },
+      "salience": [
+        0.2618311704541064,
+        0.19017163394179207,
+        0.2020314718875772,
+        0.1097117323924445,
+        0.2786734362126521
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9510882429695716
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7485050464218049,
+        0.7505391187349953,
+        0.7351610541484329
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-36-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7449603071992278,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Lugababa zasaba besaba cesaba desaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif36",
+          "mrif36",
+          "mrif36"
+        ],
+        "outsider": "mrifx36",
+        "target": "mrif36"
+      },
+      "salience": [
+        0.24540898678178494,
+        0.24313974919742545,
+        0.1283777197512301,
+        0.22911491572204565,
+        0.15090956525125768
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7529927871031096,
+        0.7540227078422272,
+        0.7206968097279146
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-37-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7588687183736771,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Rugababa lisaba misaba nisaba pisaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif37",
+          "mrif37",
+          "mrif37"
+        ],
+        "outsider": "mrifx37",
+        "target": "mrif37"
+      },
+      "salience": [
+        0.1274510939700487,
+        0.12865730795567942,
+        0.18667068583966087,
+        0.35254966275076155,
+        0.1439863908938748
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            2
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            0,
+            2
+          ],
+          "token": 1,
+          "winner": 1
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        true,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7241818104286698,
+        0.7220393150085919,
+        0.7207511549347504
+      ],
+      "competitor_strength": [
+        1.0,
+        0.95,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.277147445140345,
+            "1": -0.23018043574227928,
+            "2": -0.2199544942207549,
+            "3": -0.26625357605461214,
+            "4": -0.2125198404796514
+          },
+          "gap": null,
+          "text": "X",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2
+          ],
+          "cosines": {
+            "0": 0.33952357150696155,
+            "1": 0.40675484068614126,
+            "2": 0.3841197919642291,
+            "3": 0.2999287064296754,
+            "4": 0.30938345924493343
+          },
+          "gap": 0.022635048255324364,
+          "text": "ug",
+          "token": 1,
+          "triggered": true,
+          "winner": 1,
+          "winner_cosine": 0.40675485134124756
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5098662516749085,
+            "1": 0.5779780332174439,
+            "2": 0.5455817485008918,
+            "3": 0.5079533917402826,
+            "4": 0.5645190927912395
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4336404350301132,
+            "1": 0.5146490883219982,
+            "2": 0.5118649346169134,
+            "3": 0.4761481166334624,
+            "4": 0.5327785212976957
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "cosines": {
+            "0": 0.43843294474558403,
+            "1": 0.4111615291979436,
+            "2": 0.4251723791801238,
+            "3": 0.44780510387675,
+            "4": 0.3124588325846562
+          },
+          "gap": null,
+          "text": " w",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5052510436289624,
+            "1": 0.4287704612828566,
+            "2": 0.44710108809707655,
+            "3": 0.44458760871994113,
+            "4": 0.3455807031345671
+          },
+          "gap": null,
+          "text": "os",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6996775644692481,
+            "1": 0.7018033764369394,
+            "2": 0.7127246357412382,
+            "3": 0.6947772650983856,
+            "4": 0.6716145245665599
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.528135457786731,
+            "1": 0.391574903476258,
+            "2": 0.3989870557692279,
+            "3": 0.4204514995701056,
+            "4": 0.3857685689265993
+          },
+          "gap": null,
+          "text": " x",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6491969927048191,
+            "1": 0.5279107534752974,
+            "2": 0.5564850113917259,
+            "3": 0.51136293834132,
+            "4": 0.47375036788068375
+          },
+          "gap": null,
+          "text": "os",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.747023757479712,
+            "1": 0.7241818104286698,
+            "2": 0.7220393150085919,
+            "3": 0.7207511549347504,
+            "4": 0.7023138516503702
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5697553141216096,
+            "1": 0.43944556087043773,
+            "2": 0.41358597784189965,
+            "3": 0.4382479456267635,
+            "4": 0.36859845771006
+          },
+          "gap": null,
+          "text": " y",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.704438668897226,
+            "1": 0.5633001352845303,
+            "2": 0.5698908405722816,
+            "3": 0.5645385773311772,
+            "4": 0.45746635994089657
+          },
+          "gap": null,
+          "text": "os",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7383610508628831,
+            "1": 0.700964109171903,
+            "2": 0.6908052228449068,
+            "3": 0.697663813389425,
+            "4": 0.6653498074221015
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5913394197503774,
+            "1": 0.441835923863289,
+            "2": 0.433709784299996,
+            "3": 0.45234852376921386,
+            "4": 0.42844984314242324
+          },
+          "gap": null,
+          "text": " z",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6842133180247074,
+            "1": 0.5408201736589853,
+            "2": 0.5584202982938572,
+            "3": 0.5272735090990853,
+            "4": 0.4947718650235219
+          },
+          "gap": null,
+          "text": "os",
+          "token": 14,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7242482845171782,
+            "1": 0.6962655695794018,
+            "2": 0.6902375677402276,
+            "3": 0.6991100319727175,
+            "4": 0.6787187319851647
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 15,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-38-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7023138516503702,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        0.951226228680918,
+        1.0,
+        0.95,
+        1.0,
+        1.0
+      ],
+      "prompt": "Xugababa wosaba xosaba yosaba zosaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif38",
+          "mrif38",
+          "mrif38"
+        ],
+        "outsider": "mrifx38",
+        "target": "mrif38"
+      },
+      "salience": [
+        0.12822968959520925,
+        0.16414012188148072,
+        0.06507263854557475,
+        0.11646248859316712,
+        0.0736551802006111
+      ],
+      "strength_after": [
+        0.951226228680918,
+        1.0,
+        0.95,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 0.951226228680918,
+      "winner_same": false
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            1,
+            4
+          ],
+          "token": 1,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7963703414764144,
+        0.7543904809002099,
+        0.750201093004472
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.20590381611297187,
+            "1": -0.2198090528647576,
+            "2": -0.24038218055134547,
+            "3": -0.18554736435674585,
+            "4": -0.20640865779957032
+          },
+          "gap": null,
+          "text": "D",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            4
+          ],
+          "cosines": {
+            "0": 0.36825788078611676,
+            "1": 0.3388351317545529,
+            "2": 0.29835738938673256,
+            "3": 0.3197223247488932,
+            "4": 0.3241743990861336
+          },
+          "gap": 0.02942274883389473,
+          "text": "ah",
+          "token": 1,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.36825788021087646
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.49257087832131213,
+            "1": 0.5047285619336582,
+            "2": 0.41981234207245555,
+            "3": 0.45053975910983285,
+            "4": 0.46124706463494036
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5648859949296315,
+            "1": 0.5927099704664625,
+            "2": 0.5294868505130752,
+            "3": 0.5533217709469979,
+            "4": 0.5864200542263355
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5827796379164845,
+            "1": 0.5107583695706743,
+            "2": 0.49645268745196897,
+            "3": 0.5194361090519682,
+            "4": 0.5004812506050971
+          },
+          "gap": null,
+          "text": " hat",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7393537778895095,
+            "1": 0.7414082094437705,
+            "2": 0.6910388051360067,
+            "3": 0.730494545066012,
+            "4": 0.725260176478995
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4837726792427436,
+            "1": 0.4144928765225935,
+            "2": 0.4507296704275435,
+            "3": 0.4335093243020616,
+            "4": 0.4198125040332247
+          },
+          "gap": null,
+          "text": " j",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6762930563236379,
+            "1": 0.65771537659115,
+            "2": 0.6229721214514278,
+            "3": 0.5642087871270982,
+            "4": 0.5708273755566305
+          },
+          "gap": null,
+          "text": "at",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7743124821208724,
+            "1": 0.7963703414764144,
+            "2": 0.7543904809002099,
+            "3": 0.750201093004472,
+            "4": 0.7678837687355257
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5478149313474877,
+            "1": 0.48895667351724087,
+            "2": 0.5217123093469658,
+            "3": 0.4681979386841189,
+            "4": 0.4716851872054357
+          },
+          "gap": null,
+          "text": " k",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6509330281846498,
+            "1": 0.6135354849154601,
+            "2": 0.5980118290317562,
+            "3": 0.5145316330660287,
+            "4": 0.5456361991943965
+          },
+          "gap": null,
+          "text": "at",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7572005960346267,
+            "1": 0.7522038434960233,
+            "2": 0.7262707877687962,
+            "3": 0.732111244216294,
+            "4": 0.7405989226051437
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5796328322753109,
+            "1": 0.5347609185791907,
+            "2": 0.5030499614620764,
+            "3": 0.47491607526059776,
+            "4": 0.4978431337574936
+          },
+          "gap": null,
+          "text": " lat",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7648532133207748,
+            "1": 0.771870538036516,
+            "2": 0.7338416215754595,
+            "3": 0.7432086112410261,
+            "4": 0.7608331411101558
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-39-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": true,
+      "outsider_max_cosine": 0.7678837687355257,
+      "outsider_same": false,
+      "outsider_strength": 0.9505721535412632,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9505721535412632
+      ],
+      "prompt": "Dahababa hataba jataba kataba lataba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif39",
+          "mrif39",
+          "mrif39"
+        ],
+        "outsider": "mrifx39",
+        "target": "mrif39"
+      },
+      "salience": [
+        0.2410355366142436,
+        0.16038507201811505,
+        0.12580884233853976,
+        0.11126100948554558,
+        0.13374580823166735
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        0.9505721535412632
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0
+          ],
+          "changed": 0,
+          "fired": true,
+          "scaled": [],
+          "token": 4,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7700371359185919,
+        0.7617816984181778,
+        0.7522503140890126
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-40-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7526124250319125,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Kahababa setaba tetaba vetaba wetaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif40",
+          "mrif40",
+          "mrif40"
+        ],
+        "outsider": "mrifx40",
+        "target": "mrif40"
+      },
+      "salience": [
+        0.059573012032036854,
+        0.1278541236165625,
+        0.15198512160229105,
+        0.15685572080413548,
+        0.08480238590362875
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            3
+          ],
+          "changed": 1,
+          "fired": true,
+          "scaled": [
+            3
+          ],
+          "token": 1,
+          "winner": 0
+        },
+        {
+          "fired": false,
+          "reason": "winner already seen",
+          "token": 4
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7762319627943287,
+        0.745092458034416,
+        0.7593603585682447
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        0.95
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.24469654970718638,
+            "1": -0.1988450021866249,
+            "2": -0.23885569309568952,
+            "3": -0.22578822809000815,
+            "4": -0.2294967088663558
+          },
+          "gap": null,
+          "text": "Q",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            3
+          ],
+          "cosines": {
+            "0": 0.3271930364978277,
+            "1": 0.29099814623636844,
+            "2": 0.2460041490848962,
+            "3": 0.32666446990657605,
+            "4": 0.3088534267338818
+          },
+          "gap": 0.000528566597495228,
+          "text": "ah",
+          "token": 1,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.327193021774292
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.42551145193550777,
+            "1": 0.38542558799787313,
+            "2": 0.30569008032485284,
+            "3": 0.4142123179494826,
+            "4": 0.3835106718927733
+          },
+          "gap": null,
+          "text": "ab",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.44796165523656173,
+            "1": 0.44179515055339025,
+            "2": 0.34047340747417243,
+            "3": 0.40705712599524213,
+            "4": 0.39258799206921013
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0
+          ],
+          "cosines": {
+            "0": 0.4126398417217279,
+            "1": 0.23907607157779923,
+            "2": 0.2785786373356305,
+            "3": 0.28801036490131693,
+            "4": 0.2551859720572155
+          },
+          "gap": 0.12462947517633438,
+          "text": " dot",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.412639856338501
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7708576402826937,
+            "1": 0.7497330426368229,
+            "2": 0.6966515818969973,
+            "3": 0.7420754239729558,
+            "4": 0.7042491851670981
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5147985988725877,
+            "1": 0.37924868869760503,
+            "2": 0.4654760007444126,
+            "3": 0.43792229265373056,
+            "4": 0.5119314803892104
+          },
+          "gap": null,
+          "text": " f",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6117498941780148,
+            "1": 0.4809555929770087,
+            "2": 0.5509308472265563,
+            "3": 0.5169175104075903,
+            "4": 0.5052022429723071
+          },
+          "gap": null,
+          "text": "ot",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7933995057293473,
+            "1": 0.7762319627943287,
+            "2": 0.745092458034416,
+            "3": 0.7593603585682447,
+            "4": 0.7412273154977528
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.47538437294835145,
+            "1": 0.40836935510190714,
+            "2": 0.4523714487909577,
+            "3": 0.38579118975929055,
+            "4": 0.4127852490241522
+          },
+          "gap": null,
+          "text": " got",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7892848720810501,
+            "1": 0.7695793067901852,
+            "2": 0.7285140548100648,
+            "3": 0.752038932629968,
+            "4": 0.7415741433947939
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5296514969860754,
+            "1": 0.40728901910717913,
+            "2": 0.4385181388254988,
+            "3": 0.4261418232939896,
+            "4": 0.4505458515157926
+          },
+          "gap": null,
+          "text": " hot",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7787813201383651,
+            "1": 0.7701697232678518,
+            "2": 0.7234777418231131,
+            "3": 0.7454464503874382,
+            "4": 0.7350774537354133
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 1,
+      "id": "measure-rif-41-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7415741433947939,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "prompt": "Qahababa dotaba fotaba gotaba hotaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif41",
+          "mrif41",
+          "mrif41"
+        ],
+        "outsider": "mrifx41",
+        "target": "mrif41"
+      },
+      "salience": [
+        0.059027210237556416,
+        0.12220448237408395,
+        0.04647910780582982,
+        0.10378528448375207,
+        0.25684993936010153
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            2,
+            3
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            2,
+            3
+          ],
+          "token": 2,
+          "winner": 0
+        },
+        {
+          "fired": false,
+          "reason": "winner already seen",
+          "token": 4
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        true,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7382595449613589,
+        0.7062204471115558,
+        0.7517329250636584
+      ],
+      "competitor_strength": [
+        1.0,
+        0.9506174149346589,
+        0.95
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.23297159409223495,
+            "1": -0.23603891701736376,
+            "2": -0.22587248018267098,
+            "3": -0.1950841950804825,
+            "4": -0.2512182380905149
+          },
+          "gap": null,
+          "text": "W",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.30849474343315075,
+            "1": 0.23527851906584432,
+            "2": 0.2619917608297713,
+            "3": 0.3179812870857682,
+            "4": 0.21599724159499842
+          },
+          "gap": null,
+          "text": "ah",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            2,
+            3
+          ],
+          "cosines": {
+            "0": 0.4308715337883324,
+            "1": 0.27922231034014033,
+            "2": 0.3511345597406342,
+            "3": 0.38264682568585484,
+            "4": 0.26127933073106585
+          },
+          "gap": 0.048224709928035736,
+          "text": "ab",
+          "token": 2,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.43087154626846313
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5485827468131407,
+            "1": 0.4249685071958977,
+            "2": 0.47045713129088407,
+            "3": 0.5068070941232091,
+            "4": 0.4147504955971471
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 3,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0
+          ],
+          "cosines": {
+            "0": 0.3278430414485744,
+            "1": 0.23139000431903628,
+            "2": 0.18411295765582378,
+            "3": 0.2174073035984894,
+            "4": 0.21478825236828594
+          },
+          "gap": 0.09645304083824158,
+          "text": " put",
+          "token": 4,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.32784304022789
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7435621298051497,
+            "1": 0.6582827221954916,
+            "2": 0.6626759751313561,
+            "3": 0.7021102570559259,
+            "4": 0.6631251480445518
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5950381959471134,
+            "1": 0.5864232402420089,
+            "2": 0.5465745067327697,
+            "3": 0.5291617929360384,
+            "4": 0.5379579547273498
+          },
+          "gap": null,
+          "text": " q",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6352551370449482,
+            "1": 0.5661959511570392,
+            "2": 0.47908334849059586,
+            "3": 0.48280870782125385,
+            "4": 0.4684671833973251
+          },
+          "gap": null,
+          "text": "ut",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7870465064120545,
+            "1": 0.7269388422106244,
+            "2": 0.7062204471115558,
+            "3": 0.7420065053275808,
+            "4": 0.7027741333130517
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5947097108789134,
+            "1": 0.5110227012332147,
+            "2": 0.4155879274546528,
+            "3": 0.4928949634366999,
+            "4": 0.4687878493176442
+          },
+          "gap": null,
+          "text": " rut",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7826607106319317,
+            "1": 0.71525843385466,
+            "2": 0.7006774879515191,
+            "3": 0.745002869623163,
+            "4": 0.7316292261233216
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6038320677567147,
+            "1": 0.5533965778664168,
+            "2": 0.4397349522428119,
+            "3": 0.4843586623330266,
+            "4": 0.48324827982150675
+          },
+          "gap": null,
+          "text": " sut",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7737739550437457,
+            "1": 0.7382595449613589,
+            "2": 0.7050864060390205,
+            "3": 0.7517329250636584,
+            "4": 0.7230357175640314
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-42-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7316292261233216,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        0.9506174149346589,
+        0.95,
+        1.0
+      ],
+      "prompt": "Wahababa putaba qutaba rutaba sutaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif42",
+          "mrif42",
+          "mrif42"
+        ],
+        "outsider": "mrifx42",
+        "target": "mrif42"
+      },
+      "salience": [
+        0.04720139077204784,
+        0.1273697384404193,
+        0.005237366241507571,
+        0.04337802008080936,
+        0.06506544195985157
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        0.9506174149346589,
+        0.95,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7204439260096572,
+        0.7248364635777439,
+        0.6997700909307626
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-43-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6860845365420176,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Cehababa zavaba bevaba cevaba devaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif43",
+          "mrif43",
+          "mrif43"
+        ],
+        "outsider": "mrifx43",
+        "target": "mrif43"
+      },
+      "salience": [
+        0.008126345715204798,
+        0.17064014785150147,
+        0.05371863680963005,
+        0.08810687114320623,
+        0.07026054295131133
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1
+          ],
+          "changed": 1,
+          "fired": true,
+          "scaled": [
+            1
+          ],
+          "token": 3,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7359712868225495,
+        0.7237961052024724,
+        0.6734202904675831
+      ],
+      "competitor_strength": [
+        0.95,
+        1.0,
+        1.0
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.2727070469681943,
+            "1": -0.2800507635509438,
+            "2": -0.24536489385372115,
+            "3": -0.27108349582128966,
+            "4": -0.27632866706485065
+          },
+          "gap": null,
+          "text": "Je",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.31231996024247455,
+            "1": 0.29123064580433605,
+            "2": 0.2949064818494851,
+            "3": 0.2904617551527139,
+            "4": 0.2422902511139954
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4444071430237092,
+            "1": 0.4084124120003045,
+            "2": 0.38698872452743405,
+            "3": 0.3659284863338767,
+            "4": 0.37325326455942176
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1
+          ],
+          "cosines": {
+            "0": 0.43858964302083786,
+            "1": 0.3534619740068712,
+            "2": 0.3087781771322108,
+            "3": 0.3172140611459881,
+            "4": 0.2647471083691447
+          },
+          "gap": 0.08512766659259796,
+          "text": " liv",
+          "token": 3,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.4385896325111389
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6183889348121931,
+            "1": 0.5458127646547117,
+            "2": 0.556676721715122,
+            "3": 0.5085955429666275,
+            "4": 0.5175479711818057
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5133382719835751,
+            "1": 0.4627966209436082,
+            "2": 0.4345877569100908,
+            "3": 0.4844113082479647,
+            "4": 0.4385959472202049
+          },
+          "gap": null,
+          "text": " m",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6549067305751074,
+            "1": 0.5888347261830736,
+            "2": 0.5377328971684153,
+            "3": 0.5689970990153742,
+            "4": 0.5337859399392504
+          },
+          "gap": null,
+          "text": "iv",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7595296841758272,
+            "1": 0.7233611468530435,
+            "2": 0.6969022906616373,
+            "3": 0.6668039231664561,
+            "4": 0.704242356506755
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5005122673001375,
+            "1": 0.4730704173060557,
+            "2": 0.4505874883507285,
+            "3": 0.4634453681685873,
+            "4": 0.4425618064920574
+          },
+          "gap": null,
+          "text": " n",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6815701010336113,
+            "1": 0.636994710421313,
+            "2": 0.5733934537081133,
+            "3": 0.5864596456088511,
+            "4": 0.5513450176659523
+          },
+          "gap": null,
+          "text": "iv",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7434943187631081,
+            "1": 0.7359712868225495,
+            "2": 0.7144252417184584,
+            "3": 0.6734202904675831,
+            "4": 0.7245347180104561
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6546631089622966,
+            "1": 0.5775345866060541,
+            "2": 0.5700085392991364,
+            "3": 0.5565974949598531,
+            "4": 0.5811976914915779
+          },
+          "gap": null,
+          "text": " piv",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7431091798748773,
+            "1": 0.7329310238707889,
+            "2": 0.7237961052024724,
+            "3": 0.67341758838011,
+            "4": 0.7239292393767406
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 1,
+      "id": "measure-rif-44-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7245347180104561,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Jehababa livaba mivaba nivaba pivaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif44",
+          "mrif44",
+          "mrif44"
+        ],
+        "outsider": "mrifx44",
+        "target": "mrif44"
+      },
+      "salience": [
+        0.09594495462575278,
+        0.059776333802732756,
+        0.1389756807438925,
+        0.1073086849540359,
+        0.10151583134400324
+      ],
+      "strength_after": [
+        1.0,
+        0.95,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.6999886964341316,
+        0.7186742753082481,
+        0.6831462553405658
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-45-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.6914232568495705,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Pehababa wovaba xovaba yovaba zovaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif45",
+          "mrif45",
+          "mrif45"
+        ],
+        "outsider": "mrifx45",
+        "target": "mrif45"
+      },
+      "salience": [
+        0.06077665710716022,
+        0.09758352510071029,
+        0.03644819085928224,
+        0.09346265849020899,
+        0.151156709885199
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.749320219543935,
+        0.7306287965845929,
+        0.7272433789126559
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-46-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7345372843959751,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Vehababa hawaba jawaba kawaba lawaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif46",
+          "mrif46",
+          "mrif46"
+        ],
+        "outsider": "mrifx46",
+        "target": "mrif46"
+      },
+      "salience": [
+        0.26300058995600295,
+        0.19596694069936368,
+        0.12875861568607302,
+        0.14589660808774177,
+        0.0639983001018018
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [
+        {
+          "candidates": [
+            0,
+            1,
+            3
+          ],
+          "changed": 2,
+          "fired": true,
+          "scaled": [
+            1,
+            3
+          ],
+          "token": 3,
+          "winner": 0
+        }
+      ],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        true,
+        false,
+        true
+      ],
+      "competitor_max_cosine": [
+        0.7216168759857992,
+        0.7419497272534386,
+        0.7407360049443239
+      ],
+      "competitor_strength": [
+        0.9502708973602033,
+        1.0,
+        0.95
+      ],
+      "events": [
+        {
+          "candidates": [],
+          "cosines": {
+            "0": -0.2099211264727583,
+            "1": -0.24942681380435622,
+            "2": -0.2495616902499556,
+            "3": -0.24709968550651165,
+            "4": -0.2532040983709763
+          },
+          "gap": null,
+          "text": "Bi",
+          "token": 0,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [],
+          "cosines": {
+            "0": 0.28201218012616636,
+            "1": 0.264034701285519,
+            "2": 0.25500423663360494,
+            "3": 0.26550137451219064,
+            "4": 0.20494899031834812
+          },
+          "gap": null,
+          "text": "hab",
+          "token": 1,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.4202884755236347,
+            "1": 0.35511881944657103,
+            "2": 0.3567921141386464,
+            "3": 0.38262543011144756,
+            "4": 0.32475832160988943
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 2,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            3
+          ],
+          "cosines": {
+            "0": 0.42031921475763784,
+            "1": 0.32163172567780507,
+            "2": 0.29457864425767855,
+            "3": 0.35262953955973986,
+            "4": 0.29824993348812756
+          },
+          "gap": 0.0676896721124649,
+          "text": " sew",
+          "token": 3,
+          "triggered": true,
+          "winner": 0,
+          "winner_cosine": 0.42031922936439514
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6796204850740346,
+            "1": 0.5937642098953626,
+            "2": 0.5922981867021087,
+            "3": 0.6042641841892156,
+            "4": 0.5309577327703399
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 4,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5657841947741583,
+            "1": 0.4868345713591695,
+            "2": 0.47279531500828365,
+            "3": 0.46300788212026894,
+            "4": 0.44763144074056577
+          },
+          "gap": null,
+          "text": " te",
+          "token": 5,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6191823929958278,
+            "1": 0.5225024855162185,
+            "2": 0.5199145013788772,
+            "3": 0.5094433085454518,
+            "4": 0.4961711460472918
+          },
+          "gap": null,
+          "text": "w",
+          "token": 6,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7791273947504029,
+            "1": 0.7216168759857992,
+            "2": 0.7419497272534386,
+            "3": 0.7407360049443239,
+            "4": 0.6895505020409781
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 7,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6426571829303128,
+            "1": 0.5745805920290137,
+            "2": 0.5241637688707436,
+            "3": 0.5263510865184894,
+            "4": 0.5150607337409737
+          },
+          "gap": null,
+          "text": " ve",
+          "token": 8,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7266694525227037,
+            "1": 0.651015044492693,
+            "2": 0.6564522678061795,
+            "3": 0.6609529800206776,
+            "4": 0.6362331910117267
+          },
+          "gap": null,
+          "text": "w",
+          "token": 9,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7691629353545426,
+            "1": 0.7201362335964323,
+            "2": 0.7364202188108556,
+            "3": 0.7275752730863432,
+            "4": 0.6996633175155331
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 10,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.5584257634640205,
+            "1": 0.44817095581059774,
+            "2": 0.48972520730414487,
+            "3": 0.48242153851301334,
+            "4": 0.4919102361810576
+          },
+          "gap": null,
+          "text": " we",
+          "token": 11,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.6808210390083025,
+            "1": 0.6086254047184335,
+            "2": 0.6544036449207677,
+            "3": 0.6369212492441564,
+            "4": 0.6579613213550068
+          },
+          "gap": null,
+          "text": "w",
+          "token": 12,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        },
+        {
+          "candidates": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "cosines": {
+            "0": 0.7629669298942989,
+            "1": 0.7194412586532876,
+            "2": 0.7417008904957741,
+            "3": 0.7335692820256677,
+            "4": 0.720686945450802
+          },
+          "gap": null,
+          "text": "aba",
+          "token": 13,
+          "triggered": false,
+          "winner": -1,
+          "winner_cosine": null
+        }
+      ],
+      "forgotten": 2,
+      "id": "measure-rif-47-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.720686945450802,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        0.9502708973602033,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "prompt": "Bihababa sewaba tewaba vewaba wewaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif47",
+          "mrif47",
+          "mrif47"
+        ],
+        "outsider": "mrifx47",
+        "target": "mrif47"
+      },
+      "salience": [
+        0.02276052198340444,
+        0.08129855304919456,
+        0.1638048596889956,
+        0.18810408197716552,
+        0.13194720677558688
+      ],
+      "strength_after": [
+        1.0,
+        0.9502708973602033,
+        1.0,
+        0.95,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": true,
+      "target_entered": true,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7867310470874874,
+        0.7971399304743528,
+        0.7450773921099662
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-48-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.75870419268936,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Hihababa dowaba fowaba gowaba howaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif48",
+          "mrif48",
+          "mrif48"
+        ],
+        "outsider": "mrifx48",
+        "target": "mrif48"
+      },
+      "salience": [
+        0.002836494497468181,
+        0.15319917112996315,
+        0.14215158043447448,
+        0.10612739484992599,
+        0.25436900389732264
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    },
+    {
+      "applied": [],
+      "competitor_below_1": false,
+      "competitor_entered": [
+        false,
+        false,
+        false
+      ],
+      "competitor_max_cosine": [
+        0.7274149909678116,
+        0.7410702535898449,
+        0.71992528103322
+      ],
+      "competitor_strength": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "forgotten": 0,
+      "id": "measure-rif-49-0",
+      "indexes": {
+        "competitors": [
+          1,
+          2,
+          3
+        ],
+        "outsider": 4,
+        "target": 0
+      },
+      "match": true,
+      "outsider_entered": false,
+      "outsider_max_cosine": 0.7103283029111938,
+      "outsider_same": true,
+      "outsider_strength": 1.0,
+      "predicted_strength": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "prompt": "Nihababa puwaba quwaba ruwaba suwaba",
+      "rank_gap": null,
+      "rank_top": null,
+      "relations": {
+        "competitors": [
+          "mrif49",
+          "mrif49",
+          "mrif49"
+        ],
+        "outsider": "mrifx49",
+        "target": "mrif49"
+      },
+      "salience": [
+        0.14197526591100312,
+        0.1540441968963637,
+        0.23567668204558254,
+        0.15856036408567278,
+        0.2130892807739501
+      ],
+      "strength_after": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strength_before": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "strict_win": false,
+      "target_entered": false,
+      "target_strength": 1.0,
+      "winner_same": true
+    }
+  ],
+  "strength_match_failures": 0,
+  "strict_win_items": 19,
+  "winner_changed": [
+    "measure-rif-26-0",
+    "measure-rif-38-0"
+  ],
+  "winner_same": 48
+}

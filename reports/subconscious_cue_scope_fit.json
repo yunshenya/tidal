@@ -1,0 +1,71 @@
+{
+  "alpha": 0.25,
+  "alpha_reselected": false,
+  "decay_definition": "From the last triggering token, offsets 0, 1, 2, 4, and 8 exist; no retrigger on offsets 1 through 8; activation at 0 is positive; activation is monotone non-increasing within 1e-6; activation at 8 is strictly below activation at 0. Logit L1 is not part of the gate.",
+  "elapsed_s": 22.928558201994747,
+  "fit50": {
+    "alpha": 0.25,
+    "cued_mean": 0.2474970944590556,
+    "cued_positive": 41,
+    "cued_wilson": [
+      0.6920394632569922,
+      0.9022980732976582
+    ],
+    "decay_pass": 50,
+    "decay_reasons": {
+      "ok": 50
+    },
+    "decay_wilson": [
+      0.9286524008666414,
+      1.0
+    ],
+    "fan_k": 39,
+    "fan_means": {
+      "1": 0.2474970944590556,
+      "2": 0.05900819488878671,
+      "4": 0.0030152441367197725
+    },
+    "fan_n": 50,
+    "fan_wilson": [
+      0.6475845041874634,
+      0.8724608402978559
+    ],
+    "n": 50
+  },
+  "git": "f2b686c66703492f99af2e61012406f7dfd27885",
+  "half_life": 30.0,
+  "held_scored": false,
+  "kind": "scope-fit",
+  "lambda": 0.3,
+  "n8": {
+    "alpha": 0.25,
+    "cued_mean": 0.47904670238494873,
+    "cued_positive": 7,
+    "cued_wilson": [
+      0.5291118177871464,
+      0.9775825085499433
+    ],
+    "decay_pass": 8,
+    "decay_reasons": {
+      "ok": 8
+    },
+    "decay_wilson": [
+      0.6755924351161198,
+      1.0
+    ],
+    "fan_k": 6,
+    "fan_means": {
+      "1": 0.47904670238494873,
+      "2": 0.20303821563720703,
+      "4": 0.005775809288024902
+    },
+    "fan_n": 8,
+    "fan_wilson": [
+      0.40927543031016883,
+      0.9285207872478909
+    ],
+    "n": 8
+  },
+  "note": "Design check only. Floors were not moved.",
+  "theta": 0.32
+}

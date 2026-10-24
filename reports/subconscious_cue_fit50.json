@@ -1,0 +1,349 @@
+{
+  "alpha": 0.25,
+  "bank_sha256": "2fa639040378b3f199110f58512a380e04173de50b56cfdd0320434a40eb15d4",
+  "constants": {
+    "a_trig": 1.0,
+    "fan_s": 1.45,
+    "floor": 0.05,
+    "half_life": 30.0,
+    "lambda": 0.3,
+    "rif_span": 0.05,
+    "salience_exempt": 0.5,
+    "tau": 43.2808512266689,
+    "theta": 0.32
+  },
+  "constants_changed": false,
+  "cued_deltas": [
+    0.4389696220556907,
+    0.7952529539664583,
+    -0.02063584327697754,
+    0.030780255794525146,
+    0.0696563720703125,
+    0.02318898836771588,
+    0.012258191903431914,
+    0.08601617813110352,
+    0.050690650939941406,
+    0.48581953843434533,
+    -0.00832986831665039,
+    0.14417626212040613,
+    0.4913686513900757,
+    0.2665201226870222,
+    0.47129303961992264,
+    0.05799983938535025,
+    0.037584781646728516,
+    0.5815567970275879,
+    0.47902727127075195,
+    0.20840246478716562,
+    1.473571141560872,
+    0.5243390202522278,
+    0.08753863970438669,
+    0.15797698497772217,
+    0.18411660194396973,
+    -0.03322887420654297,
+    0.40209974348545074,
+    0.3644415835539503,
+    0.5139927864074707,
+    -0.009622160345315933,
+    0.5541479587554932,
+    0.1989436149597168,
+    1.1736278533935547,
+    0.7221231460571289,
+    0.21680892817676067,
+    0.06134294962976128,
+    0.08056745926539133,
+    0.01298270126183887,
+    0.26575934886932373,
+    -0.06744837760925293,
+    0.08702309926350882,
+    -0.04694654047489166,
+    0.11465287208557129,
+    -0.17629766464233398,
+    0.017350196838378906,
+    0.09287750720977783,
+    0.137001720567544,
+    -0.005291099349658879,
+    0.5921585038304329,
+    -0.023351192474365234
+  ],
+  "cued_mean": 0.2474970944590556,
+  "cued_n": 50,
+  "cued_positive": 41,
+  "cued_wilson": [
+    0.6920394632569922,
+    0.9022980732976582
+  ],
+  "decay_n": 50,
+  "decay_pass": 4,
+  "decay_reasons": [
+    {
+      "id": "cue-fit50-prefer-0",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-1",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-2",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-3",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-4",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-5",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-6",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-7",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-8",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-9",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-10",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-11",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-12",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-13",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-14",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-15",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-16",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-17",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-18",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-19",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-20",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "cue-fit50-prefer-21",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-22",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-23",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-24",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-25",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-26",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-27",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-28",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-29",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-30",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-31",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-32",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-33",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "cue-fit50-prefer-34",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-35",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-36",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-37",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-38",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-39",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-40",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-41",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-42",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-43",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-44",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-45",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "cue-fit50-prefer-46",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-47",
+      "pass": false,
+      "reason": "logit"
+    },
+    {
+      "id": "cue-fit50-prefer-48",
+      "pass": true,
+      "reason": "ok"
+    },
+    {
+      "id": "cue-fit50-prefer-49",
+      "pass": false,
+      "reason": "logit"
+    }
+  ],
+  "decay_wilson": [
+    0.03154951408859298,
+    0.18838246918342838
+  ],
+  "elapsed_s": 22.194769863002875,
+  "fan_k": 38,
+  "fan_means": {
+    "1": 0.2474970944590556,
+    "2": 0.05900833237683397,
+    "4": -1.1223251931316014e-05
+  },
+  "fan_n": 50,
+  "fan_wilson": [
+    0.6258731624205708,
+    0.8570260860300828
+  ],
+  "git": "490d06eee07a33ba242f687dc07800953265d5d6",
+  "kind": "fit50-diagnosis",
+  "note": "Diagnosis sample. The cell was not chosen from this bank.",
+  "protocol": "cue-direction-fit50-v1"
+}

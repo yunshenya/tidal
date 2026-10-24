@@ -26,6 +26,23 @@ from tidal.llm_memory_train import fit_decision_value, fit_inject, fit_polarity
 ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _cue_covers_every_token(monkeypatch):
+    """Magnitude checks were written when the residual sat on every token.
+
+    Theta -1 admits every finite cosine, so the one stored slot is selected
+    at each token and the last prompt token still carries the full residual.
+    The real schedule is scored in tests/test_subconscious_cue.py.
+    """
+    import tidal.llm_memory as mod
+
+    monkeypatch.setattr(mod, "CUE_THETA", -1.0)
+    monkeypatch.setattr(mod, "CUE_A_TRIG", 1.0)
+    monkeypatch.setattr(mod, "CUE_TAU", 1.0e6)
+    monkeypatch.setattr(mod, "CUE_LAMBDA", 1.0)
+    monkeypatch.setattr(mod, "CUE_FLOOR", 0.0)
+
+
 class _Out:
     def __init__(self, logits, hidden_states):
         self.logits = logits
@@ -362,12 +379,17 @@ def test_other_identity_is_kept_and_readout_is_top1():
         assert info["top"] == ("a", "p")
         assert np.allclose(value, v1, atol=1e-5)
         assert not np.allclose(value, 0.5 * (v1 + v2), atol=1e-5)
+        # Equal keys are a cosine tie. The lower index is recorded and the
+        # residual is zero. Assigning injection_readout does not average them.
         blend = mix.injection("query")
-        assert np.allclose(blend, 0.5 * (v1 + v2), atol=1e-5)
+        assert np.allclose(blend, 0.0, atol=1e-5)
         mix.injection_readout = "top1"
         assert np.allclose(mix.injection("query"), 0.0, atol=1e-5)
         assert "self.store.write" in inspect.getsource(LLMMemory.remember)
-        assert "activation_weights" in inspect.getsource(LLMMemory._rank)
+        rank_source = inspect.getsource(LLMMemory._rank)
+        assert "cue_fields" in rank_source
+        assert "compete_retrieved" in rank_source
+        assert "activation_weights" not in rank_source
     finally:
         mem.close()
         if mix is not None:
@@ -863,7 +885,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "1c28f2ebc2bb042c7c98fd8bc9bc726932a6319fd4fb3df3f3efab059a79bac8"
+    source = "52699c77084bbedd5bc3a161bddba48de010fc6786883fc7fa37c72695a5a9cd"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 

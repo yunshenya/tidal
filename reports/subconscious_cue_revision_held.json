@@ -1,0 +1,539 @@
+{
+  "alpha": 0.25,
+  "bank_sha256": "79557eb0e1234258b6cac107a087c235ffd973c3567ca28c21b85dedc9e62dc3",
+  "cost": {
+    "sizes": {
+      "16": {
+        "armed_median_s": 0.028423997006029822,
+        "armed_s_per_token": 0.0018949331337353215,
+        "extra_s": 0.0010739250064943917,
+        "extra_s_per_token": 7.159500043295945e-05,
+        "quiet_median_s": 0.02735007199953543
+      },
+      "32": {
+        "armed_median_s": 0.028562244995555375,
+        "armed_s_per_token": 0.0019041496663703584,
+        "extra_s": 0.0011974389999522828,
+        "extra_s_per_token": 7.982926666348552e-05,
+        "quiet_median_s": 0.027364805995603092
+      },
+      "8": {
+        "armed_median_s": 0.028148732999397907,
+        "armed_s_per_token": 0.0018765821999598604,
+        "extra_s": 0.0008551740029361099,
+        "extra_s_per_token": 5.701160019574066e-05,
+        "quiet_median_s": 0.027293558996461798
+      }
+    },
+    "tokens": 15
+  },
+  "elapsed_s": 153.50654569399921,
+  "floor_failures": [
+    {
+      "floor": 50,
+      "gate": "prefer_up",
+      "k": 46,
+      "n": 50
+    },
+    {
+      "floor": 39,
+      "gate": "avoid_up",
+      "k": 37,
+      "n": 50
+    },
+    {
+      "floor": 48,
+      "gate": "away_down",
+      "k": 47,
+      "n": 50
+    },
+    {
+      "floor": 50,
+      "gate": "competitor_down",
+      "k": 0,
+      "n": 50
+    },
+    {
+      "floor": 50,
+      "gate": "winner_same",
+      "k": 48,
+      "n": 50
+    },
+    {
+      "floor": 50,
+      "gate": "outsider_same",
+      "k": 46,
+      "n": 50
+    },
+    {
+      "floor": 42,
+      "gate": "similarity",
+      "k": 35,
+      "n": 50
+    },
+    {
+      "floor": 48,
+      "gate": "count",
+      "k": 32,
+      "n": 50
+    }
+  ],
+  "floor_means": {
+    "avoid_delta": 0.09669723543804146,
+    "avoid_stored_lift": -0.1285090258220832,
+    "away_delta": -1.0943180120953668,
+    "fan1": 3.0352763720974325,
+    "fan2": 0.9923981685874362,
+    "fan4": 0.00018436904375748853,
+    "prefer_delta": 3.0352763720974325,
+    "toward_delta": 1.7882910075116283
+  },
+  "floor_rates": {
+    "avoid_stored_down": {
+      "k": 42,
+      "n": 50,
+      "rate": 0.84,
+      "wilson": [
+        0.7148578393696501,
+        0.916625793219666
+      ]
+    },
+    "avoid_up": {
+      "k": 37,
+      "n": 50,
+      "rate": 0.74,
+      "wilson": [
+        0.6044684273515117,
+        0.8412847250644762
+      ]
+    },
+    "away_down": {
+      "k": 47,
+      "n": 50,
+      "rate": 0.94,
+      "wilson": [
+        0.8378290831116182,
+        0.979385029651026
+      ]
+    },
+    "competitor_down": {
+      "k": 0,
+      "n": 50,
+      "rate": 0.0,
+      "wilson": [
+        0.0,
+        0.07134759913335872
+      ]
+    },
+    "count": {
+      "k": 32,
+      "n": 50,
+      "rate": 0.64,
+      "wilson": [
+        0.501410168761127,
+        0.7586125034815325
+      ]
+    },
+    "fan_monotonic": {
+      "k": 44,
+      "n": 50,
+      "rate": 0.88,
+      "wilson": [
+        0.7619518261679701,
+        0.9438239984906773
+      ]
+    },
+    "outsider_same": {
+      "k": 46,
+      "n": 50,
+      "rate": 0.92,
+      "wilson": [
+        0.8116175308165717,
+        0.968450485911407
+      ]
+    },
+    "prefer_up": {
+      "k": 46,
+      "n": 50,
+      "rate": 0.92,
+      "wilson": [
+        0.8116175308165717,
+        0.968450485911407
+      ]
+    },
+    "rif_ge4": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "similarity": {
+      "k": 35,
+      "n": 50,
+      "rate": 0.7,
+      "wilson": [
+        0.562496495355466,
+        0.8089644649911906
+      ]
+    },
+    "toward_up": {
+      "k": 47,
+      "n": 50,
+      "rate": 0.94,
+      "wilson": [
+        0.8378290831116182,
+        0.979385029651026
+      ]
+    },
+    "winner_same": {
+      "k": 48,
+      "n": 50,
+      "rate": 0.96,
+      "wilson": [
+        0.8653990931249297,
+        0.9889611156723802
+      ]
+    }
+  },
+  "floors_pass": false,
+  "fresh": {
+    "decay_reasons": [
+      {
+        "id": "cue-fresh-prefer-0",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-1",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-2",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-3",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-4",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-5",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-6",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-7",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-8",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-9",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-10",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-11",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-12",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-13",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-14",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-15",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-16",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-17",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-18",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-19",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-20",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-21",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-22",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-23",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-24",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-25",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-26",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-27",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-28",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-29",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-30",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-31",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-32",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-33",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-34",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-35",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-36",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-37",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-38",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-39",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-40",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-41",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-42",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-43",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-44",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-45",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-46",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-47",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-48",
+        "pass": false,
+        "reason": "logit"
+      },
+      {
+        "id": "cue-fresh-prefer-49",
+        "pass": false,
+        "reason": "logit"
+      }
+    ],
+    "gates": {
+      "cued_positive": {
+        "floor": 38,
+        "gate": "cued_positive",
+        "k": 1,
+        "mean": -0.146505109022061,
+        "n": 50,
+        "pass": false,
+        "wilson": [
+          0.003539259271646236,
+          0.10495443589637815
+        ]
+      },
+      "decay": {
+        "floor": 38,
+        "gate": "decay",
+        "k": 0,
+        "n": 50,
+        "pass": false,
+        "wilson": [
+          0.0,
+          0.07134759913335872
+        ]
+      },
+      "false_trigger": {
+        "floor": 0,
+        "gate": "false_trigger",
+        "k": 0,
+        "n": 50,
+        "pass": true,
+        "rate": 0.0,
+        "wilson": [
+          0.0,
+          0.07134759913335872
+        ]
+      },
+      "fan_strict": {
+        "floor": 38,
+        "gate": "fan_strict",
+        "k": 0,
+        "means": {
+          "1": -0.146505109022061,
+          "2": 0.09323377490043651,
+          "4": -3.1011452277400764e-05
+        },
+        "n": 50,
+        "pass": false,
+        "wilson": [
+          0.0,
+          0.07134759913335872
+        ]
+      },
+      "quiet_nll": {
+        "mean": 0.0,
+        "n": 150,
+        "pass": true
+      },
+      "store": {
+        "means": {
+          "16": 0.03616333728035301,
+          "32": 0.035611751228571006,
+          "8": 0.03934888318181045
+        },
+        "n": 50,
+        "pass": true
+      },
+      "unrelated": {
+        "max": 0.05,
+        "mean_abs": 3.440678119659424e-06,
+        "n": 50,
+        "pass": true
+      }
+    },
+    "pass": false
+  },
+  "git": "143f240ed4c1fb783f3e2bab91a0c0791990bec6",
+  "half_life": 30.0,
+  "kind": "revision-held",
+  "lambda": 0.3,
+  "note": "One pass. The fresh gates and the previous floors were not used to choose the cell.",
+  "pass": false,
+  "protocol": "cue-direction-fresh-v1",
+  "theta": 0.32,
+  "theta_changed": false
+}

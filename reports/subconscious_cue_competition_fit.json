@@ -1,0 +1,32 @@
+{
+  "alpha": 0.25,
+  "decay_n": 8,
+  "decay_pass": 6,
+  "elapsed_s": 7.128463468994596,
+  "false_trigger_n": 8,
+  "false_triggers": 0,
+  "fan_k": 6,
+  "fan_means": {
+    "1": 0.47904670238494873,
+    "2": 0.20303821563720703,
+    "4": 0.0
+  },
+  "fan_n": 8,
+  "git": "077f440eb6ef9360c0f67e332fa5747c603f5b9d",
+  "half_life": 30.0,
+  "kind": "competition-fit",
+  "lambda": 0.3,
+  "mean_cued_delta": 0.47904670238494873,
+  "n_cued_pos": 7,
+  "note": "Design check on the direction fit bank. No constant was changed.",
+  "pass": true,
+  "quiet_nll_mean": 0.0,
+  "quiet_nll_n": 9,
+  "store_means": {
+    "16": 0.013207793235778809,
+    "32": 0.01293957233428955,
+    "8": 0.014412999153137207
+  },
+  "theta": 0.32,
+  "unrelated_abs_mean": 0.0
+}

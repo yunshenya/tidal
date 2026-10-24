@@ -1,12 +1,48 @@
 """Test-time memory for a frozen causal language model.
 
 Facts are written into :class:`tidal.episodic.EpisodicStore` (one slot, same
-identity overwrites). At generation a strength-weighted mixture of the top
-cosine slots is added to one decoder layer's residual, so the fact text is
-not copied into the prompt. Several slots can be partly active at once. The
-winner is still the cosine argmax: spelling and retrieval-induced forgetting
-use that slot, not the blend. A historical cosine-only soft top-4 is recorded
-in ``docs/llm_memory.md``; this mixture is a different rule.
+identity overwrites). At generation the cue is the per-token hidden state at
+the inject layer. The public name is ``cue`` and the width is ``cue_dim``.
+The decoder index is not part of that interface. A memory is a candidate only
+when ``cos(cue - query_center, key)`` is at least ``theta``. Theta does not
+read strength. The winner is the one candidate with the greatest
+``(log(strength), cosine, -index)``. One winner is added. There is no
+mixture. Before that add, every other candidate that cleared theta and
+shares the winner's relation takes the existing retrieval-induced-forgetting
+keep, once per cue retrieval event and not once per token. A retrieval
+event is a trigger onset: the first token where a winner fires after no
+open retrieval for that memory, or a winner change. A retrigger of the
+same winner while that retrieval stays open does not run competition
+again. The retrieval stays open on a retrigger of that winner, including
+when the trigger activation is 0, and it stays open on a later token only
+while the carried state is an active trigger for that winner
+(``memory_id >= 0`` and activation ``> 0``). Anderson, Bjork, and Bjork
+(1994) treat retrieval-induced forgetting as a consequence of a retrieval
+attempt. A different relation is never scaled. Similarity is key cosine
+to the winner, so a closer companion is scaled more. The winner is not
+scaled. A slot that missed theta is not scaled. A historical strength-weighted mixture is recorded in
+``docs/llm_memory.md`` and in :func:`activation_weights`; generation does not
+call it.
+
+The add at token ``t`` uses the cue copied from the inject-layer residual
+before the add, and the add is written at that same index. The cue does not
+depend on the add, and no earlier position sees it. The logit at ``t``, which
+is the distribution for token ``t+1``, does see it. On a trigger, ``dt`` is 0
+and ``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
+theta, and ``fan_factor`` is ``max(0, (S - ln n) / S)`` with ``S`` fixed.
+That factor only scales activation. A token with candidates past theta still
+triggers when the product is below :data:`CUE_FLOOR`. A later token that does
+not trigger keeps that fan factor and uses
+``a = a_trig * fan_factor * exp(-dt / tau)`` with ``dt`` the number of tokens
+after the trigger. ``tau = half_life / ln 2``. A new winner resets the clock
+and the fan factor. On that decay path, ``a`` below :data:`CUE_FLOOR` clears
+the carried trace. The fast
+timescale is this per-token decay. The slow timescale is the strength and
+replay update already on the slot. This schedule adds no second memory.
+The shipped generator re-forwards the whole prefix and recomputes
+that recurrence; ``cue_state`` after the forward is the state after the last
+token. A caller that forwards only the new token sets ``_cue_resume`` and
+passes that state, the same way a key-value cache carries the past.
 
 The value is an answer-span pool of that layer's hidden state. It is not
 L2-normalized: magnitude is what the identity copy-through needs. A phone-like
@@ -24,33 +60,38 @@ estimated once from a calibration set and stored with the module. On the
 shipped causal LM that pool runs the decoder blocks up through the inject
 layer and does not run the later blocks or the output head. The hidden state
 is the one a full forward stores for that layer. Value and surprise still run
-the whole model, because they need the logits. With one slot the add is
+the whole model, because they need the logits. The per-token add into this language model is
 
-    s * u * gain * (scale(v) + MLP(scale(v)))
+    lambda * a * s * c * u * gain * (scale(v) + MLP(scale(v)))
 
-With two or more slots the add is the sum of that term over the top ``MIX_K``
-cosine neighbors, each multiplied by its mixture weight. ``scale`` is fixed
-at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that slot's own key.
-``w = 0`` leaves ``gain = 1``. ``u = 1 + span * tanh(valence)`` uses that
-slot's valence. Valence stays 0 until a stored experience adds ``sign * step``
-on that slot, so ``u = 1`` and a one-slot add matches the replay formula.
-The sign is the experience field on the write. The fact text is not scored,
-and the language model does not supply a group prior. ``s`` is that slot's
-strength. It stays 1 until a replay cycle recomputes decay, a nonzero clock
-phase scales the write, or a same-relation retrieval scales a competitor. A
-refresh sets the replayed slot back to 1. The same cycle multiplies every
-nonzero valence by the replay decay and appends an audit row. A store with
-no experience and no replay matches the previous one-slot add. A fact is
-written when it is salient and, once 32 accepted surprises are stored, its
-answer-token NLL is at least the quantile of that window of numbers. Fewer
-stored surprises leaves the salient fact accepted. A strict retrieval win
-then multiplies the strength of at most three other slots that share the
-winner's relation; the closer key is scaled down more, and the winner is
-left as read. The mixture weight is the analogue of Lebiere's chunk-choice
-softmax, ``exp((log(strength) + cosine) / MIX_TEMP)``, over those neighbors.
-A cosine tie splits the weight instead of adding nothing. ``gap_tau`` 0.80
-still defines the recorded confidence and still scales the paired top-1
-baseline; it does not scale the mixture. The MLP weights are the shipped checkpoint;
+``a = a_trig * fan_factor * decay`` is the exported activation. ``decay`` is
+``exp(-dt / tau)``. ``lambda`` scales only this residual. The exported
+activation and the exported value do not include it, and neither does the
+training broadcast inside ``teacher_force_loss``. Each stored slot's
+``modality`` is ``text``, and every exported token carries that string.
+``interface_version`` 3 is the version-2 activation plus this field. There
+is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
+trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
+positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
+``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
+slot's own key. ``w = 0`` leaves ``gain = 1``. ``u = 1 + span * tanh(valence)``
+uses that slot's valence. Valence stays 0 until a stored experience adds
+``sign * step`` on that slot, so ``u = 1``. The sign is the experience field
+on the write. The fact text is not scored, and the language model does not
+supply a group prior. ``s`` stays 1 until a replay cycle recomputes decay, a
+nonzero clock phase scales the write, or a same-relation retrieval scales a
+competitor. A refresh sets the replayed slot back to 1. The same cycle
+multiplies every nonzero valence by the replay decay and appends an audit row.
+A fact is written when it is salient and, once 32 accepted surprises are
+stored, its answer-token NLL is at least the quantile of that window of
+numbers. Fewer stored surprises leaves the salient fact accepted. A strict
+retrieval win then multiplies the strength of the other same-relation
+candidates that cleared theta, once for that retrieval event. A retrigger
+inside the open event does not multiply them again. A different relation
+is left alone, the closer key is scaled down more, and the winner is left
+as read. ``gap_tau`` 0.80
+still defines ``c``. The MLP weights
+are the shipped checkpoint;
 polarity does not replace them. The last layer of an untrained module is
 still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
 and ``w`` is 0. Phone and birthday
@@ -77,6 +118,7 @@ Default checkpoint: ``HuggingFaceTB/SmolLM2-135M``.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence, Union
 
@@ -88,6 +130,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
@@ -126,6 +169,25 @@ DEFAULT_GAP_TAU = 0.80
 # the held-out bank.
 MIX_K = 4
 MIX_TEMP = 0.05
+# Cue schedule. The floor is fixed and is not fit. Theta 0.32 is frozen from
+# the fit-bank cosine bracket and was not co-swept with fan, half-life, or
+# lambda. Half-life 30 and lambda 0.3 are the direction-fit cell in
+# reports/subconscious_cue_prereg.md: the largest mean cued margin among the
+# 15 cells that passed gates 1-5 and the fit fan check. a_trig stays 1.
+# Not retuned on the held-out bank. The interface names the signal ``cue``;
+# cue_dim is the hidden width of whatever layer this wrapper injects at.
+# Activation is a_trig * fan_factor * decay. interface_version 2 was that
+# formula. interface_version 3 adds modality on every stored slot and every
+# exported token. The value is "text". Lambda is not part of the version.
+# There is no perceptual-fingerprint field.
+CUE_INTERFACE_VERSION = 3
+CUE_FLOOR = 0.05
+CUE_THETA = 0.32
+CUE_HALF_LIFE = 30.0
+CUE_TAU = CUE_HALF_LIFE / math.log(2.0)
+CUE_A_TRIG = 1.0
+CUE_LAMBDA = 0.3
+CUE_FAN_S = FAN_S
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).
 # w = 0 leaves gain = 1. Not retuned on the frozen bank or the held-out bank.
@@ -1183,6 +1245,92 @@ def rival_indexes(slots, winner: int, max_set: int, salience_exempt: float) -> l
     return [i for i in raw if float(slots[i].salience) < float(salience_exempt)]
 
 
+def competition_onsets(triggered, memory_id, activation) -> list:
+    """True only on the token that opens a cue retrieval event.
+
+    The state before token 0 is empty, so no retrieval is open. A triggered
+    winner is an onset when the open retrieval is not that winner: the first
+    firing after no open retrieval for that memory, or a winner change. A
+    retrigger of the open winner is not an onset, including when that
+    trigger's activation is 0. The open retrieval stays that winner after a
+    trigger. On a token that does not trigger, it stays open only while the
+    carried state is an active trigger for that same winner, meaning
+    ``memory_id`` matches and activation is ``> 0``. A blank token, or a
+    carried activation that is not positive, closes it. The next firing is
+    then a new onset.
+
+    Anderson, Bjork, and Bjork (1994) treat retrieval-induced forgetting as
+    a consequence of a retrieval attempt, so competition runs at the onset
+    and not on each token of the same attempt.
+    https://doi.org/10.1037/0278-7393.20.5.1063
+    """
+    flags = [bool(item) for item in triggered]
+    memory = [int(item) for item in memory_id]
+    levels = [float(item) for item in activation]
+    if not (len(flags) == len(memory) == len(levels)):
+        raise ValueError("onset axes must have the same length")
+    open_id = -1
+    onsets = []
+    for flag, slot, level in zip(flags, memory, levels):
+        if flag and slot >= 0:
+            onsets.append(open_id != slot)
+            open_id = slot
+            continue
+        onsets.append(False)
+        if open_id >= 0 and slot == open_id and level > 0.0:
+            continue
+        open_id = -1
+    return onsets
+
+
+def compete_retrieved(slots, winner: int, competitors) -> int:
+    """Scale same-relation candidates that cleared theta. Returns how many changed.
+
+    Different-relation candidates are never scaled. The winner is not scaled.
+    ``competitors`` is the theta set, including the winner. An empty relation
+    is not a cue. Similarity is key cosine to the winner, and the keep is
+    :func:`rif_competitor_keep`, so a closer companion drops more. A slot
+    at or above the salience exempt is left alone. Slots that missed theta
+    are absent from ``competitors``. This is competitive retrieval in the
+    sense of Norman, Newman, and Detre (2007): co-active candidates that
+    share the winner's relation are punished and only the winner is later
+    injected. It is not their oscillator and not their learning rule.
+    """
+    if winner < 0 or winner >= len(slots):
+        raise IndexError("competition winner is outside the store")
+    rel = slots[winner].rel
+    has_rel = isinstance(rel, str) and rel != ""
+    pending = []
+    seen = set()
+    for raw in competitors:
+        index = int(raw)
+        if index == int(winner) or index in seen:
+            continue
+        if index < 0 or index >= len(slots):
+            raise IndexError("competition candidate is outside the store")
+        seen.add(index)
+        if not has_rel or slots[index].rel != rel:
+            continue
+        if float(slots[index].salience) >= float(RIF_SALIENCE_EXEMPT):
+            continue
+        pending.append(index)
+    if not pending:
+        return 0
+    winner_key = np.asarray(slots[winner].k, dtype=np.float64)
+    keys = np.stack([np.asarray(slots[index].k, dtype=np.float64) for index in pending], 0)
+    sims = cosine_scores(keys, winner_key)
+    closest = float(np.max(sims))
+    changed = 0
+    for index, sim in zip(pending, sims.tolist()):
+        keep = rif_competitor_keep(float(sim), closest, RIF_SPAN)
+        before = float(slots[index].strength)
+        updated = before * float(keep)
+        if updated != before:
+            changed += 1
+        slots[index].strength = updated
+    return changed
+
+
 def forget_rivals(slots, winner: int) -> int:
     """Scale same-cue competitors. Returns how many strengths changed.
 
@@ -1286,34 +1434,39 @@ class LLMMemory:
     """Frozen causal LM with episodic residual memory.
 
     ``remember`` writes one fact. ``generate`` answers from the store. The
-    prompt is the only text the LM sees. With one slot the armed value is
-    that slot. With more than one slot the armed value is the sum of
-    per-slot residuals, weighted by :func:`activation_weights` at
-    :data:`MIX_K` and :data:`MIX_TEMP`. The cosine argmax is still the
-    winner used for spelling and for rival forgetting. Valence stays 0 until
-    an experience is stored, so the gain stays 1. Strength stays 1 until
-    replay or a nonzero clock phase. A fact is written when it is salient
-    and, once 32 surprises are stored, its answer-token NLL is at least the
-    window quantile. A strict win scales at most three other slots that
-    share the winner's relation; the winner is not scaled. Every
-    :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
-    :data:`REPLAY_M` salient slots are refreshed, and at most that many
-    same-relation surface repeats are merged. Key cosine does not merge
-    slots. Salience reuses the polarity vector.
-    There is no extra query forward. ``soft_k`` and ``soft_temp`` are kept
-    on the episodic store; ``generate`` does not read them.
-    ``injection_readout`` ``"top1"`` is the paired baseline (gap confidence
-    times the winning value). The default is ``"mixture"``. An empty store
-    leaves the residual untouched, so greedy tokens match the same model
-    with the hook removed. Phone and birthday spelling copies the winning
-    slot's stored answer, and only when the prompt is completing that
-    relation. A zero polarity vector leaves the gain at 1.
+    prompt is the only text the LM sees. Each token's cue is the inject-layer
+    residual before the add. One slot whose cosine with that cue clears
+    :data:`CUE_THETA` is the winner, ranked by log strength. The exported
+    activation is ``a_trig * fan_factor * decay``. The residual added to this
+    model is that activation times :data:`CUE_LAMBDA`, strength, confidence,
+    and valence gain, at that token only. Lambda is not copied into the
+    exported activation or value. The fan factor scales that activation and
+    does not clear a trigger. On a later token the trace decays until the
+    floor or until another token wins. Valence stays 0 until an experience is stored, so the
+    gain stays 1. Strength stays 1 until replay or a nonzero clock phase. A
+    fact is written when it is salient and, once 32 surprises are stored, its
+    answer-token NLL is at least the window quantile. A strict win scales the
+    other same-relation candidates that cleared theta once per retrieval
+    event, not on a retrigger of the same winner. A different relation
+    is left alone, and the winner is
+    not scaled. Every :data:`REPLAY_EVERY` accepted writes, decay is
+    recomputed, the top :data:`REPLAY_M` salient slots are refreshed, and at
+    most that many same-relation surface repeats are merged. Key cosine does
+    not merge slots. Salience reuses the polarity vector. ``soft_k`` and
+    ``soft_temp`` stay on the episodic store; ``generate`` does not read
+    them, and it does not read :data:`MIX_K`. An empty store leaves the
+    residual untouched, so greedy tokens match the same model with the hook
+    removed. Phone and birthday spelling copies the winning slot's stored
+    answer when that slot is still active on the last prompt token and the
+    prompt is completing that relation. A zero polarity vector leaves the
+    gain at 1.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
     (``n_layers // 2``, which is layer 15, hidden 576) installs the shipped
-    inject in ``llm_inject_smollm2_135m.pt``. A caller-supplied model, another
-    checkpoint, or another layer keeps the zero-init MLP, so the add is ``v``,
-    until :meth:`load_inject`. There is no switch.
+    inject in ``llm_inject_smollm2_135m.pt``. The cue interface still calls
+    that width ``cue_dim``. A caller-supplied model, another checkpoint, or
+    another layer keeps the zero-init MLP, so the add is ``v``, until
+    :meth:`load_inject`. There is no switch.
     """
 
     def __init__(
@@ -1369,16 +1522,23 @@ class LLMMemory:
             soft_k=soft_k,
             soft_temp=soft_temp,
         )
-        self._delta: Optional[torch.Tensor] = None
+        self._train_delta: Optional[torch.Tensor] = None
+        self._cue_live = False
+        self._cue_resume = False
+        self.cue_state = CueState()
+        self.last_cue_fields: Optional[dict] = None
         self.last_added: Optional[torch.Tensor] = None
+        self.last_rif = {"n": 0}
         self._accepted = 0
         self._surprise_window: list[float] = []
         self.last_surprise: Optional[float] = None
         self.last_write_score: float = 0.0
         self.last_replay: Optional[dict] = None
-        self.injection_readout = "mixture"
-        # Registered for the life of this wrapper. A missing delta returns
-        # None, which leaves the layer output object untouched.
+        # Kept so older callers can assign it. The cue path does not read it.
+        self.injection_readout = "cue"
+        # Registered for the life of this wrapper. A forward that is not a
+        # retrieval and is not a teacher-forced inject returns None, which
+        # leaves the layer output object untouched.
         self._handle = self.layers[self.layer].register_forward_hook(self._on_layer)
         self._load_shipped_inject()
         self.key_mean, self.query_mean = self._key_centers()
@@ -1387,7 +1547,26 @@ class LLMMemory:
         if getattr(self, "_handle", None) is not None:
             self._handle.remove()
             self._handle = None
-        self._delta = None
+        self._train_delta = None
+        self._cue_live = False
+
+    @property
+    def cue_dim(self) -> int:
+        """Width of the cue. This is the inject hidden size, not a layer index."""
+        return int(self.hidden)
+
+    @contextmanager
+    def _clean_forward(self):
+        """Encode a key or a value without retrieval and without a training add."""
+        live = self._cue_live
+        train = self._train_delta
+        self._cue_live = False
+        self._train_delta = None
+        try:
+            yield
+        finally:
+            self._cue_live = live
+            self._train_delta = train
 
     def __enter__(self):
         return self
@@ -1402,15 +1581,64 @@ class LLMMemory:
             pass
 
     def _on_layer(self, _module, _args, output):
-        delta = self._delta
-        if delta is None:
-            self.last_added = None
+        """Add at this token after copying the cue, or broadcast a training value.
+
+        The cue is the block output before this add. The add is applied at
+        that same index, so the logit at this position sees it and the cue
+        tensor does not. A training inject is the only remaining whole-sequence
+        add, and only :meth:`teacher_force_loss` sets it. Retrieval never does.
+        """
+        train = self._train_delta
+        if train is not None:
+            self.last_added = train.detach()
+            return _add_delta(output, train)
+        if not self._cue_live or len(self.store) == 0:
             return None
-        if (not delta.requires_grad) and torch.count_nonzero(delta) == 0:
-            self.last_added = None
+        tensor = output[0] if isinstance(output, tuple) else output
+        if not torch.is_tensor(tensor):
             return None
-        self.last_added = delta.detach()
-        return _add_delta(output, delta)
+        raw = tensor.detach()
+        batched = raw.dim() == 3
+        if raw.dim() == 2:
+            raw = raw.unsqueeze(0)
+        if raw.dim() != 3:
+            return None
+        batch, _steps, width = raw.shape
+        if int(width) != int(self.hidden):
+            raise ValueError(f"cue dim {width} != hidden {self.hidden}")
+        cues = raw.float().cpu().numpy()
+        self._last_cue_rows = cues[0]
+        resume = bool(self._cue_resume) and int(raw.shape[1]) == 1 and self.cue_state is not None
+        states = self._resume_states(int(batch)) if resume else [CueState() for _ in range(int(batch))]
+        packed = []
+        residuals = []
+        new_states = []
+        for index in range(int(batch)):
+            fields, residual, state = self._trace_numpy(cues[index], state=states[index])
+            packed.append(fields)
+            residuals.append(residual)
+            new_states.append(state)
+        self.cue_state = new_states[0] if int(batch) == 1 else new_states
+        self.last_cue_fields = _pack_cue_batch(packed, float(self.clock_phase()))
+        add = np.stack(residuals, 0)
+        self.last_added = torch.tensor(np.asarray(add[0, -1], dtype=np.float32))
+        if np.count_nonzero(add) == 0:
+            return None
+        add_t = torch.tensor(add, dtype=tensor.dtype, device=tensor.device)
+        if not batched:
+            add_t = add_t[0]
+        updated = tensor + add_t
+        if torch.is_tensor(output):
+            return updated
+        return (updated,) + output[1:]
+
+    def _resume_states(self, batch: int) -> list:
+        state = self.cue_state
+        if int(batch) == 1 and isinstance(state, CueState):
+            return [state]
+        if isinstance(state, list) and len(state) == int(batch):
+            return list(state)
+        return [CueState() for _ in range(int(batch))]
 
     def _tokenize(self, text: str) -> Mapping[str, Any]:
         kwargs = {"return_tensors": "pt", "add_special_tokens": True, "return_offsets_mapping": True}
@@ -1459,7 +1687,6 @@ class LLMMemory:
             hidden, enc, _logits = self._run_hidden(text)
             del _logits
             return hidden, enc
-        self._delta = None
         enc = self._tokenize(text)
         ids = _batch_ids(enc).to(self._device)
         attn = _batch_mask(enc, self._device)
@@ -1480,12 +1707,12 @@ class LLMMemory:
             kwargs = {"input_ids": ids, "use_cache": False}
             if attn is not None:
                 kwargs["attention_mask"] = attn
-            with torch.no_grad():
-                inner(**kwargs)
+            with self._clean_forward():
+                with torch.no_grad():
+                    inner(**kwargs)
         finally:
             inner.config.num_hidden_layers = saved
             handle.remove()
-            self._delta = None
         hidden = captured.get("hidden")
         if hidden is None:
             hidden, enc, _logits = self._run_hidden(text)
@@ -1497,15 +1724,15 @@ class LLMMemory:
         """Hidden state at the inject layer, with memory unhooked for this forward."""
         if not isinstance(text, str) or text == "":
             raise ValueError("text is empty")
-        self._delta = None
         enc = self._tokenize(text)
         ids = _batch_ids(enc).to(self._device)
         attn = _batch_mask(enc, self._device)
         kwargs = {"input_ids": ids, "use_cache": False, "output_hidden_states": True}
         if attn is not None:
             kwargs["attention_mask"] = attn
-        with torch.no_grad():
-            out = self.model(**kwargs)
+        with self._clean_forward():
+            with torch.no_grad():
+                out = self.model(**kwargs)
             hidden = layer_hidden(_hidden_tuple(out), self.layer, self.n_layers)
             if hidden.dim() == 3:
                 hidden = hidden[0]
@@ -1867,14 +2094,147 @@ class LLMMemory:
         with torch.no_grad():
             return self.inject(v, key_t).detach()
 
-    def _readout(self) -> str:
-        readout = getattr(self, "injection_readout", "mixture")
-        if readout not in ("mixture", "top1"):
-            raise ValueError(f"unknown injection readout {readout!r}")
-        return readout
+    def _slot_arrays(self):
+        slots = list(self.store._slots)
+        width = int(self.hidden)
+        if not slots:
+            return (
+                np.zeros((0, width), dtype=np.float64),
+                np.zeros(0, dtype=np.float64),
+                np.zeros(0, dtype=np.float64),
+                np.zeros((0, width), dtype=np.float32),
+                [],
+            )
+        keys = np.stack([np.asarray(slot.k, dtype=np.float64).reshape(-1) for slot in slots], 0)
+        strengths = np.asarray([float(slot.strength) for slot in slots], dtype=np.float64)
+        valences = np.asarray([float(slot.valence) for slot in slots], dtype=np.float64)
+        values = np.stack([np.asarray(slot.v, dtype=np.float32).reshape(-1) for slot in slots], 0)
+        modalities = [str(slot.modality) for slot in slots]
+        return keys, strengths, valences, values, modalities
+
+    def _trace_numpy(self, cues, state=None) -> tuple:
+        """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token."""
+        rows = np.asarray(cues, dtype=np.float64)
+        if rows.ndim != 2:
+            raise ValueError("cues must be [tokens, cue_dim]")
+        keys, strengths, valences, values, modalities = self._slot_arrays()
+        fields, final = trace_sequence(
+            rows,
+            keys,
+            strengths,
+            valences,
+            values,
+            self.query_mean,
+            theta=float(CUE_THETA),
+            tau=float(CUE_TAU),
+            a_trig=float(CUE_A_TRIG),
+            floor=float(CUE_FLOOR),
+            gap_tau=float(DEFAULT_GAP_TAU),
+            valence_span=float(VALENCE_SPAN),
+            state=state,
+            fan_s=float(CUE_FAN_S),
+            modalities=modalities,
+        )
+        residual = self._residual_from_fields(fields, values, keys)
+        return fields, residual, final
+
+    def _residual_from_fields(self, fields, values, keys) -> np.ndarray:
+        memory_id = fields["memory_id"]
+        activation = fields["activation"]
+        scale_sc = fields["strength_confidence"]
+        valence = fields["valence"]
+        steps, width = int(memory_id.shape[0]), int(self.hidden)
+        out = np.zeros((steps, width), dtype=np.float32)
+        cache = {}
+        for index in range(steps):
+            slot = int(memory_id[index])
+            level = float(activation[index])
+            if slot < 0 or level == 0.0:
+                continue
+            scale = float(CUE_LAMBDA) * level * float(scale_sc[index]) * (1.0 + float(valence[index]))
+            if scale == 0.0:
+                continue
+            if slot not in cache:
+                cache[slot] = (
+                    self._compose(values[slot], key=keys[slot], grad=False)
+                    .detach()
+                    .float()
+                    .cpu()
+                    .numpy()
+                    .astype(np.float32, copy=False)
+                )
+            out[index] = cache[slot] * np.float32(scale)
+        return out
+
+    def cue_hidden(self, text: str) -> np.ndarray:
+        """Pre-add cue rows, ``[T, cue_dim]``. Does not inject and does not change the store."""
+        if not isinstance(text, str) or text == "":
+            raise ValueError("text is empty")
+        captured = {}
+
+        def _keep(_module, _args, output):
+            tensor = output[0] if isinstance(output, tuple) else output
+            copied = tensor.detach()
+            if copied.dim() == 3:
+                if int(copied.shape[0]) != 1:
+                    raise ValueError("cue encode expects one sequence")
+                copied = copied[0]
+            captured["hidden"] = copied.float().cpu().numpy()
+
+        handle = self.layers[self.layer].register_forward_hook(_keep)
+        try:
+            if self._key_prefix_ok():
+                self._run_key_hidden(text)
+            else:
+                self._run_hidden(text)
+        finally:
+            handle.remove()
+        hidden = captured.get("hidden")
+        if hidden is None:
+            raise RuntimeError("the cue hook did not see the residual")
+        return np.asarray(hidden, dtype=np.float64)
+
+    def advance_cue(self, state: CueState, cue) -> tuple:
+        """One token from ``state``. ``cue`` is the raw hidden row, not the centered match."""
+        row = np.asarray(cue, dtype=np.float64).reshape(1, -1)
+        fields, _residual, new_state = self._trace_numpy(row, state=state if state is not None else CueState())
+        return new_state, _pack_cue_fields(fields, float(self.clock_phase()))
+
+    def cue_fields(self, text: str) -> dict:
+        """Deterministic per-token fields for ``text`` and the current store.
+
+        Slot strength is not changed. The tensors are ``[1, T]`` or
+        ``[1, T, cue_dim]``. ``memory_id`` is -1 and ``vec`` is zeros when no
+        memory is active. ``modality`` is ``text`` on every token.
+        ``interface_version`` is :data:`CUE_INTERFACE_VERSION`, which is 3.
+        """
+        if len(self.store) == 0:
+            hidden = self.cue_hidden(text)
+            fields = _empty_cue_fields(hidden.shape[0], hidden.shape[1], float(self.clock_phase()))
+            self._last_candidates = [[] for _ in range(int(hidden.shape[0]))]
+            self.cue_state = CueState()
+            self.last_cue_fields = fields
+            self.last_added = torch.zeros(int(hidden.shape[1]), dtype=torch.float32)
+            return fields
+        hidden = self.cue_hidden(text)
+        numpy_fields, residual, state = self._trace_numpy(hidden, state=CueState())
+        packed = _pack_cue_fields(numpy_fields, float(self.clock_phase()))
+        self._last_candidates = [list(row) for row in numpy_fields["candidates"]]
+        self.cue_state = state
+        self.last_cue_fields = packed
+        self._last_cue_rows = hidden
+        self.last_added = torch.tensor(np.asarray(residual[-1], dtype=np.float32))
+        return packed
 
     def _rank(self, prompt: str) -> dict:
-        """One query. The winner is cosine argmax. The injected value may be a mixture."""
+        """Cue trace of ``prompt``. Competition runs after the trace and before injection.
+
+        Retrieval-induced forgetting runs once per cue retrieval event, at
+        the onset from :func:`competition_onsets`, not on a retrigger of the
+        same winner. The scoring forward is a later call. It reads the
+        strengths this method just wrote and injects only the winner.
+        ``cue_fields`` itself does not change strength.
+        """
         info = {
             "n": len(self.store),
             "value": None,
@@ -1883,105 +2243,56 @@ class LLMMemory:
             "maxcos": None,
             "gap": None,
             "confidence": 0.0,
-            "readout": self._readout(),
+            "readout": "cue",
             "weights": None,
             "parts": None,
-            "participation": None,
+            "participation": 0.0,
+            "memory_id": -1,
         }
         if len(self.store) == 0:
+            self.last_rif = {"n": 0}
             return info
-        query = self._query_vector(prompt)
-        slots = self.store.slots
-        keys = np.stack([np.asarray(slot.k, dtype=np.float64) for slot in slots], 0)
-        scores = cosine_scores(keys, np.asarray(query, dtype=np.float64))
-        winner = int(np.argmax(scores))
-        gap = None
-        if scores.size >= 2:
-            rest = float(np.max(np.delete(scores, winner)))
-            gap = float(scores[winner] - rest)
-        n = len(slots)
-        strengths = [float(slot.strength) for slot in slots]
-        weights = activation_weights(scores, strengths, temperature=MIX_TEMP, k=MIX_K)
-        top_slot = slots[winner]
+        fields = self.cue_fields(prompt)
+        forgotten = 0
+        triggered = fields["triggered"][0].tolist()
+        memory = fields["memory_id"][0].tolist()
+        gaps = fields["gap"][0].tolist()
+        activation = fields["activation"][0].tolist()
+        candidates = list(getattr(self, "_last_candidates", []))
+        slots = self.store._slots
+        for token, onset in enumerate(competition_onsets(triggered, memory, activation)):
+            if not onset:
+                continue
+            slot_index = int(memory[token])
+            gap = gaps[token]
+            if slot_index >= 0 and gap == gap and float(gap) > 0.0 and len(slots) >= 2:
+                group = candidates[token] if token < len(candidates) else []
+                forgotten += int(compete_retrieved(slots, slot_index, group))
+        self.last_rif = {"n": int(forgotten)}
+        slot_index = int(fields["memory_id"][0, -1].item())
+        info["memory_id"] = slot_index
+        info["participation"] = 1.0 if slot_index >= 0 else 0.0
+        if slot_index < 0:
+            return info
+        slot = slots[slot_index]
+        gap_value = fields["gap"][0, -1].item()
+        gap = None if gap_value != gap_value else float(gap_value)
         info.update(
             {
-                "n": n,
-                "key": np.asarray(top_slot.k, dtype=np.float32).copy(),
-                "top": (top_slot.name, top_slot.rel),
-                "maxcos": float(scores[winner]),
+                "value": np.asarray(slot.v, dtype=np.float32).copy(),
+                "key": np.asarray(slot.k, dtype=np.float32).copy(),
+                "top": (slot.name, slot.rel),
+                "maxcos": float(fields["winner_cosine"][0, -1].item()),
                 "gap": gap,
-                "confidence": retrieval_confidence(n, gap, DEFAULT_GAP_TAU),
-                "strength": float(top_slot.strength),
-                "answer": top_slot.answer,
-                "valence": float(top_slot.valence),
-                "weights": [float(weight) for weight in weights],
-                "participation": participation_ratio(weights),
+                "confidence": float(fields["strength_confidence"][0, -1].item()) / float(slot.strength)
+                if float(slot.strength) > 0.0
+                else 0.0,
+                "strength": float(slot.strength),
+                "answer": slot.answer,
+                "valence": float(slot.valence),
             }
         )
-        if info["readout"] == "top1" or n < 2:
-            info["value"] = np.asarray(top_slot.v, dtype=np.float32).copy()
-        else:
-            parts = []
-            mixed = np.zeros(self.hidden, dtype=np.float64)
-            for index, slot in enumerate(slots):
-                weight = float(weights[index])
-                if weight == 0.0:
-                    continue
-                value = np.asarray(slot.v, dtype=np.float32).copy()
-                mixed = mixed + weight * np.asarray(value, dtype=np.float64)
-                parts.append(
-                    {
-                        "weight": weight,
-                        "value": value,
-                        "key": np.asarray(slot.k, dtype=np.float32).copy(),
-                        "strength": float(slot.strength),
-                        "valence": float(slot.valence),
-                    }
-                )
-            info["value"] = mixed.astype(np.float32, copy=False)
-            info["parts"] = parts
-        # Forgetting runs after the read. A tie adds no suppression. The key
-        # cosines are the slot keys already stored; there is no extra forward.
-        forgotten = 0
-        if gap is not None and float(gap) > 0.0 and n >= 2:
-            forgotten = forget_rivals(slots, winner)
-        self.last_rif = {"n": int(forgotten)}
         return info
-
-    def _set_delta(self, rank: dict) -> None:
-        parts = rank.get("parts")
-        if not parts:
-            value = rank.get("value")
-            conf = float(rank.get("confidence") or 0.0)
-            strength = float(rank.get("strength", 1.0))
-            if value is None or conf <= 0.0 or strength <= 0.0:
-                self._delta = None
-                return
-            composed = self._compose(value, key=rank.get("key"), grad=False)
-            # Valence 0 is gain 1. Full confidence and strength 1 then leave the
-            # composed residual unmultiplied, matching the replay inject.
-            scale = conf * strength * valence_gain_of(float(rank.get("valence", 0.0)))
-            if scale == 1.0:
-                self._delta = composed
-                return
-            if scale == 0.0:
-                self._delta = None
-                return
-            self._delta = composed * scale
-            return
-        total = None
-        for part in parts:
-            weight = float(part["weight"])
-            strength = float(part["strength"])
-            if weight == 0.0 or strength <= 0.0:
-                continue
-            composed = self._compose(part["value"], key=part["key"], grad=False)
-            scale = weight * strength * valence_gain_of(float(part["valence"]))
-            if scale == 0.0:
-                continue
-            term = composed if scale == 1.0 else composed * scale
-            total = term if total is None else total + term
-        self._delta = total
 
     def correct_valence(self, name: str, value: float, *, rel: str, group: Optional[str] = None, reason: str = "correction") -> dict:
         """Set one slot's valence and append an audit row. Does not write a fact."""
@@ -2009,20 +2320,15 @@ class LLMMemory:
     def clock_log(self) -> tuple:
         return self.store.clock_log()
 
-    def _arm(self, prompt: str) -> None:
-        self._set_delta(self._rank(prompt))
-
     def injection(self, prompt: str) -> np.ndarray:
-        """Vector added at the chosen layer. Zeros when the store is empty."""
+        """Residual at the last prompt token. Zeros when that token is inactive."""
         if len(self.store) == 0:
+            self.cue_fields(prompt)
             return np.zeros(self.hidden, dtype=np.float32)
-        self._arm(prompt)
-        try:
-            if self._delta is None:
-                return np.zeros(self.hidden, dtype=np.float32)
-            return self._delta.detach().cpu().numpy().astype(np.float32, copy=False)
-        finally:
-            self._delta = None
+        self.cue_fields(prompt)
+        if self.last_added is None:
+            return np.zeros(self.hidden, dtype=np.float32)
+        return self.last_added.detach().cpu().numpy().astype(np.float32, copy=False)
 
     def _stored_spelling(self, prompt: str, rank: dict) -> Optional[str]:
         """Winning slot's phone or birthday surface, when the prompt completes it."""
@@ -2050,10 +2356,10 @@ class LLMMemory:
     def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
         """Token ids of the stored phone or birthday, or None to use the LM.
 
-        Hard top-1. Spelling runs only when the winning relation is the one
-        the prompt is completing and that slot stores an answer. The ids are
-        that string. An empty store or any other prompt returns None.
-        ``max_new_tokens`` truncates the id list.
+        Spelling runs only when the memory still active on the last prompt
+        token has the relation the prompt is completing, and that slot stores
+        an answer. The ids are that string. An empty store, a decayed trace,
+        or any other prompt returns None. ``max_new_tokens`` truncates the list.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -2076,7 +2382,8 @@ class LLMMemory:
             spelled = self._spell_ids(prompt, rank, max_new_tokens)
             if spelled is not None:
                 return spelled
-            self._set_delta(rank)
+        self._cue_resume = False
+        self._cue_live = True
         try:
             with torch.no_grad():
                 return greedy_continuation(
@@ -2089,18 +2396,16 @@ class LLMMemory:
                     done=done,
                 )
         finally:
-            self._delta = None
+            self._cue_live = False
 
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        A phone or birthday slot copies its stored answer when the prompt is
-        completing that relation. The full string is returned as stored when
-        its ids fit in ``max_new_tokens``. Any other prompt keeps the residual
-        path. Leading whitespace is skipped before the stop, so a natural
-        question whose first token is a newline still yields the following
-        line. The span then ends at the next newline or at sentence-ending
-        punctuation. The store is ranked once.
+        A phone or birthday slot copies its stored answer when it is still
+        active on the last prompt token and the prompt is completing that
+        relation. Any other prompt keeps the per-token cue path. The store is
+        ranked once. Each later forward recomputes the decay from the start of
+        the string, which matches stepping :attr:`cue_state` one token at a time.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -2111,6 +2416,7 @@ class LLMMemory:
             text = self.tokenizer.decode(new_ids, skip_special_tokens=True)
             return span_complete(text)
 
+        self._cue_resume = False
         if len(self.store) == 0:
             ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done, arm=False)
             return decode_answer(self.tokenizer, ids)
@@ -2121,20 +2427,17 @@ class LLMMemory:
             if len(ids) <= int(max_new_tokens):
                 return spelled
             return decode_answer(self.tokenizer, ids[: int(max_new_tokens)])
-        self._set_delta(rank)
-        try:
-            ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done, arm=False)
-            return decode_answer(self.tokenizer, ids)
-        finally:
-            self._delta = None
+        ids = self.continuation_ids(prompt, max_new_tokens=max_new_tokens, done=_done, arm=False)
+        return decode_answer(self.tokenizer, ids)
 
     def teacher_force_loss(self, prompt: str, answer: str, value, key=None, *, armed: bool = True) -> torch.Tensor:
-        """Next-token cross-entropy on ``answer`` with ``value`` injected.
+        """Next-token cross-entropy on ``answer`` with ``value`` injected on every token.
 
-        ``prompt + answer`` is the teacher-forced string. ``prompt`` alone is
-        the generation prefix, so the fact text is not required in it. Used by
-        ``tidal.llm_memory_train``. ``key`` is the fact key for polarity.
-        ``armed=False`` scores the empty-store baseline and does not inject.
+        This is the training add. Retrieval does not use it. ``prompt + answer``
+        is the teacher-forced string. ``prompt`` alone is the generation prefix,
+        so the fact text is not required in it. Used by ``tidal.llm_memory_train``.
+        ``key`` is the fact key for polarity. ``armed=False`` scores the
+        empty-store baseline and does not inject.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -2154,9 +2457,9 @@ class LLMMemory:
         if not idxs or min(idxs) < 1:
             raise ValueError("answer span produced no token the model can predict")
         if armed:
-            self._delta = self._compose(value, key=key, grad=True)
+            self._train_delta = self._compose(value, key=key, grad=True)
         else:
-            self._delta = None
+            self._train_delta = None
         try:
             attn = _batch_mask(enc, self._device)
             kwargs = {"input_ids": ids, "use_cache": False}
@@ -2167,7 +2470,8 @@ class LLMMemory:
             target = ids[0, idxs].to(device=pred.device)
             return F.cross_entropy(pred, target)
         finally:
-            self._delta = None
+            self._train_delta = None
+
 
     def save_inject(self, path) -> None:
         torch.save(
@@ -2185,6 +2489,71 @@ class LLMMemory:
         ckpt = _torch_load(path)
         _load_inject_tensors(self.inject, ckpt["inject"])
         self.inject.to(self._device)
+
+
+def _empty_cue_fields(steps: int, cue_dim: int, phase: float) -> dict:
+    steps = int(steps)
+    cue_dim = int(cue_dim)
+    return {
+        "interface_version": int(CUE_INTERFACE_VERSION),
+        "cue_dim": cue_dim,
+        "memory_id": torch.full((1, steps), -1, dtype=torch.long),
+        "vec": torch.zeros((1, steps, cue_dim), dtype=torch.float32),
+        "activation": torch.zeros((1, steps), dtype=torch.float32),
+        "strength_confidence": torch.zeros((1, steps), dtype=torch.float32),
+        "valence": torch.zeros((1, steps), dtype=torch.float32),
+        "modality": [["text"] * steps],
+        "circadian_phase": torch.full((1, steps), float(phase), dtype=torch.float32),
+        "triggered": torch.zeros((1, steps), dtype=torch.bool),
+        "gap": torch.full((1, steps), float("nan"), dtype=torch.float32),
+        "winner_cosine": torch.full((1, steps), float("nan"), dtype=torch.float32),
+    }
+
+
+def _pack_cue_fields(fields: dict, phase: float) -> dict:
+    steps = int(np.asarray(fields["memory_id"]).shape[0])
+    modality = [str(item) for item in fields["modality"]]
+    if len(modality) != steps or any(item != "text" for item in modality):
+        raise ValueError("modality must be text on every token")
+    phase_row = np.full((1, steps), float(phase), dtype=np.float32)
+    return {
+        "interface_version": int(CUE_INTERFACE_VERSION),
+        "cue_dim": int(fields["cue_dim"]),
+        "memory_id": torch.tensor(np.asarray(fields["memory_id"]), dtype=torch.long).unsqueeze(0),
+        "vec": torch.tensor(np.asarray(fields["vec"]), dtype=torch.float32).unsqueeze(0),
+        "activation": torch.tensor(np.asarray(fields["activation"]), dtype=torch.float32).unsqueeze(0),
+        "strength_confidence": torch.tensor(np.asarray(fields["strength_confidence"]), dtype=torch.float32).unsqueeze(0),
+        "valence": torch.tensor(np.asarray(fields["valence"]), dtype=torch.float32).unsqueeze(0),
+        "modality": [modality],
+        "circadian_phase": torch.tensor(phase_row),
+        "triggered": torch.tensor(np.asarray(fields["triggered"]), dtype=torch.bool).unsqueeze(0),
+        "gap": torch.tensor(np.asarray(fields["gap"]), dtype=torch.float32).unsqueeze(0),
+        "winner_cosine": torch.tensor(np.asarray(fields["winner_cosine"]), dtype=torch.float32).unsqueeze(0),
+    }
+
+
+def _pack_cue_batch(rows: list, phase: float) -> dict:
+    packed = [_pack_cue_fields(row, phase) for row in rows]
+    if len(packed) == 1:
+        return packed[0]
+    merged = {
+        "interface_version": packed[0]["interface_version"],
+        "cue_dim": packed[0]["cue_dim"],
+    }
+    for key in (
+        "memory_id",
+        "vec",
+        "activation",
+        "strength_confidence",
+        "valence",
+        "circadian_phase",
+        "triggered",
+        "gap",
+        "winner_cosine",
+    ):
+        merged[key] = torch.cat([item[key] for item in packed], 0)
+    merged["modality"] = [row for item in packed for row in item["modality"]]
+    return merged
 
 
 def _add_delta(output, delta: torch.Tensor):

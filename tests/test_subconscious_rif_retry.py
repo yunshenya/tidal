@@ -299,6 +299,280 @@ def test_background_relations_and_salience_are_not_cues():
     assert rival_indexes(lone, 0, 3, 0.5) == []
 
 
+def test_onset_is_once_per_retrieval_event_not_per_token():
+    """A retrigger inside the open event is not a new attempt.
+
+    A winner change is an onset, including a change back. Activation 0 does
+    not carry across a blank token, but consecutive triggers of the same
+    winner are still one event. After the carried trace goes inactive, the
+    same winner is a new onset.
+    """
+    from tidal.llm_memory import competition_onsets
+
+    assert competition_onsets(
+        [True, True, False, True, False, True],
+        [0, 0, 0, 0, -1, 0],
+        [1.0, 1.0, 0.2, 1.0, 0.0, 1.0],
+    ) == [True, False, False, False, False, True]
+    assert competition_onsets(
+        [True, True, True],
+        [1, 1, 1],
+        [0.0, 0.0, 0.0],
+    ) == [True, False, False]
+    assert competition_onsets(
+        [True, True, True],
+        [0, 1, 0],
+        [1.0, 1.0, 1.0],
+    ) == [True, True, True]
+    assert competition_onsets(
+        [True, False, True],
+        [0, -1, 0],
+        [0.0, 0.0, 1.0],
+    ) == [True, False, True]
+    with pytest.raises(ValueError):
+        competition_onsets([True], [0, 1], [1.0])
+
+
+def test_theta_candidates_compete_and_a_closer_companion_drops_more():
+    from tidal.llm_memory import compete_retrieved
+
+    winner = _slot("cue", 0.0, [1.0, 0.0, 0.0])
+    close = _slot("cue", 0.0, [0.8, 0.6, 0.0])
+    farther = _slot("cue", 0.0, [0.3, 0.0, np.sqrt(1.0 - 0.09)])
+    missed = _slot("cue", 0.0, [0.0, 1.0, 0.0])
+    exempt = _slot("cue", 1.0, [0.9, 0.43589, 0.0])
+    outsider = _slot("other", 0.0, [0.4, 0.0, np.sqrt(1.0 - 0.16)])
+    slots = [winner, close, farther, missed, exempt, outsider]
+    changed = compete_retrieved(slots, 0, [0, 1, 2, 4, 5])
+    assert changed == 2
+    assert slots[0].strength == 1.0
+    assert slots[3].strength == 1.0
+    assert slots[4].strength == 1.0
+    assert slots[5].strength == 1.0
+    assert slots[1].strength < slots[2].strength < 1.0
+
+
+def test_five_theta_candidates_still_trigger_and_scale_same_relation_only():
+    """Fan does not clear the trigger, and a different relation is not scaled.
+
+    Five slots past theta make fan_factor 0, so activation is 0 and the
+    residual adds nothing. The token still triggers. The three same-relation
+    companions are scaled. The different-relation outsider stays at 1.
+    """
+    from tidal.cue_inject import fan_factor
+    import tidal.llm_memory as mod
+
+    assert fan_factor(5, float(mod.CUE_FAN_S)) == 0.0
+    assert fan_factor(4, float(mod.CUE_FAN_S)) < float(mod.CUE_FLOOR)
+    model, tok = build_tiny_lm(seed=3)
+    mem = LLMMemory(model, tok)
+    try:
+        for index in range(5):
+            assert mem.remember(f"slot {index} is Q", name=f"s{index}", rel="mrif" if index < 4 else "mrifx")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        for index, slot in enumerate(slots):
+            slot.salience = 0.0
+            slot.strength = 1.0
+            if index == 0:
+                slot.k = match.copy()
+                continue
+            near = 0.6 * match
+            near[index] = 0.8
+            slot.k = near / np.linalg.norm(near)
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 3, axis=0)
+
+        mem.cue_hidden = _fixed
+        info = mem._rank("slot 0 is Q")
+        assert info["memory_id"] == 0
+        assert mem.last_rif == {"n": 3}
+        assert slots[0].strength == 1.0
+        assert all(slot.strength < 1.0 for slot in slots[1:4])
+        assert slots[4].strength == 1.0
+        assert all(len(row) == 5 for row in mem._last_candidates)
+        fields = mem.cue_fields("slot 0 is Q")
+        assert bool(fields["triggered"][0, 0].item()) is True
+        assert float(fields["activation"][0, 0]) == 0.0
+    finally:
+        mem.close()
+
+
+def test_rank_competes_on_a_winner_change_and_not_on_a_retrigger():
+    """Same-winner retriggers scale once. A change back scales again.
+
+    A decay that clears the carried trace also opens a new event for the
+    same winner. The shipped half-life is not the constant under test;
+    ``CUE_TAU`` is patched only in this process.
+    """
+    import tidal.llm_memory as mod
+
+    model, tok = build_tiny_lm(seed=4)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("left is A", name="left", rel="mrif")
+        assert mem.remember("right is B", name="right", rel="mrif")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        left = np.zeros(width, dtype=np.float64)
+        right = np.zeros(width, dtype=np.float64)
+        left[0] = 1.0
+        left[1] = 0.3
+        right[0] = 0.3
+        right[1] = 1.0
+        left /= np.linalg.norm(left)
+        right /= np.linalg.norm(right)
+        slots[0].k = left.copy()
+        slots[1].k = right.copy()
+        for slot in slots:
+            slot.salience = 0.0
+            slot.strength = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _rows(vectors):
+            return np.stack([vector + center for vector in vectors], 0)
+
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left: _rows([_left, _left, _left])
+        mem._rank("left is A")
+        once = rif_competitor_keep(1.0, 1.0, RIF_SPAN)
+        assert mem.last_rif == {"n": 1}
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == pytest.approx(once)
+
+        slots[0].strength = 1.0
+        slots[1].strength = 1.0
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _right=right: _rows([_left, _right, _left])
+        mem._rank("left is A")
+        assert mem.last_rif == {"n": 3}
+        assert slots[0].strength == pytest.approx(once)
+        assert slots[1].strength == pytest.approx(once * once)
+
+        slots[0].strength = 1.0
+        slots[1].strength = 1.0
+        quiet = np.zeros(width, dtype=np.float64)
+        quiet[2] = 1.0
+        monkey_tau = 1.0
+        original_tau = float(mod.CUE_TAU)
+        mod.CUE_TAU = monkey_tau
+        try:
+            mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _quiet=quiet: _rows(
+                [_left, _quiet, _quiet, _quiet, _left]
+            )
+            mem._rank("left is A")
+        finally:
+            mod.CUE_TAU = original_tau
+        assert mem.last_rif == {"n": 2}
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == pytest.approx(once * once)
+        assert float(mod.CUE_TAU) == pytest.approx(original_tau)
+    finally:
+        mem.close()
+
+
+def test_each_event_leaves_its_own_winner_unscaled():
+    """A later event may scale an earlier winner. That event's winner stays put."""
+    import tidal.llm_memory as mod
+    from tidal.subconscious_interfere_score import observe_event_winners
+
+    original = mod.compete_retrieved
+    model, tok = build_tiny_lm(seed=5)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("left is A", name="left", rel="mrif")
+        assert mem.remember("right is B", name="right", rel="mrif")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        left = np.zeros(width, dtype=np.float64)
+        right = np.zeros(width, dtype=np.float64)
+        left[0] = 1.0
+        left[1] = 0.3
+        right[0] = 0.3
+        right[1] = 1.0
+        left /= np.linalg.norm(left)
+        right /= np.linalg.norm(right)
+        slots[0].k = left.copy()
+        slots[1].k = right.copy()
+        for slot in slots:
+            slot.salience = 0.0
+            slot.strength = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _rows(vectors):
+            return np.stack([vector + center for vector in vectors], 0)
+
+        mem.cue_hidden = lambda _text, _rows=_rows, _left=left, _right=right: _rows([_left, _right, _left])
+        _info, events = observe_event_winners(mem, "left is A")
+        assert mod.compete_retrieved is original
+        assert len(events) == 3
+        assert all(event["unchanged"] for event in events)
+        assert [event["winner"] for event in events] == [0, 1, 0]
+        assert slots[0].strength < 1.0
+        assert slots[1].strength < slots[0].strength
+    finally:
+        mod.compete_retrieved = original
+        mem.close()
+
+
+def test_rank_scales_a_same_relation_theta_companion_and_spares_the_outsider():
+    """A missed-theta companion and a different-relation theta candidate stay at 1.
+
+    One same-relation companion that clears theta is scaled. forget_rivals
+    on the same keys still scales every same-relation rival and leaves the
+    outsider alone.
+    """
+    model, tok = build_tiny_lm(seed=2)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("target is A", name="target", rel="mrif")
+        for index in range(3):
+            assert mem.remember(f"rival {index} is B", name=f"rival{index}", rel="mrif")
+        assert mem.remember("outsider is C", name="outsider", rel="mrifx")
+        slots = mem.store._slots
+        assert len(slots) == 5
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        for index, slot in enumerate(slots):
+            slot.salience = 0.0
+            slot.strength = 1.0
+            key = np.zeros(width, dtype=np.float64)
+            key[index] = 1.0
+            slot.k = key
+        slots[0].k = match.copy()
+        near = 0.6 * match
+        near[1] = 0.8
+        slots[1].k = near / np.linalg.norm(near)
+        outsider = 0.6 * match
+        outsider[4] = 0.8
+        slots[4].k = outsider / np.linalg.norm(outsider)
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _fixed
+        info = mem._rank("target is A")
+        assert info["gap"] is not None and float(info["gap"]) > 0.0
+        assert mem.last_rif["n"] == 1
+        assert slots[0].strength == 1.0
+        assert slots[1].strength < 1.0
+        assert [slot.strength for slot in slots[2:4]] == [1.0, 1.0]
+        assert slots[4].strength == 1.0
+        parallel = [_slot(slot.rel, 0.0, slot.k) for slot in slots]
+        assert forget_rivals(parallel, 0) == 3
+        assert parallel[0].strength == 1.0
+        assert all(slot.strength < 1.0 for slot in parallel[1:4])
+        assert parallel[4].strength == 1.0
+    finally:
+        mem.close()
+
+
 def test_closer_key_is_scaled_more_and_span_zero_is_a_no_op(monkeypatch):
     slots = [
         _slot("cue", 0.0, [1.0, 0.0]),
@@ -339,26 +613,48 @@ def test_rank_forgets_only_a_strict_same_relation_win():
             slot.strength = 1.0
         notes = [slot for slot in mem.store.slots if slot.rel == "note"]
         assert len(notes) == 5
+        width = int(np.asarray(notes[0].k).shape[0])
+        missed = np.zeros(width, dtype=np.float64)
+        missed[-1] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _miss(_text, _row=missed, _center=center):
+            return np.repeat((_row + _center).reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _miss
         mem._rank("note 0 is Z")
         assert all(slot.strength == 1.0 for slot in mem.store.slots)
         mem.store.clear()
         assert mem.remember("red is Y", name="a", rel="cue")
         assert mem.remember("blue is Z", name="b", rel="cue")
         slots = mem.store._slots
-        query = np.asarray(mem._query_vector("red is Y"), dtype=np.float64)
-        slots[0].k = query.copy()
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        slots[0].k = match.copy()
         slots[0].salience = 0.0
-        orth = np.zeros_like(query)
-        denom = float(np.dot(query, query)) + 1e-12
-        for axis in np.eye(query.size):
-            proj = axis - query * (float(np.dot(axis, query)) / denom)
-            if float(np.linalg.norm(proj)) > 1e-6:
-                orth = proj
-                break
+        orth = np.zeros(width, dtype=np.float64)
+        orth[1] = 1.0
         slots[1].k = orth
         slots[1].salience = 0.0
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _fixed
         info = mem._rank("red is Y")
         assert info["gap"] is not None and float(info["gap"]) > 0.0
+        # The orthogonal key misses theta, so it is not in the competition.
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == 1.0
+        assert mem.last_rif["n"] == 0
+        near = 0.6 * match + 0.8 * orth
+        slots[1].k = near / np.linalg.norm(near)
+        slots[1].salience = 0.0
+        slots[1].strength = 1.0
+        mem._rank("red is Y")
         assert slots[0].strength == 1.0
         assert slots[1].strength < 1.0
         assert mem.last_rif["n"] == 1
@@ -368,14 +664,16 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         assert slots[0].strength == 1.0
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
-        slots[1].k = query.copy()
+        slots[1].k = match.copy()
         slots[1].salience = 0.0
         mem._rank("red is Y")
         assert slots[0].strength == 1.0
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
-        assert "forget_rivals" in inspect.getsource(LLMMemory._rank)
-        assert "activation_weights" in inspect.getsource(LLMMemory._rank)
+        rank_source = inspect.getsource(LLMMemory._rank)
+        assert "compete_retrieved" in rank_source
+        assert "cue_fields" in rank_source
+        assert "activation_weights" not in rank_source
     finally:
         mem.close()
 

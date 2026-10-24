@@ -38,6 +38,9 @@ import numpy as np
 
 ArrayLike = Union[np.ndarray, Sequence[float]]
 SKIP_KINDS = frozenset({"chat", "noise"})
+# Every stored fact is text. The field is on the slot. There is no
+# perceptual-fingerprint field.
+MEMORY_MODALITY = "text"
 # Content-free clock. phase = sin(angle). Angle 0 is the identity.
 # Write gain is 1 + CLOCK_SPAN * phase. Decay exponent rate is
 # 1 - CLOCK_SPAN * phase. The grid is span in {0.25, 0.5, 1}. Span 0.25
@@ -316,6 +319,12 @@ class Slot:
     history: list = field(default_factory=list)
     # Write gain at stamp time. 1 until a nonzero clock phase. Not a fact.
     clock_gain: float = 1.0
+    # Record modality. Every write stores "text".
+    modality: str = MEMORY_MODALITY
+
+    def __post_init__(self) -> None:
+        if self.modality != MEMORY_MODALITY:
+            raise ValueError("modality must be text")
 
 
 class EpisodicStore:
@@ -538,6 +547,7 @@ class EpisodicStore:
             sentence=sent,
             answer=stored,
             text=stored_text,
+            modality=MEMORY_MODALITY,
         )
         hit_id, content_ids = self._locate(name, rel, group, stored_text)
         if hit_id is None and content_ids:
