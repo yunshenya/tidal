@@ -87,7 +87,7 @@ At the selected cell, or at the placeholder if none is selected, the inject cost
 
 ## Fit result
 
-One pass of the 24-cell grid. Git of the scorer before this result was written: `d25d74279c1b49969192bc1764af8501dc8f44a0`. Elapsed 83.7 seconds. All 24 cells passed gates 1–5. The selected cell is theta 0.32, tau 8, a_trig 1, mean cued margin 1.381. It is the unique maximum. The module constants now match that cell. Held has not been scored.
+One pass of the 24-cell grid. Git of the scorer before this result was written: `d25d74279c1b49969192bc1764af8501dc8f44a0`. Elapsed 83.7 seconds. All 24 cells passed gates 1–5. The selected cell is theta 0.32, tau 8, a_trig 1, mean cued margin 1.381. It is the unique maximum. The module constants now match that cell. Held was scored once after this selection and was not used to change it.
 
 Selected cell, direction fit bank, n=8:
 
@@ -104,4 +104,22 @@ Inject cost at this cell, median extra seconds per token of the cue-live forward
 
 ## Held result
 
-Held has not been scored.
+One pass. Git `9f4ea6184ff3018317bd019b9dd20d0b61acba8c`. Elapsed 120.0 seconds. The selected cell was theta 0.32, tau 8, a_trig 1. The pass is false. The floors were not moved. The pull request stays a draft.
+
+| rate | count | Wilson 95% | floor | pass |
+| --- | --- | --- | --- | --- |
+| prefer margin up | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| avoid margin up | 36/50 | [0.5833487630404344, 0.8252582933408878] | 39/50 | no |
+| avoid stored logprob down | 42/50 | [0.7148578393696501, 0.916625793219666] | 42/50 | yes |
+| toward experience | 45/50 | [0.7863976856252035, 0.9565242350681096] | 45/50 | yes |
+| away experience | 48/50 | [0.8653990931249297, 0.9889611156723802] | 48/50 | yes |
+| at least 4 slots | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| competitor strength below 1 | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| winner strength unchanged | 15/50 | [0.19103553500880954, 0.437503504644534] | 50/50 | no |
+| outsider strength unchanged | 50/50 | [0.9286524008666414, 1.0] | 50/50 | yes |
+| more similar companion lowers the target margin | 41/50 | [0.6920394632569922, 0.9022980732976582] | 42/50 | no |
+| three companions lower the target margin more than one | 19/50 | [0.25862789310193596, 0.5184955306900703] | 48/50 | no |
+
+Means, not a gate: prefer delta 9.892, avoid delta 0.262, avoid stored lift -0.356, toward delta 1.935, away delta -4.943.
+
+The report is `reports/subconscious_cue_held.json`.

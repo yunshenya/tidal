@@ -1,0 +1,159 @@
+{
+  "elapsed_s": 120.0051673199996,
+  "failures": [
+    {
+      "floor": 39,
+      "gate": "avoid_up",
+      "k": 36,
+      "n": 50
+    },
+    {
+      "floor": 50,
+      "gate": "winner_same",
+      "k": 15,
+      "n": 50
+    },
+    {
+      "floor": 42,
+      "gate": "similarity",
+      "k": 41,
+      "n": 50
+    },
+    {
+      "floor": 48,
+      "gate": "count",
+      "k": 19,
+      "n": 50
+    }
+  ],
+  "floors": {
+    "avoid_stored_down": 42,
+    "avoid_up": 39,
+    "away_down": 48,
+    "competitor_down": 50,
+    "count": 48,
+    "outsider_same": 50,
+    "prefer_up": 50,
+    "rif_ge4": 50,
+    "similarity": 42,
+    "toward_up": 45,
+    "winner_same": 50
+  },
+  "git": "9f4ea6184ff3018317bd019b9dd20d0b61acba8c",
+  "kind": "held",
+  "means": {
+    "avoid_delta": 0.2618337395784135,
+    "avoid_stored_lift": -0.35568869863947233,
+    "away_delta": -4.94324250519198,
+    "prefer_delta": 9.89158199026948,
+    "toward_delta": 1.9347473311056578
+  },
+  "pass": false,
+  "rates": {
+    "avoid_stored_down": {
+      "k": 42,
+      "n": 50,
+      "rate": 0.84,
+      "wilson": [
+        0.7148578393696501,
+        0.916625793219666
+      ]
+    },
+    "avoid_up": {
+      "k": 36,
+      "n": 50,
+      "rate": 0.72,
+      "wilson": [
+        0.5833487630404344,
+        0.8252582933408878
+      ]
+    },
+    "away_down": {
+      "k": 48,
+      "n": 50,
+      "rate": 0.96,
+      "wilson": [
+        0.8653990931249297,
+        0.9889611156723802
+      ]
+    },
+    "competitor_down": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "count": {
+      "k": 19,
+      "n": 50,
+      "rate": 0.38,
+      "wilson": [
+        0.25862789310193596,
+        0.5184955306900703
+      ]
+    },
+    "outsider_same": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "prefer_up": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "rif_ge4": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "similarity": {
+      "k": 41,
+      "n": 50,
+      "rate": 0.82,
+      "wilson": [
+        0.6920394632569922,
+        0.9022980732976582
+      ]
+    },
+    "toward_up": {
+      "k": 45,
+      "n": 50,
+      "rate": 0.9,
+      "wilson": [
+        0.7863976856252035,
+        0.9565242350681096
+      ]
+    },
+    "winner_same": {
+      "k": 15,
+      "n": 50,
+      "rate": 0.3,
+      "wilson": [
+        0.19103553500880954,
+        0.437503504644534
+      ]
+    }
+  },
+  "selected": {
+    "a_trig": 1.0,
+    "mean_cued_delta": 1.3812962770462036,
+    "tau": 8.0,
+    "theta": 0.32
+  }
+}

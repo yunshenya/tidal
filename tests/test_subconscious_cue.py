@@ -366,7 +366,10 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "largest mean cued margin" in text
     assert "39/50" in text and "42/50" in text and "48/50" in text
     assert "theta 0.32" in text
-    assert "Held has not been scored." in text
+    assert "The pass is false." in text
+    assert "36/50" in text
+    assert "15/50" in text
+    assert "19/50" in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script
