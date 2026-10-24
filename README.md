@@ -226,6 +226,8 @@ Anderson, Bjork, and Bjork (1994). Remembering can cause forgetting. Crossref re
 
 The held bank was not scored.
 
+The fit bank, git `f9fbd380735975ca706b17aef0e9bce78bb36b2e`, is 8/8 on interference, decay, fan, false trigger, spontaneous recall, fresh retrieval, and the shape item, Wilson 95% [0.6755924351161198, 1.0]. `canonical_same` is true. False-trigger events are 0. Explicit exact, gist, peripheral, intrusion, and live are 8/8. Explicit intrusion events are 0/8, Wilson [0.0, 0.32440756488388023]. Implicit deltas are finite on 8/8. Cue d_z is 1.2804097895278619. In-context d_z is 3.7690587251956713. Cue mean delta is 1.6407157182693481. In-context mean delta is 4.3629966378211975. The 8/8 positive rate is not a held floor. Elapsed 5.011534953999217 seconds. Report `reports/error_pattern_fit.json`. Constants were not changed.
+
 ## Signals exported to growbrain
 
 The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:

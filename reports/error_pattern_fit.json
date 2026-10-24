@@ -1,0 +1,311 @@
+{
+  "bank_sha256": "b127a314367fbe273ec05b40841029748018170244c10ef84b7f72dab8fee514",
+  "canonical": {
+    "both": [
+      0.7071067811865476,
+      0.8312378961427878
+    ],
+    "false_events": 0,
+    "fan": [
+      1.0,
+      0.5219674706459045,
+      0.04393492266535759
+    ],
+    "fresh_activation_0": 0.0,
+    "live_4": 0.9548416039104165,
+    "live_internal": 5.0,
+    "off": null,
+    "rif_strengths": [
+      1.0,
+      0.95,
+      1.0
+    ],
+    "spontaneous_fires": 1,
+    "spontaneous_rate": 0.0625,
+    "surfaces": {
+      "birthday_emotion": "April 12, 1984",
+      "birthday_high": "April 21, 1984",
+      "birthday_long": "April 1, 1984",
+      "birthday_low": "April 1, 1984",
+      "birthday_slip": "April 12, 1984",
+      "phone_emotion": "+1-617-555-4862",
+      "phone_high": "+1-617-555-4826",
+      "phone_long": "+1-617-555-5937",
+      "phone_low": "+1-617-555-5937",
+      "phone_slip": "+1-617-555-4862"
+    },
+    "token": [
+      1.0,
+      0.9771599684342459,
+      0.9117224885582168
+    ],
+    "wake_pressure": 0.2990792952357356,
+    "wall": [
+      1.0,
+      0.9885140203528962,
+      0.9548416039104165,
+      0.03125
+    ]
+  },
+  "canonical_same": true,
+  "elapsed_s": 5.011534953999217,
+  "explicit": {
+    "exact": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "gist": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "intrusion": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "intrusion_events": {
+      "k": 0,
+      "n": 8,
+      "pass": true,
+      "rate": 0.0,
+      "wilson": [
+        0.0,
+        0.32440756488388023
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "live": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "peripheral": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "explicit_match": true,
+  "false_trigger_events": 0,
+  "git": "f9fbd380735975ca706b17aef0e9bce78bb36b2e",
+  "ids": [
+    "error-fit-000",
+    "error-fit-001",
+    "error-fit-002",
+    "error-fit-003",
+    "error-fit-004",
+    "error-fit-005",
+    "error-fit-006",
+    "error-fit-007"
+  ],
+  "implicit": {
+    "context_dz": 3.7690587251956713,
+    "context_mean": 3.958538234233856,
+    "context_mean_delta": 4.3629966378211975,
+    "context_positive": {
+      "k": 8,
+      "n": 8,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "cue_dz": 1.2804097895278619,
+    "cue_mean": 1.2362573146820068,
+    "cue_mean_delta": 1.6407157182693481,
+    "cue_positive": {
+      "k": 8,
+      "n": 8,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "finite": true,
+    "n": 8,
+    "nomem_mean": -0.4044584035873413,
+    "pass": true
+  },
+  "implicit_pass": true,
+  "kind": "error-pattern-fit",
+  "note": "Fit only. The held bank was not scored.",
+  "pass": true,
+  "protocol": "error-pattern-v1",
+  "rows": [
+    {
+      "context_delta": 4.2093353271484375,
+      "cue_delta": 1.1984748840332031,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-000",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.617586135864258,
+      "cue_delta": 3.954256057739258,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-001",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.251656532287598,
+      "cue_delta": 3.003626823425293,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-002",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 6.171873092651367,
+      "cue_delta": 1.8622961044311523,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-003",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.510260581970215,
+      "cue_delta": 1.3243227005004883,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-004",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.375597953796387,
+      "cue_delta": 0.021686553955078125,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-005",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.9469151496887207,
+      "cue_delta": 0.5958461761474609,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-006",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.820748329162598,
+      "cue_delta": 1.1652164459228516,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-fit-007",
+      "shape_pass": true
+    }
+  ],
+  "shape": {
+    "decay": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "false_trigger": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "fan": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "fresh": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "rif": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "spontaneous": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "shape_pass": true
+}
