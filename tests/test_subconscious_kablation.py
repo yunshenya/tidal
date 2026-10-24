@@ -310,8 +310,10 @@ def test_fit_scorer_does_not_read_held_probes_or_score_geometry_margins():
 def test_prereg_locks_the_grid_and_waits_for_scores():
     text = PREREG.read_text(encoding="utf-8")
     assert "Geometry has not been recorded." not in text
-    assert "Fit has not been scored." in text
+    assert "Fit has not been scored." not in text
     assert "Held has not been scored." in text
+    assert "c00bfc8621bd6ada2a3a35f1b5d74645086c99fc" in text
+    assert "0.15461428702409788" in text
     assert "0.07515952280613003" in text
     assert "72/72" in text
     assert "no direct paper" in text
