@@ -42,7 +42,7 @@ from tidal.subconscious_replay_data import held_bank as replay_held_bank
 from tidal.subconscious_replay_score import score_direction
 from tidal.subconscious_rif_retry_score import score_quartets
 from tidal.subconscious_surprise_rel_score import score_gate
-from tidal.subconscious_valence_data import REPEATS
+from tidal.subconscious_valence_data import REPEATS, held_bank as valence_held_bank
 from tidal.subconscious_valence_score import score_signed
 
 HIST_BINS = [-1.0, 0.0, 0.25, 0.5, 0.75, 0.9, 0.99, 1.0]

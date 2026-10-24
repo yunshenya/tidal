@@ -196,6 +196,22 @@ def test_subconscious_score_excludes_explicit_recall():
     assert set(summary["score_dz"]) == {"tone", "choice", "preference"}
 
 
+def test_key_rows_include_the_locked_banks():
+    from tidal.subconscious_measure_score import _key_rows
+
+    rows = _key_rows()
+    sources = {source for source, _item in rows}
+    assert sources == {
+        "measure-prefer",
+        "measure-avoid",
+        "replay-held-prefer",
+        "replay-held-avoid",
+        "valence-held-toward",
+        "valence-held-away",
+    }
+    assert sum(source.startswith("measure-") for source, _item in rows) == 100
+
+
 def test_cosine_distribution_reports_the_threshold():
     above = cosine_distribution([0.991, 0.995, 1.0])
     assert above["all_gt_0.99"] is True
