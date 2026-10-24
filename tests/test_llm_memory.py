@@ -262,6 +262,60 @@ def test_experience_valence_scales_only_the_stored_sign(monkeypatch):
         mem.close()
 
 
+def test_clock_scales_the_write_and_stores_no_fact_text():
+    import json
+    import math
+
+    from tidal.llm_memory import ByteTokenizer
+
+    mem = LLMMemory(EyeLM(), ByteTokenizer())
+    try:
+        prompt = "Ask:"
+        fact = {"text": "code is Y", "answer": "Y", "name": "ada", "rel": "note"}
+        assert mem.remember(dict(fact))
+        base = mem.injection(prompt).copy()
+        assert mem.store.slots[0].strength == 1.0
+        assert mem.store.slots[0].clock_gain == 1.0
+        mem.store.clear()
+        mem.clock_set(math.pi / 2)
+        assert mem.remember(dict(fact))
+        from tidal.episodic import clock_write_gain
+
+        gain = clock_write_gain(1.0)
+        assert mem.store.slots[0].strength == gain
+        assert mem.store.slots[0].clock_gain == gain
+        assert np.allclose(mem.injection(prompt), base * gain)
+        other = {"text": "town is Q", "answer": "Q", "name": "bea", "rel": "city"}
+        assert mem.remember(other)
+        assert mem.store.slots[1].strength == mem.store.slots[0].strength
+        blob = json.dumps(mem.clock_log())
+        assert "code is Y" not in blob
+        assert "town is Q" not in blob
+        assert set(mem.clock_log()[0]) == {"kind", "angle", "phase", "gain"}
+        mem.store.clear()
+        assert mem.clock_phase() == 0.0
+        assert mem.clock_log() == ()
+        assert mem.remember(dict(fact))
+        mem.store.recompute_decay(0.5)
+        assert mem.store.slots[0].strength == 0.5
+        mem.store.clear()
+        mem.clock_set(math.pi / 2)
+        assert mem.remember(dict(fact))
+        mem.store.recompute_decay(0.5)
+        high_s = mem.store.slots[0].strength
+        mem.store.clear()
+        mem.clock_set(-math.pi / 2)
+        assert mem.remember(dict(fact))
+        mem.store.recompute_decay(0.5)
+        low_s = mem.store.slots[0].strength
+        assert high_s > 0.5 > low_s
+        event = mem.clock_tick()
+        assert event["kind"] == "tick"
+        assert "code is Y" not in json.dumps(event)
+    finally:
+        mem.close()
+
+
 def test_other_identity_is_kept_and_readout_is_top1():
     mem = _byte_memory()
     mix = None

@@ -30,7 +30,8 @@ stored experience adds ``sign * step`` on that slot, so ``u = 1`` and the add
 matches the replay formula. The sign is the experience field on the write.
 The fact text is not scored, and the language model does not supply a group
 prior. ``s`` is the winning slot's strength. It stays 1 until a replay cycle
-recomputes decay, and a refresh sets it back to 1. The same cycle multiplies
+recomputes decay or a nonzero clock phase scales the write, and a refresh
+sets it back to 1. The same cycle multiplies
 every nonzero valence by the replay decay and appends an audit row. A store
 with no experience and no replay matches the previous add. ``c`` is 1 when
 the store has one slot. Otherwise
@@ -73,7 +74,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tidal.episodic import EpisodicStore, cosine_scores
+from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
 
@@ -1037,7 +1038,7 @@ class LLMMemory:
     :func:`retrieval_confidence`, by the slot's strength, by
     :func:`valence_gain_of` on that slot, and by the polarity gain of that
     slot's key. Valence stays 0 until an experience is stored, so the gain
-    stays 1. Strength stays 1 until replay. Every
+    stays 1. Strength stays 1 until replay or a nonzero clock phase. Every
     :data:`REPLAY_EVERY` accepted writes, decay is recomputed, the top
     :data:`REPLAY_M` salient slots are refreshed, and at most that many
     near-duplicate keys are merged. Salience reuses the polarity vector.
@@ -1394,8 +1395,15 @@ class LLMMemory:
         for slot in self.store._slots:
             if slot.group == group and slot.name == name and slot.rel == rel:
                 slot.salience = self._salience(key_vec)
-                slot.strength = 1.0
                 slot.age = 0
+                # Phase 0 assigns 1. A nonzero phase scales the write.
+                gain = float(clock_write_gain(self.store.clock_phase()))
+                if gain == 1.0:
+                    slot.strength = 1.0
+                    slot.clock_gain = 1.0
+                else:
+                    slot.strength = gain
+                    slot.clock_gain = gain
                 return
         raise RuntimeError("accepted write did not leave a slot")
 
@@ -1546,6 +1554,20 @@ class LLMMemory:
     def valence_history(self, name: str, *, rel: str, group: Optional[str] = None) -> tuple:
         """Copy of the valence audit for one slot, oldest event first."""
         return self.store.valence_history(name, rel, group)
+
+    def clock_set(self, angle: float) -> dict:
+        """Set the store's clock angle. The argument is a number, not text."""
+        return self.store.clock_set(angle)
+
+    def clock_tick(self, steps: int = 1) -> dict:
+        """Advance the clock. No fact text is read or stored."""
+        return self.store.clock_tick(steps)
+
+    def clock_phase(self) -> float:
+        return self.store.clock_phase()
+
+    def clock_log(self) -> tuple:
+        return self.store.clock_log()
 
     def _arm(self, prompt: str) -> None:
         self._set_delta(self._rank(prompt))

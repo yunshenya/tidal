@@ -1,0 +1,471 @@
+{
+  "chosen": {
+    "span": 0.25
+  },
+  "grid": [
+    {
+      "audit": 8,
+      "content_free": true,
+      "decay_gap": 0.17415534987450326,
+      "decay_order": 8,
+      "high_mean": 2.3409677743911743,
+      "high_pos": 8,
+      "low_mean": -2.1397132873535156,
+      "low_neg": 8,
+      "n": 8,
+      "ok": true,
+      "phase0_exact": true,
+      "span": 0.25,
+      "strength": 8
+    },
+    {
+      "audit": 8,
+      "content_free": true,
+      "decay_gap": 0.3535533905932738,
+      "decay_order": 8,
+      "high_mean": 4.49057700112462,
+      "high_pos": 8,
+      "low_mean": -3.7752574682235718,
+      "low_neg": 8,
+      "n": 8,
+      "ok": true,
+      "phase0_exact": true,
+      "span": 0.5,
+      "strength": 8
+    },
+    {
+      "audit": 8,
+      "content_free": true,
+      "decay_gap": 0.75,
+      "decay_order": 8,
+      "high_mean": 7.49640909768641,
+      "high_pos": 8,
+      "low_mean": -5.863304376602173,
+      "low_neg": 8,
+      "n": 8,
+      "ok": true,
+      "phase0_exact": true,
+      "span": 1.0,
+      "strength": 8
+    }
+  ],
+  "result": {
+    "bank_kind": "fit",
+    "bank_sha256": "ae9c1a9392fbbbf4d4dca134a7a2771a1859a1db6495658067e5292eeaf9a772",
+    "cost": {
+      "buffers": 66931,
+      "clock_span": 0.25,
+      "clock_tick_forwards": 0,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "query_forwards": 1,
+      "remember_forwards": 2
+    },
+    "exact": {
+      "birthday_exact": 1,
+      "birthday_off_equal": 0,
+      "birthday_off_n": 5,
+      "birthday_off_takeover": 0.0,
+      "birthday_prefix": 1,
+      "birthday_question_text": "August 25, 2009",
+      "birthday_stored": "August 25, 2009",
+      "phone_exact": 1,
+      "phone_off_equal": 0,
+      "phone_off_n": 5,
+      "phone_off_takeover": 0.0,
+      "phone_prefix": 0,
+      "phone_question_text": "+1-278-555-0989",
+      "phone_stored": "+1-278-555-0989"
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": -0.014109611511230469,
+            "flip": 0,
+            "id": "circadian-fit-choice-0",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.015410423278808594,
+            "flip": 0,
+            "id": "circadian-fit-choice-1",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.0021190643310546875,
+            "flip": 0,
+            "id": "circadian-fit-choice-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.008909225463867188,
+            "flip": 0,
+            "id": "circadian-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0131988525390625,
+            "flip": 0,
+            "id": "circadian-fit-choice-4",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.010118484497070312,
+            "flip": 0,
+            "id": "circadian-fit-choice-5",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.006403923034667969,
+            "flip": 0,
+            "id": "circadian-fit-choice-6",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.04838752746582031,
+            "flip": 0,
+            "id": "circadian-fit-choice-7",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8289757314934582,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Sketch variants corrective killed redist.",
+            "text": "The first step in the process is to determine the"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch compete compliant recurrence smashed.",
+            "text": "The first thing to note is that the algorithm is"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch glycogen purchased topical fundamentals.",
+            "text": "The first step in the process is to determine the"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch principally crimes traumas checkups.",
+            "text": "The first step in the process is to identify the"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch emotions registry entangled complaint.",
+            "text": "The first step in the process is to create a"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch celebrated cryptography hallmark desperation.",
+            "text": "The first thing to do is to get the encryption"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch penetrating radioactive absentee arrhythmias.",
+            "text": "The most common cause of radiation-induced cardiac arrhythmias"
+          },
+          {
+            "hits": [],
+            "prompt": "Sketch recite refused mystery redirect.",
+            "text": "The first time I saw the film, I was"
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.00867927074432373,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 0.006869484455418323,
+            "delta": -0.018651962280273438,
+            "id": "circadian-fit-nll-0",
+            "nll_inject": 9.970609664916992,
+            "nll_nomem": 9.989261627197266
+          },
+          {
+            "confidence": 0.0037213215889635165,
+            "delta": -0.0057220458984375,
+            "id": "circadian-fit-nll-1",
+            "nll_inject": 12.447721481323242,
+            "nll_nomem": 12.45344352722168
+          },
+          {
+            "confidence": 0.0033097862817648566,
+            "delta": -0.014009475708007812,
+            "id": "circadian-fit-nll-2",
+            "nll_inject": 14.28135871887207,
+            "nll_nomem": 14.295368194580078
+          },
+          {
+            "confidence": 0.0001237060462483397,
+            "delta": -0.00016307830810546875,
+            "id": "circadian-fit-nll-3",
+            "nll_inject": 15.555732727050781,
+            "nll_nomem": 15.555895805358887
+          },
+          {
+            "confidence": 0.00035530265964471563,
+            "delta": -0.00047588348388671875,
+            "id": "circadian-fit-nll-4",
+            "nll_inject": 11.503621101379395,
+            "nll_nomem": 11.504096984863281
+          },
+          {
+            "confidence": 0.008180471764828723,
+            "delta": 0.000339508056640625,
+            "id": "circadian-fit-nll-5",
+            "nll_inject": 14.214414596557617,
+            "nll_nomem": 14.214075088500977
+          },
+          {
+            "confidence": 0.0075977999682942665,
+            "delta": -0.01149749755859375,
+            "id": "circadian-fit-nll-6",
+            "nll_inject": 13.38776969909668,
+            "nll_nomem": 13.399267196655273
+          },
+          {
+            "confidence": 0.007277311049684529,
+            "delta": -0.01925373077392578,
+            "id": "circadian-fit-nll-7",
+            "nll_inject": 13.301652908325195,
+            "nll_nomem": 13.320906639099121
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Sketch variants corrective killed redist.",
+            "takeover": 0,
+            "text": "DISCOVERS BIOMARPLEMS COquisite MEDOCREMS COOPERBS COHOSTED BY DISCOVERS BIOMAR"
+          },
+          {
+            "prompt": "Sketch compete compliant recurrence smashed.",
+            "takeover": 0,
+            "text": ""
+          },
+          {
+            "prompt": "Sketch glycogen purchased topical fundamentals.",
+            "takeover": 0,
+            "text": ""
+          },
+          {
+            "prompt": "Sketch principally crimes traumas checkups.",
+            "takeover": 0,
+            "text": "this paper crime cases essays crime cases essays crime cases essays essay crime cases essays essay crime cases essays essay crime cases essays essay crime cases essays essay crime cases essays essay"
+          },
+          {
+            "prompt": "Phone drawn for Kequrepi under the cistern?",
+            "takeover": 0,
+            "text": "search, search, search, search, search, search, search, search, search, search, search, search, search, search, search, search,"
+          },
+          {
+            "prompt": "Birthday filed for Kequrepi inside the annex?",
+            "takeover": 1,
+            "text": "August 25, 2009"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Sketch variants corrective killed redist.",
+            "takeover": 0,
+            "text": "The same thing was done, but with a lot of trouble, and a lot of money, to make sure the last thing was done was to get"
+          },
+          {
+            "prompt": "Sketch compete compliant recurrence smashed.",
+            "takeover": 0,
+            "text": "What is a recurrence?"
+          },
+          {
+            "prompt": "Sketch glycogen purchased topical fundamentals.",
+            "takeover": 0,
+            "text": "What is a topical solution?"
+          },
+          {
+            "prompt": "Sketch principally crimes traumas checkups.",
+            "takeover": 0,
+            "text": "What is a crime?"
+          },
+          {
+            "prompt": "Phone drawn for Kequrepi under the cistern?",
+            "takeover": 0,
+            "text": "+1-278-555-0989"
+          },
+          {
+            "prompt": "Birthday filed for Kequrepi inside the annex?",
+            "takeover": 0,
+            "text": "The Kequrepi address was 1000000000000000000000"
+          }
+        ],
+        "phone_question": 0,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "phases": {
+      "content_free": true,
+      "decay_rate_high": 0.75,
+      "decay_rate_low": 1.25,
+      "mean_decay_gap": 0.17415534987450326,
+      "mean_high": 2.3409677743911743,
+      "mean_low": -2.1397132873535156,
+      "n": 8,
+      "n_audit": 8,
+      "n_decay_order": 8,
+      "n_high_pos": 8,
+      "n_low_neg": 8,
+      "n_strength": 8,
+      "phase0_exact": true,
+      "rows": [
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 2.6808979511260986,
+          "hit": 1,
+          "id": "circadian-fit-phase-0",
+          "low_delta": -2.9094972610473633,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 1.963001012802124,
+          "hit": 1,
+          "id": "circadian-fit-phase-1",
+          "low_delta": -2.5343103408813477,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 3.343454360961914,
+          "hit": 1,
+          "id": "circadian-fit-phase-2",
+          "low_delta": -2.2795639038085938,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 2.0006322860717773,
+          "hit": 1,
+          "id": "circadian-fit-phase-3",
+          "low_delta": -1.891463279724121,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 2.7046308517456055,
+          "hit": 1,
+          "id": "circadian-fit-phase-4",
+          "low_delta": -2.7617712020874023,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 2.058833122253418,
+          "hit": 1,
+          "id": "circadian-fit-phase-5",
+          "low_delta": -2.4762191772460938,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 2.362616539001465,
+          "hit": 1,
+          "id": "circadian-fit-phase-6",
+          "low_delta": -0.8393535614013672,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        },
+        {
+          "audit": true,
+          "decay_high": 0.5946035575013605,
+          "decay_low": 0.42044820762685725,
+          "decay_order": true,
+          "decay_zero": 0.5,
+          "high_delta": 1.6136760711669922,
+          "hit": 1,
+          "id": "circadian-fit-phase-7",
+          "low_delta": -1.425527572631836,
+          "strength_high": 1.25,
+          "strength_low": 0.75,
+          "strength_match": true
+        }
+      ],
+      "write_gain_high": 1.25
+    },
+    "phases_s": {
+      "cost": 0.0755661240000336,
+      "neutral": 12.502529866000259,
+      "phases": 4.030239787000028
+    },
+    "protocol": "subconscious-circadian-fit-v1",
+    "wall_s": 16.60833577700032
+  }
+}
