@@ -1,28 +1,26 @@
-# v7 e2e checklist (draft for 两仪式)
+# v7 e2e checklist (draft, aligned with growbrain)
 
-Cross-repo first draft after tidal live export is 7. Fill gaps on growbrain.
+Mirror of growbrain `reports/v7_e2e_checklist.md`. Growbrain v7 already landed (`c12e4e6` wire + `951ac6b` field table). Live tidal rows are this PR. Do not change backend dims (192/64/32) or the tidal sleep floor.
 
-## Packet / adapter
+| Row | Growbrain (landed) | Tidal (this PR) |
+|---|---|---|
+| Live version | `INTERFACE_VERSION=7` | `CUE_INTERFACE_VERSION=7`. Exporters emit 7 only. No dual-version packet with empty reserved keys. |
+| `fingerprint` | `from_dict` accepts float32 `(32,)` | Store + cue winner emit float32 `(32,)`. Text-only writes store `zero_fingerprint()`. tidal does not compute fingerprints. |
+| `fusion_confidence` | `from_dict` accepts scalar in `[0, 1]` | Cue packet sample-level / last-token scalar. Zero-fusion path emits `0`. |
+| `modality` | `from_dict` accepts `text\|audio\|image\|fused\|none` | Store + per-token export use the same enum. Unknown is rejected (`check_modality`). Text-only writes store `text`. |
+| `fusion_weights` / pairing | `TidalWrite(transport)` callable. No homemade HTTP. | `LLMMemory.set_fusion_weights(weights, *, pair=None)`. float32 `(3,)`, order text/audio/image. **Not** a `cue_fields` key. Transport on growbrain calls this write. |
+| v6 compat | Kept on growbrain | Exporters emit 7. Older packets that lack v7 keys may still be read; new exports always include `fingerprint` + `fusion_confidence`. Reconstruct bank `canonical_surfaces()["interface_version"]` stays 6 (frozen measurement). |
+| `sleep_pressure` missing | → `0` | Tidal floor stays `0.1`. Known cross-repo note. Do **not** change the tidal floor. |
+| `arousal` missing | → `0.2` | Tidal baseline stays `0.2`. |
+| `TickRuntime` / `SignalBundle` | Last-token valence / sleep_pressure / arousal / circadian | Same last-token rule for `fusion_confidence`. `fingerprint` is memory-level, not per-token. `B=1` on the single-packet path (#69). |
 
-- [ ] `TidalPacket.from_dict` accepts `fingerprint` float32 `(32,)` and `fusion_confidence` float in `[0, 1]`.
-- [ ] Missing `fingerprint` on an older packet may still parse; new tidal exports always include both fields.
-- [ ] `fusion_weights` is **not** a cue-packet key. Write via `set_fusion_weights(weights, *, pair=None)`, `(3,)` order text/audio/image.
-- [ ] `modality` enum is `text | audio | image | fused | none`. Unknown is rejected (or mapped to `none` only if you choose that on growbrain; tidal rejects unknown).
-- [ ] Keep `B=1` on the single-packet path. Last-token rule for gate scalars, including `fusion_confidence`. `fingerprint` is memory-level, not per-token.
+## Still open (cross-repo)
 
-## Defaults / known cross-repo limits
+- [ ] Dual-checkout e2e: growbrain `from_dict` on a live tidal `cue_fields` packet (fingerprint `(32,)`, `fusion_confidence`, modality, `interface_version` 7).
+- [ ] Dual-checkout e2e: growbrain `TidalWrite(transport)` → tidal `set_fusion_weights` (and optional `pair`). Confirm `fusion_weights` is absent from the cue packet.
+- [ ] Confirm missing-`sleep_pressure` on growbrain stays 0 while tidal still exports ≥ 0.1.
+- [ ] Confirm missing-`arousal` on growbrain stays 0.2.
 
-- [ ] tidal text-only writes store `zero_fingerprint()` and modality `text` until growbrain sends real fingerprints.
-- [ ] Zero-fusion path: tidal emits `fusion_confidence=0`.
-- [ ] `sleep_pressure` missing → 0 on growbrain vs tidal floor 0.1. Known e2e note; do **not** change the tidal floor.
-- [ ] `arousal` missing → 0.2 (tidal baseline).
-- [ ] `TickRuntime` `SignalBundle` path still consumes last-token valence / sleep_pressure / arousal / circadian; add `fusion_confidence` the same way if the gate reads it.
+## Out of scope
 
-## Version bump
-
-- [ ] After this tidal PR merges, bump growbrain `TIDAL_INTERFACE` live to 7.
-- [ ] Do not keep a dual-version fake packet with empty reserved keys.
-
-## Out of scope here
-
-Full fusion / sleep pairing, inject/key_center retrain, backend dim changes (192/64/32), tidal `sleep_pressure` floor, feature flags.
+Full fusion / sleep pairing, inject/key_center retrain, backend dim changes, tidal `sleep_pressure` floor, feature flags, Origin/growbrain package imports.

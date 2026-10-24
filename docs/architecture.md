@@ -4,7 +4,7 @@ tidal is only the subconscious and below-subconscious memory layer. Turn-taking,
 
 The principle is human-likeness over usefulness. A mechanism stays when it reproduces a human memory effect, including a partial or fuzzy one. It is not tuned to maximize usefulness after the held-out bank is seen. Each mechanism names a neuroscience paper. Where a preregistration read that paper, the sentence says so. The other papers are the sources of the effect. Their measurements are not the fit numbers.
 
-Memory vectors are text-only and modality-agnostic. `LLMMemory()` is the growbrain stage0 path at `d_model` 192. An explicit SmolLM2 model is still constructible. It does not read image, audio, video, or metadata features. Each stored slot has `modality`, and every write sets it to `text`.
+Memory vectors are text-only and modality-agnostic. `LLMMemory()` is the growbrain stage0 path at `d_model` 192. An explicit SmolLM2 model is still constructible. It does not read image, audio, video, or metadata features. Each stored slot has `modality`. Text-only live writes store `text` and a zero fingerprint; growbrain may pass `audio`, `image`, `fused`, or `none`.
 
 ## Store and inject
 
@@ -243,7 +243,7 @@ This subsection is the tidal ↔ growbrain multimodal interface as `interface_ve
 
 **Cue / packet additions (v7).** Keep the existing per-token inject fields. Keep `B=1` and last-token gate scalars (#69). Add `fingerprint`: float32 `(F,)` on the cue winner, memory-level. Add `fusion_confidence`: float32 scalar in `[0, 1]`, one per sample, the same last-token / sample-level rule as the v6 gate scalars. When no cross-modal fusion happened, the value is 0.
 
-**`fusion_weights` is not in the cue packet.** It is float32 `(M,)` with `M=3`, order `text, audio, image`. `fused` and `none` do not occupy weight slots. The write path is `LLMMemory.set_fusion_weights` (the `tidal.interface_v7.FusionControl` shape), not `cue_fields` and not the inject residual. tidal sleep replay and low-level fusion may read `LLMMemory.fusion_weights`. growbrain semantic new pairings use the same write (pair, optional weight modulate). Full fusion and pairing algorithms are out of scope.
+**`fusion_weights` is not in the cue packet.** It is float32 `(M,)` with `M=3`, order `text, audio, image`. `fused` and `none` do not occupy weight slots. The write path is `LLMMemory.set_fusion_weights` (the `tidal.interface_v7.FusionControl` shape), not `cue_fields` and not the inject residual. growbrain calls it through `TidalWrite(transport)`, not a homemade HTTP client. tidal sleep replay and low-level fusion may read `LLMMemory.fusion_weights`. growbrain semantic new pairings use the same write (pair, optional weight modulate). Full fusion and pairing algorithms are out of scope.
 
 **Bump rule.** Live `CUE_INTERFACE_VERSION` is 7. Exporters emit 7. Do not put empty reserved keys on a dual-version packet.
 

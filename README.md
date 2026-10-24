@@ -4,7 +4,7 @@ tidal is only the subconscious and below-subconscious memory layer. It stores sp
 
 The design prefers a human-like memory, including partial and fuzzy effects, over a store that is as useful as possible. Each mechanism below is tied to a neuroscience paper. The fit numbers are not the paper's numbers.
 
-Memory vectors are text-only and modality-agnostic. A key and a value are residuals of text. The default width is growbrain `d_model` 192. `mem_dim` 64 is the growbrain injector slot, not this width. An explicit SmolLM2 model is still constructible at hidden 576. They do not read image, audio, video, or other modality features. Each stored slot has `modality`, and every write sets it to `text`.
+Memory vectors are text-only and modality-agnostic. A key and a value are residuals of text. The default width is growbrain `d_model` 192. `mem_dim` 64 is the growbrain injector slot, not this width. An explicit SmolLM2 model is still constructible at hidden 576. They do not read image, audio, video, or other modality features. Each stored slot has `modality`. Text-only live writes store `text` and a zero fingerprint; growbrain may pass `audio`, `image`, `fused`, or `none`.
 
 The longer account is [docs/architecture.md](docs/architecture.md).
 

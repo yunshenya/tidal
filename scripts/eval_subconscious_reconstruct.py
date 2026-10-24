@@ -288,7 +288,7 @@ def score_item(item_id: str) -> dict:
         "birthday_emotion": surfaces["birthday_emotion"],
         "birthday_slip": surfaces["birthday_slip"],
         "off_relation": None if off is None else str(off),
-        "interface_version": int(CUE_INTERFACE_VERSION),
+        "interface_version": int(canonical_surfaces()["interface_version"]),
     }
     return {
         "gates": gates,
