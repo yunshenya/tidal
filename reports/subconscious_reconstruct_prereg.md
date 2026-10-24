@@ -76,3 +76,29 @@ The held bank was not scored.
 ## Fit result
 
 Report `reports/subconscious_reconstruct_fit.json`. Fit git `f73c3cb777cae3686de2d8cfa92a452d89af6ef4`. Every gate is 8/8, Wilson 95% [0.6755924351161198, 1.0]: high, low, long, emotion, slip, intrusion, live, and the item. Intrusion events are 0/8, Wilson 95% [0.0, 0.32440756488388023]. `canonical_same` is true. Elapsed 0.08174987400707323 seconds. High spelling is `+1-617-555-4826` and `April 21, 1984`. Low and long spelling is `+1-617-555-5937` and `April 1, 1984`. Emotion and slip spelling is `+1-617-555-4862` and `April 12, 1984`. The off-relation continuation is absent. `interface_version` is 5. These counts did not move a held floor. Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, the arousal weights, and the wall-clock formulas were not changed.
+
+## Held result
+
+The held bank was scored once after the sentence above was committed. Git `2177edf43b63b90fe0a4ca6e6a2206012b7307bb`. Elapsed 0.4337025309941964 seconds. Report `reports/subconscious_reconstruct_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: high, low, long, emotion, slip, intrusion, live, and the item. Intrusion events are 0/50, Wilson 95% [0.0, 0.07134759913335872]. The canonical spellings match the fit record. Constants were not changed.
+
+## Sleep guard result
+
+The sleep guard was scored once after the sentence above was committed. Git `2177edf43b63b90fe0a4ca6e6a2206012b7307bb`. Elapsed 0.7253884659876348 seconds. Report `reports/subconscious_reconstruct_sleep_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The canonical record matches `reports/subconscious_sleep_held.json`. Process S formulas were not changed.
+
+## Arousal guard result
+
+The arousal guard was scored once after the sentence above was committed. Git `2177edf43b63b90fe0a4ca6e6a2206012b7307bb`. Elapsed 1.0047294219984906 seconds. Report `reports/subconscious_reconstruct_arousal_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: surprise, quiet, valence and triggers, export, and the item. The canonical record matches `reports/subconscious_arousal_held.json`. Arousal weights were not changed.
+
+## Clock guard result
+
+The clock guard was scored once after the sentence above was committed. Git `2177edf43b63b90fe0a4ca6e6a2206012b7307bb`. Elapsed 0.4586705560068367 seconds. Report `reports/subconscious_reconstruct_clock_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wall, token, both, entrainment, fresh export, and the item. The canonical record matches `reports/subconscious_clock_held.json`. Wall-clock formulas were not changed.
+
+## Cue guard result
+
+The cue guard was scored once after the sentence above was committed. Git `2177edf43b63b90fe0a4ca6e6a2206012b7307bb`. Outer elapsed time 159.7738904459984 seconds, including the floor pass of 117.55057893399498 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_reconstruct_cue_held.json` and `reports/subconscious_reconstruct_cue_floors.json`.
+
+Direction gates match. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.00012736245513555002, 0.00014176245498343963, and 0.00020858918089123273. Armed seconds per token are 0.002498511818967844, 0.0025629730000880295, and 0.0026091230908853254.

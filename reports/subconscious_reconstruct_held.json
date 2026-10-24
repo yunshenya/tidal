@@ -1,0 +1,183 @@
+{
+  "bank_sha256": "bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589",
+  "canonical": {
+    "birthday_emotion": "April 12, 1984",
+    "birthday_high": "April 21, 1984",
+    "birthday_long": "April 1, 1984",
+    "birthday_low": "April 1, 1984",
+    "birthday_slip": "April 12, 1984",
+    "interface_version": 5,
+    "off_relation": null,
+    "phone_emotion": "+1-617-555-4862",
+    "phone_high": "+1-617-555-4826",
+    "phone_long": "+1-617-555-5937",
+    "phone_low": "+1-617-555-5937",
+    "phone_slip": "+1-617-555-4862"
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.4337025309941964,
+  "failures": [],
+  "fit_canonical": {
+    "birthday_emotion": "April 12, 1984",
+    "birthday_high": "April 21, 1984",
+    "birthday_long": "April 1, 1984",
+    "birthday_low": "April 1, 1984",
+    "birthday_slip": "April 12, 1984",
+    "interface_version": 5,
+    "off_relation": null,
+    "phone_emotion": "+1-617-555-4862",
+    "phone_high": "+1-617-555-4826",
+    "phone_long": "+1-617-555-5937",
+    "phone_low": "+1-617-555-5937",
+    "phone_slip": "+1-617-555-4862"
+  },
+  "gates": {
+    "emotion": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "high": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "intrusion": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "live": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "long": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "low": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "slip": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "git": "2177edf43b63b90fe0a4ca6e6a2206012b7307bb",
+  "ids": [
+    "reconstruct-held-000",
+    "reconstruct-held-001",
+    "reconstruct-held-002",
+    "reconstruct-held-003",
+    "reconstruct-held-004",
+    "reconstruct-held-005",
+    "reconstruct-held-006",
+    "reconstruct-held-007",
+    "reconstruct-held-008",
+    "reconstruct-held-009",
+    "reconstruct-held-010",
+    "reconstruct-held-011",
+    "reconstruct-held-012",
+    "reconstruct-held-013",
+    "reconstruct-held-014",
+    "reconstruct-held-015",
+    "reconstruct-held-016",
+    "reconstruct-held-017",
+    "reconstruct-held-018",
+    "reconstruct-held-019",
+    "reconstruct-held-020",
+    "reconstruct-held-021",
+    "reconstruct-held-022",
+    "reconstruct-held-023",
+    "reconstruct-held-024",
+    "reconstruct-held-025",
+    "reconstruct-held-026",
+    "reconstruct-held-027",
+    "reconstruct-held-028",
+    "reconstruct-held-029",
+    "reconstruct-held-030",
+    "reconstruct-held-031",
+    "reconstruct-held-032",
+    "reconstruct-held-033",
+    "reconstruct-held-034",
+    "reconstruct-held-035",
+    "reconstruct-held-036",
+    "reconstruct-held-037",
+    "reconstruct-held-038",
+    "reconstruct-held-039",
+    "reconstruct-held-040",
+    "reconstruct-held-041",
+    "reconstruct-held-042",
+    "reconstruct-held-043",
+    "reconstruct-held-044",
+    "reconstruct-held-045",
+    "reconstruct-held-046",
+    "reconstruct-held-047",
+    "reconstruct-held-048",
+    "reconstruct-held-049"
+  ],
+  "intrusion_events": {
+    "k": 0,
+    "n": 50,
+    "pass": true,
+    "rate": 0.0,
+    "wilson": [
+      0.0,
+      0.07134759913335872
+    ]
+  },
+  "kind": "reconstruct-held",
+  "note": "One pass. Constants were not changed after the fit lock.",
+  "pass": true,
+  "protocol": "reconstruct-spell-v1"
+}

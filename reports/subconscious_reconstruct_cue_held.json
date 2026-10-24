@@ -1,0 +1,496 @@
+{
+  "alpha": 0.25,
+  "bank_sha256": "7a8f62d244ec98b52349bf441bcc3262c9c5ff10f7148d3d79fb824e7d109110",
+  "constants_changed": false,
+  "cost": {
+    "sizes": {
+      "16": {
+        "armed_median_s": 0.028192703000968322,
+        "armed_s_per_token": 0.0025629730000880295,
+        "extra_s": 0.001559387004817836,
+        "extra_s_per_token": 0.00014176245498343963,
+        "quiet_median_s": 0.026633315996150486
+      },
+      "32": {
+        "armed_median_s": 0.02870035399973858,
+        "armed_s_per_token": 0.0026091230908853254,
+        "extra_s": 0.00229448098980356,
+        "extra_s_per_token": 0.00020858918089123273,
+        "quiet_median_s": 0.02640587300993502
+      },
+      "8": {
+        "armed_median_s": 0.027483630008646287,
+        "armed_s_per_token": 0.002498511818967844,
+        "extra_s": 0.0014009870064910501,
+        "extra_s_per_token": 0.00012736245513555002,
+        "quiet_median_s": 0.026082643002155237
+      }
+    },
+    "tokens": 11
+  },
+  "diffs": [],
+  "direction": {
+    "decay_reasons": [
+      {
+        "id": "cue-word-prefer-0",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-1",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-2",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-3",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-4",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-5",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-6",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-7",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-8",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-9",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-10",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-11",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-12",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-13",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-14",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-15",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-16",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-17",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-18",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-19",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-20",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-21",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-22",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-23",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-24",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-25",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-26",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-27",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-28",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-29",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-30",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-31",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-32",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-33",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-34",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-35",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-36",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-37",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-38",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-39",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-40",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-41",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-42",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-43",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-44",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-45",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-46",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-47",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-48",
+        "pass": true,
+        "reason": "ok"
+      },
+      {
+        "id": "cue-word-prefer-49",
+        "pass": true,
+        "reason": "ok"
+      }
+    ],
+    "gates": {
+      "cued_positive": {
+        "floor": 38,
+        "gate": "cued_positive",
+        "k": 43,
+        "mean": 0.574797535019073,
+        "n": 50,
+        "pass": true,
+        "wilson": [
+          0.7381380628941446,
+          0.9304916657298371
+        ]
+      },
+      "decay": {
+        "floor": 38,
+        "gate": "decay",
+        "k": 50,
+        "n": 50,
+        "pass": true,
+        "wilson": [
+          0.9286524008666414,
+          1.0
+        ]
+      },
+      "false_trigger": {
+        "floor": 0,
+        "gate": "false_trigger",
+        "k": 0,
+        "n": 50,
+        "pass": true,
+        "rate": 0.0,
+        "wilson": [
+          0.0,
+          0.07134759913335872
+        ]
+      },
+      "fan_strict": {
+        "floor": 38,
+        "gate": "fan_strict",
+        "k": 40,
+        "means": {
+          "1": 0.574797535019073,
+          "2": 0.19655592603958205,
+          "4": 0.008063986022801456
+        },
+        "n": 50,
+        "pass": true,
+        "wilson": [
+          0.6696289406777459,
+          0.887562499842239
+        ]
+      },
+      "quiet_nll": {
+        "mean": -2.347582425826635e-05,
+        "n": 117,
+        "pass": true
+      },
+      "store": {
+        "means": {
+          "16": 0.04411715648680307,
+          "32": 0.03872253612925597,
+          "8": 0.054827355566279226
+        },
+        "n": 50,
+        "pass": true
+      },
+      "unrelated": {
+        "max": 0.05,
+        "mean_abs": 0.0007146249711513519,
+        "n": 50,
+        "pass": true
+      }
+    },
+    "pass": true
+  },
+  "elapsed_s": 159.7738904459984,
+  "floor_failures": [],
+  "floor_means": {
+    "avoid_delta": 0.09669723543804146,
+    "avoid_stored_lift": -0.1285090258220832,
+    "away_delta": -1.0943180120953668,
+    "fan1": 3.0352763720974325,
+    "fan2": 0.9923983175990482,
+    "fan4": 0.03559282800182707,
+    "prefer_delta": 3.0352763720974325,
+    "toward_delta": 1.7882910075116283
+  },
+  "floor_rates": {
+    "avoid_stored_down": {
+      "k": 42,
+      "n": 50,
+      "rate": 0.84,
+      "wilson": [
+        0.7148578393696501,
+        0.916625793219666
+      ]
+    },
+    "avoid_up": {
+      "k": 37,
+      "n": 50,
+      "rate": 0.74,
+      "wilson": [
+        0.6044684273515117,
+        0.8412847250644762
+      ]
+    },
+    "away_down": {
+      "k": 47,
+      "n": 50,
+      "rate": 0.94,
+      "wilson": [
+        0.8378290831116182,
+        0.979385029651026
+      ]
+    },
+    "competitor_down": {
+      "k": 47,
+      "n": 50,
+      "rate": 0.94,
+      "wilson": [
+        0.8378290831116182,
+        0.979385029651026
+      ]
+    },
+    "count": {
+      "k": 32,
+      "n": 50,
+      "rate": 0.64,
+      "wilson": [
+        0.501410168761127,
+        0.7586125034815325
+      ]
+    },
+    "fan_monotonic": {
+      "k": 45,
+      "n": 50,
+      "rate": 0.9,
+      "wilson": [
+        0.7863976856252035,
+        0.9565242350681096
+      ]
+    },
+    "outsider_same": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "prefer_up": {
+      "k": 46,
+      "n": 50,
+      "rate": 0.92,
+      "wilson": [
+        0.8116175308165717,
+        0.968450485911407
+      ]
+    },
+    "rif_ge4": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "similarity": {
+      "k": 35,
+      "n": 50,
+      "rate": 0.7,
+      "wilson": [
+        0.562496495355466,
+        0.8089644649911906
+      ]
+    },
+    "toward_up": {
+      "k": 47,
+      "n": 50,
+      "rate": 0.94,
+      "wilson": [
+        0.8378290831116182,
+        0.979385029651026
+      ]
+    },
+    "winner_same": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "floors_pass": true,
+  "git": "2177edf43b63b90fe0a4ca6e6a2206012b7307bb",
+  "half_life": 30.0,
+  "kind": "reconstruct-cue-guard",
+  "lambda": 0.3,
+  "matches_pr57": true,
+  "note": "One pass. Reconstruction is not an input to theta, the token half-life, or lambda.",
+  "pass": true,
+  "protocol": "cue-direction-word-v1",
+  "theta": 0.32,
+  "winner_events": {
+    "k": 215,
+    "n": 215
+  }
+}
