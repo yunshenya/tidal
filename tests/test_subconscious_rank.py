@@ -105,6 +105,8 @@ def test_prereg_locks_bitwise_identity_and_the_cost_grid():
     assert "np.array_equal" in text
     assert "No absolute tolerance" in text
     assert "one CPU thread" in text
+    assert "Intra-op threads and inter-op threads are both 1." in text
+    assert "Intra-op threads are `os.cpu_count()`." in text
     assert "noise floor" in text
     assert "Weigh unlabeled cadence." in text
     assert "Tone mqtag0:" in text
@@ -121,7 +123,11 @@ def shipped():
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     previous = torch.get_num_threads()
-    # One thread is the regime where this bfloat16 forward is bitwise.
+    # One intra-op thread and one inter-op thread is where this bfloat16 forward is bitwise.
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
     torch.set_num_threads(1)
     mem = LLMMemory()
     try:

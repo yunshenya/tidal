@@ -242,10 +242,20 @@ def _last_logits(mem, text: str, delta):
         mem._delta = None
 
 
+def _identity_threads() -> None:
+    import torch
+
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+    torch.set_num_threads(1)
+
+
 def _identity(mem) -> dict:
     import torch
 
-    torch.set_num_threads(1)
+    _identity_threads()
     from tidal.subconscious_eval import Encoder, write_rows
     from tidal.subconscious_measure_data import choice_items, phone_items, preference_items, tone_items
     from tidal.subconscious_softmix_score import _group_rows
@@ -380,6 +390,7 @@ def _identity(mem) -> dict:
         "phone_equal": spelled_fast == spelled_slow,
         "bare_generate_equal": bare_fast == bare_slow_model,
         "threads": int(__import__("torch").get_num_threads()),
+        "interop_threads": int(__import__("torch").get_num_interop_threads()),
         "ok": (
             not mismatches
             and sentinel_ok
@@ -530,6 +541,7 @@ def _cost(mem) -> dict:
         "warmup": WARMUP,
         "repeats": REPEATS,
         "threads": int(__import__("torch").get_num_threads()),
+        "interop_threads": int(__import__("torch").get_num_interop_threads()),
         "prompt_pool_noise": _noise(mem),
         "rows": rows,
     }
@@ -538,7 +550,7 @@ def _cost(mem) -> dict:
 def main() -> None:
     import torch
 
-    torch.set_num_threads(1)
+    _identity_threads()
     started = time.perf_counter()
     from tidal.llm_memory import LLMMemory
 
