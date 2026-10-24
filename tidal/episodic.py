@@ -36,12 +36,13 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
+from tidal.interface_v7 import check_fingerprint, check_modality, zero_fingerprint
 from tidal.reconstruct import residue_from_answer
 
 ArrayLike = Union[np.ndarray, Sequence[float]]
 SKIP_KINDS = frozenset({"chat", "noise"})
-# Every stored fact is text. The field is on the slot. There is no
-# perceptual-fingerprint field.
+# Default live write. Store writes may pass text|audio|image|fused|none.
+# Fingerprint is stored on the slot; tidal does not compute it.
 MEMORY_MODALITY = "text"
 # Content-free clock. phase = sin(angle). Angle 0 is the identity.
 # Write gain is 1 + CLOCK_SPAN * phase. Decay exponent rate is
@@ -322,15 +323,20 @@ class Slot:
     history: list = field(default_factory=list)
     # Write gain at stamp time. 1 until a nonzero clock phase. Not a fact.
     clock_gain: float = 1.0
-    # Record modality. Every write stores "text".
+    # Record modality. Text-only live writes store "text".
     modality: str = MEMORY_MODALITY
+    # growbrain encoder output. tidal stores and returns it. Width F=32.
+    fingerprint: Optional[np.ndarray] = None
     # Phone or birthday parts. Not the raw string. None for every other answer.
     # Spelling reads this with strength, age, and valence.
     residue: Optional[tuple] = None
 
     def __post_init__(self) -> None:
-        if self.modality != MEMORY_MODALITY:
-            raise ValueError("modality must be text")
+        self.modality = check_modality(str(self.modality))
+        if self.fingerprint is None:
+            self.fingerprint = zero_fingerprint()
+        else:
+            self.fingerprint = check_fingerprint(self.fingerprint)
 
 
 class EpisodicStore:
@@ -516,6 +522,8 @@ class EpisodicStore:
         sentence: Optional[np.ndarray] = None,
         answer: Optional[str] = None,
         text: Optional[str] = None,
+        fingerprint: Optional[np.ndarray] = None,
+        modality: Optional[str] = None,
     ) -> bool:
         """Insert or overwrite one slot. Returns True iff a write happened.
 
@@ -525,7 +533,10 @@ class EpisodicStore:
         not added to the previous value. ``answer`` is stored for the
         reconsolidation identity check. Spelling does not read it. A phone or
         a birthday also stores a residue of its parts. Overwrite replaces both.
-        A write that omits ``answer`` stores none.
+        A write that omits ``answer`` stores none. ``fingerprint`` is a
+        growbrain encoder vector of width 32; omitted writes store zeros.
+        ``modality`` is ``text``, ``audio``, ``image``, ``fused``, or
+        ``none``; omitted writes store ``text``.
         """
         if not self.gate_write(kind, surprise):
             return False
@@ -554,7 +565,8 @@ class EpisodicStore:
             sentence=sent,
             answer=stored,
             text=stored_text,
-            modality=MEMORY_MODALITY,
+            modality=MEMORY_MODALITY if modality is None else modality,
+            fingerprint=None if fingerprint is None else fingerprint,
             residue=residue_from_answer(stored),
         )
         hit_id, content_ids = self._locate(name, rel, group, stored_text)

@@ -76,6 +76,8 @@ EXPORT_KEYS = frozenset(
         "sleep_pressure",
         "arousal",
         "source",
+        "fingerprint",
+        "fusion_confidence",
     }
 )
 
@@ -244,7 +246,7 @@ def score_item(item_id: str) -> dict:
         kept_answer = slot.answer == PHONE
         off = mem.scripted_continuation(OFF_PROMPT)
         fields = mem.cue_fields(PHONE_PROMPT)
-        export_ok = int(fields["interface_version"]) == int(CUE_INTERFACE_VERSION) == 6 and set(fields) == EXPORT_KEYS
+        export_ok = int(fields["interface_version"]) == int(CUE_INTERFACE_VERSION) == 7 and set(fields) == EXPORT_KEYS
         live_birthday_high = _live(mem, BIRTHDAY_PROMPT, "birthday", BIRTHDAY, HIGH)
         live_birthday_long = _live(mem, BIRTHDAY_PROMPT, "birthday", BIRTHDAY, LONG)
         kept_date = mem.store._slots[-1].answer == BIRTHDAY
@@ -286,7 +288,7 @@ def score_item(item_id: str) -> dict:
         "birthday_emotion": surfaces["birthday_emotion"],
         "birthday_slip": surfaces["birthday_slip"],
         "off_relation": None if off is None else str(off),
-        "interface_version": int(CUE_INTERFACE_VERSION),
+        "interface_version": int(canonical_surfaces()["interface_version"]),
     }
     return {
         "gates": gates,

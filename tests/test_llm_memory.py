@@ -885,7 +885,7 @@ def test_shipped_llm_files_stay_byte_identical():
 
     root = ROOT / "tidal"
     inject = "bab6c73572a9566a4326d2e9c783b367b5eb1d6eb374f93d7c0004578128af5e"
-    source = "fa3f11ebfcb5bdae3499b2c7cc20a8ee155ee09a208e3fd5906049934419255d"
+    source = "39f86116d6b66cf3da0bf03baec42d0eaa0cb3ddb6bd66a2ac605666dad41c61"
     assert hashlib.sha256((root / "llm_inject_smollm2_135m.pt").read_bytes()).hexdigest() == inject
     assert hashlib.sha256((root / "llm_memory.py").read_bytes()).hexdigest() == source
 

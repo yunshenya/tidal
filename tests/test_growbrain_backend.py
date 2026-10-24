@@ -82,7 +82,7 @@ def test_stage0_pins_and_interface_version():
     assert GROWBRAIN_N_LAYERS == 4
     assert GROWBRAIN_HEAD_DIM == 48
     assert GROWBRAIN_CHECKPOINT == "e1_base_rebalance"
-    assert CUE_INTERFACE_VERSION == 6
+    assert CUE_INTERFACE_VERSION == 7
     assert CUE_THETA == 0.32
     assert CUE_LAMBDA == 0.3
     assert resolve_d_model(None, None) == 192
@@ -153,7 +153,9 @@ def test_default_store_is_d_model_not_the_injector_slot(monkeypatch, tmp_path):
         nll = mem.backend.answer_nll(logits, enc["input_ids"][0].tolist(), [False, True])
         assert nll > 0.0
         fields = mem.cue_fields("ab")
-        assert int(fields["interface_version"]) == 6
+        assert int(fields["interface_version"]) == 7
+        assert tuple(np.asarray(fields["fingerprint"]).shape) == (32,)
+        assert float(fields["fusion_confidence"]) == 0.0
         assert tuple(fields["vec"].shape) == (1, 2, 192)
     finally:
         mem.close()

@@ -125,7 +125,7 @@ def test_reconstruct_module_has_no_switch_and_banks_are_disjoint():
     assert "slot.answer" not in spelling
     assert "recall_surface" in spelling
     assert "PHONE_TAIL" not in spelling
-    assert CUE_INTERFACE_VERSION == 6
+    assert CUE_INTERFACE_VERSION == 7
     assert set(FIT_IDS).isdisjoint(HELD_IDS)
     assert len(FIT_IDS) == 8
     assert len(HELD_IDS) == 50

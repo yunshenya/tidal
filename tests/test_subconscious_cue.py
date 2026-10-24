@@ -187,8 +187,8 @@ def test_kwta_keeps_the_top_k_and_generation_does_not_call_it():
     assert rank_auc([1.0], [1.0]) == 0.5
 
 
-def test_modality_rejects_anything_but_text():
-    with pytest.raises(ValueError, match="text"):
+def test_modality_rejects_unknown_and_accepts_enum():
+    with pytest.raises(ValueError, match="unknown modality"):
         Slot(
             k=np.ones(2),
             v=np.ones(2, dtype=np.float32),
@@ -197,7 +197,7 @@ def test_modality_rejects_anything_but_text():
             t=1,
             modality="voice",
         )
-    with pytest.raises(ValueError, match="text"):
+    with pytest.raises(ValueError, match="unknown modality"):
         step_cue(
             CueState(),
             np.array([1.0]),
@@ -212,6 +212,31 @@ def test_modality_rejects_anything_but_text():
             valence_span=1.0,
             modalities=["voice"],
         )
+    slot = Slot(
+        k=np.ones(2),
+        v=np.ones(2, dtype=np.float32),
+        name="ada",
+        rel="note",
+        t=1,
+        modality="audio",
+    )
+    assert slot.modality == "audio"
+    assert slot.fingerprint.shape == (32,)
+    _state, row = step_cue(
+        CueState(),
+        np.array([1.0]),
+        np.array([1.0]),
+        np.array([0.0]),
+        np.ones((1, 2), dtype=np.float32),
+        theta=-1.0,
+        tau=4.0,
+        a_trig=1.0,
+        floor=0.0,
+        gap_tau=0.8,
+        valence_span=1.0,
+        modalities=["image"],
+    )
+    assert row["modality"] == "image"
     assert MEMORY_MODALITY == "text"
 
 
@@ -280,7 +305,7 @@ def test_offline_fields_and_interface_version():
         fields = mem.cue_fields(text)
         assert mem.store.slots[0].strength == before
         steps = hidden.shape[0]
-        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 6
+        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 7
         assert fields["modality"] == [["text"] * steps]
         assert fields["source"][0][0] == "cue"
         assert "spontaneous" not in fields["source"][0]
@@ -290,7 +315,10 @@ def test_offline_fields_and_interface_version():
         assert float(fields["arousal"].min()) >= 0.0
         assert float(fields["arousal"].max()) <= 1.0
         assert mem.store.slots[0].modality == "text"
-        assert "fingerprint" not in fields
+        fp = np.asarray(fields["fingerprint"], dtype=np.float32)
+        assert fp.shape == (32,) and fp.dtype.name == "float32"
+        assert float(fields["fusion_confidence"]) == 0.0
+        assert "fusion_weights" not in fields
         assert fields["cue_dim"] == mem.cue_dim
         assert tuple(fields["memory_id"].shape) == (1, steps)
         assert tuple(fields["vec"].shape) == (1, steps, mem.cue_dim)
