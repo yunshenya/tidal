@@ -62,3 +62,25 @@ The held bank was not scored.
 ## Fit result
 
 Report `reports/subconscious_clock_fit.json`. Fit git `8f4664a49c27994c026b31cbb95a216e4d08007d`. Every gate is 8/8, Wilson 95% [0.6755924351161198, 1.0]: wall, token, both, entrainment, fresh export, and the item. `canonical_same` is true. Elapsed 0.08675143199798185 seconds. From peak 1, wall elapsed 0, 1, 4, and 300 leave activation 1.0, 0.9885140203528962, 0.9548416039104165, and 0.03125. The carried 4-second trace matches 0.9548416039104165 with internal time 5.0. Token steps 0, 1, and 4 leave 1.0, 0.9771599684342459, and 0.9117224885582168. The both-clock points leave 0.7071067811865476 and 0.8312378961427878. A fresh token after a trigger at the same wall reading leaves 0.9771599684342459. Entrainment errors are 2.0, 1.0, and 0.5. Calibration leaves activation 0.9117224885582168. The fresh export's first activation is 1.0 and `interface_version` is 5. These counts did not move a held floor. Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, and the arousal weights were not changed.
+
+## Held result
+
+The held bank was scored once after the sentence above was committed. Git `27fdf54864b619ff5c4bc0349003df3ce32724cf`. Elapsed 0.513421332987491 seconds. Report `reports/subconscious_clock_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wall, token, both, entrainment, fresh export, and the item. The canonical levels match the fit record. Constants were not changed.
+
+## Sleep guard result
+
+The sleep guard was scored once after the sentence above was committed. Git `27fdf54864b619ff5c4bc0349003df3ce32724cf`. Elapsed 0.776676025998313 seconds. Report `reports/subconscious_clock_sleep_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The canonical record matches `reports/subconscious_sleep_held.json`. Process S formulas were not changed.
+
+## Arousal guard result
+
+The arousal guard was scored once after the sentence above was committed. Git `27fdf54864b619ff5c4bc0349003df3ce32724cf`. Elapsed 1.1136485640017781 seconds. Report `reports/subconscious_clock_arousal_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: surprise, quiet, valence and triggers, export, and the item. The canonical record matches `reports/subconscious_arousal_held.json`. Arousal weights were not changed.
+
+## Cue guard result
+
+The cue guard was scored once after the sentence above was committed. Git `27fdf54864b619ff5c4bc0349003df3ce32724cf`. Outer elapsed time 180.95111955799803 seconds, including the floor pass. The floor pass took 133.12191816899576 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_clock_cue_held.json` and `reports/subconscious_clock_cue_floors.json`.
+
+Direction gates match the merged cue-triggered rescore. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.00011631009031341158, 0.00025335254560394043, and 0.00017067436287602916. Armed seconds per token are 0.0029889260000676254, 0.0031389612730973486, and 0.0030871179994640193.
