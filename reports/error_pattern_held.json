@@ -1,0 +1,690 @@
+{
+  "bank_sha256": "b127a314367fbe273ec05b40841029748018170244c10ef84b7f72dab8fee514",
+  "canonical": {
+    "both": [
+      0.7071067811865476,
+      0.8312378961427878
+    ],
+    "false_events": 0,
+    "fan": [
+      1.0,
+      0.5219674706459045,
+      0.04393492266535759
+    ],
+    "fresh_activation_0": 0.0,
+    "live_4": 0.9548416039104165,
+    "live_internal": 5.0,
+    "off": null,
+    "rif_strengths": [
+      1.0,
+      0.95,
+      1.0
+    ],
+    "spontaneous_fires": 1,
+    "spontaneous_rate": 0.0625,
+    "surfaces": {
+      "birthday_emotion": "April 12, 1984",
+      "birthday_high": "April 21, 1984",
+      "birthday_long": "April 1, 1984",
+      "birthday_low": "April 1, 1984",
+      "birthday_slip": "April 12, 1984",
+      "phone_emotion": "+1-617-555-4862",
+      "phone_high": "+1-617-555-4826",
+      "phone_long": "+1-617-555-5937",
+      "phone_low": "+1-617-555-5937",
+      "phone_slip": "+1-617-555-4862"
+    },
+    "token": [
+      1.0,
+      0.9771599684342459,
+      0.9117224885582168
+    ],
+    "wake_pressure": 0.2990792952357356,
+    "wall": [
+      1.0,
+      0.9885140203528962,
+      0.9548416039104165,
+      0.03125
+    ]
+  },
+  "canonical_same": true,
+  "elapsed_s": 16.244382283010054,
+  "explicit": {
+    "exact": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "gist": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "intrusion": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "intrusion_events": {
+      "k": 0,
+      "n": 50,
+      "pass": true,
+      "rate": 0.0,
+      "wilson": [
+        0.0,
+        0.07134759913335872
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "live": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "peripheral": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "explicit_match": true,
+  "failures": [],
+  "false_trigger_events": 0,
+  "git": "ed42036e8e58d84178c2b4d78f1a3277537d3870",
+  "ids": [
+    "error-held-000",
+    "error-held-001",
+    "error-held-002",
+    "error-held-003",
+    "error-held-004",
+    "error-held-005",
+    "error-held-006",
+    "error-held-007",
+    "error-held-008",
+    "error-held-009",
+    "error-held-010",
+    "error-held-011",
+    "error-held-012",
+    "error-held-013",
+    "error-held-014",
+    "error-held-015",
+    "error-held-016",
+    "error-held-017",
+    "error-held-018",
+    "error-held-019",
+    "error-held-020",
+    "error-held-021",
+    "error-held-022",
+    "error-held-023",
+    "error-held-024",
+    "error-held-025",
+    "error-held-026",
+    "error-held-027",
+    "error-held-028",
+    "error-held-029",
+    "error-held-030",
+    "error-held-031",
+    "error-held-032",
+    "error-held-033",
+    "error-held-034",
+    "error-held-035",
+    "error-held-036",
+    "error-held-037",
+    "error-held-038",
+    "error-held-039",
+    "error-held-040",
+    "error-held-041",
+    "error-held-042",
+    "error-held-043",
+    "error-held-044",
+    "error-held-045",
+    "error-held-046",
+    "error-held-047",
+    "error-held-048",
+    "error-held-049"
+  ],
+  "implicit": {
+    "context_dz": 2.306501266001375,
+    "context_mean": 3.1899565124511717,
+    "context_mean_delta": 3.3451554679870608,
+    "context_positive": {
+      "k": 50,
+      "n": 50,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "cue_dz": 1.394142246389373,
+    "cue_mean": 1.0676419448852539,
+    "cue_mean_delta": 1.2228409004211427,
+    "cue_positive": {
+      "k": 49,
+      "n": 50,
+      "rate": 0.98,
+      "wilson": [
+        0.8950455641036219,
+        0.9964607407283539
+      ]
+    },
+    "finite": true,
+    "n": 50,
+    "nomem_mean": -0.15519895553588867,
+    "pass": true
+  },
+  "implicit_pass": true,
+  "kind": "error-pattern-held",
+  "note": "One held pass. Explicit recall is report-only. Mechanisms were not changed.",
+  "pass": true,
+  "protocol": "error-pattern-v1",
+  "rows": [
+    {
+      "context_delta": 2.3101305961608887,
+      "cue_delta": 0.012387275695800781,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-000",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.8809003829956055,
+      "cue_delta": 0.6601219177246094,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-001",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.271510124206543,
+      "cue_delta": 0.7822370529174805,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-002",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.878608226776123,
+      "cue_delta": 0.5269746780395508,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-003",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.998590469360352,
+      "cue_delta": 1.915257453918457,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-004",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.1451520919799805,
+      "cue_delta": 0.04005718231201172,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-005",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 1.6979351043701172,
+      "cue_delta": 0.19861316680908203,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-006",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.498661994934082,
+      "cue_delta": 0.2450542449951172,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-007",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.089848518371582,
+      "cue_delta": 0.25402259826660156,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-008",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.6450071334838867,
+      "cue_delta": -0.02562427520751953,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-009",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.347590446472168,
+      "cue_delta": 0.9000587463378906,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-010",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.836742401123047,
+      "cue_delta": 0.4718818664550781,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-011",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 6.022666931152344,
+      "cue_delta": 0.6557016372680664,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-012",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.2179718017578125,
+      "cue_delta": 0.7847728729248047,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-013",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.260093688964844,
+      "cue_delta": 2.3788185119628906,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-014",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.445052146911621,
+      "cue_delta": 2.458888053894043,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-015",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 0.6984167098999023,
+      "cue_delta": 1.122096061706543,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-016",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 1.1711444854736328,
+      "cue_delta": 2.198357582092285,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-017",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 0.7052145004272461,
+      "cue_delta": 1.5825834274291992,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-018",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.902256965637207,
+      "cue_delta": 0.9799652099609375,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-019",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.046377182006836,
+      "cue_delta": 1.564870834350586,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-020",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.3720016479492188,
+      "cue_delta": 0.6608772277832031,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-021",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.397336959838867,
+      "cue_delta": 2.7691354751586914,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-022",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.597830772399902,
+      "cue_delta": 2.7157773971557617,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-023",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 0.2917938232421875,
+      "cue_delta": 0.4656648635864258,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-024",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 1.1530323028564453,
+      "cue_delta": 1.613851547241211,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-025",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.314608573913574,
+      "cue_delta": 0.6416282653808594,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-026",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.60200309753418,
+      "cue_delta": 2.295041084289551,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-027",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.1954517364501953,
+      "cue_delta": 0.8995580673217773,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-028",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.3565711975097656,
+      "cue_delta": 0.43917083740234375,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-029",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 1.8672094345092773,
+      "cue_delta": 1.2730979919433594,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-030",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.536005020141602,
+      "cue_delta": 1.0243282318115234,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-031",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.186521530151367,
+      "cue_delta": 2.248774528503418,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-032",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.014733791351318,
+      "cue_delta": 1.3323497772216797,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-033",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 0.9186258316040039,
+      "cue_delta": 0.2647895812988281,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-034",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.9255504608154297,
+      "cue_delta": 3.075162887573242,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-035",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.1676015853881836,
+      "cue_delta": 0.06525897979736328,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-036",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.270647048950195,
+      "cue_delta": 0.7551727294921875,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-037",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.226963043212891,
+      "cue_delta": 1.321976661682129,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-038",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 5.806768417358398,
+      "cue_delta": 1.1146793365478516,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-039",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.273819923400879,
+      "cue_delta": 1.9093008041381836,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-040",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 1.3397064208984375,
+      "cue_delta": 2.6789207458496094,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-041",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 4.41043758392334,
+      "cue_delta": 2.0791797637939453,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-042",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.0125818252563477,
+      "cue_delta": 2.3098134994506836,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-043",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.634458541870117,
+      "cue_delta": 0.6118383407592773,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-044",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.7087135314941406,
+      "cue_delta": 1.973790168762207,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-045",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.0438928604125977,
+      "cue_delta": 0.5158004760742188,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-046",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.6666431427001953,
+      "cue_delta": 2.556023597717285,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-047",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 3.5057430267333984,
+      "cue_delta": 0.3092021942138672,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-048",
+      "shape_pass": true
+    },
+    {
+      "context_delta": 2.390648365020752,
+      "cue_delta": 1.5147838592529297,
+      "explicit_pass": true,
+      "finite": true,
+      "id": "error-held-049",
+      "shape_pass": true
+    }
+  ],
+  "shape": {
+    "decay": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "false_trigger": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "fan": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "fresh": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "rif": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "spontaneous": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "shape_pass": true
+}
