@@ -11,13 +11,16 @@ the tie break. One winner is injected. There is no average across neighbors.
 On the trigger token, ``dt`` is 0 and the exported activation is
 ``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
 ``theta``. ``fan_factor`` is ``max(0, (S - ln n) / S)`` with ``S`` fixed at
-1.45, so fan 1 leaves ``a_trig`` unchanged. A later token that does not
-trigger keeps that fan factor and uses
+1.45, so fan 1 leaves ``a_trig`` unchanged. The fan factor only scales that
+activation down. A token with candidates past ``theta`` still triggers when
+the product is below ``floor``, including when the factor is 0. A later
+token that does not trigger keeps that fan factor and uses
 ``a = a_trig * fan_factor * exp(-dt / tau)``. ``dt`` is the number of tokens
 after the trigger. A new winner resets ``dt`` and recomputes the fan factor.
-``a`` below ``floor`` clears the trace. The same-token add is applied after
-the cue is copied, so the cue does not depend on the add and no earlier
-position sees it. This module does not apply the language-model gain.
+On that decay path, ``a`` below ``floor`` clears the carried trace. The
+same-token add is applied after the cue is copied, so the cue does not
+depend on the add and no earlier position sees it. This module does not
+apply the language-model gain.
 """
 from __future__ import annotations
 
@@ -305,10 +308,6 @@ def step_cue(
     if choice is not None:
         factor = fan_factor(int(choice["n"]), fan_s)
         activation = float(a_trig) * factor
-        if activation < float(floor):
-            cleared = _blank(cue_dim)
-            cleared["candidates"] = [int(item) for item in choice["candidates"]]
-            return CueState(), cleared
         index = int(choice["index"])
         vec = np.asarray(values[index], dtype=np.float32).reshape(-1).copy()
         offset = float(valence_span) * math.tanh(float(valences[index]))

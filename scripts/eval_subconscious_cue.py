@@ -36,6 +36,7 @@ ANISOTROPY_PATH = REPORT_DIR / "subconscious_cue_anisotropy.json"
 KWTA_FIT_PATH = REPORT_DIR / "subconscious_cue_kwta_fit.json"
 DIRECTION_HELD_PATH = REPORT_DIR / "subconscious_cue_direction_held.json"
 REVISION_PATH = REPORT_DIR / "subconscious_cue_revision_held.json"
+WORD_HELD_PATH = REPORT_DIR / "subconscious_cue_word_held.json"
 COMPETITION_FIT_PATH = REPORT_DIR / "subconscious_cue_competition_fit.json"
 KWTA_KS = (1, 2, 3, 4)
 HELD_N_MIN = 50
@@ -540,6 +541,49 @@ def _fan_summary(rows: list) -> dict:
     }
 
 
+def _decay_records(mem, prefer, prefer_rows) -> list:
+    """Activation decay from the last trigger. Logit L1 is not a gate.
+
+    Offsets 0, 1, 2, 4, and 8 are measured from the last triggering token.
+    Offsets 1 through 8 must not trigger. Activation at 0 is positive, the
+    series is monotone non-increasing within 1e-6, and activation at 8 is
+    strictly below activation at 0.
+    """
+    records = []
+    for item, row in zip(prefer, prefer_rows):
+        text = item["text"] + FILLER
+        _write(mem, [row])
+        fields = mem.cue_fields(text)
+        activation = fields["activation"][0].tolist()
+        triggered = fields["triggered"][0].tolist()
+        record = {"id": item["id"], "pass": False, "reason": ""}
+        hits = [index for index, flag in enumerate(triggered) if flag]
+        if not hits:
+            record["reason"] = "no trigger"
+            records.append(record)
+            continue
+        start = int(hits[-1])
+        if start + DECAY_OFFSETS[-1] >= len(activation):
+            record["reason"] = "sequence shorter than distance 8"
+            records.append(record)
+            continue
+        if any(triggered[start + 1 : start + DECAY_OFFSETS[-1] + 1]):
+            record["reason"] = "retrigger"
+            records.append(record)
+            continue
+        taken = [float(activation[start + offset]) for offset in DECAY_OFFSETS]
+        monotone = all(taken[i] >= taken[i + 1] - 1e-6 for i in range(len(taken) - 1))
+        record["activation"] = taken
+        if not (taken[0] > 0.0 and taken[-1] < taken[0] and monotone):
+            record["reason"] = "activation"
+            records.append(record)
+            continue
+        record["pass"] = True
+        record["reason"] = "ok"
+        records.append(record)
+    return records
+
+
 def _score_cell(mem, bank, prefer_rows, incidental_rows, base, alpha) -> dict:
     import torch
 
@@ -568,53 +612,8 @@ def _score_cell(mem, bank, prefer_rows, incidental_rows, base, alpha) -> dict:
     gate2_rate = triggers / len(neutrals)
     gate2 = bool(gate2_rate <= FALSE_TRIGGER_CEILING)
 
-    decay_rows = []
-    decay_pass = 0
-    for item, row in zip(prefer, prefer_rows):
-        text = item["text"] + FILLER
-        _write(mem, [row])
-        fields = mem.cue_fields(text)
-        activation = fields["activation"][0].tolist()
-        triggered = fields["triggered"][0].tolist()
-        record = {"id": item["id"], "pass": False, "reason": ""}
-        hits = [index for index, flag in enumerate(triggered) if flag]
-        if not hits:
-            record["reason"] = "no trigger"
-            decay_rows.append(record)
-            continue
-        # Distance is measured from the last triggering token. The fact's own
-        # tokens are a run of matches, so the first match is still inside the cue.
-        start = int(hits[-1])
-        if start + DECAY_OFFSETS[-1] >= len(activation):
-            record["reason"] = "sequence shorter than distance 8"
-            decay_rows.append(record)
-            continue
-        if any(triggered[start + 1 : start + DECAY_OFFSETS[-1] + 1]):
-            record["reason"] = "retrigger"
-            decay_rows.append(record)
-            continue
-        taken = [float(activation[start + offset]) for offset in DECAY_OFFSETS]
-        monotone = all(taken[i] >= taken[i + 1] - 1e-6 for i in range(len(taken) - 1))
-        if not (taken[0] > 0.0 and taken[-1] < taken[0] and monotone):
-            record["reason"] = "activation"
-            record["activation"] = taken
-            decay_rows.append(record)
-            continue
-        quiet = base["decay_quiet"][item["id"]]
-        armed_logits = _armed_logits(mem, text)
-        l1_0 = float(torch.sum(torch.abs(armed_logits[start] - quiet[start])))
-        l1_8 = float(torch.sum(torch.abs(armed_logits[start + 8] - quiet[start + 8])))
-        record["l1_0"] = l1_0
-        record["l1_8"] = l1_8
-        record["activation"] = taken
-        if not (l1_8 < l1_0):
-            record["reason"] = "logit"
-            decay_rows.append(record)
-            continue
-        record["pass"] = True
-        record["reason"] = "ok"
-        decay_pass += 1
-        decay_rows.append(record)
+    decay_rows = _decay_records(mem, prefer, prefer_rows)
+    decay_pass = int(sum(bool(row["pass"]) for row in decay_rows))
     gate3 = bool(decay_pass >= DECAY_PASS_MIN)
 
     size_means = {}
@@ -719,10 +718,8 @@ def _baselines(mem, bank, prefer_rows) -> dict:
     unrelated_empty = []
     for item in bank.NEUTRAL_CHOICE:
         unrelated_empty.append(_margin(mem, item["prompt"], item["good"], item["bad"]))
+    # Decay is scored on activation. Quiet logits are not part of that gate.
     decay_quiet = {}
-    for item in prefer:
-        text = item["text"] + FILLER
-        decay_quiet[item["id"]] = _quiet_logits(mem, text)
     nll_empty = {}
     for item in bank.NEUTRAL_NLL:
         values, _prompt_len = _continuation_logps(mem, item["prompt"], item["continuation"], live=False)
@@ -1602,6 +1599,204 @@ def revision() -> dict:
     return payload
 
 
+def _prefer_slice(mem, bank) -> dict:
+    """Cued margin, activation decay, and fan on one prefer list.
+
+    Alpha stays the shipped 0.25. This does not call ``_freeze_alpha``.
+    """
+    prefer = list(bank.PREFER)
+    rows = _encode(mem, [_fact(item) for item in prefer])
+    mem.store.clear()
+    empties = [
+        _margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"])
+        for item in prefer
+    ]
+    cued = []
+    for index, (item, row, empty) in enumerate(zip(prefer, rows, empties)):
+        _print(f"scope cued {index + 1}/{len(prefer)}")
+        _write(mem, [row])
+        armed = _margin(mem, item["prompt"], item["good"], item["bad"], item["name"], item["rel"])
+        cued.append(float(armed - empty))
+    mean = float(sum(cued) / len(cued))
+    positive = int(sum(value > 0.0 for value in cued))
+    _print("scope decay")
+    decay_rows = _decay_records(mem, prefer, rows)
+    decay_k = int(sum(bool(row["pass"]) for row in decay_rows))
+    fan_rows = []
+    for index, (item, row, effect, empty) in enumerate(zip(prefer, rows, cued, empties)):
+        _print(f"scope fan {index + 1}/{len(prefer)}")
+        measured = _fan_effects(mem, item, row, float(empty), float(FROZEN_ALPHA))
+        measured["id"] = item["id"]
+        measured["fan1"] = float(effect)
+        if measured["fan2"] is None or measured["fan4"] is None:
+            measured["strict"] = False
+        else:
+            measured["strict"] = bool(float(effect) > float(measured["fan2"]) > float(measured["fan4"]))
+        fan_rows.append(measured)
+    fan = _fan_summary(fan_rows)
+    reasons = {}
+    for row in decay_rows:
+        reasons[row["reason"]] = reasons.get(row["reason"], 0) + 1
+    return {
+        "n": len(prefer),
+        "cued_positive": positive,
+        "cued_mean": mean,
+        "cued_wilson": _wilson(positive, len(prefer)),
+        "decay_pass": decay_k,
+        "decay_wilson": _wilson(decay_k, len(prefer)),
+        "decay_reasons": reasons,
+        "fan_k": int(fan["k"]),
+        "fan_n": int(fan["n"]),
+        "fan_means": fan["means"],
+        "fan_wilson": _wilson(int(fan["k"]), int(fan["n"])) if int(fan["n"]) else None,
+        "alpha": float(FROZEN_ALPHA),
+    }
+
+
+def scope_fit() -> dict:
+    """Shipped cell on the n=8 direction fit bank and on fit50.
+
+    Does not re-select alpha, theta, half-life, lambda, or fan S, and does
+    not score a held bank.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_cue_fit50_data import fit50_bank
+
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        _print("scope n=8")
+        small = _prefer_slice(mem, _fit_bank())
+        _print("scope fit50")
+        wide = _prefer_slice(mem, fit50_bank())
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    payload = {
+        "kind": "scope-fit",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "alpha_reselected": False,
+        "decay_definition": (
+            "From the last triggering token, offsets 0, 1, 2, 4, and 8 exist; "
+            "no retrigger on offsets 1 through 8; activation at 0 is positive; "
+            "activation is monotone non-increasing within 1e-6; activation at 8 "
+            "is strictly below activation at 0. Logit L1 is not part of the gate."
+        ),
+        "n8": small,
+        "fit50": wide,
+        "held_scored": False,
+        "note": "Design check only. Floors were not moved.",
+    }
+    _dump(REPORT_DIR / "subconscious_cue_scope_fit.json", payload)
+    _print(json.dumps({"n8": small, "fit50": wide}, indent=2))
+    return payload
+
+
+def word_held() -> dict:
+    """One held pass of the real-word direction bank, then the previous floors.
+
+    Refuses unless the decay definition and the gates are already in the
+    preregistration. Does not move theta, half-life, lambda, alpha, or a floor.
+    """
+    import tidal.llm_memory as mod
+    from tidal.subconscious_cue_word_data import PROTOCOL, word_bank
+
+    prereg = (REPORT_DIR / "subconscious_cue_prereg.md").read_text(encoding="utf-8")
+    for needle in (
+        PROTOCOL,
+        "38/50",
+        "Logit L1 is not part of the gate.",
+        "distribution mismatch: injection cannot steer toward unknown nonce tokens",
+        "The word bank was not scored.",
+    ):
+        if needle not in prereg:
+            raise RuntimeError("word-bank gates are not in the preregistration")
+    if WORD_HELD_PATH.is_file():
+        raise RuntimeError("the word bank was already scored")
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = word_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        prefer = list(bank.PREFER)
+        if len(prefer) < FRESH_N_MIN or len(list(bank.NEUTRAL_CHOICE)) < FRESH_N_MIN:
+            raise RuntimeError("word bank is below 50")
+        if len(list(bank.NEUTRAL_NLL)) < FRESH_N_MIN or len(list(bank.incidental_facts())) < 31:
+            raise RuntimeError("word bank controls are short")
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        base = _baselines(mem, bank, prefer_rows)
+        scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base, FROZEN_ALPHA)
+        summary = _fresh_summary(scored)
+        cost = _cost(mem, prefer_rows + incidental_rows, prefer[0]["prompt"])
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    floors = held(dest=REPORT_DIR / "subconscious_cue_word_floors.json")
+    payload = {
+        "kind": "word-held",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "protocol": PROTOCOL,
+        "bank_sha256": bank.sha256(),
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "constants_changed": False,
+        "direction": summary,
+        "cost": cost,
+        "floors_pass": bool(floors["pass"]),
+        "floor_failures": floors["failures"],
+        "floor_rates": floors["rates"],
+        "floor_means": floors["means"],
+        "pass": bool(summary["pass"] and floors["pass"]),
+        "theta_changed": False,
+        "note": "One pass. Fit counts were not used to move a gate or a floor.",
+    }
+    _dump(WORD_HELD_PATH, payload)
+    _print(
+        json.dumps(
+            {
+                "pass": payload["pass"],
+                "direction_pass": summary["pass"],
+                "floors_pass": payload["floors_pass"],
+                "direction": {
+                    name: {
+                        "pass": row["pass"],
+                        **{key: row[key] for key in row if key in ("k", "n", "mean", "mean_abs", "rate")},
+                    }
+                    for name, row in summary["gates"].items()
+                },
+                "floor_failures": floors["failures"],
+                "cost": cost,
+            },
+            indent=2,
+        )
+    )
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1618,6 +1813,10 @@ def main(argv: list) -> None:
         direction_held()
     elif mode == "revision":
         revision()
+    elif mode == "scope-fit":
+        scope_fit()
+    elif mode == "word-held":
+        word_held()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

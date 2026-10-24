@@ -304,23 +304,26 @@ def test_theta_candidates_compete_and_a_closer_companion_drops_more():
 
     winner = _slot("cue", 0.0, [1.0, 0.0, 0.0])
     close = _slot("cue", 0.0, [0.8, 0.6, 0.0])
-    far = _slot("other", 0.0, [0.4, 0.0, np.sqrt(1.0 - 0.16)])
+    farther = _slot("cue", 0.0, [0.3, 0.0, np.sqrt(1.0 - 0.09)])
     missed = _slot("cue", 0.0, [0.0, 1.0, 0.0])
     exempt = _slot("cue", 1.0, [0.9, 0.43589, 0.0])
-    slots = [winner, close, far, missed, exempt]
-    changed = compete_retrieved(slots, 0, [0, 1, 2, 4])
+    outsider = _slot("other", 0.0, [0.4, 0.0, np.sqrt(1.0 - 0.16)])
+    slots = [winner, close, farther, missed, exempt, outsider]
+    changed = compete_retrieved(slots, 0, [0, 1, 2, 4, 5])
     assert changed == 2
     assert slots[0].strength == 1.0
     assert slots[3].strength == 1.0
     assert slots[4].strength == 1.0
+    assert slots[5].strength == 1.0
     assert slots[1].strength < slots[2].strength < 1.0
 
 
-def test_five_theta_candidates_stay_unscaled_when_the_fan_floor_clears_the_token():
-    """The floor-bank competitor gate, through the shipped _rank path.
+def test_five_theta_candidates_still_trigger_and_scale_same_relation_only():
+    """Fan does not clear the trigger, and a different relation is not scaled.
 
-    Five slots past theta make fan_factor 0, so the token is not triggered.
-    _rank competes only a triggered token, and every strength stays 1.
+    Five slots past theta make fan_factor 0, so activation is 0 and the
+    residual adds nothing. The token still triggers. The three same-relation
+    companions are scaled. The different-relation outsider stays at 1.
     """
     from tidal.cue_inject import fan_factor
     import tidal.llm_memory as mod
@@ -353,21 +356,25 @@ def test_five_theta_candidates_stay_unscaled_when_the_fan_floor_clears_the_token
 
         mem.cue_hidden = _fixed
         info = mem._rank("slot 0 is Q")
-        assert info["memory_id"] < 0
-        assert mem.last_rif == {"n": 0}
-        assert [float(slot.strength) for slot in slots] == [1.0, 1.0, 1.0, 1.0, 1.0]
+        assert info["memory_id"] == 0
+        assert mem.last_rif == {"n": 3}
+        assert slots[0].strength == 1.0
+        assert all(slot.strength < 1.0 for slot in slots[1:4])
+        assert slots[4].strength == 1.0
         assert all(len(row) == 5 for row in mem._last_candidates)
+        fields = mem.cue_fields("slot 0 is Q")
+        assert bool(fields["triggered"][0, 0].item()) is True
+        assert float(fields["activation"][0, 0]) == 0.0
     finally:
         mem.close()
 
 
-def test_rank_scales_a_theta_outsider_and_spares_a_missed_competitor():
-    """Floor-bank pattern through the shipped _rank path.
+def test_rank_scales_a_same_relation_theta_companion_and_spares_the_outsider():
+    """A missed-theta companion and a different-relation theta candidate stay at 1.
 
-    A same-relation competitor that misses theta stays at strength 1.
-    A different-relation outsider that clears theta is scaled.
-    forget_rivals on the same keys does the opposite: it scales the
-    same-relation competitors and leaves the outsider alone.
+    One same-relation companion that clears theta is scaled. forget_rivals
+    on the same keys still scales every same-relation rival and leaves the
+    outsider alone.
     """
     model, tok = build_tiny_lm(seed=2)
     mem = LLMMemory(model, tok)
@@ -390,8 +397,11 @@ def test_rank_scales_a_theta_outsider_and_spares_a_missed_competitor():
             slot.k = key
         slots[0].k = match.copy()
         near = 0.6 * match
-        near[4] = 0.8
-        slots[4].k = near / np.linalg.norm(near)
+        near[1] = 0.8
+        slots[1].k = near / np.linalg.norm(near)
+        outsider = 0.6 * match
+        outsider[4] = 0.8
+        slots[4].k = outsider / np.linalg.norm(outsider)
 
         def _fixed(_text, _match=match, _center=center):
             row = _match + _center
@@ -402,8 +412,9 @@ def test_rank_scales_a_theta_outsider_and_spares_a_missed_competitor():
         assert info["gap"] is not None and float(info["gap"]) > 0.0
         assert mem.last_rif["n"] == 1
         assert slots[0].strength == 1.0
-        assert [slot.strength for slot in slots[1:4]] == [1.0, 1.0, 1.0]
-        assert slots[4].strength < 1.0
+        assert slots[1].strength < 1.0
+        assert [slot.strength for slot in slots[2:4]] == [1.0, 1.0]
+        assert slots[4].strength == 1.0
         parallel = [_slot(slot.rel, 0.0, slot.k) for slot in slots]
         assert forget_rivals(parallel, 0) == 3
         assert parallel[0].strength == 1.0

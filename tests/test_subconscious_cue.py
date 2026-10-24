@@ -441,6 +441,59 @@ def test_fan_factor_decreases_and_stays_out_of_the_export_scale():
     assert "lambda" not in (ROOT / "tidal" / "cue_inject.py").read_text(encoding="utf-8")
 
 
+def test_fan_below_the_floor_still_triggers_and_decay_still_clears():
+    width = 6
+    cue = np.zeros(width, dtype=np.float64)
+    cue[0] = 1.0
+    keys = [cue.copy()]
+    for index in range(1, 5):
+        near = 0.6 * cue
+        near[index] = 0.8
+        keys.append(near)
+    keys = np.stack(keys)
+    values = np.eye(width, dtype=np.float32)[:5]
+    quiet = np.zeros(width, dtype=np.float64)
+    quiet[-1] = 1.0
+    shared = dict(
+        theta=0.32,
+        tau=30.0 / math.log(2.0),
+        a_trig=1.0,
+        floor=0.05,
+        gap_tau=0.8,
+        valence_span=1.0,
+    )
+    four, _final = trace_sequence(
+        np.stack([cue, quiet]),
+        keys[:4],
+        np.ones(4),
+        np.zeros(4),
+        values[:4],
+        np.zeros(width),
+        **shared,
+    )
+    assert fan_factor(4) < 0.05
+    assert bool(four["triggered"][0]) is True
+    assert four["activation"][0] == pytest.approx(fan_factor(4))
+    assert int(four["memory_id"][0]) == 0
+    assert list(four["candidates"][0]) == [0, 1, 2, 3]
+    assert four["activation"][1] == 0.0
+    assert int(four["memory_id"][1]) == -1
+    five, _final = trace_sequence(
+        cue.reshape(1, -1),
+        keys,
+        np.ones(5),
+        np.zeros(5),
+        values,
+        np.zeros(width),
+        **shared,
+    )
+    assert fan_factor(5) == 0.0
+    assert bool(five["triggered"][0]) is True
+    assert five["activation"][0] == 0.0
+    assert int(five["memory_id"][0]) == 0
+    assert list(five["candidates"][0]) == [0, 1, 2, 3, 4]
+
+
 def test_half_life_halves_the_activation():
     half = 10.0
     tau = half / math.log(2.0)
@@ -568,6 +621,10 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "competitor strength below 1 | 0/50" in text
     assert "The RIF trace matches compete_retrieved on 50/50." in text
     assert "cue-direction-fit50-v1" in text
+    assert "cue-direction-word-v1" in text
+    assert "Logit L1 is not part of the gate." in text
+    assert "distribution mismatch: injection cannot steer toward unknown nonce tokens" in text
+    assert "The word bank was not scored." in text
     assert "compete_retrieved" in (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
@@ -582,6 +639,29 @@ def test_prereg_locks_the_schedule_and_the_citations():
             fit_src = ast.get_source_segment(script, node)
     assert "0.35" not in fit_src
     assert "SCHEDULE" in fit_src
+
+
+def test_word_direction_bank_is_disjoint_and_large():
+    from tidal.subconscious_cue_word_data import N, word_bank
+
+    bank = word_bank()
+    assert len(bank.PREFER) == N == 50
+    assert len(bank.NEUTRAL_CHOICE) == 50
+    assert len(bank.NEUTRAL_NLL) == 50
+    assert len(bank.incidental_facts()) >= 31
+    assert bank.PROTOCOL == "cue-direction-word-v1"
+    assert bank.PREFER[0]["prompt"].startswith("Hand ")
+    assert "circles toward" in bank.PREFER[0]["text"]
+    assert len(bank.sha256()) == 64
+    source = (ROOT / "tidal" / "subconscious_cue_word_data.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imported = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            imported.extend(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.append(node.module.split(".")[0])
+    assert "torch" not in imported
 
 
 def test_fit50_direction_bank_is_disjoint_and_large():

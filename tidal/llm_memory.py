@@ -7,8 +7,9 @@ The decoder index is not part of that interface. A memory is a candidate only
 when ``cos(cue - query_center, key)`` is at least ``theta``. Theta does not
 read strength. The winner is the one candidate with the greatest
 ``(log(strength), cosine, -index)``. One winner is added. There is no
-mixture. Before that add, every other candidate that cleared theta takes
-the existing retrieval-induced-forgetting keep. Similarity is key cosine
+mixture. Before that add, every other candidate that cleared theta and
+shares the winner's relation takes the existing retrieval-induced-forgetting
+keep. A different relation is never scaled. Similarity is key cosine
 to the winner, so a closer companion is scaled more. The winner is not
 scaled. A slot that missed theta is not scaled. A historical strength-weighted mixture is recorded in
 ``docs/llm_memory.md`` and in :func:`activation_weights`; generation does not
@@ -20,10 +21,13 @@ depend on the add, and no earlier position sees it. The logit at ``t``, which
 is the distribution for token ``t+1``, does see it. On a trigger, ``dt`` is 0
 and ``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
 theta, and ``fan_factor`` is ``max(0, (S - ln n) / S)`` with ``S`` fixed.
-A later token that does not trigger keeps that fan factor and uses
+That factor only scales activation. A token with candidates past theta still
+triggers when the product is below :data:`CUE_FLOOR`. A later token that does
+not trigger keeps that fan factor and uses
 ``a = a_trig * fan_factor * exp(-dt / tau)`` with ``dt`` the number of tokens
 after the trigger. ``tau = half_life / ln 2``. A new winner resets the clock
-and the fan factor. ``a`` below :data:`CUE_FLOOR` clears the trace. The fast
+and the fan factor. On that decay path, ``a`` below :data:`CUE_FLOOR` clears
+the carried trace. The fast
 timescale is this per-token decay. The slow timescale is the strength and
 replay update already on the slot. This schedule adds no second memory.
 The shipped generator re-forwards the whole prefix and recomputes
@@ -72,9 +76,10 @@ multiplies every nonzero valence by the replay decay and appends an audit row.
 A fact is written when it is salient and, once 32 accepted surprises are
 stored, its answer-token NLL is at least the quantile of that window of
 numbers. Fewer stored surprises leaves the salient fact accepted. A strict
-retrieval win then multiplies the strength of at most three other slots that
-share the winner's relation; the closer key is scaled down more, and the
-winner is left as read. ``gap_tau`` 0.80 still defines ``c``. The MLP weights
+retrieval win then multiplies the strength of the other same-relation
+candidates that cleared theta; a different relation is left alone, the closer
+key is scaled down more, and the winner is left as read. ``gap_tau`` 0.80
+still defines ``c``. The MLP weights
 are the shipped checkpoint;
 polarity does not replace them. The last layer of an untrained module is
 still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
@@ -1230,19 +1235,22 @@ def rival_indexes(slots, winner: int, max_set: int, salience_exempt: float) -> l
 
 
 def compete_retrieved(slots, winner: int, competitors) -> int:
-    """Scale every other candidate that cleared theta. Returns how many changed.
+    """Scale same-relation candidates that cleared theta. Returns how many changed.
 
-    The winner is not scaled. ``competitors`` is that theta set, including
-    the winner. Similarity is key cosine to the winner, and the keep is
+    Different-relation candidates are never scaled. The winner is not scaled.
+    ``competitors`` is the theta set, including the winner. An empty relation
+    is not a cue. Similarity is key cosine to the winner, and the keep is
     :func:`rif_competitor_keep`, so a closer companion drops more. A slot
     at or above the salience exempt is left alone. Slots that missed theta
     are absent from ``competitors``. This is competitive retrieval in the
-    sense of Norman, Newman, and Detre (2007): co-active candidates are
-    punished and only the winner is later injected. It is not their
-    oscillator and not their learning rule.
+    sense of Norman, Newman, and Detre (2007): co-active candidates that
+    share the winner's relation are punished and only the winner is later
+    injected. It is not their oscillator and not their learning rule.
     """
     if winner < 0 or winner >= len(slots):
         raise IndexError("competition winner is outside the store")
+    rel = slots[winner].rel
+    has_rel = isinstance(rel, str) and rel != ""
     pending = []
     seen = set()
     for raw in competitors:
@@ -1252,6 +1260,8 @@ def compete_retrieved(slots, winner: int, competitors) -> int:
         if index < 0 or index >= len(slots):
             raise IndexError("competition candidate is outside the store")
         seen.add(index)
+        if not has_rel or slots[index].rel != rel:
+            continue
         if float(slots[index].salience) >= float(RIF_SALIENCE_EXEMPT):
             continue
         pending.append(index)
@@ -1381,12 +1391,14 @@ class LLMMemory:
     activation is ``a_trig * fan_factor * decay``. The residual added to this
     model is that activation times :data:`CUE_LAMBDA`, strength, confidence,
     and valence gain, at that token only. Lambda is not copied into the
-    exported activation or value. The trace then decays until the floor or
-    until another token wins. Valence stays 0 until an experience is stored, so the
+    exported activation or value. The fan factor scales that activation and
+    does not clear a trigger. On a later token the trace decays until the
+    floor or until another token wins. Valence stays 0 until an experience is stored, so the
     gain stays 1. Strength stays 1 until replay or a nonzero clock phase. A
     fact is written when it is salient and, once 32 surprises are stored, its
-    answer-token NLL is at least the window quantile. A strict win scales at
-    most three other slots that share the winner's relation; the winner is
+    answer-token NLL is at least the window quantile. A strict win scales the
+    other same-relation candidates that cleared theta; a different relation
+    is left alone, and the winner is
     not scaled. Every :data:`REPLAY_EVERY` accepted writes, decay is
     recomputed, the top :data:`REPLAY_M` salient slots are refreshed, and at
     most that many same-relation surface repeats are merged. Key cosine does
