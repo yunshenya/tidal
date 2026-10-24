@@ -60,7 +60,8 @@ def stop_text(tok, ids) -> str:
 
 def _spans(mem, text: str, answer: str | None):
     """One forward. Returns legacy pool, sink-dropped pool, and the value pool."""
-    hidden, enc = mem._run_hidden(text)
+    hidden, enc, _logits = mem._run_hidden(text)
+    del _logits
     n = hidden.shape[0]
     content = mem._content_mask(enc, n)
     if answer is None:

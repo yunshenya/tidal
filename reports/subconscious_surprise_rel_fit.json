@@ -1,0 +1,544 @@
+{
+  "chosen": {
+    "quantile": 0.0
+  },
+  "circadian_fit_pass": true,
+  "constants": {
+    "clock_span": 0.25,
+    "replay_decay": 0.5,
+    "replay_every": 32,
+    "replay_m": 1,
+    "surprise_quantile": 0.0,
+    "surprise_window": 32,
+    "valence_span": 1.0,
+    "valence_step": 0.25
+  },
+  "grid": [
+    {
+      "bar": 9.955883026123047,
+      "high_mean_surprise": 16.595247268676758,
+      "high_n": 8,
+      "high_written": 8,
+      "keep_n": 8,
+      "keep_written": 8,
+      "low_mean_surprise": 2.541414961218834,
+      "low_n": 8,
+      "low_written": 0,
+      "ok": true,
+      "quantile": 0.0,
+      "seed_slots": 32,
+      "train_slots": 32,
+      "window": 32
+    },
+    {
+      "bar": 11.916155815124512,
+      "high_mean_surprise": 16.595247268676758,
+      "high_n": 8,
+      "high_written": 8,
+      "keep_n": 8,
+      "keep_written": 5,
+      "low_mean_surprise": 2.541414961218834,
+      "low_n": 8,
+      "low_written": 0,
+      "ok": false,
+      "quantile": 0.25,
+      "seed_slots": 32,
+      "train_slots": 32,
+      "window": 32
+    },
+    {
+      "bar": 13.199799537658691,
+      "high_mean_surprise": 16.595247268676758,
+      "high_n": 8,
+      "high_written": 8,
+      "keep_n": 8,
+      "keep_written": 4,
+      "low_mean_surprise": 2.541414961218834,
+      "low_n": 8,
+      "low_written": 0,
+      "ok": false,
+      "quantile": 0.5,
+      "seed_slots": 32,
+      "train_slots": 32,
+      "window": 32
+    }
+  ],
+  "keeps": {
+    "keep_n": 8,
+    "keep_written": 8,
+    "rows": [
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-0",
+        "surprise": 9.406257629394531,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-1",
+        "surprise": 10.493948936462402,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-2",
+        "surprise": 11.073226928710938,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-3",
+        "surprise": 12.819794654846191,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-4",
+        "surprise": 14.26408576965332,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-5",
+        "surprise": 14.672494888305664,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-6",
+        "surprise": 16.599489212036133,
+        "written": 1
+      },
+      {
+        "family": "keep",
+        "id": "surprise-rel-train-keep-7",
+        "surprise": 17.256486892700195,
+        "written": 1
+      }
+    ],
+    "seed_n": 32,
+    "seed_slots": 32,
+    "seed_written": 32
+  },
+  "result": {
+    "bank_kind": "fit",
+    "bank_sha256": "87a581a35f0d8ed51e8c394c68d241fc65da9fefbf119c4a1fc99b6fcb5b641d",
+    "cost": {
+      "above_forwards": 2,
+      "above_written": 1,
+      "below_forwards": 1,
+      "below_written": 0,
+      "buffers": 66931,
+      "chat_forwards": 0,
+      "chat_written": 0,
+      "clock_span": 0.25,
+      "mlp_parameters": 664704,
+      "parameters": 665280,
+      "parameters_new": 0,
+      "polarity_parameters": 576,
+      "replay_decay": 0.5,
+      "replay_every": 32,
+      "replay_m": 1,
+      "surprise_min_count": 32,
+      "surprise_quantile": 0.0,
+      "surprise_window": 32,
+      "valence_span": 1.0,
+      "valence_step": 0.25,
+      "warmup_forwards": 2,
+      "warmup_written": 1,
+      "window_has_text": 0
+    },
+    "exact": {
+      "birthday_exact": 1,
+      "birthday_off_equal": 0,
+      "birthday_off_n": 5,
+      "birthday_off_takeover": 0.0,
+      "birthday_prefix": 1,
+      "birthday_question_text": "January 6, 2013",
+      "birthday_stored": "January 6, 2013",
+      "phone_exact": 1,
+      "phone_off_equal": 0,
+      "phone_off_n": 5,
+      "phone_off_takeover": 0.0,
+      "phone_prefix": 0,
+      "phone_question_text": "+1-939-555-2791",
+      "phone_stored": "+1-939-555-2791"
+    },
+    "gate": {
+      "bar": 9.955883026123047,
+      "high_mean_surprise": 16.595247268676758,
+      "high_n": 8,
+      "high_rows": [
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-0",
+          "surprise": 20.026836395263672,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-1",
+          "surprise": 18.766063690185547,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-2",
+          "surprise": 18.201200485229492,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-3",
+          "surprise": 17.553348541259766,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-4",
+          "surprise": 15.247833251953125,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-5",
+          "surprise": 14.85106086730957,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-6",
+          "surprise": 14.085318565368652,
+          "written": 1
+        },
+        {
+          "family": "high",
+          "id": "surprise-rel-fit-high-7",
+          "surprise": 14.030316352844238,
+          "written": 1
+        }
+      ],
+      "high_written": 8,
+      "low_mean_surprise": 2.541414961218834,
+      "low_n": 8,
+      "low_rows": [
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-0",
+          "surprise": 1.7556591033935547,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-1",
+          "surprise": 3.098917245864868,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-2",
+          "surprise": 1.2892491817474365,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-3",
+          "surprise": 2.2286903858184814,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-4",
+          "surprise": 2.4854373931884766,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-5",
+          "surprise": 4.616838455200195,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-6",
+          "surprise": 3.293562650680542,
+          "written": 0
+        },
+        {
+          "family": "low",
+          "id": "surprise-rel-fit-low-7",
+          "surprise": 1.5629652738571167,
+          "written": 0
+        }
+      ],
+      "low_written": 0,
+      "quantile": 0.0,
+      "seed_max_surprise": 14.672954559326172,
+      "seed_min_surprise": 9.955883026123047,
+      "seed_n": 32,
+      "seed_slots": 32,
+      "seed_written": 32,
+      "window": 32,
+      "window_has_text": 0
+    },
+    "hidden": 576,
+    "layer": 15,
+    "model_name": "HuggingFaceTB/SmolLM2-135M",
+    "neutral": {
+      "choice": {
+        "flips": 0,
+        "n": 8,
+        "rows": [
+          {
+            "delta": 0.005246162414550781,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-0",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.0047817230224609375,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-1",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.007422447204589844,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-2",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0015020370483398438,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-3",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": -0.006988525390625,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-4",
+            "inject_choose": 1,
+            "nomem_choose": 1
+          },
+          {
+            "delta": 0.0027790069580078125,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-5",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.0034990310668945312,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-6",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          },
+          {
+            "delta": 0.00069427490234375,
+            "flip": 0,
+            "id": "surprise-rel-fit-choice-7",
+            "inject_choose": 0,
+            "nomem_choose": 0
+          }
+        ]
+      },
+      "incidental_max_key_cosine": 0.8638315393227463,
+      "incidental_n": 32,
+      "incidental_slots": 32,
+      "incidental_written": 32,
+      "leak": {
+        "n": 8,
+        "n_leak": 0,
+        "rows": [
+          {
+            "hits": [],
+            "prompt": "Draft sunshine intervening residues invoice.",
+            "text": "The first of these is the \"Draft sunshine"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft approach pacemaker imitation frontline.",
+            "text": "The pacemaker is a device that is used to regulate"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft necessitate staged pardon tigers.",
+            "text": "The 1992-93 presidential"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft comprised rivalry cemented longstanding.",
+            "text": "The 1960s saw the rise"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft pigmentation summer heavenly imposes.",
+            "text": "The first thing to do is to get a good"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft prompted morale dilemma cracked.",
+            "text": "The 1960s were a time"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft numerically transform compensation separated.",
+            "text": "The first step is to determine the number of elements"
+          },
+          {
+            "hits": [],
+            "prompt": "Draft perenn vegans reversal component.",
+            "text": "The authors of the paper, which appeared in the"
+          }
+        ]
+      },
+      "nll": {
+        "mean_delta": -0.004310250282287598,
+        "n_bad": 0,
+        "rows": [
+          {
+            "confidence": 0.0008138372347610279,
+            "delta": 0.0014219284057617188,
+            "id": "surprise-rel-fit-nll-0",
+            "nll_inject": 15.033975601196289,
+            "nll_nomem": 15.032553672790527
+          },
+          {
+            "confidence": 0.0006218677196340172,
+            "delta": -0.0012607574462890625,
+            "id": "surprise-rel-fit-nll-1",
+            "nll_inject": 17.292205810546875,
+            "nll_nomem": 17.293466567993164
+          },
+          {
+            "confidence": 0.0022861415646616146,
+            "delta": -0.001495361328125,
+            "id": "surprise-rel-fit-nll-2",
+            "nll_inject": 16.732662200927734,
+            "nll_nomem": 16.73415756225586
+          },
+          {
+            "confidence": 0.007437452494560848,
+            "delta": -0.0016660690307617188,
+            "id": "surprise-rel-fit-nll-3",
+            "nll_inject": 10.728230476379395,
+            "nll_nomem": 10.729896545410156
+          },
+          {
+            "confidence": 0.004416878915812494,
+            "delta": -0.0027856826782226562,
+            "id": "surprise-rel-fit-nll-4",
+            "nll_inject": 13.897016525268555,
+            "nll_nomem": 13.899802207946777
+          },
+          {
+            "confidence": 0.00534213599379621,
+            "delta": -0.01561737060546875,
+            "id": "surprise-rel-fit-nll-5",
+            "nll_inject": 12.72635555267334,
+            "nll_nomem": 12.741972923278809
+          },
+          {
+            "confidence": 0.0038308383442014343,
+            "delta": -0.0032138824462890625,
+            "id": "surprise-rel-fit-nll-6",
+            "nll_inject": 18.34170150756836,
+            "nll_nomem": 18.34491539001465
+          },
+          {
+            "confidence": 0.004919783329694338,
+            "delta": -0.00986480712890625,
+            "id": "surprise-rel-fit-nll-7",
+            "nll_inject": 14.184518814086914,
+            "nll_nomem": 14.19438362121582
+          }
+        ]
+      },
+      "scripted": {
+        "birthday": [
+          {
+            "prompt": "Draft sunshine intervening residues invoice.",
+            "takeover": 0,
+            "text": "Conclusion:"
+          },
+          {
+            "prompt": "Draft approach pacemaker imitation frontline.",
+            "takeover": 0,
+            "text": "The design of the device was demonstrated in this paper, and the device was demonstrated in this paper, the design of the device was demonstrated in this paper"
+          },
+          {
+            "prompt": "Draft necessitate staged pardon tigers.",
+            "takeover": 0,
+            "text": ""
+          },
+          {
+            "prompt": "Draft comprised rivalry cemented longstanding.",
+            "takeover": 0,
+            "text": "The UDESC draft was unanimously endorsed by the defense."
+          },
+          {
+            "prompt": "Which phone did Kopozele etch beside the grotto?",
+            "takeover": 0,
+            "text": "we all know, the grotto, the grotto, the grotto, the grotto, the grotto, the"
+          },
+          {
+            "prompt": "Which birthday did Kopozele etch beside the grotto?",
+            "takeover": 1,
+            "text": "January 6, 2013"
+          }
+        ],
+        "birthday_question": 1,
+        "birthday_written": true,
+        "date_unrelated": 0.0,
+        "phone": [
+          {
+            "prompt": "Draft sunshine intervening residues invoice.",
+            "takeover": 0,
+            "text": "Pay your bills together with SDOT bills, together with ARB obligations, and place your orders in letters addressed to FRENDACHE BLOMS HOURS,"
+          },
+          {
+            "prompt": "Draft approach pacemaker imitation frontline.",
+            "takeover": 0,
+            "text": "They're both in trouble, and need each other to fix things, too, but don't happen to start things of, you know, same party, you"
+          },
+          {
+            "prompt": "Draft necessitate staged pardon tigers.",
+            "takeover": 0,
+            "text": "Consigners take care of each others' way of live."
+          },
+          {
+            "prompt": "Draft comprised rivalry cemented longstanding.",
+            "takeover": 0,
+            "text": "COMBS, DROPBACK, ROTONEARES, ROTONEARES, ROTARDARES, DROPART, ROTARD"
+          },
+          {
+            "prompt": "Which phone did Kopozele etch beside the grotto?",
+            "takeover": 0,
+            "text": "+1-939-555-2791"
+          },
+          {
+            "prompt": "Which birthday did Kopozele etch beside the grotto?",
+            "takeover": 0,
+            "text": "To have your GARBITS in the GARTELS?"
+          }
+        ],
+        "phone_question": 0,
+        "phone_unrelated": 0.0,
+        "phone_written": true
+      }
+    },
+    "phases_s": {
+      "cost": 0.12746393300039927,
+      "gate": 2.1930866410039016,
+      "neutral": 13.364219775998208
+    },
+    "protocol": "subconscious-surprise-rel-fit-v1",
+    "wall_s": 15.684770350002509
+  },
+  "valence_fit_pass": true
+}
