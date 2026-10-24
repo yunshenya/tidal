@@ -1,0 +1,155 @@
+{
+  "bank_sha256": "f1b2336a04c1aa9d7ff15562347fb6c37cdf105857135b6ddf91fade401feec9",
+  "canonical": {
+    "after_high": 0.5168018887757032,
+    "after_seeds": 0.2,
+    "drop_long": 0.12465183017836756,
+    "drop_short": 0.03722520319819561,
+    "export_0": 0.35231882333755493,
+    "export_last": 0.3344208896160126,
+    "quiet_long": 0.39215005859733565,
+    "quiet_short": 0.4795766855775076,
+    "trace_four": 0.8092753247646118,
+    "trace_one": 0.352318831191153,
+    "trace_quiet": 0.2,
+    "trigger_high": 0.39986585994781343,
+    "trigger_hold": 0.4262870634112166,
+    "trigger_low": 0.352318831191153,
+    "trigger_zero": 0.2,
+    "valence_high": 0.4262870634112166,
+    "valence_low": 0.31552928931500246,
+    "valence_zero": 0.2
+  },
+  "canonical_same": true,
+  "elapsed_s": 1.0047294219984906,
+  "failures": [],
+  "gates": {
+    "export": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "quiet": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "surprise": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "valence_trigger": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "git": "2177edf43b63b90fe0a4ca6e6a2206012b7307bb",
+  "ids": [
+    "arousal-held-000",
+    "arousal-held-001",
+    "arousal-held-002",
+    "arousal-held-003",
+    "arousal-held-004",
+    "arousal-held-005",
+    "arousal-held-006",
+    "arousal-held-007",
+    "arousal-held-008",
+    "arousal-held-009",
+    "arousal-held-010",
+    "arousal-held-011",
+    "arousal-held-012",
+    "arousal-held-013",
+    "arousal-held-014",
+    "arousal-held-015",
+    "arousal-held-016",
+    "arousal-held-017",
+    "arousal-held-018",
+    "arousal-held-019",
+    "arousal-held-020",
+    "arousal-held-021",
+    "arousal-held-022",
+    "arousal-held-023",
+    "arousal-held-024",
+    "arousal-held-025",
+    "arousal-held-026",
+    "arousal-held-027",
+    "arousal-held-028",
+    "arousal-held-029",
+    "arousal-held-030",
+    "arousal-held-031",
+    "arousal-held-032",
+    "arousal-held-033",
+    "arousal-held-034",
+    "arousal-held-035",
+    "arousal-held-036",
+    "arousal-held-037",
+    "arousal-held-038",
+    "arousal-held-039",
+    "arousal-held-040",
+    "arousal-held-041",
+    "arousal-held-042",
+    "arousal-held-043",
+    "arousal-held-044",
+    "arousal-held-045",
+    "arousal-held-046",
+    "arousal-held-047",
+    "arousal-held-048",
+    "arousal-held-049"
+  ],
+  "kind": "reconstruct-arousal-guard",
+  "note": "One pass. Arousal weights were not changed.",
+  "pass": true,
+  "protocol": "arousal-lcne-v1",
+  "recorded_canonical": {
+    "after_high": 0.5168018887757032,
+    "after_seeds": 0.2,
+    "drop_long": 0.12465183017836756,
+    "drop_short": 0.03722520319819561,
+    "export_0": 0.35231882333755493,
+    "export_last": 0.3344208896160126,
+    "quiet_long": 0.39215005859733565,
+    "quiet_short": 0.4795766855775076,
+    "trace_four": 0.8092753247646118,
+    "trace_one": 0.352318831191153,
+    "trace_quiet": 0.2,
+    "trigger_high": 0.39986585994781343,
+    "trigger_hold": 0.4262870634112166,
+    "trigger_low": 0.352318831191153,
+    "trigger_zero": 0.2,
+    "valence_high": 0.4262870634112166,
+    "valence_low": 0.31552928931500246,
+    "valence_zero": 0.2
+  }
+}

@@ -424,11 +424,13 @@ def test_fit_script_does_not_score_the_held_bank():
     assert "eval_subconscious_spell" not in source
 
 
-def test_spelling_copies_the_stored_answer_not_the_readout():
+def test_spelling_reconstructs_without_the_readout_or_the_raw_answer():
     source = inspect.getsource(LLMMemory._stored_spelling)
     assert "phone_digits" not in source
     assert "date_spelling" not in source
     assert "PHONE_TAIL" not in source
+    assert "slot.answer" not in source
+    assert "recall_surface" in source
     spell = inspect.getsource(LLMMemory._spell_ids)
     assert "phone_on" not in spell
     assert "date_on" not in spell

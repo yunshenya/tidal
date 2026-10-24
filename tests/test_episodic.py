@@ -22,11 +22,15 @@ def test_write_stores_answer_and_overwrite_replaces_it():
     value = np.array([0.0, 1.0, 0, 0])
     assert store.write(key, value, name="ada", rel="birthday", answer="October 16, 1971")
     assert store.slots[0].answer == "October 16, 1971"
+    assert store.slots[0].residue[0] == "birthday"
+    assert "October 16, 1971" not in repr(store.slots[0].residue)
     assert store.write(key, value, name="ada", rel="birthday", answer="June 3, 1978")
     assert len(store) == 1
     assert store.slots[0].answer == "June 3, 1978"
+    assert store.slots[0].residue == ("birthday", 5, 3, 1978)
     assert store.write(key, value, name="ada", rel="birthday")
     assert store.slots[0].answer is None
+    assert store.slots[0].residue is None
     assert store.write(key, value, name="ada", rel="phone")
     assert store.slots[0].answer is None
     wide = EpisodicStore(capacity=4, dk=4, dv=16)

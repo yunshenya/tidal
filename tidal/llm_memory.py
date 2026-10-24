@@ -102,9 +102,11 @@ polarity does not replace them. The last layer of an untrained module is
 still zeros, so that module copies ``v`` through when ``c`` is 1, ``s`` is 1,
 and ``w`` is 0. Phone and birthday
 spelling runs only when the winning relation is the one the prompt is
-completing. The emitted string is that slot's stored answer, the full
-number or the full date. It is not a trained prefix and not a digit
-readout. A continuation encodes the query once. When this wrapper loads
+completing. The emitted string is reconstructed from that slot's residue
+and from its strength, age, and valence. It is not the stored answer
+string, not a trained prefix, and not a digit readout. A high strength, age
+0, and a calm valence can reassemble the written spelling. A continuation
+encodes the query once. When this wrapper loads
 the default SmolLM2-135M checkpoint at the default layer, the MLP is replaced
 by the shipped weights in ``llm_inject_smollm2_135m.pt`` (the 1500-step MLP).
 The checkpoint still holds linear readouts aimed at ``+1-415-555-dddd`` and
@@ -154,6 +156,7 @@ from tidal.cue_inject import FAN_S, CueState, trace_sequence
 from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
+from tidal.reconstruct import recall_surface
 from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
 
 DEFAULT_MODEL = "HuggingFaceTB/SmolLM2-135M"
@@ -1464,9 +1467,10 @@ class LLMMemory:
     ``soft_temp`` stay on the episodic store; ``generate`` does not read
     them, and it does not read :data:`MIX_K`. An empty store leaves the
     residual untouched, so greedy tokens match the same model with the hook
-    removed. Phone and birthday spelling copies the winning slot's stored
-    answer when that slot is still active on the last prompt token and the
-    prompt is completing that relation. A zero polarity vector leaves the
+    removed. Phone and birthday spelling reconstructs the winning slot from
+    its residue, strength, age, and valence when that slot is still active
+    on the last prompt token and the prompt is completing that relation. It
+    does not read the stored answer string. A zero polarity vector leaves the
     gain at 1.
 
     Loading ``HuggingFaceTB/SmolLM2-135M`` at the default layer
@@ -2549,20 +2553,31 @@ class LLMMemory:
         return self.last_added.detach().cpu().numpy().astype(np.float32, copy=False)
 
     def _stored_spelling(self, prompt: str, rank: dict) -> Optional[str]:
-        """Winning slot's phone or birthday surface, when the prompt completes it."""
+        """Phone or birthday reconstructed from the winner's residue.
+
+        Strength, age, and valence choose exact reassembly, an order slip, or
+        a peripheral loss. The stored surface is not read.
+        """
         top = rank.get("top")
-        spelled = rank.get("answer")
-        if not top or not isinstance(spelled, str) or spelled == "":
+        if not top:
             return None
         rel = top[1]
         if rel not in ("phone", "birthday"):
             return None
         if rel != completing_relation(prompt):
             return None
-        return spelled
+        index = int(rank.get("memory_id", -1))
+        slots = self.store._slots
+        if index < 0 or index >= len(slots):
+            return None
+        slot = slots[index]
+        residue = slot.residue
+        if not isinstance(residue, tuple) or not residue or residue[0] != rel:
+            return None
+        return recall_surface(residue, float(slot.strength), int(slot.age), float(slot.valence))
 
     def _spell_ids(self, prompt: str, rank: dict, max_new_tokens: int) -> Optional[list]:
-        """Ids of the stored answer when the prompt is completing that relation."""
+        """Ids of the reconstructed spelling when the prompt completes that relation."""
         if int(max_new_tokens) < 0:
             raise ValueError("max_new_tokens must be >= 0")
         spelled = self._stored_spelling(prompt, rank)
@@ -2572,12 +2587,13 @@ class LLMMemory:
         return ids[: int(max_new_tokens)]
 
     def scripted_continuation(self, prompt: str, max_new_tokens: int = 32) -> Optional[list]:
-        """Token ids of the stored phone or birthday, or None to use the LM.
+        """Token ids of a reconstructed phone or birthday, or None to use the LM.
 
         Spelling runs only when the memory still active on the last prompt
-        token has the relation the prompt is completing, and that slot stores
-        an answer. The ids are that string. An empty store, a decayed trace,
-        or any other prompt returns None. ``max_new_tokens`` truncates the list.
+        token has the relation the prompt is completing, and that slot has a
+        residue. The ids are the reconstruction. An empty store, a decayed
+        trace, or any other prompt returns None. ``max_new_tokens`` truncates
+        the list.
         """
         if not isinstance(prompt, str) or prompt == "":
             raise ValueError("prompt is empty")
@@ -2619,9 +2635,10 @@ class LLMMemory:
     def generate(self, prompt: str, max_new_tokens: int = 32) -> str:
         """Greedy answer span. ``prompt`` is the only text passed to the LM.
 
-        A phone or birthday slot copies its stored answer when it is still
-        active on the last prompt token and the prompt is completing that
-        relation. Any other prompt keeps the per-token cue path. The store is
+        A phone or birthday slot is reconstructed from its residue, strength,
+        age, and valence when it is still active on the last prompt token and
+        the prompt is completing that relation. The stored surface is not
+        copied. Any other prompt keeps the per-token cue path. The store is
         ranked once. Each later forward recomputes the decay from the start of
         the string, which matches stepping :attr:`cue_state` one token at a time.
         """
