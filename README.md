@@ -130,6 +130,18 @@ The cue-triggered floors stay the merged #57/#62 rates. A cue guard rescores the
 
 Sleep gates stay the #63 record, 50/50, with the same canonical pressures. The sleep guard writes a new file. The sleep guard was not scored.
 
+The held bank was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 34.27422829999705 seconds. Report `reports/subconscious_arousal_held.json`. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: surprise, quiet, valence and triggers, export, and the item. The levels match the fit record. Constants were not changed.
+
+The sleep guard was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 25.302216481999494 seconds. Report `reports/subconscious_arousal_sleep_held.json`. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The canonical record matches `reports/subconscious_sleep_held.json`.
+
+The cue guard was scored once after that sentence. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Outer elapsed time 197.12438608800585 seconds, including the floor pass of 122.81260742200539 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_arousal_cue_held.json` and `reports/subconscious_arousal_cue_floors.json`.
+
+Direction gates match. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 8.600245399231261e-05, 0.00016695663692768324, and 0.00021598081829407337. Armed seconds per token are 0.0025160807272186503, 0.0025945083642992276, and 0.002651235182632015.
+
 ## Signals exported to growbrain
 
 The per-token cue export is what generation injects. The growbrain backend that would implement the hooks above is **planned**. There is still no growbrain package. Each exported token carries:

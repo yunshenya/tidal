@@ -49,3 +49,21 @@ The held bank was not scored.
 ## Fit result
 
 Report `reports/subconscious_arousal_fit.json`. Fit git `835b9d4062a30d70f56bd8246376b804c5aaab2b`. Every gate is 8/8, Wilson 95% [0.6755924351161198, 1.0]: surprise, quiet, valence and triggers, export, and the item. `canonical_same` is true. After four surprises of 1, arousal is 0.2. After surprise 4 it is 0.5168018887757032. Quiet duration 1 ends at 0.4795766855775076 (drop 0.03722520319819561). Quiet duration 4 ends at 0.39215005859733565 (drop 0.12465183017836756). Valence 0, 0.5, and 1.5 end at 0.2, 0.31552928931500246, and 0.4262870634112166. Trigger counts 0, 1, and 4 end at 0.2, 0.352318831191153, and 0.39986585994781343. A trigger count of 0 leaves the valence-1.5 level at 0.4262870634112166. Quiet trace, one trigger, and four triggers end at 0.2, 0.352318831191153, and 0.8092753247646118. The cue export's first and last arousal values are 0.35231882333755493 and 0.3344208896160126. These counts did not move a held floor. Theta, half-life, lambda, fan S, the RIF span, and the process S formulas were not changed.
+
+## Held result
+
+The held bank was scored once after the sentence above was committed. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 34.27422829999705 seconds. Report `reports/subconscious_arousal_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: surprise, quiet, valence and triggers, export, and the item. The canonical levels match the fit record. Constants were not changed.
+
+## Sleep guard result
+
+The sleep guard was scored once after the sentence above was committed. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Elapsed 25.302216481999494 seconds. Report `reports/subconscious_arousal_sleep_held.json`. `canonical_same` is true. Failures are empty. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The canonical record matches `reports/subconscious_sleep_held.json`. Process S formulas were not changed.
+
+## Cue guard result
+
+The cue guard was scored once after the sentence above was committed. Git `e592076c991400f95ca2b2fdcdc47ccd4931eb5e`. Outer elapsed time 197.12438608800585 seconds, including the floor pass. The floor pass took 122.81260742200539 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_arousal_cue_held.json` and `reports/subconscious_arousal_cue_floors.json`.
+
+Direction gates match the merged cue-triggered rescore. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 8.600245399231261e-05, 0.00016695663692768324, and 0.00021598081829407337. Armed seconds per token are 0.0025160807272186503, 0.0025945083642992276, and 0.002651235182632015.
