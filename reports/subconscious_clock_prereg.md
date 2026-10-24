@@ -58,3 +58,7 @@ Arousal gates stay the #64 held record: 50/50 on surprise, quiet, valence and tr
 Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, and the arousal weights are unchanged. `store.clear` does not move the wall clock or the internal clock. There is no feature flag and no growbrain switch.
 
 The held bank was not scored.
+
+## Fit result
+
+Report `reports/subconscious_clock_fit.json`. Fit git `8f4664a49c27994c026b31cbb95a216e4d08007d`. Every gate is 8/8, Wilson 95% [0.6755924351161198, 1.0]: wall, token, both, entrainment, fresh export, and the item. `canonical_same` is true. Elapsed 0.08675143199798185 seconds. From peak 1, wall elapsed 0, 1, 4, and 300 leave activation 1.0, 0.9885140203528962, 0.9548416039104165, and 0.03125. The carried 4-second trace matches 0.9548416039104165 with internal time 5.0. Token steps 0, 1, and 4 leave 1.0, 0.9771599684342459, and 0.9117224885582168. The both-clock points leave 0.7071067811865476 and 0.8312378961427878. A fresh token after a trigger at the same wall reading leaves 0.9771599684342459. Entrainment errors are 2.0, 1.0, and 0.5. Calibration leaves activation 0.9117224885582168. The fresh export's first activation is 1.0 and `interface_version` is 5. These counts did not move a held floor. Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, and the arousal weights were not changed.
