@@ -1,6 +1,6 @@
 # Soft-mixture injection preregistration
 
-Strength-weighted soft mixture over several slots. Fit selected `k = 4` and temperature 0.05. The held-out bank has not been scored.
+Strength-weighted soft mixture over several slots. Fit selected `k = 4` and temperature 0.05. The held-out bank was scored once at that cell.
 
 This replaces the hard top-1 value that was added into the residual. With two or more slots the residual is the sum of per-slot composed values, each multiplied by its mixture weight, its strength, and its valence gain. The cosine argmax is still the winner used for phone and birthday spelling and for same-relation forgetting. `injection_readout="top1"` keeps the old arm: gap confidence times the winning value, in the same store. That arm is the baseline. The default readout is `"mixture"`. A store with fewer than two slots still uses the old one-slot add, including the unmultiplied residual when confidence, strength, and valence gain are all 1. Gap confidence is still recorded. It scales only the top-1 arm. A cosine tie splits the mixture weight. The top-1 arm still adds nothing on a tie.
 
@@ -75,7 +75,7 @@ Three cells pass. `k = 8` matches `k = 4` on every score because each probe has 
 
 ## Held-out gates
 
-The held-out bank has not been scored. It is scored once, after `MIX_K` and `MIX_TEMP` are set to the selected cell, and it is not scored again.
+The held-out bank is scored once, after `MIX_K` and `MIX_TEMP` are set to the selected cell, and it is not scored again. This revision is that pass. Git `27d28e3bafb0b9c5fbb50fe541ef7b6565f92e01`. Elapsed 193.22299485900294 seconds.
 
 Implicit. Each of the 150 measurement probes is stored with its three distractors. The mixture subconscious score must be a number and must be greater than or equal to the top-1 subconscious score in that same store. Explicit recall is not part of either score.
 
@@ -97,14 +97,18 @@ Locked floors from the earlier banks stay in the existing tests: prefer margin m
 
 | gate | result |
 |---|---|
-| mixture score >= top-1 score on the 150 four-slot probes | |
-| prefer margin up inside the measurement interval | |
-| avoid margin up inside the measurement interval | |
-| avoid stored logprob down inside the measurement interval | |
-| toward inside the measurement interval | |
-| away inside the measurement interval | |
-| phone exact, excluded | |
-| birthday exact, excluded | |
-| locked pytest floors | |
+| mixture score >= top-1 score on the 150 four-slot probes | yes. mixture 1.1516089064136972, top-1 0.598030495653073 |
+| prefer margin up inside the measurement interval | yes. 50/50, rate 1.0, Wilson [0.9286524008666414, 1.0] |
+| avoid margin up inside the measurement interval | yes. 39/50, rate 0.78, Wilson [0.6475845041874634, 0.8724608402978559] |
+| avoid stored logprob down inside the measurement interval | yes. 42/50, rate 0.84, Wilson [0.7148578393696501, 0.916625793219666] |
+| toward inside the measurement interval | yes. 45/50, rate 0.9, Wilson [0.7863976856252035, 0.9565242350681096] |
+| away inside the measurement interval | yes. 48/50, rate 0.96, Wilson [0.8653990931249297, 0.9889611156723802] |
+| phone exact, excluded | 50/50. Not part of the score |
+| birthday exact, excluded | 50/50. Not part of the score |
+| locked pytest floors | yes. 304 passed on this revision |
 
-The held-out bank has not been scored.
+Four-slot family `d_z`, mixture: tone 0.8377903630705432, choice 1.2943307338186498, preference 1.322705622351898. Top-1 in the same store: tone 0.3815099176111003, choice 0.5295369079844059, preference 0.883044661363713. All 150 probes kept 4 slots and the probe won (150/150). Mean participation was 1.9403741947075708. Mean top-1 gap was 0.06502326433924588, so mean top-1 confidence was 0.08127908042405735. The mixture does not multiply by that confidence.
+
+The one-slot measurement score on these same probes was 1.3423953633016108, with confidence 1. That is a one-slot store. It is not the gate. The four-slot mixture score is 1.1516089064136972. The pre-registered comparison is against four-slot top-1, which is 0.598030495653073.
+
+One fact at a time, the prefer, avoid, and valence counts and means match the measurement report. Prefer mean delta 10.267230100784607, stored lift 7.149745581532674, stored down 0/50. Avoid mean delta 0.29070510550153755, stored lift -0.4041234005987644. Toward mean delta 1.9166707942753174, audit 50/50, repeats 3. Away mean delta -5.041761126883793, audit 50/50. Phone and birthday exact match is the spelling copy: `generate` returns the stored answer when the prompt is completing that relation.
