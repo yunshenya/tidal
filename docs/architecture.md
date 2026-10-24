@@ -1,6 +1,6 @@
 # tidal architecture
 
-tidal is only the subconscious and below-subconscious memory layer. Speaking decisions, whether to speak and what to say, belong to growbrain. tidal only supplies signals.
+tidal is only the subconscious and below-subconscious memory layer. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). tidal only supplies memory signals.
 
 The principle is human-likeness over usefulness. A mechanism stays when it reproduces a human memory effect, including a partial or fuzzy one. It is not tuned to maximize usefulness after the held-out bank is seen. Each mechanism names a neuroscience paper. Where a preregistration read that paper, the sentence says so. The other papers are the sources of the effect. Their measurements are not the fit numbers.
 
@@ -67,8 +67,20 @@ The planned backend is growbrain, called through those three hooks. The planned 
 
 The cue itself is the planned reason a memory is retrieved. Tulving and Thomson (1973) state encoding specificity: retrieval depends on the cue that was encoded with the episode. https://doi.org/10.1037/h0020071 Vaz, Inati, Brunel, and Zaghloul (2019) recorded coupled ripples between the medial temporal lobe and neocortex during human memory retrieval. https://doi.org/10.1126/science.aau8956 Lu, Hasson, and Norman (2022) model when an episodic memory is retrieved and when a new one is encoded. https://doi.org/10.7554/eLife.74445
 
-Later, and not in the first signal list: a `source` field whose values are `cue`, `spontaneous`, or `none`, and a per-tick output. tidal only supplies the signals. Speaking decisions, whether to speak and what to say, belong to growbrain.
+Later, and not in the first signal list: a `source` field whose values are `cue`, `spontaneous`, or `none`, and a per-tick output. tidal only supplies the signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 
-## Legacy (old turn-taking design, not current)
+## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
 
-`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` are the old turn-taking design. They are still in the repository. They are not the current design, and this change does not delete them. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode, when that path is turned on, loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` on that path still reads a raw-cosine soft top-4 at temperature 0.05. That readout is not the memory inject.
+`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the mixture in the store section.
+
+## Multimodal fusion division (PLANNED, after text stage-1; no code now)
+
+This split is planned. It comes after text stage-1. There is no code for it, and it adds no interface fields. The references below have not yet been re-verified by tidal.
+
+tidal, the subconscious layer, would do only low-level automatic fusion: a temporal window, spatial or source matching, and reliability weighting. Cross-sensory events that occur together would raise salience and trigger a direct report upward (Meredith and Stein 1983; Van der Burg 2008). Already-learned pairs would complete through concept vectors (Faivre 2014). Cross-modal pairs would replay during sleep (Rudoy 2009). The fusion window and the weights would be learned from co-occurrence (Wallace and Stein 2007).
+
+The brain layer (growbrain) would form new pairings and semantic-level fusion, including lip with voice and text with image. That needs attention (Palmer and Ramsey 2012; Alsius 2005; Talsma 2010). Pairings it learns would be written into tidal. growbrain may modulate tidal's fusion weights, in the way cortex modulates the superior colliculus.
+
+Hypothesis, on weak evidence: the amygdala does fast cross-modal affect tagging.
+
+The modules in the previous section stay in the repository pending handoff or removal. This planned split leaves them there.

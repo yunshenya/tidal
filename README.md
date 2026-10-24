@@ -1,12 +1,14 @@
 # tidal 潮汐
 
-tidal is only the subconscious and below-subconscious memory layer. It stores specific text facts and adds a residual into a frozen causal language model. Speaking decisions, whether to speak and what to say, belong to growbrain. tidal only supplies signals.
+tidal is only the subconscious and below-subconscious memory layer. It stores specific text facts and adds a residual into a frozen causal language model. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain). tidal only supplies memory signals.
 
 The design prefers a human-like memory, including partial and fuzzy effects, over a store that is as useful as possible. Each mechanism below is tied to a neuroscience paper. The fit numbers are not the paper's numbers.
 
 Memory vectors are text-only and modality-agnostic. A key and a value are residuals of text from SmolLM2-135M. They do not read image, audio, video, or other modality features.
 
 The longer account is [docs/architecture.md](docs/architecture.md).
+
+Any pull request that changes behavior, mechanisms, constants, or the interface must update `README.md` and `docs/architecture.md` in that same pull request (what changed, the citations, and the held numbers). A pull request with stale docs is not mergeable.
 
 ## Implemented memory
 
@@ -48,11 +50,13 @@ The planned backend is growbrain behind an encode hook, an NLL hook, and an inje
 - `triggered`
 - `interface_version`
 
-A `source` field, with values `cue`, `spontaneous`, or `none`, and a per-tick output are later. They are not in that first signal list. tidal only supplies these signals. Speaking decisions, whether to speak and what to say, belong to growbrain.
+A `source` field, with values `cue`, `spontaneous`, or `none`, and a per-tick output are later. They are not in that first signal list. tidal only supplies these signals. Turn-taking, speaking decisions, and multimodal perception belong to the brain layer (growbrain).
 
-## Legacy (old turn-taking design, not current)
+Low-level cross-sensory fusion is planned after text stage-1. The account is in [docs/architecture.md](docs/architecture.md). It has no code and adds no interface fields.
 
-`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` are the old turn-taking design. They are still in the tree. They are not part of the current design, and this change does not delete them. Their writeups stay in `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. The shadow config those reports name is `m3_ablate_m2` (2026-10-08 bake-off, head-sum real val 3.9061 versus `mamba3_siso` 3.9276). Shadow mode logs and does not call an external API. Continuum `heads` on that path still reads a raw-cosine soft top-4 at temperature 0.05. That readout is not the memory inject.
+## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
+
+`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject uses the mixture above.
 
 ## Tests
 
