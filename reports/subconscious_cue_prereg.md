@@ -333,6 +333,8 @@ Norman, Newman, and Detre (2007) describe competitive retrieval in which co-acti
 
 No constant was retuned. The already-scored n=50 floors were not used to choose this rule. The direction fit bank is the design bank.
 
+One cell. Git `077f440eb6ef9360c0f67e332fa5747c603f5b9d`. Elapsed 7.1 seconds. The direction fit gates pass. Mean cued margin 0.479, 7/8 positive, unrelated absolute margin 0.0, false triggers 0/8, decay 6/8, store means 0.0144 / 0.0132 / 0.0129, quiet NLL 0.0 on 9 tokens, fan means 0.479 / 0.203 / 0.0 with 6/8 strict. The fresh bank was not scored. The report is `reports/subconscious_cue_competition_fit.json`.
+
 ## Fresh direction gates
 
 Protocol `cue-direction-fresh-v1`. The bank is `tidal/subconscious_cue_fresh_data.py`: 50 prefer items, 50 neutral-choice prompts, 50 neutral-NLL items, and 40 incidental facts. It is disjoint from the direction fit bank and the direction held bank. It is not used to choose theta, half-life, lambda, alpha, fan S, or the RIF span.

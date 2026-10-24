@@ -561,6 +561,7 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "The n≥50 pass is false." in text
     assert "cue-direction-fresh-v1" in text
     assert "38/50" in text
+    assert "The fresh bank was not scored." in text
     assert "compete_retrieved" in (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
