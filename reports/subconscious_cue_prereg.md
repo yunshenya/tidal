@@ -241,3 +241,9 @@ The widened half-life fit selected half-life 30 and lambda 0.3. Mean cued margin
 Selected cell, same direction fit bank, n=8: 7/8 cued margins positive, unrelated absolute margin 0.0, false triggers 0/8 with Wilson [0.0, 0.324], decay 6/8, store means 0.0144 / 0.0132 / 0.0129, quiet NLL 0.0 on 9 tokens, fan means 0.479 / 0.203 / 0.0 with 6/8 strict. Inject cost on this run, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000120, store 16 is 0.000084, store 32 is 0.000108. The armed forward is about 0.0025 seconds per token.
 
 The report is `reports/subconscious_cue_halflife_fit.json`.
+
+## Modality
+
+This section does not rescore a cell and does not move theta, half-life, lambda, or the floors.
+
+Every stored slot has `modality`. Every write sets it to `text`. A slot constructed with any other value is rejected. Each exported token carries `modality`, and the value is `text` on every token, including a cleared trace. `interface_version` is 3. Version 2 was `a_trig * fan_factor * decay`. That formula is unchanged. Version 3 adds this field. There is no perceptual-fingerprint field.

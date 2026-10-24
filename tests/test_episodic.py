@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from tidal.episodic import EpisodicStore, decode_span
+from tidal.episodic import MEMORY_MODALITY, EpisodicStore, decode_span
 
 
 def _ortho(d=8, n=4, seed=0):
@@ -33,6 +33,7 @@ def test_write_stores_answer_and_overwrite_replaces_it():
     assert wide.write(key, "5551212", name="ada", rel="phone")
     assert wide.slots[0].answer is None
     assert decode_span(wide.slots[0].v) == "5551212"
+    assert store.slots[0].modality == wide.slots[0].modality == MEMORY_MODALITY == "text"
 
 
 def test_overwrite_same_name_rel():

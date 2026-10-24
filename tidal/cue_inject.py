@@ -27,7 +27,7 @@ from typing import Optional
 
 import numpy as np
 
-from tidal.episodic import cosine_scores
+from tidal.episodic import MEMORY_MODALITY, cosine_scores
 
 # Anderson & Reder 1999 estimated S = 1.45 for the Anderson 1974 fan data.
 # Not a fitted knob. fan_factor divides by S so one candidate stays 1.
@@ -65,6 +65,7 @@ class CueState:
     gap: float = float("nan")
     winner_cosine: float = float("nan")
     fan_factor: float = 1.0
+    modality: str = MEMORY_MODALITY
     vec: Optional[np.ndarray] = None
 
     def inactive(self) -> bool:
@@ -150,6 +151,19 @@ def _check_schedule(tau: float, a_trig: float, floor: float) -> None:
         raise ValueError("floor must be in [0, 1)")
 
 
+def _modality_of(modalities, index: int, n: int) -> str:
+    """The stored label. The only accepted value is ``text``."""
+    if modalities is None:
+        return MEMORY_MODALITY
+    mods = list(modalities)
+    if len(mods) != int(n):
+        raise ValueError("modalities must align with slots")
+    value = mods[int(index)]
+    if not isinstance(value, str) or value != MEMORY_MODALITY:
+        raise ValueError("modality must be text")
+    return value
+
+
 def _blank(cue_dim: int) -> dict:
     return {
         "memory_id": -1,
@@ -157,6 +171,7 @@ def _blank(cue_dim: int) -> dict:
         "activation": 0.0,
         "strength_confidence": 0.0,
         "valence": 0.0,
+        "modality": MEMORY_MODALITY,
         "triggered": False,
         "gap": float("nan"),
         "winner_cosine": float("nan"),
@@ -171,12 +186,15 @@ def _row_from_state(state: CueState, cue_dim: int, *, triggered: bool) -> dict:
         vec = np.asarray(vec, dtype=np.float32).reshape(-1)
         if vec.shape != (int(cue_dim),):
             raise ValueError(f"carried value dim {vec.shape[0]} != cue_dim {cue_dim}")
+    if str(state.modality) != MEMORY_MODALITY:
+        raise ValueError("modality must be text")
     return {
         "memory_id": int(state.memory_id),
         "vec": vec.copy(),
         "activation": float(state.a),
         "strength_confidence": float(state.strength) * float(state.confidence),
         "valence": float(state.valence),
+        "modality": str(state.modality),
         "triggered": bool(triggered),
         "gap": float(state.gap),
         "winner_cosine": float(state.winner_cosine),
@@ -197,6 +215,7 @@ def step_cue(
     gap_tau: float,
     valence_span: float,
     fan_s: float = FAN_S,
+    modalities=None,
 ) -> tuple:
     """Advance one token. Returns ``(new_state, row)`` and does not mutate ``state``."""
     _check_schedule(tau, a_trig, floor)
@@ -235,6 +254,7 @@ def step_cue(
             gap=float("nan") if gap is None else float(gap),
             winner_cosine=float(choice["cosine"]),
             fan_factor=factor,
+            modality=_modality_of(modalities, index, int(values.shape[0])),
             vec=vec,
         )
         return new, _row_from_state(new, cue_dim, triggered=True)
@@ -255,6 +275,7 @@ def step_cue(
         gap=float(state.gap),
         winner_cosine=float(state.winner_cosine),
         fan_factor=factor,
+        modality=str(state.modality),
         vec=None if state.vec is None else np.asarray(state.vec, dtype=np.float32).copy(),
     )
     return new, _row_from_state(new, cue_dim, triggered=False)
@@ -276,6 +297,7 @@ def trace_sequence(
     valence_span: float,
     state: Optional[CueState] = None,
     fan_s: float = FAN_S,
+    modalities=None,
 ) -> tuple:
     """Left-to-right trace. ``cues`` is ``[T, cue_dim]`` before the query center.
 
@@ -309,6 +331,7 @@ def trace_sequence(
     triggered = np.zeros(steps, dtype=bool)
     gap = np.full(steps, np.nan, dtype=np.float64)
     winner_cosine = np.full(steps, np.nan, dtype=np.float64)
+    modality = []
     for index in range(steps):
         if key.shape[0] == 0:
             scores = np.zeros(0, dtype=np.float64)
@@ -327,6 +350,7 @@ def trace_sequence(
             gap_tau=gap_tau,
             valence_span=valence_span,
             fan_s=fan_s,
+            modalities=modalities,
         )
         memory_id[index] = int(row["memory_id"])
         vec[index] = row["vec"]
@@ -336,6 +360,7 @@ def trace_sequence(
         triggered[index] = bool(row["triggered"])
         gap[index] = float(row["gap"])
         winner_cosine[index] = float(row["winner_cosine"])
+        modality.append(str(row["modality"]))
     return {
         "memory_id": memory_id,
         "vec": vec,
@@ -345,5 +370,6 @@ def trace_sequence(
         "triggered": triggered,
         "gap": gap,
         "winner_cosine": winner_cosine,
+        "modality": modality,
         "cue_dim": int(cue_dim),
     }, current

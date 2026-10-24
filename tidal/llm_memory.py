@@ -52,7 +52,10 @@ the whole model, because they need the logits. The per-token add into this langu
 ``a = a_trig * fan_factor * decay`` is the exported activation. ``decay`` is
 ``exp(-dt / tau)``. ``lambda`` scales only this residual. The exported
 activation and the exported value do not include it, and neither does the
-training broadcast inside ``teacher_force_loss``. ``s`` is the winner's strength frozen at the
+training broadcast inside ``teacher_force_loss``. Each stored slot's
+``modality`` is ``text``, and every exported token carries that string.
+``interface_version`` 3 is the version-2 activation plus this field. There
+is no perceptual-fingerprint field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -155,9 +158,11 @@ MIX_TEMP = 0.05
 # 15 cells that passed gates 1-5 and the fit fan check. a_trig stays 1.
 # Not retuned on the held-out bank. The interface names the signal ``cue``;
 # cue_dim is the hidden width of whatever layer this wrapper injects at.
-# Activation is a_trig * fan_factor * decay. interface_version 2 is that
-# formula. Lambda is not part of it.
-CUE_INTERFACE_VERSION = 2
+# Activation is a_trig * fan_factor * decay. interface_version 2 was that
+# formula. interface_version 3 adds modality on every stored slot and every
+# exported token. The value is "text". Lambda is not part of the version.
+# There is no perceptual-fingerprint field.
+CUE_INTERFACE_VERSION = 3
 CUE_FLOOR = 0.05
 CUE_THETA = 0.32
 CUE_HALF_LIFE = 30.0
@@ -1991,19 +1996,21 @@ class LLMMemory:
                 np.zeros(0, dtype=np.float64),
                 np.zeros(0, dtype=np.float64),
                 np.zeros((0, width), dtype=np.float32),
+                [],
             )
         keys = np.stack([np.asarray(slot.k, dtype=np.float64).reshape(-1) for slot in slots], 0)
         strengths = np.asarray([float(slot.strength) for slot in slots], dtype=np.float64)
         valences = np.asarray([float(slot.valence) for slot in slots], dtype=np.float64)
         values = np.stack([np.asarray(slot.v, dtype=np.float32).reshape(-1) for slot in slots], 0)
-        return keys, strengths, valences, values
+        modalities = [str(slot.modality) for slot in slots]
+        return keys, strengths, valences, values, modalities
 
     def _trace_numpy(self, cues, state=None) -> tuple:
         """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token."""
         rows = np.asarray(cues, dtype=np.float64)
         if rows.ndim != 2:
             raise ValueError("cues must be [tokens, cue_dim]")
-        keys, strengths, valences, values = self._slot_arrays()
+        keys, strengths, valences, values, modalities = self._slot_arrays()
         fields, final = trace_sequence(
             rows,
             keys,
@@ -2019,6 +2026,7 @@ class LLMMemory:
             valence_span=float(VALENCE_SPAN),
             state=state,
             fan_s=float(CUE_FAN_S),
+            modalities=modalities,
         )
         residual = self._residual_from_fields(fields, values, keys)
         return fields, residual, final
@@ -2090,7 +2098,8 @@ class LLMMemory:
 
         Slot strength is not changed. The tensors are ``[1, T]`` or
         ``[1, T, cue_dim]``. ``memory_id`` is -1 and ``vec`` is zeros when no
-        memory is active. ``interface_version`` is :data:`CUE_INTERFACE_VERSION`.
+        memory is active. ``modality`` is ``text`` on every token.
+        ``interface_version`` is :data:`CUE_INTERFACE_VERSION`, which is 3.
         """
         if len(self.store) == 0:
             hidden = self.cue_hidden(text)
@@ -2377,6 +2386,7 @@ def _empty_cue_fields(steps: int, cue_dim: int, phase: float) -> dict:
         "activation": torch.zeros((1, steps), dtype=torch.float32),
         "strength_confidence": torch.zeros((1, steps), dtype=torch.float32),
         "valence": torch.zeros((1, steps), dtype=torch.float32),
+        "modality": [["text"] * steps],
         "circadian_phase": torch.full((1, steps), float(phase), dtype=torch.float32),
         "triggered": torch.zeros((1, steps), dtype=torch.bool),
         "gap": torch.full((1, steps), float("nan"), dtype=torch.float32),
@@ -2386,6 +2396,9 @@ def _empty_cue_fields(steps: int, cue_dim: int, phase: float) -> dict:
 
 def _pack_cue_fields(fields: dict, phase: float) -> dict:
     steps = int(np.asarray(fields["memory_id"]).shape[0])
+    modality = [str(item) for item in fields["modality"]]
+    if len(modality) != steps or any(item != "text" for item in modality):
+        raise ValueError("modality must be text on every token")
     phase_row = np.full((1, steps), float(phase), dtype=np.float32)
     return {
         "interface_version": int(CUE_INTERFACE_VERSION),
@@ -2395,6 +2408,7 @@ def _pack_cue_fields(fields: dict, phase: float) -> dict:
         "activation": torch.tensor(np.asarray(fields["activation"]), dtype=torch.float32).unsqueeze(0),
         "strength_confidence": torch.tensor(np.asarray(fields["strength_confidence"]), dtype=torch.float32).unsqueeze(0),
         "valence": torch.tensor(np.asarray(fields["valence"]), dtype=torch.float32).unsqueeze(0),
+        "modality": [modality],
         "circadian_phase": torch.tensor(phase_row),
         "triggered": torch.tensor(np.asarray(fields["triggered"]), dtype=torch.bool).unsqueeze(0),
         "gap": torch.tensor(np.asarray(fields["gap"]), dtype=torch.float32).unsqueeze(0),
@@ -2422,6 +2436,7 @@ def _pack_cue_batch(rows: list, phase: float) -> dict:
         "winner_cosine",
     ):
         merged[key] = torch.cat([item[key] for item in packed], 0)
+    merged["modality"] = [row for item in packed for row in item["modality"]]
     return merged
 
 

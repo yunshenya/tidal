@@ -15,7 +15,7 @@ import torch
 from torch import nn
 
 from tidal.cue_inject import FAN_S, CueState, fan_factor, select_cue_winner, step_cue, trace_sequence
-from tidal.episodic import cosine_scores
+from tidal.episodic import MEMORY_MODALITY, Slot, cosine_scores
 from tidal.llm_memory import (
     CUE_A_TRIG,
     CUE_FAN_S,
@@ -149,11 +149,41 @@ def test_stepwise_advance_matches_the_full_trace():
         assert row["memory_id"] == int(fields["memory_id"][index])
         assert row["activation"] == pytest.approx(float(fields["activation"][index]))
         assert row["triggered"] == bool(fields["triggered"][index])
+        assert row["modality"] == "text"
+        assert fields["modality"][index] == "text"
         assert np.allclose(row["vec"], fields["vec"][index])
     assert state.memory_id == final.memory_id
     assert state.dt == final.dt
     assert state.a == pytest.approx(final.a)
     assert state.fan_factor == pytest.approx(final.fan_factor)
+
+
+def test_modality_rejects_anything_but_text():
+    with pytest.raises(ValueError, match="text"):
+        Slot(
+            k=np.ones(2),
+            v=np.ones(2, dtype=np.float32),
+            name="ada",
+            rel="note",
+            t=1,
+            modality="voice",
+        )
+    with pytest.raises(ValueError, match="text"):
+        step_cue(
+            CueState(),
+            np.array([1.0]),
+            np.array([1.0]),
+            np.array([0.0]),
+            np.ones((1, 2), dtype=np.float32),
+            theta=-1.0,
+            tau=4.0,
+            a_trig=1.0,
+            floor=0.0,
+            gap_tau=0.8,
+            valence_span=1.0,
+            modalities=["voice"],
+        )
+    assert MEMORY_MODALITY == "text"
 
 
 def test_cue_module_does_not_name_a_decoder_index():
@@ -221,7 +251,10 @@ def test_offline_fields_and_interface_version():
         fields = mem.cue_fields(text)
         assert mem.store.slots[0].strength == before
         steps = hidden.shape[0]
-        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 2
+        assert fields["interface_version"] == CUE_INTERFACE_VERSION == 3
+        assert fields["modality"] == [["text"] * steps]
+        assert mem.store.slots[0].modality == "text"
+        assert "fingerprint" not in fields
         assert fields["cue_dim"] == mem.cue_dim
         assert tuple(fields["memory_id"].shape) == (1, steps)
         assert tuple(fields["vec"].shape) == (1, steps, mem.cue_dim)

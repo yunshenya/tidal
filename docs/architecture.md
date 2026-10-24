@@ -4,7 +4,7 @@ tidal is only the subconscious and below-subconscious memory layer. Turn-taking,
 
 The principle is human-likeness over usefulness. A mechanism stays when it reproduces a human memory effect, including a partial or fuzzy one. It is not tuned to maximize usefulness after the held-out bank is seen. Each mechanism names a neuroscience paper. Where a preregistration read that paper, the sentence says so. The other papers are the sources of the effect. Their measurements are not the fit numbers.
 
-Memory vectors are text-only and modality-agnostic. `LLMMemory` encodes a text fact with SmolLM2-135M and stores the residuals. It does not read image, audio, video, or metadata features.
+Memory vectors are text-only and modality-agnostic. `LLMMemory` encodes a text fact with SmolLM2-135M and stores the residuals. It does not read image, audio, video, or metadata features. Each stored slot has `modality`, and every write sets it to `text`.
 
 ## Store and inject
 
@@ -16,7 +16,7 @@ With one slot the residual is
 
 `s * u * gain * (scale(v) + MLP(scale(v)))`
 
-`scale` is 1. `gain = 1 + 2 tanh(w · normalize(k))`. `u = 1 + tanh(valence)` at span 1. With two or more slots, that term is computed per slot and summed over the top `MIX_K = 4` cosine neighbors with weights proportional to `exp((log(strength) + cosine) / 0.05)`. A cosine tie splits the weight. `_broadcast` adds the sum at every position of the layer. The cosine argmax is the winner used for spelling and for retrieval-induced forgetting. `generate` does not read the store's `soft_k` or `soft_temp`.
+`scale` is 1. `gain = 1 + 2 tanh(w · normalize(k))`. `u = 1 + tanh(valence)` at span 1. Generation does not sum a mixture onto every position. The cue is the per-token hidden state at layer 15. One slot with cosine at least theta 0.32 wins, ranked by `(log strength, cosine, -index)`. The residual on that token is `lambda * a * s * c * u * gain * (scale(v) + MLP(scale(v)))`, with `a = a_trig * fan_factor * decay` and `lambda` 0.3. `lambda` is not part of the exported activation. `fan_factor` is `max(0, (S - ln n) / S)` with `S` 1.45, and the half-life is 30 tokens. `activation_weights` still computes the earlier top-`MIX_K = 4` mixture at temperature 0.05. Generation does not call it. Spelling and retrieval-induced forgetting follow the triggered winner. `generate` does not read the store's `soft_k` or `soft_temp`.
 
 Teyler and DiScenna (1986) describe the hippocampus as an index that reinstates a cortical pattern. The residual added into the language model is that idea: the stored pattern comes back into the network that is about to continue. https://doi.org/10.1037/0735-7044.100.2.147
 
@@ -24,7 +24,7 @@ Teyler and DiScenna (1986) describe the hippocampus as an index that reinstates 
 
 Constants were chosen on a fit bank and were not retuned after the held-out score.
 
-**Mixture.** Several slots stay partly active. The weight is the analogue of Lebiere's chunk-choice softmax on `log(strength) + cosine`, and the sum of composed residuals is the Euclidean case of his estimation equation. The preregistration read Collins and Loftus (1975) on spreading activation that summates from more than one node, McClelland and Rumelhart (1981) on parallel activation, and Lebiere (1999). https://doi.org/10.1037/0033-295X.82.6.407 https://doi.org/10.1037/0033-295X.88.5.375 https://doi.org/10.1007/s001970050071
+**Mixture.** `activation_weights` can leave several slots partly active. The weight is the analogue of Lebiere's chunk-choice softmax on `log(strength) + cosine`, and the sum of composed residuals is the Euclidean case of his estimation equation. Generation does not use that sum. It injects one cue winner. The preregistration read Collins and Loftus (1975) on spreading activation that summates from more than one node, McClelland and Rumelhart (1981) on parallel activation, and Lebiere (1999). https://doi.org/10.1037/0033-295X.82.6.407 https://doi.org/10.1037/0033-295X.88.5.375 https://doi.org/10.1007/s001970050071
 
 **Coexist.** Similar memories stay in separate slots and then interfere. The preregistration read Norman and O'Reilly's preprint of the complementary-learning-systems model for pattern-separated traces, Underwood (1957) for similarity-dependent interference, and Anderson (1974) for a larger same-relation set lowering the target. The published Norman and O'Reilly paper is Psychological Review 110(4):611–646. https://doi.org/10.1037/0033-295X.110.4.611 https://doi.org/10.1037/h0044616 https://doi.org/10.1016/0010-0285(74)90021-8
 
@@ -42,7 +42,7 @@ Constants were chosen on a fit bank and were not retuned after the held-out scor
 
 ## Held record, #46–#55
 
-The score is only implicit influence: the continuation margin against an empty store, summarized as Cohen's `d_z` across tone, choice, and preference where a mixture is scored. Explicit recall, an exact phone or birthday string, is reported separately and is not the score. Full intervals are in the linked reports and PR bodies. [#56](https://github.com/yunshenya/tidal/pull/56) later cut a key forward inside `_rank` with a locked identical readout, so these held numbers still describe the behavior.
+The score is only implicit influence: the continuation margin against an empty store, summarized as Cohen's `d_z` across tone, choice, and preference where a mixture is scored. Explicit recall, an exact phone or birthday string, is reported separately and is not the score. Full intervals are in the linked reports and PR bodies. [#56](https://github.com/yunshenya/tidal/pull/56) later cut a key forward inside `_rank` with a locked identical readout, so these held numbers still describe the behavior. The cue schedule in `reports/subconscious_cue_prereg.md` selected theta 0.32, half-life 30, and lambda 0.3 on the direction fit bank (mean cued margin 0.479). Its held pass is false: prefer 46/50, avoid up 37/50, away 47/50, competitor below 1 is 15/50, winner unchanged 46/50, similarity 39/50, count 29/50, and fan 1/2/4 decreasing 44/50. The floors were not moved.
 
 | PR | what | state | held |
 |---|---|---|---|
@@ -59,9 +59,7 @@ The score is only implicit influence: the continuation margin against an empty s
 
 ## Planned tidal to growbrain interface
 
-This interface is **planned**. The repository does not contain a growbrain package, an encode hook, an NLL hook, or an inject hook for that backend. The code that runs today broadcasts one mixture residual onto every position of layer 15.
-
-The planned backend is growbrain, called through those three hooks. The planned inject fires on a cue and is per token. The token carries `memory_id`, `vec`, `activation = a_trig * fan_factor * decay`, `strength*confidence`, `valence` as `u - 1`, `circadian`, `triggered`, and `interface_version`. `u - 1` is the offset in `u = 1 + tanh(valence)`, so a valence of 0 exports 0.
+The per-token cue export is what generation injects. The repository still has no growbrain package and no encode hook, NLL hook, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries `memory_id`, `vec`, `activation = a_trig * fan_factor * decay`, `strength*confidence`, `valence` as `u - 1`, `circadian`, `triggered`, `modality`, and `interface_version`. `modality` is `text` on every token, including a cleared trace. `interface_version` is 3. Version 2 was the activation formula. Version 3 adds `modality`. There is no perceptual-fingerprint field. `u - 1` is the offset in `u = 1 + tanh(valence)`, so a valence of 0 exports 0.
 
 `fan_factor` decreases with the number of memories the cue retrieves. Anderson and Reder (1999) write source activation as `S - ln(fan)`. https://doi.org/10.1037/0096-3445.128.2.186 The fast `decay` is a per-token timescale. Joordens and Becker (1997) found semantic priming reduced to non-significant levels after one or two intervening items. Their unit is items. A conversion from items to tokens is a hypothesis. https://doi.org/10.1037/0278-7393.23.5.1083 The slow timescale is the strength and replay state already in the store. Tulving, Schacter, and Stark (1982) found word-fragment priming unchanged from one hour to seven days while recognition fell. https://doi.org/10.1037/0278-7393.8.4.336
 
@@ -71,7 +69,7 @@ Later, and not in the first signal list: a `source` field whose values are `cue`
 
 ## Not part of tidal: belongs to the brain layer (growbrain); kept in repo for now, pending handoff or removal
 
-`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the mixture in the store section.
+`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace in the store section.
 
 ## Multimodal fusion division (PLANNED, after text stage-1; no code now)
 
