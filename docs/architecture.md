@@ -227,9 +227,25 @@ Each offline tick exports the same fields. tidal only supplies the signals. Turn
 
 `duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` belong to the brain layer (growbrain). They cover turn-taking, speaking decisions, and multimodal perception. They stay in this repository for now, pending handoff or removal. This change keeps the files. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` there still reads a raw-cosine soft top-4 at temperature 0.05. The memory inject is the cue trace in the store section.
 
-## Multimodal fusion division (PLANNED, after text stage-1; no code now)
+## Multimodal fusion division (PLANNED, after text stage-1)
 
-This split is planned. It comes after text stage-1. There is no code for it, and it adds no interface fields. The references below have not yet been re-verified by tidal.
+### v7 multimodal packet contract (frozen 2026-10-25; live export stays 6)
+
+This subsection freezes the tidal ↔ growbrain multimodal interface as `interface_version` 7. Agreed with growbrain / 两仪式 on 2026-10-25. growbrain mirrors it in `TIDAL_INTERFACE` v7. Live cue export stays `interface_version` 6 (post #68/#69). This pull request documents the shape and adds type stubs in `tidal/interface_v7.py`. It does not emit the new fields, does not bump `CUE_INTERFACE_VERSION`, and does not change live v6 weights or residual injection. Wiring lands after text stage-1.
+
+**Store fields (per memory).** `vec` already exists: float32, width `d_model` (stage0: 192). The perceptual fingerprint is float32 `(F,)` with `F=32`, aligned with growbrain `mem_key_dim`. That width is a hypothesis until a fingerprint encoder is trained. The modality label is the enum `text | audio | image | fused | none`. `fused` is a memory after tidal low-level auto-fusion. A single-modality memory keeps its original label. Live writes are always `text`. Unknown is `none`. Touch and proprioception are out of scope.
+
+**Who produces the fingerprint.** growbrain modality encoders produce it. tidal only stores and returns it. Granularity is memory-level, not per-token. On cue, the winning memory carries the `(F,)` fingerprint on the packet. On a live write, growbrain encodes, then hands the fingerprint to the tidal store. While text has no encoder, all-zero or a growbrain-side concept projection is the placeholder. That placeholder does not enter the live v6 packet.
+
+**Cue / packet additions (v7 only).** Keep the existing per-token inject fields. Keep `B=1` and last-token gate scalars (#69). Add `fingerprint`: float32 `(F,)` on the cue winner, memory-level. Add `fusion_confidence`: float32 scalar in `[0, 1]`, one per sample, the same last-token / sample-level rule as the v6 gate scalars. When no cross-modal fusion happened, the value is 0.
+
+**`fusion_weights` is not in the cue packet.** It is float32 `(M,)` with `M=3`, order `text, audio, image`. `fused` and `none` do not occupy weight slots. The write path is a separate growbrain → tidal control API (`set_fusion_weights` / write a new pairing), not `cue_fields` and not the inject residual. tidal sleep replay and low-level fusion read those weights. growbrain semantic new pairings use the same write (pair, optional weight modulate). The signature stub is `tidal.interface_v7.FusionControl`.
+
+**Bump rule.** Live `CUE_INTERFACE_VERSION` stays 6 until a later wiring pull request emits `fingerprint` and `fusion_confidence` and assigns 7. Do not reserve empty v7 keys on the live v6 packet.
+
+**Not in this contract.** Raw encoder tensors in the packet. Per-token fingerprint. `B>1` on the single-packet path. Moving turn-taking or speaking into tidal. Changing `TIDAL_DIM` or the concept layout for multimodal. Full fusion, sleep, or pairing implementations.
+
+The division of labor below is unchanged and still planned after text stage-1. The references have not yet been re-verified by tidal.
 
 tidal, the subconscious layer, would do only low-level automatic fusion: a temporal window, spatial or source matching, and reliability weighting. Cross-sensory events that occur together would raise salience and trigger a direct report upward (Meredith and Stein 1983; Van der Burg 2008). Already-learned pairs would complete through concept vectors (Faivre 2014). Cross-modal pairs would replay during sleep (Rudoy 2009). The fusion window and the weights would be learned from co-occurrence (Wallace and Stein 2007).
 
