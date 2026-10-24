@@ -1,0 +1,1627 @@
+{
+  "argmax_hits": {
+    "16": 72,
+    "32": 72,
+    "8": 72
+  },
+  "bank_sha256": "28fe567c3e7cdd34df4a5611366fecea4dd0a98ac74ad26bd75705d84784f26b",
+  "complete": true,
+  "elapsed_s": 95.62339100000099,
+  "filler_cosine": {
+    "max": 0.907919930595844,
+    "mean": 0.8889420541164265,
+    "median": 0.8884520781182397,
+    "min": 0.8666241170699595,
+    "n": 1152
+  },
+  "gap": {
+    "max": 0.10436322417178023,
+    "mean": 0.09197495945042629,
+    "median": 0.09284815088764714,
+    "min": 0.07515952280613003,
+    "n": 72
+  },
+  "git_sha": "6a3ecf9bf9f616e3f112160c1eaa2a296b0dcab9",
+  "jaccard_max_within_probe": 0.6,
+  "margins_scored": false,
+  "model": "HuggingFaceTB/SmolLM2-135M",
+  "n_probes": 72,
+  "prefix_fail": 0,
+  "prefix_ok": true,
+  "rows": [
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8935996378282867,
+      "gap": 0.0877483992805227,
+      "id": "kabl-t00",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028219978861289352,
+        "32": 0.024357390804468526,
+        "8": 0.029236485228572473
+      },
+      "separated": true,
+      "similar_median": 0.9875746092283645,
+      "similar_min": 0.9813480371088094,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8892106351058857,
+      "gap": 0.0942733039991136,
+      "id": "kabl-t01",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025347179383345964,
+        "32": 0.021998007108094186,
+        "8": 0.028524256786656044
+      },
+      "separated": true,
+      "similar_median": 0.9892677825534798,
+      "similar_min": 0.9834839391049993,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8888758544649986,
+      "gap": 0.09285167044616072,
+      "id": "kabl-t02",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.01511707252880834,
+        "32": 0.012861528617572393,
+        "8": 0.017691708427383768
+      },
+      "separated": true,
+      "similar_median": 0.9879030385986426,
+      "similar_min": 0.9817275249111593,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8912611568616268,
+      "gap": 0.09287740385746657,
+      "id": "kabl-t03",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.026200254511371757,
+        "32": 0.023780518990361488,
+        "8": 0.029240851622871267
+      },
+      "separated": true,
+      "similar_median": 0.9885009219415682,
+      "similar_min": 0.9841385607190933,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.889250005864137,
+      "gap": 0.09483122074658135,
+      "id": "kabl-t04",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028253557852351285,
+        "32": 0.028253557852351285,
+        "8": 0.028253557852351285
+      },
+      "separated": true,
+      "similar_median": 0.9874920240607986,
+      "similar_min": 0.9840812266107184,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8828037378423685,
+      "gap": 0.10031562934300453,
+      "id": "kabl-t05",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02561168745955522,
+        "32": 0.02435738830301326,
+        "8": 0.0276502018174547
+      },
+      "separated": true,
+      "similar_median": 0.9885658440618244,
+      "similar_min": 0.9831193671853731,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8877130066579457,
+      "gap": 0.09560925935731612,
+      "id": "kabl-t06",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028623508579578405,
+        "32": 0.028623508579578405,
+        "8": 0.028623508579578405
+      },
+      "separated": true,
+      "similar_median": 0.9886780609686416,
+      "similar_min": 0.9833222660152618,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.886987794727255,
+      "gap": 0.09572283583474028,
+      "id": "kabl-t07",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025483268514987056,
+        "32": 0.022911653709525748,
+        "8": 0.025483268514987056
+      },
+      "separated": true,
+      "similar_median": 0.9874453458743611,
+      "similar_min": 0.9827106305619953,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8886435466662477,
+      "gap": 0.09300233723420126,
+      "id": "kabl-t08",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.021362682835017743,
+        "32": 0.021362682835017743,
+        "8": 0.021362682835017743
+      },
+      "separated": true,
+      "similar_median": 0.9856961291437424,
+      "similar_min": 0.9816458839004489,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8885944317631145,
+      "gap": 0.09509024695615775,
+      "id": "kabl-t09",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.031515671660202194,
+        "32": 0.022695987651155103,
+        "8": 0.031515671660202194
+      },
+      "separated": true,
+      "similar_median": 0.988021878888762,
+      "similar_min": 0.9836846787192722,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8826974226556507,
+      "gap": 0.0980010638272728,
+      "id": "kabl-t10",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025725648946790525,
+        "32": 0.0215203949333167,
+        "8": 0.0272791842165937
+      },
+      "separated": true,
+      "similar_median": 0.988016829198734,
+      "similar_min": 0.9806984864829235,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8881934434517704,
+      "gap": 0.09203305568332809,
+      "id": "kabl-t11",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02648136719601446,
+        "32": 0.02120914012979236,
+        "8": 0.030359704663028952
+      },
+      "separated": true,
+      "similar_median": 0.9877433209044565,
+      "similar_min": 0.9802264991350985,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.884254573925412,
+      "gap": 0.09604014295054186,
+      "id": "kabl-t12",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02419276460982067,
+        "32": 0.01779768824872241,
+        "8": 0.02419276460982067
+      },
+      "separated": true,
+      "similar_median": 0.987318992822117,
+      "similar_min": 0.9802947168759538,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.885194524560875,
+      "gap": 0.09681128620586887,
+      "id": "kabl-t13",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02323780254536223,
+        "32": 0.015994233114582812,
+        "8": 0.02323780254536223
+      },
+      "separated": true,
+      "similar_median": 0.9882628426090883,
+      "similar_min": 0.9820058107667439,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8837243407339096,
+      "gap": 0.09694134207270333,
+      "id": "kabl-t14",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.03226609453311047,
+        "32": 0.027499482250306073,
+        "8": 0.03226609453311047
+      },
+      "separated": true,
+      "similar_median": 0.987684077024342,
+      "similar_min": 0.9806656828066129,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8831897122811305,
+      "gap": 0.09896902061725721,
+      "id": "kabl-t15",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.029796551217505685,
+        "32": 0.01898964902466116,
+        "8": 0.029975390532280266
+      },
+      "separated": true,
+      "similar_median": 0.9876876672126684,
+      "similar_min": 0.9821587328983877,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8885455193830701,
+      "gap": 0.09483767188257797,
+      "id": "kabl-t16",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.024230885937075564,
+        "32": 0.017475237580201308,
+        "8": 0.024230885937075564
+      },
+      "separated": true,
+      "similar_median": 0.9878642961658589,
+      "similar_min": 0.9833831912656481,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8874087463055007,
+      "gap": 0.0954181124317911,
+      "id": "kabl-t17",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.019929079519521387,
+        "32": 0.018911077911702767,
+        "8": 0.02656610275365967
+      },
+      "separated": true,
+      "similar_median": 0.9870652827776469,
+      "similar_min": 0.9828268587372918,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8827399537052786,
+      "gap": 0.10135961178087716,
+      "id": "kabl-t18",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022432361628808573,
+        "32": 0.020857282518918496,
+        "8": 0.027736472623505315
+      },
+      "separated": true,
+      "similar_median": 0.9874460695094043,
+      "similar_min": 0.9840995654861557,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8797101216127896,
+      "gap": 0.1015471698096545,
+      "id": "kabl-t19",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.019509016703372684,
+        "32": 0.019509016703372684,
+        "8": 0.028138265613404823
+      },
+      "separated": true,
+      "similar_median": 0.9865410246556616,
+      "similar_min": 0.9812572914224441,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8782557533085301,
+      "gap": 0.0925810877554829,
+      "id": "kabl-t20",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.03282863811686243,
+        "32": 0.03282863811686243,
+        "8": 0.0378320757760463
+      },
+      "separated": true,
+      "similar_median": 0.9833093527660626,
+      "similar_min": 0.970836841064013,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8845102812707637,
+      "gap": 0.09647241375771254,
+      "id": "kabl-t21",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.021404466283035273,
+        "32": 0.021404466283035273,
+        "8": 0.021404466283035273
+      },
+      "separated": true,
+      "similar_median": 0.9878789651092285,
+      "similar_min": 0.9809826950284762,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8817837403111418,
+      "gap": 0.10064275336424222,
+      "id": "kabl-t22",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028139723965208363,
+        "32": 0.024388699242713696,
+        "8": 0.032078830693780036
+      },
+      "separated": true,
+      "similar_median": 0.9860539846019569,
+      "similar_min": 0.982426493675384,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "tone",
+      "filler_max": 0.8795338081114993,
+      "gap": 0.10412194941836361,
+      "id": "kabl-t23",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.020837791951572204,
+        "32": 0.020837791951572204,
+        "8": 0.020837791951572204
+      },
+      "separated": true,
+      "similar_median": 0.9885054461069441,
+      "similar_min": 0.9836557575298629,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.907919930595844,
+      "gap": 0.07515952280613003,
+      "id": "kabl-c00",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022743652739113163,
+        "32": 0.019063775116401782,
+        "8": 0.02408804623494043
+      },
+      "separated": true,
+      "similar_median": 0.9903749873274175,
+      "similar_min": 0.983079453401974,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9043027634340085,
+      "gap": 0.08270208834688042,
+      "id": "kabl-c01",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02318338466596137,
+        "32": 0.02318338466596137,
+        "8": 0.02318338466596137
+      },
+      "separated": true,
+      "similar_median": 0.9910945240505977,
+      "similar_min": 0.9870048517808889,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.899783164048918,
+      "gap": 0.08684425926389228,
+      "id": "kabl-c02",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02268906518581415,
+        "32": 0.021372637193977972,
+        "8": 0.02268906518581415
+      },
+      "separated": true,
+      "similar_median": 0.991090044056949,
+      "similar_min": 0.9866274233128103,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9002810621998153,
+      "gap": 0.08579993683081799,
+      "id": "kabl-c03",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02301955853748483,
+        "32": 0.023017541502547312,
+        "8": 0.02301955853748483
+      },
+      "separated": true,
+      "similar_median": 0.9900498431309015,
+      "similar_min": 0.9860809990306333,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.904691683822311,
+      "gap": 0.08178881250550096,
+      "id": "kabl-c04",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.030439069058404322,
+        "32": 0.029392285111271343,
+        "8": 0.030439069058404322
+      },
+      "separated": true,
+      "similar_median": 0.9911721257036383,
+      "similar_min": 0.986480496327812,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9054898992730276,
+      "gap": 0.08059999187450462,
+      "id": "kabl-c05",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02772349400068197,
+        "32": 0.023928291335286622,
+        "8": 0.02772349400068197
+      },
+      "separated": true,
+      "similar_median": 0.9908768918679606,
+      "similar_min": 0.9860898911475322,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9007087420316874,
+      "gap": 0.08643314147644798,
+      "id": "kabl-c06",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.023200412257093905,
+        "32": 0.021588840651666552,
+        "8": 0.023200412257093905
+      },
+      "separated": true,
+      "similar_median": 0.9886790758486189,
+      "similar_min": 0.9871418835081354,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9017653807812831,
+      "gap": 0.08355105977344268,
+      "id": "kabl-c07",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028631610345075442,
+        "32": 0.024758546045548058,
+        "8": 0.030575069147318223
+      },
+      "separated": true,
+      "similar_median": 0.9898713650173191,
+      "similar_min": 0.9853164405547258,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9027483903022314,
+      "gap": 0.08381691052436901,
+      "id": "kabl-c08",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025102763390486782,
+        "32": 0.016480465694155955,
+        "8": 0.025102763390486782
+      },
+      "separated": true,
+      "similar_median": 0.9903784073249445,
+      "similar_min": 0.9865653008266004,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9030021051960477,
+      "gap": 0.08467591422982834,
+      "id": "kabl-c09",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028484675632074463,
+        "32": 0.02215366989547618,
+        "8": 0.030324237087233752
+      },
+      "separated": true,
+      "similar_median": 0.9912296019541188,
+      "similar_min": 0.9876780194258761,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9007432911177268,
+      "gap": 0.08530764641860034,
+      "id": "kabl-c10",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.019729531842885506,
+        "32": 0.009480611304790054,
+        "8": 0.022227763016399726
+      },
+      "separated": true,
+      "similar_median": 0.9916754361150677,
+      "similar_min": 0.9860509375363271,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9027075440246407,
+      "gap": 0.08345978134370136,
+      "id": "kabl-c11",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02279898983737738,
+        "32": 0.01628629614096211,
+        "8": 0.02279898983737738
+      },
+      "separated": true,
+      "similar_median": 0.9907373219436697,
+      "similar_min": 0.9861673253683421,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8980491228050858,
+      "gap": 0.0877668274117056,
+      "id": "kabl-c12",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.020776688685827827,
+        "32": 0.012081567671767046,
+        "8": 0.020776688685827827
+      },
+      "separated": true,
+      "similar_median": 0.9905685369763645,
+      "similar_min": 0.9858159502167914,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9014149505193639,
+      "gap": 0.08664732711673018,
+      "id": "kabl-c13",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022811133196500855,
+        "32": 0.012373730443687614,
+        "8": 0.023123527371128105
+      },
+      "separated": true,
+      "similar_median": 0.9904548273694505,
+      "similar_min": 0.9880622776360941,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8982649919055608,
+      "gap": 0.08865965738134207,
+      "id": "kabl-c14",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.026042628631101294,
+        "32": 0.014459029791201172,
+        "8": 0.02640284957077421
+      },
+      "separated": true,
+      "similar_median": 0.9890162718688105,
+      "similar_min": 0.9869246492869028,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8997431255574617,
+      "gap": 0.08857648332424628,
+      "id": "kabl-c15",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.024410163103662175,
+        "32": 0.013846758518458846,
+        "8": 0.030197266494460195
+      },
+      "separated": true,
+      "similar_median": 0.9914633174713042,
+      "similar_min": 0.988319608881708,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9036270407942818,
+      "gap": 0.08509939253847454,
+      "id": "kabl-c16",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.014563360446467222,
+        "32": 0.01391260524416249,
+        "8": 0.024018708925955146
+      },
+      "separated": true,
+      "similar_median": 0.9915734333387405,
+      "similar_min": 0.9887264333327563,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8999769159970763,
+      "gap": 0.08765403473641065,
+      "id": "kabl-c17",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.013589944739024196,
+        "32": 0.013589944739024196,
+        "8": 0.02239524036945051
+      },
+      "separated": true,
+      "similar_median": 0.9911197263311821,
+      "similar_min": 0.987630950733487,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8940720908079176,
+      "gap": 0.09167262290572331,
+      "id": "kabl-c18",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.010132660389859272,
+        "32": 0.010132660389859272,
+        "8": 0.018151810589195017
+      },
+      "separated": true,
+      "similar_median": 0.9886672985221954,
+      "similar_min": 0.9857447137136409,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8995388602416156,
+      "gap": 0.08785259973768733,
+      "id": "kabl-c19",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.016531062369826044,
+        "32": 0.014852012837438644,
+        "8": 0.021647875747087375
+      },
+      "separated": true,
+      "similar_median": 0.9908992074047489,
+      "similar_min": 0.9873914599793029,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.8991903803581337,
+      "gap": 0.08131614918901353,
+      "id": "kabl-c20",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.018106077124351305,
+        "32": 0.018106077124351305,
+        "8": 0.018106077124351305
+      },
+      "separated": true,
+      "similar_median": 0.9883455892124327,
+      "similar_min": 0.9805065295471472,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9041382825367684,
+      "gap": 0.08386299267162056,
+      "id": "kabl-c21",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.018754106085806965,
+        "32": 0.018754106085806965,
+        "8": 0.018754106085806965
+      },
+      "separated": true,
+      "similar_median": 0.9914418693399094,
+      "similar_min": 0.988001275208389,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.9021486534551402,
+      "gap": 0.08557521173557892,
+      "id": "kabl-c22",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.017854911828094067,
+        "32": 0.017854911828094067,
+        "8": 0.017854911828094067
+      },
+      "separated": true,
+      "similar_median": 0.9909004665979981,
+      "similar_min": 0.9877238651907191,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "choice",
+      "filler_max": 0.906427639985582,
+      "gap": 0.07885504732903637,
+      "id": "kabl-c23",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025093099693573984,
+        "32": 0.025093099693573984,
+        "8": 0.02681635976706409
+      },
+      "separated": true,
+      "similar_median": 0.9901680348066311,
+      "similar_min": 0.9852826873146183,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.9019599987789667,
+      "gap": 0.08251296853221723,
+      "id": "kabl-p00",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022749878789380618,
+        "32": 0.014663354494559133,
+        "8": 0.022749878789380618
+      },
+      "separated": true,
+      "similar_median": 0.9899659950753131,
+      "similar_min": 0.9844729673111839,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8964695878183699,
+      "gap": 0.08985950870297088,
+      "id": "kabl-p01",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02485134841373715,
+        "32": 0.02485134841373715,
+        "8": 0.02696857200504743
+      },
+      "separated": true,
+      "similar_median": 0.9904096069109313,
+      "similar_min": 0.9863290965213408,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8946612053080281,
+      "gap": 0.09188320680365358,
+      "id": "kabl-p02",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.027503094828697172,
+        "32": 0.02681103085339298,
+        "8": 0.029574128964786506
+      },
+      "separated": true,
+      "similar_median": 0.9904053757407841,
+      "similar_min": 0.9865444121116816,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8987714355475978,
+      "gap": 0.08774257867505597,
+      "id": "kabl-p03",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028029665598356845,
+        "32": 0.027960098464881122,
+        "8": 0.032556676460977374
+      },
+      "separated": true,
+      "similar_median": 0.9899455983021391,
+      "similar_min": 0.9865140142226537,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8919972076714022,
+      "gap": 0.09422534813452699,
+      "id": "kabl-p04",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.027145511698175695,
+        "32": 0.02642126042135229,
+        "8": 0.027145511698175695
+      },
+      "separated": true,
+      "similar_median": 0.9898273152198062,
+      "similar_min": 0.9862225558059292,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8944542888677869,
+      "gap": 0.09143234339156447,
+      "id": "kabl-p05",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.026020771272182497,
+        "32": 0.025492352125814466,
+        "8": 0.026020771272182497
+      },
+      "separated": true,
+      "similar_median": 0.9890616913471652,
+      "similar_min": 0.9858866322593514,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.89830038384727,
+      "gap": 0.08875293457514433,
+      "id": "kabl-p06",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.029638937762722528,
+        "32": 0.027029356880513333,
+        "8": 0.029638937762722528
+      },
+      "separated": true,
+      "similar_median": 0.9900418420101078,
+      "similar_min": 0.9870533184224143,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8984170747565444,
+      "gap": 0.0874203020895562,
+      "id": "kabl-p07",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.03192305527681971,
+        "32": 0.03165715983970108,
+        "8": 0.03192305527681971
+      },
+      "separated": true,
+      "similar_median": 0.9889056248955537,
+      "similar_min": 0.9858373768461006,
+      "slots_32": 32,
+      "split": "fit"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8949421744634608,
+      "gap": 0.09011340084556518,
+      "id": "kabl-p08",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.03346333533928847,
+        "32": 0.03346333533928847,
+        "8": 0.037904671978239435
+      },
+      "separated": true,
+      "similar_median": 0.9889908881955997,
+      "similar_min": 0.985055575309026,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8927151359867982,
+      "gap": 0.09417682833641905,
+      "id": "kabl-p09",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02781762748587424,
+        "32": 0.022666909141552005,
+        "8": 0.02781762748587424
+      },
+      "separated": true,
+      "similar_median": 0.9898734537751257,
+      "similar_min": 0.9868919643232172,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8846776115020932,
+      "gap": 0.10133503946276323,
+      "id": "kabl-p10",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.01793553878359322,
+        "32": 0.016789640899374847,
+        "8": 0.01793553878359322
+      },
+      "separated": true,
+      "similar_median": 0.9902801436944544,
+      "similar_min": 0.9860126509648565,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8877454389041189,
+      "gap": 0.09640223927806624,
+      "id": "kabl-p11",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02300607962839718,
+        "32": 0.020012457560038555,
+        "8": 0.023506402861859677
+      },
+      "separated": true,
+      "similar_median": 0.9901733033576752,
+      "similar_min": 0.9841476781821852,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8848348288621943,
+      "gap": 0.10207240183390931,
+      "id": "kabl-p12",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.025526099947063896,
+        "32": 0.02294785262004506,
+        "8": 0.026073391847947658
+      },
+      "separated": true,
+      "similar_median": 0.9903423319793404,
+      "similar_min": 0.9869072306961036,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8933657572303011,
+      "gap": 0.09378160600650165,
+      "id": "kabl-p13",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02520715956555697,
+        "32": 0.02387701140047549,
+        "8": 0.03018367384664178
+      },
+      "separated": true,
+      "similar_median": 0.9907509635314551,
+      "similar_min": 0.9871473632368027,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8851115998665069,
+      "gap": 0.10253026672856724,
+      "id": "kabl-p14",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.0256338621852239,
+        "32": 0.022833282617606754,
+        "8": 0.02638135687750931
+      },
+      "separated": true,
+      "similar_median": 0.9903229664132724,
+      "similar_min": 0.9876418665950741,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8874508244080649,
+      "gap": 0.09899716686680327,
+      "id": "kabl-p15",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.023556308011192906,
+        "32": 0.021556369967387856,
+        "8": 0.023556308011192906
+      },
+      "separated": true,
+      "similar_median": 0.9896535320295899,
+      "similar_min": 0.9864479912748682,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.892436061768961,
+      "gap": 0.09574838514424167,
+      "id": "kabl-p16",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022545237625327563,
+        "32": 0.020589868407042133,
+        "8": 0.025573337879749802
+      },
+      "separated": true,
+      "similar_median": 0.9908846882438966,
+      "similar_min": 0.9881844469132026,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8923492716662841,
+      "gap": 0.09495560339950038,
+      "id": "kabl-p17",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.029415252716508133,
+        "32": 0.02316404518027415,
+        "8": 0.029415252716508133
+      },
+      "separated": true,
+      "similar_median": 0.9898844832876034,
+      "similar_min": 0.9873048750657845,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8922103074292987,
+      "gap": 0.09284463132913356,
+      "id": "kabl-p18",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.028631753365372936,
+        "32": 0.027162183004326823,
+        "8": 0.02876467662373816
+      },
+      "separated": true,
+      "similar_median": 0.9890699415639886,
+      "similar_min": 0.9850549387584323,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8884609142672736,
+      "gap": 0.09805585077398582,
+      "id": "kabl-p19",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.021559294542663587,
+        "32": 0.021559294542663587,
+        "8": 0.030089709774728912
+      },
+      "separated": true,
+      "similar_median": 0.9902751644914037,
+      "similar_min": 0.9865167650412594,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.879301345438295,
+      "gap": 0.09997866590184423,
+      "id": "kabl-p20",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.022903973140488643,
+        "32": 0.022903973140488643,
+        "8": 0.024191379163506332
+      },
+      "separated": true,
+      "similar_median": 0.987763760915431,
+      "similar_min": 0.9792800113401392,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.88642653650218,
+      "gap": 0.10012217165465254,
+      "id": "kabl-p21",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.02761544753368128,
+        "32": 0.02761544753368128,
+        "8": 0.02761544753368128
+      },
+      "separated": true,
+      "similar_median": 0.990366553905703,
+      "similar_min": 0.9865487081568325,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.881338169493288,
+      "gap": 0.10436322417178023,
+      "id": "kabl-p22",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.024906189932851652,
+        "32": 0.022594839480287066,
+        "8": 0.027144978249155294
+      },
+      "separated": true,
+      "similar_median": 0.9906113103078142,
+      "similar_min": 0.9857013936650683,
+      "slots_32": 32,
+      "split": "held"
+    },
+    {
+      "argmax": {
+        "16": true,
+        "32": true,
+        "8": true
+      },
+      "family": "preference",
+      "filler_max": 0.8859279832715203,
+      "gap": 0.10111400770764534,
+      "id": "kabl-p23",
+      "prefix_ok": true,
+      "query_gap": {
+        "16": 0.021632906324624335,
+        "32": 0.020957699596049095,
+        "8": 0.021632906324624335
+      },
+      "separated": true,
+      "similar_median": 0.9908249053365626,
+      "similar_min": 0.9870419909791657,
+      "slots_32": 32,
+      "split": "held"
+    }
+  ],
+  "separated": 72,
+  "separation_ok": true,
+  "similar_cosine": {
+    "max": 0.9931601405647932,
+    "mean": 0.988626600474161,
+    "median": 0.9890279362758504,
+    "min": 0.970836841064013,
+    "n": 1080
+  },
+  "slots_32_min": 32
+}
