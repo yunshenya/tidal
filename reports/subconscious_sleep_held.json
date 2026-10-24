@@ -1,0 +1,169 @@
+{
+  "bank_sha256": "543e679c07fade14e2b2b78272aea0f6915e76b5cad04687dd5691f0a20c6483",
+  "canonical": {
+    "formula_sleep_1": 0.25504311102289434,
+    "formula_sleep_3": 0.19403840041261516,
+    "formula_wake_4": 0.2990792952357356,
+    "replay_high_strength": 0.951229424500714,
+    "sleep_after": [
+      0.25504311102289434,
+      0.19403840041261516
+    ],
+    "sleep_before": 0.2990792952357356,
+    "sleep_drop": [
+      0.04403618421284128,
+      0.10504089482312046
+    ],
+    "spontaneous_fires": 1,
+    "spontaneous_rate": 0.0625,
+    "wake_pressures": [
+      0.15452824346787175,
+      0.20575278767386407,
+      0.2990792952357356
+    ]
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.7110615019919351,
+  "failures": [],
+  "fit_canonical": {
+    "formula_sleep_1": 0.25504311102289434,
+    "formula_sleep_3": 0.19403840041261516,
+    "formula_wake_4": 0.2990792952357356,
+    "replay_high_strength": 0.951229424500714,
+    "sleep_after": [
+      0.25504311102289434,
+      0.19403840041261516
+    ],
+    "sleep_before": 0.2990792952357356,
+    "sleep_drop": [
+      0.04403618421284128,
+      0.10504089482312046
+    ],
+    "spontaneous_fires": 1,
+    "spontaneous_rate": 0.0625,
+    "wake_pressures": [
+      0.15452824346787175,
+      0.20575278767386407,
+      0.2990792952357356
+    ]
+  },
+  "gates": {
+    "cue_source": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "replay": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "sleep": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "spontaneous": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    },
+    "wake": {
+      "k": 50,
+      "n": 50,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.9286524008666414,
+        1.0
+      ]
+    }
+  },
+  "git": "e075f7477bc559d0d2cc30fe42b15bfde69721fd",
+  "ids": [
+    "sleep-held-000",
+    "sleep-held-001",
+    "sleep-held-002",
+    "sleep-held-003",
+    "sleep-held-004",
+    "sleep-held-005",
+    "sleep-held-006",
+    "sleep-held-007",
+    "sleep-held-008",
+    "sleep-held-009",
+    "sleep-held-010",
+    "sleep-held-011",
+    "sleep-held-012",
+    "sleep-held-013",
+    "sleep-held-014",
+    "sleep-held-015",
+    "sleep-held-016",
+    "sleep-held-017",
+    "sleep-held-018",
+    "sleep-held-019",
+    "sleep-held-020",
+    "sleep-held-021",
+    "sleep-held-022",
+    "sleep-held-023",
+    "sleep-held-024",
+    "sleep-held-025",
+    "sleep-held-026",
+    "sleep-held-027",
+    "sleep-held-028",
+    "sleep-held-029",
+    "sleep-held-030",
+    "sleep-held-031",
+    "sleep-held-032",
+    "sleep-held-033",
+    "sleep-held-034",
+    "sleep-held-035",
+    "sleep-held-036",
+    "sleep-held-037",
+    "sleep-held-038",
+    "sleep-held-039",
+    "sleep-held-040",
+    "sleep-held-041",
+    "sleep-held-042",
+    "sleep-held-043",
+    "sleep-held-044",
+    "sleep-held-045",
+    "sleep-held-046",
+    "sleep-held-047",
+    "sleep-held-048",
+    "sleep-held-049"
+  ],
+  "kind": "sleep-held",
+  "note": "One pass. Constants were not changed after the fit lock.",
+  "pass": true,
+  "protocol": "sleep-pressure-v1"
+}

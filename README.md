@@ -104,7 +104,17 @@ growbrain is the planned consumer. Its planned threshold is `θ = θ0 + a·S −
 
 Protocol `sleep-pressure-v1`. Fit ids `sleep-fit-000` through `sleep-fit-007` are disjoint from held ids `sleep-held-000` through `sleep-held-049`. The fit bank, git `f8e5b48a4b77cf239a6d90d80de5d5970b5855a9`, is 8/8 on wake, sleep, replay, spontaneous recall, and cue source, Wilson 95% [0.6755924351161198, 1.0]. Wake pressures are 0.15452824346787175, 0.20575278767386407, and 0.2990792952357356. Sleep from 0.2990792952357356 drops by 0.04403618421284128 and 0.10504089482312046, to 0.25504311102289434 and 0.19403840041261516. Spontaneous fires are 1/16, rate 0.0625. One orthogonal replay leaves strength 0.951229424500714. The held floors are 50/50 on each gate. The held bank was not scored.
 
+The held bank was scored once after that sentence. Git `e075f7477bc559d0d2cc30fe42b15bfde69721fd`. Elapsed 0.7110615019919351 seconds. Report `reports/subconscious_sleep_held.json`. Every gate is 50/50, Wilson 95% [0.9286524008666414, 1.0]: wake, sleep, replay, spontaneous recall, cue source, and the item. The pressures, the drop, the spontaneous rate 0.0625, and the orthogonal replay strength 0.951229424500714 match the fit record. Constants were not changed.
+
 The cue-triggered floors stay the merged #57/#62 rates. A cue guard rescores them once into new files and must match. The cue guard was not scored. Theta, half-life, lambda, fan S, and the RIF span are unchanged.
+
+The cue guard was scored once after that sentence. Git `e075f7477bc559d0d2cc30fe42b15bfde69721fd`. Outer elapsed time 157.57020951200684 seconds, including the floor pass of 116.71694204599771 seconds. `matches_pr57` is true. `diffs` is empty. Reports `reports/subconscious_sleep_cue_held.json` and `reports/subconscious_sleep_cue_floors.json`.
+
+Direction gates match. Cued margin positive 43/50, mean 0.574797535019073, Wilson 95% [0.7381380628941446, 0.9304916657298371]. Unrelated absolute margin 0.0007146249711513519. False triggers 0/50, Wilson [0.0, 0.07134759913335872]. Decay 50/50, Wilson [0.9286524008666414, 1.0]. Store means at 8/16/32 are 0.054827355566279226 / 0.04411715648680307 / 0.03872253612925597. Quiet-token NLL is -2.347582425826635e-05 on 117 tokens. Fan strict 40/50, Wilson [0.6696289406777459, 0.887562499842239], means 0.574797535019073 / 0.19655592603958205 / 0.008063986022801456.
+
+Cue-triggered floors match. Prefer up 46/50. Avoid up 37/50. Avoid stored down 42/50. Toward up 47/50. Away down 47/50. Coexist 50/50. RIF competitor below 1 is 47/50. Winner per event 50/50 items and 215/215 events. Outsider 50/50. Interference similarity 35/50. Interference count 32/50. Fan strictly decreasing 45/50. Floor means match: prefer delta 3.0352763720974325, avoid delta 0.09669723543804146, avoid stored lift -0.1285090258220832, toward delta 1.7882910075116283, away delta -1.0943180120953668, fan 3.0352763720974325 / 0.9923983175990482 / 0.03559282800182707.
+
+Inject cost on this pass is not a gate. Extra seconds per token at store sizes 8, 16, and 32 are 0.0001314447264038873, 0.00014579572598449886, and 0.00018903836396268824. Armed seconds per token are 0.002436959727095779, 0.0023961939084322444, and 0.0024913608186497268.
 
 ## Signals exported to growbrain
 
