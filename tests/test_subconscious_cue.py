@@ -47,6 +47,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_log_strength_beats_a_higher_cosine_above_theta():
     choice = select_cue_winner([0.2, 0.9], [math.exp(2.0), 1.0], 0.15)
     assert choice["index"] == 0
+    assert choice["candidates"] == [0, 1]
     assert choice["cosine"] == pytest.approx(0.2)
     assert choice["gap"] == pytest.approx(0.2 - 0.9)
     assert choice["tied"] is False
@@ -58,6 +59,7 @@ def test_strength_below_theta_is_not_a_candidate():
     assert choice["index"] == 1
     assert choice["gap"] == pytest.approx(0.10)
     assert choice["n"] == 1
+    assert choice["candidates"] == [1]
 
 
 def test_cosine_tie_records_the_lower_index_and_adds_nothing():
@@ -557,6 +559,9 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "direction held bank" in text
     assert "The point pass is false because decay is 5/8." in text
     assert "The n≥50 pass is false." in text
+    assert "cue-direction-fresh-v1" in text
+    assert "38/50" in text
+    assert "compete_retrieved" in (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script
@@ -570,6 +575,18 @@ def test_prereg_locks_the_schedule_and_the_citations():
             fit_src = ast.get_source_segment(script, node)
     assert "0.35" not in fit_src
     assert "SCHEDULE" in fit_src
+
+
+def test_fresh_direction_bank_is_disjoint_and_large():
+    from tidal.subconscious_cue_fresh_data import N, fresh_bank
+
+    bank = fresh_bank()
+    assert len(bank.PREFER) == N == 50
+    assert len(bank.NEUTRAL_CHOICE) == 50
+    assert len(bank.NEUTRAL_NLL) == 50
+    assert len(bank.incidental_facts()) >= 31
+    assert bank.PROTOCOL == "cue-direction-fresh-v1"
+    assert len(bank.sha256()) == 64
 
 
 def test_fit_script_keeps_held_banks_out_of_fit_and_histogram():

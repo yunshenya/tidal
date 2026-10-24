@@ -35,6 +35,8 @@ HALFLIFE_FIT_PATH = REPORT_DIR / "subconscious_cue_halflife_fit.json"
 ANISOTROPY_PATH = REPORT_DIR / "subconscious_cue_anisotropy.json"
 KWTA_FIT_PATH = REPORT_DIR / "subconscious_cue_kwta_fit.json"
 DIRECTION_HELD_PATH = REPORT_DIR / "subconscious_cue_direction_held.json"
+REVISION_PATH = REPORT_DIR / "subconscious_cue_revision_held.json"
+COMPETITION_FIT_PATH = REPORT_DIR / "subconscious_cue_competition_fit.json"
 KWTA_KS = (1, 2, 3, 4)
 HELD_N_MIN = 50
 FROZEN_ALPHA = 0.25
@@ -70,6 +72,16 @@ CUED_POS_MIN = 6
 DECAY_PASS_MIN = 6
 STORE_DROP_MAX = 0.05
 QUIET_NLL_MAX = 0.02
+# Fresh direction gates. 38/50 is the fit 6/8 proportion on n=50.
+# Fixed before the fresh bank is scored. Not taken from the seen n=50 floors.
+FRESH_N_MIN = 50
+FRESH_CUED_MIN = 38
+FRESH_DECAY_MIN = 38
+FRESH_FAN_MIN = 38
+FRESH_FALSE_TRIGGER_CEILING = FALSE_TRIGGER_CEILING
+FRESH_UNRELATED_ABS_MAX = UNRELATED_ABS_MAX
+FRESH_STORE_DROP_MAX = STORE_DROP_MAX
+FRESH_QUIET_NLL_MAX = QUIET_NLL_MAX
 STORE_SIZES = (8, 16, 32)
 COST_WARMUP = 2
 COST_REPEATS = 7
@@ -889,7 +901,7 @@ def fit() -> dict:
     return payload
 
 
-def held() -> dict:
+def held(dest: Path = None) -> dict:
     """Gates 6 and 7 on the n=50 banks. Refuses to run unless the schedule fit selected a cell."""
     from tidal.subconscious_interfere_score import score_quartet
     from tidal.subconscious_measure_data import (
@@ -1038,7 +1050,7 @@ def held() -> dict:
             "fan4": fan["means"].get("4"),
         },
     }
-    _dump(SCHEDULE_HELD_PATH, payload)
+    _dump(SCHEDULE_HELD_PATH if dest is None else dest, payload)
     _print(json.dumps({"pass": payload["pass"], "failures": failures, "rates": {k: [v["k"], v["n"]] for k, v in rates.items()}}, indent=2))
     return payload
 
@@ -1432,6 +1444,164 @@ def direction_held() -> dict:
     return payload
 
 
+def _fresh_summary(scored) -> dict:
+    """Apply the pre-registered n=50 floors. ``_score_cell`` still uses the n=8 cut."""
+
+    def _rate(name: str, k: int, n: int, floor: int) -> dict:
+        return {
+            "gate": name,
+            "k": int(k),
+            "n": int(n),
+            "floor": int(floor),
+            "wilson": _wilson(int(k), int(n)) if int(n) > 0 else None,
+            "pass": bool(int(n) >= FRESH_N_MIN and int(k) >= int(floor)),
+        }
+
+    cued = _rate("cued_positive", scored["n_cued_pos"], scored["decay_n"], FRESH_CUED_MIN)
+    cued["mean"] = float(scored["mean_cued_delta"])
+    cued["pass"] = bool(cued["pass"] and float(scored["mean_cued_delta"]) > 0.0)
+    false_trigger = _rate(
+        "false_trigger",
+        scored["false_triggers"],
+        scored["false_trigger_n"],
+        0,
+    )
+    false_rate = float(scored["false_trigger_rate"])
+    false_trigger["rate"] = false_rate
+    false_trigger["pass"] = bool(
+        int(scored["false_trigger_n"]) >= FRESH_N_MIN and false_rate <= FRESH_FALSE_TRIGGER_CEILING
+    )
+    decay = _rate("decay", scored["decay_pass"], scored["decay_n"], FRESH_DECAY_MIN)
+    fan = _rate("fan_strict", scored["fan_k"], scored["fan_n"], FRESH_FAN_MIN)
+    fan["means"] = scored["fan_means"]
+    means = scored["fan_means"]
+    fan["pass"] = bool(
+        fan["pass"]
+        and means["1"] is not None
+        and float(means["1"]) > float(means["2"]) > float(means["4"])
+    )
+    store_n = int(scored["decay_n"])
+    store_means = scored["store_means"]
+    store_pass = bool(
+        store_n >= FRESH_N_MIN
+        and float(store_means["16"]) > 0.0
+        and float(store_means["32"]) > 0.0
+        and float(store_means["16"]) >= float(store_means["8"]) - FRESH_STORE_DROP_MAX
+        and float(store_means["32"]) >= float(store_means["8"]) - FRESH_STORE_DROP_MAX
+    )
+    quiet_n = int(scored["quiet_nll_n"])
+    quiet_mean = scored["quiet_nll_mean"]
+    quiet_pass = bool(
+        quiet_n >= FRESH_N_MIN
+        and quiet_mean is not None
+        and float(quiet_mean) <= FRESH_QUIET_NLL_MAX
+    )
+    unrelated_n = int(scored["false_trigger_n"])
+    unrelated_mean = float(scored["unrelated_abs_mean"])
+    unrelated_pass = bool(
+        unrelated_n >= FRESH_N_MIN and unrelated_mean <= FRESH_UNRELATED_ABS_MAX
+    )
+    gates = {
+        "cued_positive": cued,
+        "unrelated": {
+            "n": unrelated_n,
+            "mean_abs": unrelated_mean,
+            "max": FRESH_UNRELATED_ABS_MAX,
+            "pass": unrelated_pass,
+        },
+        "false_trigger": false_trigger,
+        "decay": decay,
+        "store": {"n": store_n, "means": store_means, "pass": store_pass},
+        "quiet_nll": {"n": quiet_n, "mean": quiet_mean, "pass": quiet_pass},
+        "fan_strict": fan,
+    }
+    return {
+        "gates": gates,
+        "pass": all(row["pass"] for row in gates.values()),
+        "decay_reasons": [
+            {"id": row.get("id"), "pass": row.get("pass"), "reason": row.get("reason")}
+            for row in scored["decay_rows"]
+        ],
+    }
+
+
+def revision() -> dict:
+    """One held pass: fresh direction gates, then the previous n=50 floors.
+
+    Does not read the fresh bank while choosing a cell. Theta, half-life,
+    lambda, and the floors stay the values already selected on fit.
+    """
+    from tidal.subconscious_cue_fresh_data import PROTOCOL, fresh_bank
+
+    prereg = (REPORT_DIR / "subconscious_cue_prereg.md").read_text(encoding="utf-8")
+    if PROTOCOL not in prereg or "38/50" not in prereg:
+        raise RuntimeError("fresh gates are not in the preregistration")
+    import tidal.llm_memory as mod
+
+    original = (
+        float(mod.CUE_THETA),
+        float(mod.CUE_HALF_LIFE),
+        float(mod.CUE_LAMBDA),
+        float(mod.CUE_A_TRIG),
+    )
+    bank = fresh_bank()
+    mem = _load_memory()
+    started = time.perf_counter()
+    try:
+        prefer = list(bank.PREFER)
+        if len(prefer) < FRESH_N_MIN or len(list(bank.NEUTRAL_CHOICE)) < FRESH_N_MIN:
+            raise RuntimeError("fresh bank is below 50")
+        prefer_rows = _encode(mem, [_fact(item) for item in prefer])
+        incidental_rows = _encode(mem, list(bank.incidental_facts())[:31])
+        _bind(FROZEN_THETA, float(original[1]), float(original[2]), 1.0)
+        base = _baselines(mem, bank, prefer_rows)
+        scored = _score_cell(mem, bank, prefer_rows, incidental_rows, base, FROZEN_ALPHA)
+        fresh = _fresh_summary(scored)
+        cost = _cost(mem, prefer_rows + incidental_rows, prefer[0]["prompt"])
+        mem.store.clear()
+    finally:
+        _bind(*original)
+        mem.close()
+    floors = held(dest=REPORT_DIR / "subconscious_cue_revision_floors.json")
+    payload = {
+        "kind": "revision-held",
+        "git": _git_sha(),
+        "elapsed_s": time.perf_counter() - started,
+        "protocol": PROTOCOL,
+        "bank_sha256": bank.sha256(),
+        "theta": FROZEN_THETA,
+        "half_life": original[1],
+        "lambda": original[2],
+        "alpha": FROZEN_ALPHA,
+        "fresh": fresh,
+        "cost": cost,
+        "floors_pass": bool(floors["pass"]),
+        "floor_failures": floors["failures"],
+        "floor_rates": floors["rates"],
+        "floor_means": floors["means"],
+        "pass": bool(fresh["pass"] and floors["pass"]),
+        "theta_changed": False,
+        "note": "One pass. The fresh gates and the previous floors were not used to choose the cell.",
+    }
+    _dump(REVISION_PATH, payload)
+    _print(
+        json.dumps(
+            {
+                "pass": payload["pass"],
+                "fresh_pass": fresh["pass"],
+                "floors_pass": payload["floors_pass"],
+                "fresh": {
+                    name: {"pass": row["pass"], **{k: row[k] for k in row if k in ("k", "n", "mean", "mean_abs", "rate")}}
+                    for name, row in fresh["gates"].items()
+                },
+                "floor_failures": floors["failures"],
+            },
+            indent=2,
+        )
+    )
+    return payload
+
+
 def main(argv: list) -> None:
     mode = argv[1] if len(argv) > 1 else "fit"
     if mode == "histogram":
@@ -1446,6 +1616,8 @@ def main(argv: list) -> None:
         compete()
     elif mode == "direction-held":
         direction_held()
+    elif mode == "revision":
+        revision()
     else:
         raise SystemExit(f"unknown mode {mode}")
 

@@ -299,6 +299,23 @@ def test_background_relations_and_salience_are_not_cues():
     assert rival_indexes(lone, 0, 3, 0.5) == []
 
 
+def test_theta_candidates_compete_and_a_closer_companion_drops_more():
+    from tidal.llm_memory import compete_retrieved
+
+    winner = _slot("cue", 0.0, [1.0, 0.0, 0.0])
+    close = _slot("cue", 0.0, [0.8, 0.6, 0.0])
+    far = _slot("other", 0.0, [0.4, 0.0, np.sqrt(1.0 - 0.16)])
+    missed = _slot("cue", 0.0, [0.0, 1.0, 0.0])
+    exempt = _slot("cue", 1.0, [0.9, 0.43589, 0.0])
+    slots = [winner, close, far, missed, exempt]
+    changed = compete_retrieved(slots, 0, [0, 1, 2, 4])
+    assert changed == 2
+    assert slots[0].strength == 1.0
+    assert slots[3].strength == 1.0
+    assert slots[4].strength == 1.0
+    assert slots[1].strength < slots[2].strength < 1.0
+
+
 def test_closer_key_is_scaled_more_and_span_zero_is_a_no_op(monkeypatch):
     slots = [
         _slot("cue", 0.0, [1.0, 0.0]),
@@ -339,6 +356,15 @@ def test_rank_forgets_only_a_strict_same_relation_win():
             slot.strength = 1.0
         notes = [slot for slot in mem.store.slots if slot.rel == "note"]
         assert len(notes) == 5
+        width = int(np.asarray(notes[0].k).shape[0])
+        missed = np.zeros(width, dtype=np.float64)
+        missed[-1] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+
+        def _miss(_text, _row=missed, _center=center):
+            return np.repeat((_row + _center).reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _miss
         mem._rank("note 0 is Z")
         assert all(slot.strength == 1.0 for slot in mem.store.slots)
         mem.store.clear()
@@ -363,6 +389,15 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         mem.cue_hidden = _fixed
         info = mem._rank("red is Y")
         assert info["gap"] is not None and float(info["gap"]) > 0.0
+        # The orthogonal key misses theta, so it is not in the competition.
+        assert slots[0].strength == 1.0
+        assert slots[1].strength == 1.0
+        assert mem.last_rif["n"] == 0
+        near = 0.6 * match + 0.8 * orth
+        slots[1].k = near / np.linalg.norm(near)
+        slots[1].salience = 0.0
+        slots[1].strength = 1.0
+        mem._rank("red is Y")
         assert slots[0].strength == 1.0
         assert slots[1].strength < 1.0
         assert mem.last_rif["n"] == 1
@@ -379,7 +414,7 @@ def test_rank_forgets_only_a_strict_same_relation_win():
         assert slots[1].strength == 1.0
         assert mem.last_rif["n"] == 0
         rank_source = inspect.getsource(LLMMemory._rank)
-        assert "forget_rivals" in rank_source
+        assert "compete_retrieved" in rank_source
         assert "cue_fields" in rank_source
         assert "activation_weights" not in rank_source
     finally:

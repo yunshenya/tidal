@@ -320,3 +320,35 @@ The point pass is false because decay is 5/8. The n≥50 pass is false.
 The three decay failures are the logit comparison, on `dir-held-prefer-2`, `dir-held-prefer-4`, and `dir-held-prefer-7`. Activation on those items still fell with distance. The report is `reports/subconscious_cue_direction_held.json`.
 
 Inject cost at the selected cell, from the widened half-life fit, median extra seconds per token, 10 tokens, warmup 2, repeats 7: store 8 is 0.000120, store 16 is 0.000084, store 32 is 0.000108. The armed forward is about 0.0025 seconds per token.
+
+## Competitive retrieval
+
+This section supersedes the rule that `forget_rivals` scales same-relation rivals of the winner whether or not those rivals cleared theta.
+
+Theta still gates on centered cosine. Strength still ranks the candidates that clear theta. One winner is injected. Decay is unchanged. Lambda still scales only the residual.
+
+Before that injection, every other candidate that cleared theta participates. `compete_retrieved` multiplies its strength by the existing retrieval-induced-forgetting keep. Similarity is key cosine to the winner, so a closer companion is scaled more. That is the similar-companion interference. The winner is not scaled. A slot that missed theta is not scaled. A slot whose salience is at least 0.5 is exempt. The span stays 0.05. `cue_fields` does not change strength. The scoring forward reads the updated strengths and still adds only the winner.
+
+Norman, Newman, and Detre (2007) describe competitive retrieval in which co-active competitors are punished. This is that consequence. It is not their oscillator and not their learning rule. https://doi.org/10.1037/0033-295X.114.4.887
+
+No constant was retuned. The already-scored n=50 floors were not used to choose this rule. The direction fit bank is the design bank.
+
+## Fresh direction gates
+
+Protocol `cue-direction-fresh-v1`. The bank is `tidal/subconscious_cue_fresh_data.py`: 50 prefer items, 50 neutral-choice prompts, 50 neutral-NLL items, and 40 incidental facts. It is disjoint from the direction fit bank and the direction held bank. It is not used to choose theta, half-life, lambda, alpha, fan S, or the RIF span.
+
+One pass, after this section is committed. Wilson 95% intervals are reported. A rate with n below 50 fails.
+
+| gate | rule |
+| --- | --- |
+| cued margin positive, mean positive | 38/50 and mean > 0 |
+| unrelated absolute margin | n=50 and mean ≤ 0.05 |
+| false triggers | n=50 and rate ≤ 0.10 |
+| decay after the last trigger | 38/50 |
+| store 8 / 16 / 32 | n=50, means at 16 and 32 positive and within 0.05 of size 8 |
+| quiet-token NLL | n≥50 tokens and mean ≤ 0.02 |
+| fan 1 / 2 / 4 strictly decreasing | 38/50 and the three means decreasing |
+
+38/50 is the fit point rule of 6/8 on a bank of 50. It is not a number from the already-scored floors.
+
+The same pass also scores the previous n=50 floors: prefer 50/50, avoid up 39/50, avoid stored 42/50, toward 45/50, away 48/50, at least 4 slots 50/50, competitor below 1 is 50/50, winner unchanged 50/50, outsider unchanged 50/50, similarity 42/50, count 48/50, and fan strictly decreasing 38/50. Those floors are not moved. The previous schedule-held file is not rewritten. The report is `reports/subconscious_cue_revision_held.json`. Inject cost per token is reported on this pass at store sizes 8, 16, and 32.

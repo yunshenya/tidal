@@ -132,6 +132,11 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
         if other == (best_log, best_cos):
             tied = True
             break
+    candidates = []
+    for index in positive:
+        if not math.isfinite(float(cosine[index])) or float(cosine[index]) < float(theta):
+            continue
+        candidates.append(int(index))
     return {
         "index": int(best_index),
         "cosine": float(cosine[best_index]),
@@ -139,6 +144,7 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
         "strength": float(strength[best_index]),
         "tied": bool(tied),
         "n": int(n_candidates),
+        "candidates": candidates,
     }
 
 
@@ -243,6 +249,7 @@ def _blank(cue_dim: int) -> dict:
         "triggered": False,
         "gap": float("nan"),
         "winner_cosine": float("nan"),
+        "candidates": [],
     }
 
 
@@ -266,6 +273,7 @@ def _row_from_state(state: CueState, cue_dim: int, *, triggered: bool) -> dict:
         "triggered": bool(triggered),
         "gap": float(state.gap),
         "winner_cosine": float(state.winner_cosine),
+        "candidates": [],
     }
 
 
@@ -298,7 +306,9 @@ def step_cue(
         factor = fan_factor(int(choice["n"]), fan_s)
         activation = float(a_trig) * factor
         if activation < float(floor):
-            return CueState(), _blank(cue_dim)
+            cleared = _blank(cue_dim)
+            cleared["candidates"] = [int(item) for item in choice["candidates"]]
+            return CueState(), cleared
         index = int(choice["index"])
         vec = np.asarray(values[index], dtype=np.float32).reshape(-1).copy()
         offset = float(valence_span) * math.tanh(float(valences[index]))
@@ -325,7 +335,9 @@ def step_cue(
             modality=_modality_of(modalities, index, int(values.shape[0])),
             vec=vec,
         )
-        return new, _row_from_state(new, cue_dim, triggered=True)
+        row = _row_from_state(new, cue_dim, triggered=True)
+        row["candidates"] = [int(item) for item in choice["candidates"]]
+        return new, row
     if state.inactive():
         return CueState(), _blank(cue_dim)
     dt = int(state.dt) + 1
@@ -400,6 +412,7 @@ def trace_sequence(
     gap = np.full(steps, np.nan, dtype=np.float64)
     winner_cosine = np.full(steps, np.nan, dtype=np.float64)
     modality = []
+    candidates = []
     for index in range(steps):
         if key.shape[0] == 0:
             scores = np.zeros(0, dtype=np.float64)
@@ -429,6 +442,7 @@ def trace_sequence(
         gap[index] = float(row["gap"])
         winner_cosine[index] = float(row["winner_cosine"])
         modality.append(str(row["modality"]))
+        candidates.append([int(item) for item in row["candidates"]])
     return {
         "memory_id": memory_id,
         "vec": vec,
@@ -439,5 +453,6 @@ def trace_sequence(
         "gap": gap,
         "winner_cosine": winner_cosine,
         "modality": modality,
+        "candidates": candidates,
         "cue_dim": int(cue_dim),
     }, current

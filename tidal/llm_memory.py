@@ -7,8 +7,10 @@ The decoder index is not part of that interface. A memory is a candidate only
 when ``cos(cue - query_center, key)`` is at least ``theta``. Theta does not
 read strength. The winner is the one candidate with the greatest
 ``(log(strength), cosine, -index)``. One winner is added. There is no
-mixture. Losers of a strict win still take the existing retrieval-induced
-forgetting scale. A historical strength-weighted mixture is recorded in
+mixture. Before that add, every other candidate that cleared theta takes
+the existing retrieval-induced-forgetting keep. Similarity is key cosine
+to the winner, so a closer companion is scaled more. The winner is not
+scaled. A slot that missed theta is not scaled. A historical strength-weighted mixture is recorded in
 ``docs/llm_memory.md`` and in :func:`activation_weights`; generation does not
 call it.
 
@@ -1227,6 +1229,49 @@ def rival_indexes(slots, winner: int, max_set: int, salience_exempt: float) -> l
     return [i for i in raw if float(slots[i].salience) < float(salience_exempt)]
 
 
+def compete_retrieved(slots, winner: int, competitors) -> int:
+    """Scale every other candidate that cleared theta. Returns how many changed.
+
+    The winner is not scaled. ``competitors`` is that theta set, including
+    the winner. Similarity is key cosine to the winner, and the keep is
+    :func:`rif_competitor_keep`, so a closer companion drops more. A slot
+    at or above the salience exempt is left alone. Slots that missed theta
+    are absent from ``competitors``. This is competitive retrieval in the
+    sense of Norman, Newman, and Detre (2007): co-active candidates are
+    punished and only the winner is later injected. It is not their
+    oscillator and not their learning rule.
+    """
+    if winner < 0 or winner >= len(slots):
+        raise IndexError("competition winner is outside the store")
+    pending = []
+    seen = set()
+    for raw in competitors:
+        index = int(raw)
+        if index == int(winner) or index in seen:
+            continue
+        if index < 0 or index >= len(slots):
+            raise IndexError("competition candidate is outside the store")
+        seen.add(index)
+        if float(slots[index].salience) >= float(RIF_SALIENCE_EXEMPT):
+            continue
+        pending.append(index)
+    if not pending:
+        return 0
+    winner_key = np.asarray(slots[winner].k, dtype=np.float64)
+    keys = np.stack([np.asarray(slots[index].k, dtype=np.float64) for index in pending], 0)
+    sims = cosine_scores(keys, winner_key)
+    closest = float(np.max(sims))
+    changed = 0
+    for index, sim in zip(pending, sims.tolist()):
+        keep = rif_competitor_keep(float(sim), closest, RIF_SPAN)
+        before = float(slots[index].strength)
+        updated = before * float(keep)
+        if updated != before:
+            changed += 1
+        slots[index].strength = updated
+    return changed
+
+
 def forget_rivals(slots, winner: int) -> int:
     """Scale same-cue competitors. Returns how many strengths changed.
 
@@ -2104,6 +2149,7 @@ class LLMMemory:
         if len(self.store) == 0:
             hidden = self.cue_hidden(text)
             fields = _empty_cue_fields(hidden.shape[0], hidden.shape[1], float(self.clock_phase()))
+            self._last_candidates = [[] for _ in range(int(hidden.shape[0]))]
             self.cue_state = CueState()
             self.last_cue_fields = fields
             self.last_added = torch.zeros(int(hidden.shape[1]), dtype=torch.float32)
@@ -2111,6 +2157,7 @@ class LLMMemory:
         hidden = self.cue_hidden(text)
         numpy_fields, residual, state = self._trace_numpy(hidden, state=CueState())
         packed = _pack_cue_fields(numpy_fields, float(self.clock_phase()))
+        self._last_candidates = [list(row) for row in numpy_fields["candidates"]]
         self.cue_state = state
         self.last_cue_fields = packed
         self._last_cue_rows = hidden
@@ -2118,7 +2165,12 @@ class LLMMemory:
         return packed
 
     def _rank(self, prompt: str) -> dict:
-        """Cue trace of ``prompt``. Forgetting runs after the trace, once per strict win."""
+        """Cue trace of ``prompt``. Competition runs after the trace and before injection.
+
+        The scoring forward is a later call. It reads the strengths this
+        method just wrote and injects only the winner. ``cue_fields`` itself
+        does not change strength.
+        """
         info = {
             "n": len(self.store),
             "value": None,
@@ -2142,8 +2194,9 @@ class LLMMemory:
         triggered = fields["triggered"][0].tolist()
         memory = fields["memory_id"][0].tolist()
         gaps = fields["gap"][0].tolist()
+        candidates = list(getattr(self, "_last_candidates", []))
         slots = self.store._slots
-        for flag, slot_index, gap in zip(triggered, memory, gaps):
+        for token, (flag, slot_index, gap) in enumerate(zip(triggered, memory, gaps)):
             if not flag:
                 continue
             slot_index = int(slot_index)
@@ -2151,7 +2204,8 @@ class LLMMemory:
                 continue
             seen.add(slot_index)
             if gap == gap and float(gap) > 0.0 and len(slots) >= 2:
-                forgotten += int(forget_rivals(slots, slot_index))
+                group = candidates[token] if token < len(candidates) else []
+                forgotten += int(compete_retrieved(slots, slot_index, group))
         self.last_rif = {"n": int(forgotten)}
         slot_index = int(fields["memory_id"][0, -1].item())
         info["memory_id"] = slot_index
