@@ -18,6 +18,51 @@ real held-out data; results are reported with block-bootstrap CIs, including the
 (log-only, never acts) collects fresh evaluation data. MIT licensed. No real chat data and no weights trained on real
 chat are published.
 
+Two layers sit side by side. The floor-control layer decides whether to speak. The subconscious memory layer stores text facts and adds a residual inside a frozen language model. It does not take the floor. A growbrain backend is planned and is not in this tree. The longer account, including every held count, is in [docs/architecture.md](docs/architecture.md).
+
+### Floor control
+
+`tidal/duplex.py` runs one tick every `TICK_S = 0.1` seconds. Each tick reads events, an optional audio frame, an optional vision frame, and the bot's own speaking state, then emits one action in `{silent, start, keep, yield, continue, backchannel, initiate}`. The loop does not generate the words.
+
+The six task heads live on the event model, `HEAD_DIMS` in `tidal/model.py`: `y_eot`, `y_self`, `y_addr`, `y_act` (speak / wait / silent), `y_recheck` (7 time buckets), `y_hreply`. The tick GRU is a separate head. It sees `ev_p_speak`, `ev_p_addr`, and `ev_p_eot` as features. `p_interrupt`, `p_barge`, and `ControlOut.task_shadow` are logged and do not change the action.
+
+Front ends are `tidal/modalities/`. `meta` parses placeholders and does not open the file. `text` is frozen bge-small-zh (512-d) and `available()` is true only when `models/bge/bge_q.onnx` is present. `image`, `video`, and `audio` each have a deterministic CPU `encode()`; `available()` stays false because no learned checkpoint ships. The streaming speech encoder is `tidal/audio_fe.py`. Duplex wraps it as `AudioFrontEnd` when a checkpoint path is given, and that wrapper writes the tick's `music` feature as 0. `tidal/audio_turn.py` is a separate shift experiment on reference segment boundaries. `VisionFrontEnd` turns an image or a clip into salience and scene-change through the CPU fallbacks. Tick policy training is the synthetic host in `tidal/duplex_sim.py`.
+
+Shadow mode (`tidal/shadow/`) logs and does not act. The default cron tick is the phase-1 ONNX model. `TIDAL_SHADOW_P4=1` or `shadow/state/frozen_p4.json` also logs the phase-4 winner `m3_ablate_m2` (text emotion on, speech emotion off) plus `p_interrupt`. No phase has a stable, significant win over the strong baselines on real held-out data, so this layer does not take a real decision.
+
+### Subconscious memory
+
+`tidal/episodic.py` `EpisodicStore` is the slot list: one slot per fact, same-identity overwrite, capacity 256 with FIFO eviction, and a raw-cosine soft top-k (`soft_k` 4, `soft_temp` 0.05) used by Continuum `heads`. Key cosine does not merge slots. A different identity is merged only when the group matches, the relation is the same non-empty string, and the surface token Jaccard is at least `REPEAT_JACCARD` 0.85. Continuum readout is shadow replay. String values on that path are positional byte codes, and that path does not run the inject MLP.
+
+`tidal/llm_memory.py` `LLMMemory` reuses the same store for a frozen causal LM. The default checkpoint is `HuggingFaceTB/SmolLM2-135M`. The inject layer is `n_layers // 2`, layer 15, hidden 576, and that default loads `tidal/llm_inject_smollm2_135m.pt`. The fact text is not copied into the prompt. With one slot the residual is `s * u * gain * (scale(v) + MLP(scale(v)))`. With more slots it is the sum of that term over the top `MIX_K = 4` cosine neighbors, weighted by `exp((log(strength) + cosine) / MIX_TEMP)` at `MIX_TEMP = 0.05`. `_broadcast` adds that one vector at every position of the layer. Spelling and retrieval-induced forgetting follow the cosine argmax, not the blend. `generate` does not read `soft_k`. The tick loop does not import this module.
+
+Shipped constants, each fit on a fit bank and not retuned on held-out: polarity span 2, valence span 1 and step 0.25, clock span 0.25 with tick `pi/16`, surprise window 32 at quantile 0, replay every 32 accepted writes, strength `0.5 ** age`, refreshing 1 slot, RIF span 0.05 over at most 3 same-relation competitors. Phone and birthday spelling copies the winning slot's stored string, and only when the prompt is completing that relation.
+
+The stored key and value are SmolLM2 residuals of text. The value is an answer-span pool at the inject layer (phone and birthday answers are concatenated slices, not a mean of the span). The key drops sink tokens and subtracts a fixed center. This path does not read `tidal/modalities` image, video, audio, or meta features.
+
+[#56](https://github.com/yunshenya/tidal/pull/56) is merged. It removes a key forward inside `_rank` and locks the readout as identical, so it has no new held behavior. The behavior record is [#46](https://github.com/yunshenya/tidal/pull/46)–[#55](https://github.com/yunshenya/tidal/pull/55):
+
+| PR | change | state | held result |
+|---|---|---|---|
+| [#46](https://github.com/yunshenya/tidal/pull/46) | exact phone and birthday spelling | merged | phone `+1-802-555-3145`, birthday `July 26, 1990`; choice flips 1/8, so the held pass is no; prefer / avoid / forbidden means 20.750 / 1.453 / −1.578 (8/8) |
+| [#47](https://github.com/yunshenya/tidal/pull/47) | experience valence | merged | pass. toward 6/8, mean 1.865; away 8/8, mean −10.242 |
+| [#48](https://github.com/yunshenya/tidal/pull/48) | content-free circadian clock | merged | pass. high phase 8/8, mean 1.942; low phase 8/8, mean −1.677; decay gap 0.174 |
+| [#49](https://github.com/yunshenya/tidal/pull/49) | relative surprise gate | merged | pass. lows written 0/8, highs 8/8, window bar 10.621 |
+| [#50](https://github.com/yunshenya/tidal/pull/50) | retrieval-induced forgetting | merged | pass. competitor min drop 0.191, mean 0.312; winner and outsider drop 0 |
+| [#51](https://github.com/yunshenya/tidal/pull/51) | delete unused question-dialogue code | merged | no held bank. `ask` / `query` are gone |
+| [#52](https://github.com/yunshenya/tidal/pull/52) | retrieval, key cosine, implicit influence | draft | n=50: prefer 50/50, avoid up 39/50, avoid stored down 42/50, toward 45/50, away 48/50; one-slot subconscious score 1.342; RIF geometry 0/50 under the old cosine overwrite |
+| [#53](https://github.com/yunshenya/tidal/pull/53) | strength-weighted mixture, K=4, T=0.05 | merged | pass. four-slot mixture score 1.152 ≥ top-1 0.598 (150/150 probes, 4 slots); same n=50 rates as #52 |
+| [#54](https://github.com/yunshenya/tidal/pull/54) | similar memories coexist and interfere | merged | pass. slots 50/50, competitor down 50/50, winner unchanged 50/50, outsider unchanged 50/50, similarity 42/50, count 48/50; same n=50 direction rates |
+| [#55](https://github.com/yunshenya/tidal/pull/55) | fixed K=4 versus cumulative top-p | draft | constants unchanged. shipped cell `d_z` 0.291 / 0.558 / 0.665 at store size 8 / 16 / 32; help is negative on every cell |
+
+### Planned growbrain interface
+
+This interface is **planned**. The repository has no growbrain module, no encode/nll/inject hook for that backend, and no per-token cue export.
+
+The planned backend is growbrain behind an encode hook, an NLL hook, and an inject hook. The planned inject is cue-triggered and per token. Each token would carry `memory_id`, `vec`, `activation`, `strength*confidence`, `valence`, `circadian`, `triggered`, and `interface_version`. A `source` field and a per-tick output are later additions to that list.
+
+**Proposed, pending confirmation:** tidal decides whether to speak; growbrain decides what to say and supplies a want-to-speak logit. That split is not implemented.
+
 ---
 
 ## 为什么做 tidal
@@ -46,7 +91,9 @@ tidal 想填的就是这个空档。详细的对比和文献见 [docs/related-wo
 | 选择性弃权（风险-覆盖曲线、"等一下再看"策略）、ECE 报告 | ✅ 第二阶段 |
 | 身份无关的相对角色；冷启动评测（加入后前 20 / 50 / 100 条）和按会话在线重新校准 | ✅ 第二阶段 |
 | 场景通用的统一事件流（没有场景枚举，参与人数是连续特征）、留一场景评测 | ✅ 第二阶段（直播和 1:1 流是脚本合成的） |
-| 全双工 tick 控制循环（100 ms，多路输入，她自己的输出也是输入，控制与内容生成分离） | ✅ 控制循环、合成 sanity/CPU 基准、真实音频流和无 checkpoint 视觉特征适配；策略训练仍在模拟器上 |
+| 全双工 tick 控制循环（100 ms，多路输入，她自己的输出也是输入，控制与内容生成分离） | ✅ 控制循环、合成 sanity/CPU 基准、流式音频 checkpoint 适配、无 checkpoint 视觉特征；策略训练仍在 `duplex_sim.py`。影子字段不改动作 |
+| 潜意识记忆：`EpisodicStore` + SmolLM2-135M 第 15 层残差，混合 K=4、T=0.05 | ✅ 文本残差。不读模态特征，不进 tick。held 数字见上表 |
+| growbrain 后端，以及逐 token 的 cue 信号 | 📋 计划，仓库里没有。谁说话 / 说什么的分工是提议，待确认 |
 | 影子模式（只记录不执行，延迟打标签，定时任务，报告；新旧模型在同一批标签上并行打分） | ✅ |
 | int8 动态量化（ONNX Runtime） | ✅ 第三阶段（这个尺寸上收益很小） |
 | 蒸馏、剪枝、LoRA、保形预测 | 📋 计划中 |
@@ -81,7 +128,7 @@ tidal/                 核心代码
   model.py             小型因果主干 + 多任务头
   train.py / evaluate.py / baselines.py / metrics.py / audit.py / export.py / bench.py
   synth.py             用 LLM 生成合成群聊（只用抽象的场景描述；需要你自己的 key）
-  modalities/          各模态前端（meta、text 已实现；image、video 和统一 audio.py 仍是接口；可运行语音前端见 audio_fe.py）
+  modalities/          各模态前端。meta 与 text（bge，要本地 onnx）可编码；image、video、audio 有确定性 CPU fallback，`available()` 为 False。流式语音见 audio_fe.py
   features_g.py        第二阶段：场景通用的事件输入（时间 / 节奏 / 相对角色 + 可丢弃的人数、模态块）
   vap_targets.py       第二阶段：VAP 式未来事件投影目标（4 个相对通道 × 5 个时间桶）
   vap.py               第二阶段：投影预训练 → 多任务微调；流式 step()
@@ -97,8 +144,8 @@ tidal/                 核心代码
   backbones.py         第四阶段：Mamba-3 SISO / MIMO（含分块 SSD）、RoPE + KV 缓存 Transformer、Mamba-2 式消融
   emotion.py / emotion_speech.py / sv_soft.py / emo_features.py / emo_speech_integ.py   第四阶段：文本 / 语音情绪头、SenseVoice 离线教师软标签、情绪特征、语音情绪接入测试
   eval4.py / bench4.py / report4.py / continuum.py   第四阶段：评测、流式延迟与 ONNX、汇总、连续体记忆（影子回放）
-  episodic.py          情景事实槽（同身份覆盖、soft top-k、位置字节码）
-  llm_memory.py        可选：冻结因果 LM 的测试时记忆（答案跨度池化，残差注入；默认 SmolLM2-135M 装上随包的已训练 inject）。`pip install tidal[llm]`
+  episodic.py          情景事实槽。同身份覆盖；键余弦不合并；同关系表面重复按 Jaccard 0.85 合并；Continuum 用 raw-cosine soft top-k
+  llm_memory.py        冻结 SmolLM2-135M 的测试时记忆。答案跨度残差注入第 15 层，混合 K=4、T=0.05。`pip install tidal[llm]`
   llm_memory_train.py  答案跨度池化 + inject MLP 的 CPU 训练（`--tiny` 不下载模型）
   corpus_fmt.py        "!语料" 对话片段格式的通用解析器（示例见 examples/corpus_example.txt，纯虚构）
   shadow/              影子模式：数据源插件、SQLite 存储、推理、打标签、报告
