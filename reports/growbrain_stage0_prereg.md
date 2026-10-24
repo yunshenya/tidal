@@ -14,13 +14,13 @@ Protocol `growbrain-stage0-v1`. This is the behavior change. The live `interface
 
 Migrate the packet and the episodic store onto growbrain `d_model`. Stage0 `e1_base_rebalance` has no `expand_d`. The pinned ModelConfig is `d_model` 192, `mem_dim` 64, `mem_key_dim` 32, `inject_layer` 2, `n_layers` 4, `head_dim` 48. `d_model` is the text-hidden width and the packet `vec` width. `mem_dim` is the injector slot only. The episodic store and the key center are not 64. A later checkpoint's `cfg.d_model` wins over 192.
 
-Retire `TIDAL_DIM` 576 as the live packet width. `GrowbrainBackend` does not load `tidal/llm_key_center.npz` or `tidal/llm_inject_smollm2_135m.pt` and does not map 192 back to 576. Those two files stay on the explicit SmolLM2 constructor so that path can still be built. They are not a retrain. The 192-d key center and inject MLP are not in this pull request: the checkpoint was not on the machine, and a zero MLP is not a trained substitute. `scripts/train_growbrain_inject.py` exits before writing a file.
+Retire `TIDAL_DIM` 576 as the live packet width. `GrowbrainBackend` does not load `tidal/llm_key_center.npz` or `tidal/llm_inject_smollm2_135m.pt` and does not map 192 back to 576. Those two files stay on the explicit SmolLM2 constructor so that path can still be built. They are not a retrain. The 192-d key center and inject MLP are not in this pull request. Origin `shen-yun/growbrain` does not store the weights: `checkpoints/` is gitignored. The file is `/workspace/checkpoints/e1_base_rebalance.pt` on the growbrain VM, with a vocab sidecar, vocab 5135. Training, fit, and held stay paused until that file is attached. A zero MLP is not a trained substitute. `scripts/train_growbrain_inject.py` exits before writing a file.
 
 `interface_version` was 5. It is 6. The field set is unchanged. Version 6 records the width. growbrain should set `TIDAL_DIM` to 192 and point `TidalAdapter.proj` at 192 → `mem_dim` 64.
 
 ## What was readable
 
-No `e1_base_rebalance` checkpoint and no growbrain tree were on this machine. Origin reported an invalid session for `shen-yun/growbrain`. No cfg file was found, so these pins are the stage0 numbers above, not a cfg read from disk. `model(idx)` is the text call. A return value that does not expose a logits tensor raises. The loader does not guess a checkpoint constructor.
+No `e1_base_rebalance` checkpoint and no growbrain tree were on this machine. Origin `shen-yun/growbrain` has no `.pt` in git. The real file is `/workspace/checkpoints/e1_base_rebalance.pt` on the growbrain VM, plus a vocab sidecar, vocab 5135. It is being exported as a cloud-agent artifact or a Hugging Face file. This protocol does not score until that file is attached. No cfg file was found, so these pins are the stage0 numbers above, not a cfg read from disk. `model(idx)` is the text call. A return value that does not expose a logits tensor raises. The loader does not guess a checkpoint constructor.
 
 ## Gates
 
