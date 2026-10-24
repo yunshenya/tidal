@@ -65,6 +65,8 @@ The new floors are the git `709ae8c` held rates. Prefer up 46/50, Wilson 95% [0.
 
 Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required. The winner at event onset is unchanged by that event. The utterance-level 16/50 is retired. The per-event winner floor was not scored.
 
+That definition was scored once on the floor bank at git `b3726225387f7d592a89de6f0c412091a72af112`, elapsed 47.2 seconds. Every event left its own winner unscaled: 215/215 events, Wilson 95% [0.9824463845132672, 1.0], and 50/50 items, Wilson [0.9286524008666414, 1.0]. The floor is 50/50. The retired utterance-level check on the same pass is still 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. Theta, half-life, lambda, and the retrieval mechanism were not changed.
+
 ## Planned interface to growbrain
 
 The per-token cue export is what generation injects. There is still no growbrain package and no encode, NLL, or inject hook for that backend. Those hooks stay **planned**. Each exported token carries:

@@ -1,0 +1,786 @@
+{
+  "constants_changed": false,
+  "definition": "Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required. The winner at event onset is unchanged by that event.",
+  "elapsed_s": 47.15778860700084,
+  "events": {
+    "k": 215,
+    "n": 215,
+    "wilson": [
+      0.9824463845132672,
+      1.0
+    ]
+  },
+  "git": "b3726225387f7d592a89de6f0c412091a72af112",
+  "items": {
+    "k": 50,
+    "n": 50,
+    "wilson": [
+      0.9286524008666414,
+      1.0
+    ]
+  },
+  "kind": "winner-event",
+  "mechanism_changed": false,
+  "note": "One pass of the floor-bank quartets. Direction gates were not rescored.",
+  "rows": [
+    {
+      "id": "measure-rif-0-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-0-0": 1.0,
+        "measure-rif-0-1": 0.9025,
+        "measure-rif-0-2": 0.90362729084093,
+        "measure-rif-0-3": 0.9046483106095923,
+        "measure-rif-0-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-1-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-1-0": 0.7350918906249998,
+        "measure-rif-1-1": 0.573951550333848,
+        "measure-rif-1-2": 0.7354573645362429,
+        "measure-rif-1-3": 0.6049830692437868,
+        "measure-rif-1-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 11,
+      "winner_events_unchanged": 11,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-2-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-2-0": 1.0,
+        "measure-rif-2-1": 0.95,
+        "measure-rif-2-2": 0.9501477453169475,
+        "measure-rif-2-3": 0.9504217733641163,
+        "measure-rif-2-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-3-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-3-0": 0.8578208929097902,
+        "measure-rif-3-1": 0.8145062499999999,
+        "measure-rif-3-2": 0.7354998710708215,
+        "measure-rif-3-3": 0.773871594903082,
+        "measure-rif-3-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 7,
+      "winner_events_unchanged": 7,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-4-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-4-0": 0.9025,
+        "measure-rif-4-1": 0.9025,
+        "measure-rif-4-2": 0.8162528779436796,
+        "measure-rif-4-3": 0.8173929000910508,
+        "measure-rif-4-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-5-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-5-0": 1.0,
+        "measure-rif-5-1": 0.95,
+        "measure-rif-5-2": 0.9501176791799597,
+        "measure-rif-5-3": 0.950098977292118,
+        "measure-rif-5-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-6-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-6-0": 0.8574395855631247,
+        "measure-rif-6-1": 0.8573749999999999,
+        "measure-rif-6-2": 0.7369276963195167,
+        "measure-rif-6-3": 0.8175686596871482,
+        "measure-rif-6-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 6,
+      "winner_events_unchanged": 6,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-7-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-7-0": 0.8587794830264746,
+        "measure-rif-7-1": 0.859446480096317,
+        "measure-rif-7-2": 0.7780467228448817,
+        "measure-rif-7-3": 0.820266111278722,
+        "measure-rif-7-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-8-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-8-0": 0.9503077678912012,
+        "measure-rif-8-1": 0.8573749999999999,
+        "measure-rif-8-2": 0.8585841581024326,
+        "measure-rif-8-3": 0.9033742593437207,
+        "measure-rif-8-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-9-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-9-0": 1.0,
+        "measure-rif-9-1": 0.95,
+        "measure-rif-9-2": 0.9510215654295149,
+        "measure-rif-9-3": 0.9507461820660715,
+        "measure-rif-9-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-10-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-10-0": 0.9040463113113276,
+        "measure-rif-10-1": 0.8160111527070494,
+        "measure-rif-10-2": 0.8578343811614828,
+        "measure-rif-10-3": 0.8573749999999999,
+        "measure-rif-10-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-11-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-11-0": 0.9030208667387036,
+        "measure-rif-11-1": 0.9025,
+        "measure-rif-11-2": 0.814971327337833,
+        "measure-rif-11-3": 0.8172505010554234,
+        "measure-rif-11-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-12-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-12-0": 0.9044618140406913,
+        "measure-rif-12-1": 0.9031302587567149,
+        "measure-rif-12-2": 0.857824220012064,
+        "measure-rif-12-3": 0.9035404881348622,
+        "measure-rif-12-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-13-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-13-0": 0.7737809374999999,
+        "measure-rif-13-1": 0.6329445783329987,
+        "measure-rif-13-2": 0.8145062499999999,
+        "measure-rif-13-3": 0.6329948333938353,
+        "measure-rif-13-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 10,
+      "winner_events_unchanged": 10,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-14-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-14-0": 0.9513322144123808,
+        "measure-rif-14-1": 0.904499338454003,
+        "measure-rif-14-2": 0.9513060419831435,
+        "measure-rif-14-3": 0.903742517611785,
+        "measure-rif-14-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-15-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-15-0": 0.9026796198456336,
+        "measure-rif-15-1": 0.7744924129644639,
+        "measure-rif-15-2": 0.8145062499999999,
+        "measure-rif-15-3": 0.8150874822590795,
+        "measure-rif-15-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-16-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-16-0": 1.0,
+        "measure-rif-16-1": 0.95,
+        "measure-rif-16-2": 0.9504086039097032,
+        "measure-rif-16-3": 0.950025809320419,
+        "measure-rif-16-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-17-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-17-0": 0.8184349181955701,
+        "measure-rif-17-1": 0.6634204312890623,
+        "measure-rif-17-2": 0.665285427845736,
+        "measure-rif-17-3": 0.8160334048879165,
+        "measure-rif-17-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 9,
+      "winner_events_unchanged": 9,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-18-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-18-0": 0.9503261625306039,
+        "measure-rif-18-1": 0.9025,
+        "measure-rif-18-2": 0.9505652354233414,
+        "measure-rif-18-3": 0.9041501815420188,
+        "measure-rif-18-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-19-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-19-0": 1.0,
+        "measure-rif-19-1": 0.95,
+        "measure-rif-19-2": 0.9503575356783424,
+        "measure-rif-19-3": 0.9500852233082209,
+        "measure-rif-19-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-20-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-20-0": 0.7737809374999999,
+        "measure-rif-20-1": 0.7737809374999999,
+        "measure-rif-20-2": 0.6313605215353075,
+        "measure-rif-20-3": 0.6342183073491954,
+        "measure-rif-20-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 10,
+      "winner_events_unchanged": 10,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-21-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-21-0": 0.818790084448857,
+        "measure-rif-21-1": 0.6696352258635426,
+        "measure-rif-21-2": 0.6671289158489458,
+        "measure-rif-21-3": 0.8188392262318706,
+        "measure-rif-21-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 8,
+      "winner_events_unchanged": 8,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-22-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-22-0": 0.8582530426282652,
+        "measure-rif-22-1": 0.735969559105049,
+        "measure-rif-22-2": 0.8577301076439102,
+        "measure-rif-22-3": 0.7356435077011717,
+        "measure-rif-22-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 6,
+      "winner_events_unchanged": 6,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-23-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-23-0": 0.8573749999999999,
+        "measure-rif-23-1": 0.9025,
+        "measure-rif-23-2": 0.7768787683079331,
+        "measure-rif-23-3": 0.7777889252407121,
+        "measure-rif-23-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-24-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-24-0": 0.8611530975881974,
+        "measure-rif-24-1": 0.8157514790089906,
+        "measure-rif-24-2": 0.8599163690964094,
+        "measure-rif-24-3": 0.7737809374999999,
+        "measure-rif-24-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 6,
+      "winner_events_unchanged": 6,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-25-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-25-0": 0.7737809374999999,
+        "measure-rif-25-1": 0.7737809374999999,
+        "measure-rif-25-2": 0.6021510366903092,
+        "measure-rif-25-3": 0.6047481249504916,
+        "measure-rif-25-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 10,
+      "winner_events_unchanged": 10,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-26-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-26-0": 0.95,
+        "measure-rif-26-1": 0.9503701579901288,
+        "measure-rif-26-2": 0.95,
+        "measure-rif-26-3": 0.9504393664251348,
+        "measure-rif-26-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-27-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-27-0": 1.0,
+        "measure-rif-27-1": 1.0,
+        "measure-rif-27-2": 1.0,
+        "measure-rif-27-3": 1.0,
+        "measure-rif-27-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-28-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-28-0": 0.9057948705598764,
+        "measure-rif-28-1": 0.8618801707746768,
+        "measure-rif-28-2": 0.9040686878166858,
+        "measure-rif-28-3": 0.9029385514004868,
+        "measure-rif-28-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-29-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-29-0": 0.9026366332568857,
+        "measure-rif-29-1": 0.8145973901688153,
+        "measure-rif-29-2": 0.8579286690768596,
+        "measure-rif-29-3": 0.8580386455094516,
+        "measure-rif-29-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-30-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-30-0": 1.0,
+        "measure-rif-30-1": 0.95,
+        "measure-rif-30-2": 0.9510042052767723,
+        "measure-rif-30-3": 0.9513058563369813,
+        "measure-rif-30-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-31-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-31-0": 0.9506885970014564,
+        "measure-rif-31-1": 0.8584890901536001,
+        "measure-rif-31-2": 0.8157019895721404,
+        "measure-rif-31-3": 0.8145062499999999,
+        "measure-rif-31-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 8,
+      "winner_events_unchanged": 8,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-32-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-32-0": 1.0,
+        "measure-rif-32-1": 0.9025,
+        "measure-rif-32-2": 0.9031884937510796,
+        "measure-rif-32-3": 0.9039493860201424,
+        "measure-rif-32-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-33-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-33-0": 0.9522340755361683,
+        "measure-rif-33-1": 0.8577928438019249,
+        "measure-rif-33-2": 0.903745366579882,
+        "measure-rif-33-3": 0.9518259391613781,
+        "measure-rif-33-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-34-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-34-0": 0.95,
+        "measure-rif-34-1": 0.8577718073859963,
+        "measure-rif-34-2": 0.9029229529207843,
+        "measure-rif-34-3": 0.8580022899255175,
+        "measure-rif-34-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 3,
+      "winner_events_unchanged": 3,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-35-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-35-0": 0.9045029785245661,
+        "measure-rif-35-1": 0.8169250836542264,
+        "measure-rif-35-2": 0.9511999769690747,
+        "measure-rif-35-3": 0.8592628083996413,
+        "measure-rif-35-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 5,
+      "winner_events_unchanged": 5,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-36-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-36-0": 1.0,
+        "measure-rif-36-1": 0.9501565293594898,
+        "measure-rif-36-2": 0.95,
+        "measure-rif-36-3": 0.9505896002137316,
+        "measure-rif-36-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-37-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-37-0": 0.9504016206372607,
+        "measure-rif-37-1": 0.8573749999999999,
+        "measure-rif-37-2": 0.9043370421126116,
+        "measure-rif-37-3": 0.8589436419912633,
+        "measure-rif-37-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-38-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-38-0": 0.8604934824177602,
+        "measure-rif-38-1": 0.814617682096806,
+        "measure-rif-38-2": 0.8151924973905916,
+        "measure-rif-38-3": 0.857897411674732,
+        "measure-rif-38-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 6,
+      "winner_events_unchanged": 6,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-39-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-39-0": 0.8145062499999999,
+        "measure-rif-39-1": 0.8145062499999999,
+        "measure-rif-39-2": 0.7012361815829823,
+        "measure-rif-39-3": 0.7036474302143673,
+        "measure-rif-39-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 8,
+      "winner_events_unchanged": 8,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-40-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-40-0": 1.0,
+        "measure-rif-40-1": 0.9500837774399368,
+        "measure-rif-40-2": 0.9502071310362685,
+        "measure-rif-40-3": 0.95,
+        "measure-rif-40-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-41-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-41-0": 1.0,
+        "measure-rif-41-1": 1.0,
+        "measure-rif-41-2": 1.0,
+        "measure-rif-41-3": 0.95,
+        "measure-rif-41-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-42-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-42-0": 1.0,
+        "measure-rif-42-1": 1.0,
+        "measure-rif-42-2": 0.9506174149346589,
+        "measure-rif-42-3": 0.95,
+        "measure-rif-42-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-43-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-43-0": 0.9029545542966361,
+        "measure-rif-43-1": 0.8145062499999999,
+        "measure-rif-43-2": 0.9026933697328106,
+        "measure-rif-43-3": 0.8163976769186597,
+        "measure-rif-43-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-44-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-44-0": 1.0,
+        "measure-rif-44-1": 0.95,
+        "measure-rif-44-2": 0.9508549662854016,
+        "measure-rif-44-3": 0.9509489690526728,
+        "measure-rif-44-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-45-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-45-0": 0.951246923293893,
+        "measure-rif-45-1": 0.858139800499887,
+        "measure-rif-45-2": 0.857522872308914,
+        "measure-rif-45-3": 0.8145062499999999,
+        "measure-rif-45-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 4,
+      "winner_events_unchanged": 4,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-46-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-46-0": 1.0,
+        "measure-rif-46-1": 0.95,
+        "measure-rif-46-2": 0.9511276534555163,
+        "measure-rif-46-3": 0.9505058186340927,
+        "measure-rif-46-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-47-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-47-0": 1.0,
+        "measure-rif-47-1": 0.9502708973602033,
+        "measure-rif-47-2": 0.9500130833825583,
+        "measure-rif-47-3": 0.95,
+        "measure-rif-47-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 1,
+      "winner_events_unchanged": 1,
+      "winner_same": true
+    },
+    {
+      "id": "measure-rif-48-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-48-0": 0.7398104029333713,
+        "measure-rif-48-1": 0.631675111628201,
+        "measure-rif-48-2": 0.7737809374999999,
+        "measure-rif-48-3": 0.6382926866249911,
+        "measure-rif-48-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 10,
+      "winner_events_unchanged": 10,
+      "winner_same": false
+    },
+    {
+      "id": "measure-rif-49-0",
+      "pattern_ok": true,
+      "strength": {
+        "measure-rif-49-0": 0.9509949390719385,
+        "measure-rif-49-1": 0.9039319836861833,
+        "measure-rif-49-2": 0.9039229624981286,
+        "measure-rif-49-3": 0.951250199602896,
+        "measure-rif-49-4": 1.0
+      },
+      "winner_event_same": true,
+      "winner_events": 2,
+      "winner_events_unchanged": 2,
+      "winner_same": false
+    }
+  ],
+  "utterance_winner_same": {
+    "k": 16,
+    "n": 50,
+    "note": "Retired criterion. Not the floor.",
+    "wilson": [
+      0.20758216260656845,
+      0.45810297308144077
+    ]
+  }
+}

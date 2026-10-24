@@ -99,8 +99,8 @@ HELD_FAN_MIN = 45
 # Cue-triggered floors. User-approved tradeoff against the soft-mixture
 # floors from #53 and #54. These counts are the git 709ae8c held rescore.
 # winner_same is not the utterance-level 16/50. It is the per-event onset
-# check, filled from the one floor-bank score of that definition.
-# Direction gates stay at the 38/50 pre-registration. n is 50.
+# check: 50/50 items, and 215/215 events, on the one floor-bank score at
+# git b372622. Direction gates stay at the 38/50 pre-registration. n is 50.
 HELD_FLOORS = {
     "prefer_up": 46,
     "avoid_up": 37,

@@ -551,3 +551,9 @@ The counts below, other than the per-event winner floor, are the rates on the he
 Toward up 47/50 is above the old floor of 45/50. Fan strictly decreasing 45/50 is above the old floor of 38/50. Avoid stored down, coexist, and outsider are unchanged. The utterance-level winner check on that rescore was 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. That check is retired.
 
 Winner strength after its own retrieval event is unchanged by later events in the same utterance is not required. The winner at event onset is unchanged by that event. The floor for that definition is the rate observed on one pass of the existing floor bank. The per-event winner floor was not scored.
+
+## Per-event winner floor
+
+One pass of the floor-bank quartets, after the definition above was committed. Git `b3726225387f7d592a89de6f0c412091a72af112`. Elapsed 47.15778860700084 seconds. Theta, half-life, lambda, and the retrieval mechanism were not changed. `constants_changed` is false. `mechanism_changed` is false. Direction gates were not rescored. Report: `reports/subconscious_cue_winner_event.json`.
+
+The winner at event onset was unchanged by that event on 215/215 events, Wilson 95% [0.9824463845132672, 1.0]. That is 50/50 items, Wilson [0.9286524008666414, 1.0]. The floor is 50/50. The retired utterance-level check on this same pass is 16/50, Wilson [0.20758216260656845, 0.45810297308144077]. Later events in the utterance may still scale that winner. That is not a failure of this floor.
