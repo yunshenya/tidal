@@ -1,6 +1,6 @@
 # tidal 潮汐
 
-tidal is the subconscious and below-subconscious memory layer. It stores specific text facts and adds a residual into a frozen causal language model. Growbrain owns turn-taking, speaking, and content. tidal supplies memory signals. Growbrain decides speak or wait.
+tidal is only the subconscious and below-subconscious memory layer. It stores specific text facts and adds a residual into a frozen causal language model. Speaking decisions, whether to speak and what to say, belong to growbrain. tidal only supplies signals.
 
 The design prefers a human-like memory, including partial and fuzzy effects, over a store that is as useful as possible. Each mechanism below is tied to a neuroscience paper. The fit numbers are not the paper's numbers.
 
@@ -16,11 +16,11 @@ The longer account is [docs/architecture.md](docs/architecture.md).
 
 Shipped constants, fit on a fit bank and not retuned on held-out: polarity span 2, valence span 1 and step 0.25, clock span 0.25 with tick `pi/16`, surprise window 32 at quantile 0, replay every 32 accepted writes with strength `0.5 ** age` and one refresh, RIF span 0.05 over at most 3 same-relation competitors.
 
-From [#52](https://github.com/yunshenya/tidal/pull/52) on, the score is implicit influence: the continuation margin against no memory, summarized as Cohen's `d_z`. Exact phone and birthday recall is reported separately and is not that score.
+The score is only implicit influence: the continuation margin against no memory, summarized as Cohen's `d_z`. Explicit recall, an exact phone or birthday string, is reported separately and is not the score.
 
 | PR | mechanism | state | held |
 |---|---|---|---|
-| [#46](https://github.com/yunshenya/tidal/pull/46) | spell the stored phone and birthday | merged | exact `+1-802-555-3145` and `July 26, 1990`. Choice flips 1/8, so the held pass is no. Prefer / avoid / forbidden means 20.750 / 1.453 / −1.578 (8/8) |
+| [#46](https://github.com/yunshenya/tidal/pull/46) | spell the stored phone and birthday | merged | implicit: choice flips 1/8, held pass no; prefer / avoid / forbidden means 20.750 / 1.453 / −1.578 (8/8). Explicit, reported separately: `+1-802-555-3145` and `July 26, 1990` |
 | [#47](https://github.com/yunshenya/tidal/pull/47) | valence | merged | pass. toward 6/8, mean 1.865; away 8/8, mean −10.242 |
 | [#48](https://github.com/yunshenya/tidal/pull/48) | circadian clock | merged | pass. high phase 8/8, mean 1.942; low phase 8/8, mean −1.677; decay gap 0.174 |
 | [#49](https://github.com/yunshenya/tidal/pull/49) | relative surprise gate | merged | pass. lows written 0/8, highs 8/8, window bar 10.621 |
@@ -48,11 +48,11 @@ The planned backend is growbrain behind an encode hook, an NLL hook, and an inje
 - `triggered`
 - `interface_version`
 
-A `source` field, with values `cue`, `spontaneous`, or `none`, and a per-tick output are later. They are not in that first signal list. tidal only supplies these signals. Growbrain decides speak or wait, and growbrain decides the words.
+A `source` field, with values `cue`, `spontaneous`, or `none`, and a per-tick output are later. They are not in that first signal list. tidal only supplies these signals. Speaking decisions, whether to speak and what to say, belong to growbrain.
 
-## Legacy code
+## Legacy (old turn-taking design, not current)
 
-These modules are still in the tree and are not part of the current design: `duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/`. This repository does not delete them here. Their writeups stay in `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. The shadow config those reports name is `m3_ablate_m2` (2026-10-08 bake-off, head-sum real val 3.9061 versus `mamba3_siso` 3.9276).
+`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` are the old turn-taking design. They are still in the tree. They are not part of the current design, and this change does not delete them. Their writeups stay in `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. The shadow config those reports name is `m3_ablate_m2` (2026-10-08 bake-off, head-sum real val 3.9061 versus `mamba3_siso` 3.9276). Shadow mode logs and does not call an external API. Continuum `heads` on that path still reads a raw-cosine soft top-4 at temperature 0.05. That readout is not the memory inject.
 
 ## Tests
 
@@ -67,7 +67,7 @@ The tests use synthetic data. `pip install tidal[llm]` is the extra for `LLMMemo
 
 ## Privacy
 
-The repository has no real chat, no weights trained on real chat, and no redistributed public datasets. IDs are salted HMACs. Shadow mode does not call an external API. Secrets stay in `.secrets/` and `config/local.json`, both gitignored.
+The repository has no real chat, no weights trained on real chat, and no redistributed public datasets. IDs are salted HMACs. Secrets stay in `.secrets/` and `config/local.json`, both gitignored.
 
 ## License
 

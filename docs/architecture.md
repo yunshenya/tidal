@@ -1,10 +1,10 @@
 # tidal architecture
 
-tidal is the subconscious and below-subconscious memory layer. Growbrain owns turn-taking, speaking, and content. tidal supplies memory signals. Growbrain decides speak or wait.
+tidal is only the subconscious and below-subconscious memory layer. Speaking decisions, whether to speak and what to say, belong to growbrain. tidal only supplies signals.
 
 The principle is human-likeness over usefulness. A mechanism stays when it reproduces a human memory effect, including a partial or fuzzy one. It is not tuned to maximize usefulness after the held-out bank is seen. Each mechanism names a neuroscience paper. Where a preregistration read that paper, the sentence says so. The other papers are the sources of the effect. Their measurements are not the fit numbers.
 
-Memory vectors are text-only and modality-agnostic. `LLMMemory` encodes a text fact with SmolLM2-135M and stores the residuals. It does not read image, audio, video, or metadata features. Modality front ends exist only in the legacy tree below.
+Memory vectors are text-only and modality-agnostic. `LLMMemory` encodes a text fact with SmolLM2-135M and stores the residuals. It does not read image, audio, video, or metadata features.
 
 ## Store and inject
 
@@ -16,7 +16,7 @@ With one slot the residual is
 
 `s * u * gain * (scale(v) + MLP(scale(v)))`
 
-`scale` is 1. `gain = 1 + 2 tanh(w · normalize(k))`. `u = 1 + tanh(valence)` at span 1. With two or more slots, that term is computed per slot and summed over the top `MIX_K = 4` cosine neighbors with weights proportional to `exp((log(strength) + cosine) / 0.05)`. A cosine tie splits the weight. `_broadcast` adds the sum at every position of the layer. The cosine argmax is the winner used for spelling and for retrieval-induced forgetting. `generate` does not read the store's `soft_k` or `soft_temp`. Continuum `heads` still has its own raw-cosine soft top-4 at temperature 0.05. That readout is on the legacy shadow path and is not this inject.
+`scale` is 1. `gain = 1 + 2 tanh(w · normalize(k))`. `u = 1 + tanh(valence)` at span 1. With two or more slots, that term is computed per slot and summed over the top `MIX_K = 4` cosine neighbors with weights proportional to `exp((log(strength) + cosine) / 0.05)`. A cosine tie splits the weight. `_broadcast` adds the sum at every position of the layer. The cosine argmax is the winner used for spelling and for retrieval-induced forgetting. `generate` does not read the store's `soft_k` or `soft_temp`.
 
 Teyler and DiScenna (1986) describe the hippocampus as an index that reinstates a cortical pattern. The residual added into the language model is that idea: the stored pattern comes back into the network that is about to continue. https://doi.org/10.1037/0735-7044.100.2.147
 
@@ -42,11 +42,11 @@ Constants were chosen on a fit bank and were not retuned after the held-out scor
 
 ## Held record, #46–#55
 
-Implicit influence is the continuation margin against an empty store. From [#52](https://github.com/yunshenya/tidal/pull/52) onward that is the subconscious score (Cohen's `d_z` across tone, choice, and preference where a mixture is scored). Exact phone and birthday strings are explicit recall. They are reported and are not the implicit score. Full intervals are in the linked reports and PR bodies. [#56](https://github.com/yunshenya/tidal/pull/56) later cut a key forward inside `_rank` with a locked identical readout, so these held numbers still describe the behavior.
+The score is only implicit influence: the continuation margin against an empty store, summarized as Cohen's `d_z` across tone, choice, and preference where a mixture is scored. Explicit recall, an exact phone or birthday string, is reported separately and is not the score. Full intervals are in the linked reports and PR bodies. [#56](https://github.com/yunshenya/tidal/pull/56) later cut a key forward inside `_rank` with a locked identical readout, so these held numbers still describe the behavior.
 
 | PR | what | state | held |
 |---|---|---|---|
-| [#46](https://github.com/yunshenya/tidal/pull/46) | spell | merged | exact phone `+1-802-555-3145`, birthday `July 26, 1990`. Choice flips 1/8, held pass no. Prefer / avoid / forbidden 20.750 / 1.453 / −1.578 (8/8). Report `reports/subconscious_spell.md` |
+| [#46](https://github.com/yunshenya/tidal/pull/46) | spell | merged | implicit: choice flips 1/8, held pass no; prefer / avoid / forbidden 20.750 / 1.453 / −1.578 (8/8). Explicit, reported separately: phone `+1-802-555-3145`, birthday `July 26, 1990`. Report `reports/subconscious_spell.md` |
 | [#47](https://github.com/yunshenya/tidal/pull/47) | valence | merged | pass. toward 6/8 mean 1.865, away 8/8 mean −10.242. Report `reports/subconscious_valence.md` |
 | [#48](https://github.com/yunshenya/tidal/pull/48) | circadian | merged | pass. high phase 8/8 mean 1.942, low phase 8/8 mean −1.677, decay gap 0.174. Report `reports/subconscious_circadian.md` |
 | [#49](https://github.com/yunshenya/tidal/pull/49) | relative surprise | merged | pass. lows written 0/8, highs 8/8, bar 10.621. Report `reports/subconscious_surprise_rel.md` |
@@ -67,10 +67,8 @@ The planned backend is growbrain, called through those three hooks. The planned 
 
 The cue itself is the planned reason a memory is retrieved. Tulving and Thomson (1973) state encoding specificity: retrieval depends on the cue that was encoded with the episode. https://doi.org/10.1037/h0020071 Vaz, Inati, Brunel, and Zaghloul (2019) recorded coupled ripples between the medial temporal lobe and neocortex during human memory retrieval. https://doi.org/10.1126/science.aau8956 Lu, Hasson, and Norman (2022) model when an episodic memory is retrieved and when a new one is encoded. https://doi.org/10.7554/eLife.74445
 
-Later, and not in the first signal list: a `source` field whose values are `cue`, `spontaneous`, or `none`, and a per-tick output. tidal only supplies the signals. Growbrain decides speak or wait, and growbrain decides what is said.
+Later, and not in the first signal list: a `source` field whose values are `cue`, `spontaneous`, or `none`, and a per-tick output. tidal only supplies the signals. Speaking decisions, whether to speak and what to say, belong to growbrain.
 
-## Legacy
+## Legacy (old turn-taking design, not current)
 
-The turn-taking and multimodal code is still in the repository. It is not the current design, and this change does not delete it.
-
-`tidal/duplex.py` and `tidal/duplex_sim.py`, `turn_*`, `audio_*`, `tidal/modalities/`, the six heads in `HEAD_DIMS` (`tidal/model.py`), `head_*`, `phase5_*`, and `tidal/shadow/` are that older tree. Phase writeups remain `reports/phase1.md` through `reports/phase5.md`. Shadow mode, when that legacy path is turned on, loads `m3_ablate_m2`. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`.
+`duplex*` (`tidal/duplex.py`, `tidal/duplex_sim.py`), `turn_*`, `audio_*`, `tidal/modalities/`, the six `HEAD_DIMS` in `tidal/model.py`, `head_*`, `phase5_*`, and `tidal/shadow/` are the old turn-taking design. They are still in the repository. They are not the current design, and this change does not delete them. Phase writeups remain `reports/phase1.md` through `reports/phase5.md` and `shadow/README.md`. Shadow mode, when that path is turned on, loads `m3_ablate_m2`, logs, and does not call an external API. The 2026-10-08 bake-off recorded head-sum real validation 3.9061 for that ablation and 3.9276 for `mamba3_siso`. Continuum `heads` on that path still reads a raw-cosine soft top-4 at temperature 0.05. That readout is not the memory inject.
