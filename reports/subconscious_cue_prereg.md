@@ -391,3 +391,33 @@ Same cell. `reports/subconscious_cue_schedule_held.json` was not rewritten. The 
 | more similar companion lowers the target margin | 35/50 | [0.562496495355466, 0.8089644649911906] | 42/50 | no |
 | larger same-relation count lowers the target margin | 32/50 | [0.501410168761127, 0.7586125034815325] | 48/50 | no |
 | fan 1 / 2 / 4 strictly decreasing | 44/50 | [0.7619518261679701, 0.9438239984906773] | 38/50 | yes |
+
+## Diagnosis, no retune
+
+This section does not change the mechanism or any constant. Theta stays 0.32, half-life stays 30, lambda stays 0.3, fan S stays 1.45, the RIF span stays 0.05, and the activation floor stays 0.05. The three reports were taken at mechanism git `490d06eee07a33ba242f687dc07800953265d5d6`. `constants_changed` is false in each report.
+
+### Floor-bank strength trace
+
+`score_quartet` reads strength after one `LLMMemory._rank` of the target prompt. `_rank` calls `cue_fields`, which does not change strength, then `compete_retrieved` on each new triggered token whose gap is positive. `forget_rivals` is not on that path. Replaying `compete_retrieved` on the recorded candidate lists reproduced the stored strengths on 50/50 items. The RIF trace matches compete_retrieved on 50/50. Salience on these slots is at most 0.354, below the 0.5 exempt. Report: `reports/subconscious_cue_rif_trace.json`.
+
+A strict win fires on 19/50 items. The forgotten counts are 0 on 37 items, 1 on 5, and 2 on 8. All 150 competitor slots have some prompt token with centered cosine at least 0.32. 131 of those 150 are absent from every triggered candidate list. 15 are scaled. 4 sit in a triggered candidate list and stay at strength 1 because they are the winner of that token.
+
+`fan_factor(4, 1.45)` is 0.0439, under the 0.05 floor, and `fan_factor(5, 1.45)` is 0. A token whose candidate list has length 4 or 5 is stored with `triggered` false, and `_rank` skips it. The tokens that do trigger have three candidates. On `measure-rif-20-0`, token 1 (`ag`) triggers with candidates `[0, 1, 4]`, gap 0.027, and scales competitor 1 and outsider 4 to about 0.95. Later tokens list all five slots, with cosines about 0.41 to 0.78, and do not trigger.
+
+Competitor-below-1 is 0/50 because no quartet scales all three competitors. The pattern of how many of the three drop is 38 items with none, 9 items with one, and 3 items with two. Outsider strength changes on the 4 items that enter a triggered theta set: `measure-rif-20-0`, `measure-rif-26-0`, `measure-rif-35-0`, and `measure-rif-39-0`. Their relations are `mrifx*`, not the target relation, and their strengths are 0.9507, 0.95, 0.9511, and 0.9506. Target strength changes on `measure-rif-26-0` (0.9509) and `measure-rif-38-0` (0.9512). On both, the early winner is competitor index 1, and the target is a co-candidate of that token.
+
+This is a design consequence. The scaler writes only the triggered theta set. The fan floor turns that trigger off once four slots clear theta, so the full competitor set never competes. A different-relation outsider that does clear theta on a three-candidate token is scaled.
+
+### Fit bank of 50
+
+Protocol `cue-direction-fit50-v1`. Same template as the n=8 direction fit: `Hand {name} some {domain}.` and `{name} circles toward {answer} about {domain}.` Content words are disjoint from the held banks and from that n=8 bank. Sha256 `2fa639040378b3f199110f58512a380e04173de50b56cfdd0320434a40eb15d4`. The cell was not chosen from this bank. Report: `reports/subconscious_cue_fit50.json`.
+
+Cued margin is positive on 41/50, mean 0.2474970944590556, Wilson 95% [0.6920394632569922, 0.9022980732976582]. Decay passes 4/50, Wilson [0.03154951408859298, 0.18838246918342838]. The other 46 rows fail the logit comparison after the activation has already fallen. Fan is strict on 38/50, Wilson [0.6258731624205708, 0.8570260860300828], means 0.2474970944590556 / 0.05900833237683397 / −1.1223251931316014e-05.
+
+### Fresh route
+
+The fresh margin is unchanged: 1/50 positive, mean −0.146505109022061, Wilson [0.003539259271646236, 0.10495443589637815]. Report: `reports/subconscious_cue_fresh_route.json`.
+
+Every item triggers, and the winner at the first scored token is the intended slot on 50/50. Winner cosine on the trigger tokens runs from 0.32035893201828003 to 0.6890713572502136, mean 0.4870702051880336. The first scored position is the `:` that predicts the first piece of the answer. Its distance from the last prompt trigger is 3 tokens on 49/50 items and 4 on one item. Activation there is 0.9117224812507629 to 0.9330329895019531, mean 0.9326067793369294. Later answer tokens often trigger again, at activation 1. Every continuation token id also occurs in the fact, on 50/50 items.
+
+The negative margin is present while the intended memory is injected at activation near 1. It is not a decay to the floor, and it is not a different slot.

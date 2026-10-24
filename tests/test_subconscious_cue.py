@@ -566,6 +566,8 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "The floor pass is false." in text
     assert "cued margin positive | 1/50" in text
     assert "competitor strength below 1 | 0/50" in text
+    assert "The RIF trace matches compete_retrieved on 50/50." in text
+    assert "cue-direction-fit50-v1" in text
     assert "compete_retrieved" in (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
@@ -580,6 +582,17 @@ def test_prereg_locks_the_schedule_and_the_citations():
             fit_src = ast.get_source_segment(script, node)
     assert "0.35" not in fit_src
     assert "SCHEDULE" in fit_src
+
+
+def test_fit50_direction_bank_is_disjoint_and_large():
+    from tidal.subconscious_cue_fit50_data import N, fit50_bank
+
+    bank = fit50_bank()
+    assert len(bank.PREFER) == N == 50
+    assert bank.PROTOCOL == "cue-direction-fit50-v1"
+    assert len(bank.sha256()) == 64
+    assert bank.PREFER[0]["prompt"].startswith("Hand ")
+    assert "circles toward" in bank.PREFER[0]["text"]
 
 
 def test_fresh_direction_bank_is_disjoint_and_large():

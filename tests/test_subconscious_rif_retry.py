@@ -316,6 +316,103 @@ def test_theta_candidates_compete_and_a_closer_companion_drops_more():
     assert slots[1].strength < slots[2].strength < 1.0
 
 
+def test_five_theta_candidates_stay_unscaled_when_the_fan_floor_clears_the_token():
+    """The floor-bank competitor gate, through the shipped _rank path.
+
+    Five slots past theta make fan_factor 0, so the token is not triggered.
+    _rank competes only a triggered token, and every strength stays 1.
+    """
+    from tidal.cue_inject import fan_factor
+    import tidal.llm_memory as mod
+
+    assert fan_factor(5, float(mod.CUE_FAN_S)) == 0.0
+    assert fan_factor(4, float(mod.CUE_FAN_S)) < float(mod.CUE_FLOOR)
+    model, tok = build_tiny_lm(seed=3)
+    mem = LLMMemory(model, tok)
+    try:
+        for index in range(5):
+            assert mem.remember(f"slot {index} is Q", name=f"s{index}", rel="mrif" if index < 4 else "mrifx")
+        slots = mem.store._slots
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        for index, slot in enumerate(slots):
+            slot.salience = 0.0
+            slot.strength = 1.0
+            if index == 0:
+                slot.k = match.copy()
+                continue
+            near = 0.6 * match
+            near[index] = 0.8
+            slot.k = near / np.linalg.norm(near)
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 3, axis=0)
+
+        mem.cue_hidden = _fixed
+        info = mem._rank("slot 0 is Q")
+        assert info["memory_id"] < 0
+        assert mem.last_rif == {"n": 0}
+        assert [float(slot.strength) for slot in slots] == [1.0, 1.0, 1.0, 1.0, 1.0]
+        assert all(len(row) == 5 for row in mem._last_candidates)
+    finally:
+        mem.close()
+
+
+def test_rank_scales_a_theta_outsider_and_spares_a_missed_competitor():
+    """Floor-bank pattern through the shipped _rank path.
+
+    A same-relation competitor that misses theta stays at strength 1.
+    A different-relation outsider that clears theta is scaled.
+    forget_rivals on the same keys does the opposite: it scales the
+    same-relation competitors and leaves the outsider alone.
+    """
+    model, tok = build_tiny_lm(seed=2)
+    mem = LLMMemory(model, tok)
+    try:
+        assert mem.remember("target is A", name="target", rel="mrif")
+        for index in range(3):
+            assert mem.remember(f"rival {index} is B", name=f"rival{index}", rel="mrif")
+        assert mem.remember("outsider is C", name="outsider", rel="mrifx")
+        slots = mem.store._slots
+        assert len(slots) == 5
+        width = int(np.asarray(slots[0].k).shape[0])
+        match = np.zeros(width, dtype=np.float64)
+        match[0] = 1.0
+        center = np.asarray(mem.query_mean, dtype=np.float64)
+        for index, slot in enumerate(slots):
+            slot.salience = 0.0
+            slot.strength = 1.0
+            key = np.zeros(width, dtype=np.float64)
+            key[index] = 1.0
+            slot.k = key
+        slots[0].k = match.copy()
+        near = 0.6 * match
+        near[4] = 0.8
+        slots[4].k = near / np.linalg.norm(near)
+
+        def _fixed(_text, _match=match, _center=center):
+            row = _match + _center
+            return np.repeat(row.reshape(1, -1), 4, axis=0)
+
+        mem.cue_hidden = _fixed
+        info = mem._rank("target is A")
+        assert info["gap"] is not None and float(info["gap"]) > 0.0
+        assert mem.last_rif["n"] == 1
+        assert slots[0].strength == 1.0
+        assert [slot.strength for slot in slots[1:4]] == [1.0, 1.0, 1.0]
+        assert slots[4].strength < 1.0
+        parallel = [_slot(slot.rel, 0.0, slot.k) for slot in slots]
+        assert forget_rivals(parallel, 0) == 3
+        assert parallel[0].strength == 1.0
+        assert all(slot.strength < 1.0 for slot in parallel[1:4])
+        assert parallel[4].strength == 1.0
+    finally:
+        mem.close()
+
+
 def test_closer_key_is_scaled_more_and_span_zero_is_a_no_op(monkeypatch):
     slots = [
         _slot("cue", 0.0, [1.0, 0.0]),
