@@ -72,3 +72,7 @@ Clock gates stay the #65 held record: 50/50 on wall, token, both, entrainment, f
 Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, the arousal weights, and the wall-clock formulas are unchanged. There is no feature flag and no growbrain switch.
 
 The held bank was not scored.
+
+## Fit result
+
+Report `reports/subconscious_reconstruct_fit.json`. Fit git `f73c3cb777cae3686de2d8cfa92a452d89af6ef4`. Every gate is 8/8, Wilson 95% [0.6755924351161198, 1.0]: high, low, long, emotion, slip, intrusion, live, and the item. Intrusion events are 0/8, Wilson 95% [0.0, 0.32440756488388023]. `canonical_same` is true. Elapsed 0.08174987400707323 seconds. High spelling is `+1-617-555-4826` and `April 21, 1984`. Low and long spelling is `+1-617-555-5937` and `April 1, 1984`. Emotion and slip spelling is `+1-617-555-4862` and `April 12, 1984`. The off-relation continuation is absent. `interface_version` is 5. These counts did not move a held floor. Theta, the token half-life, lambda, fan S, the RIF span, the process S formulas, the arousal weights, and the wall-clock formulas were not changed.

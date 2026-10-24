@@ -1,0 +1,126 @@
+{
+  "bank_sha256": "bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589",
+  "canonical": {
+    "birthday_emotion": "April 12, 1984",
+    "birthday_high": "April 21, 1984",
+    "birthday_long": "April 1, 1984",
+    "birthday_low": "April 1, 1984",
+    "birthday_slip": "April 12, 1984",
+    "interface_version": 5,
+    "off_relation": null,
+    "phone_emotion": "+1-617-555-4862",
+    "phone_high": "+1-617-555-4826",
+    "phone_long": "+1-617-555-5937",
+    "phone_low": "+1-617-555-5937",
+    "phone_slip": "+1-617-555-4862"
+  },
+  "canonical_same": true,
+  "elapsed_s": 0.08174987400707323,
+  "gates": {
+    "emotion": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "high": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "intrusion": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "item": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "live": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "long": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "low": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    },
+    "slip": {
+      "k": 8,
+      "n": 8,
+      "pass": true,
+      "rate": 1.0,
+      "wilson": [
+        0.6755924351161198,
+        1.0
+      ]
+    }
+  },
+  "git": "f73c3cb777cae3686de2d8cfa92a452d89af6ef4",
+  "ids": [
+    "reconstruct-fit-000",
+    "reconstruct-fit-001",
+    "reconstruct-fit-002",
+    "reconstruct-fit-003",
+    "reconstruct-fit-004",
+    "reconstruct-fit-005",
+    "reconstruct-fit-006",
+    "reconstruct-fit-007"
+  ],
+  "intrusion_events": {
+    "k": 0,
+    "n": 8,
+    "pass": true,
+    "rate": 0.0,
+    "wilson": [
+      0.0,
+      0.32440756488388023
+    ]
+  },
+  "kind": "reconstruct-fit",
+  "note": "Fit only. The held bank was not scored.",
+  "pass": true,
+  "protocol": "reconstruct-spell-v1"
+}

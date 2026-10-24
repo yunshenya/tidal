@@ -184,6 +184,8 @@ Bartlett, with Kintsch on the Crossref record of the 1995 reprint, describes mem
 
 Protocol `reconstruct-spell-v1`. Fit ids `reconstruct-fit-000` through `reconstruct-fit-007` are disjoint from held ids `reconstruct-held-000` through `reconstruct-held-049`. Bank sha256 `bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589`. The probe phone is `+1-617-555-4826` and the probe birthday is `April 21, 1984`. High strength 1, age 0, valence 0 reassembles both. Low strength 0.2 and age 4 each yield `+1-617-555-5937` and `April 1, 1984`. Strength 0.5 and valence 1.5 at strength 1 and age 0 each yield `+1-617-555-4862` and `April 12, 1984`. The lure `+1-617-555-9090` and `June 9, 1972` are not emitted. An off-relation prompt emits nothing. Held floors are 50/50 on high, low, long, emotion, slip, intrusion, live, and the item, and intrusion events are 0/50. The held bank was not scored.
 
+The fit bank, git `f73c3cb777cae3686de2d8cfa92a452d89af6ef4`, is 8/8 on high, low, long, emotion, slip, intrusion, live, and the item, Wilson 95% [0.6755924351161198, 1.0]. Intrusion events are 0/8, Wilson [0.0, 0.32440756488388023]. `canonical_same` is true. Elapsed 0.08174987400707323 seconds. Report `reports/subconscious_reconstruct_fit.json`. These counts did not move a held floor.
+
 The cue-triggered floors stay the merged #57/#62 rates. A cue guard rescores them once into new files and must match. The cue guard was not scored. Theta, the token half-life, lambda, fan S, and the RIF span are unchanged.
 
 Sleep gates stay the #63 record, 50/50, with the same canonical pressures. The sleep guard writes a new file. The sleep guard was not scored.
