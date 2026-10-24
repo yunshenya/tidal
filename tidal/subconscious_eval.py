@@ -102,6 +102,12 @@ PATH_FLAGS = (
         "varies": "rejects the write when the window is full and the answer-token NLL is below the live quantile; warmup and phase-unrelated paths unchanged; no third forward and no text in the window",
         "retries": False,
     },
+    {
+        "path": "retrieval forgetting",
+        "when": "a retrieval with a strict winner, after the winner's strength is read",
+        "varies": "multiplies the strength of at most three other slots that share the winner's relation; the winner, a tie, a larger shared relation, a high-salience slot, and every other relation stay put; no extra forward",
+        "retries": False,
+    },
 )
 
 
