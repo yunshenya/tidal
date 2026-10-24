@@ -140,14 +140,15 @@ DEFAULT_GAP_TAU = 0.80
 # the held-out bank.
 MIX_K = 4
 MIX_TEMP = 0.05
-# Cue schedule. The floor is fixed and is not fit. Theta, tau, and a_trig
-# below are a placeholder until reports/subconscious_cue_prereg.md records a
-# fit-bank cell. They are not a selected cell. The interface names the signal
-# ``cue``; cue_dim is the hidden width of whatever layer this wrapper injects at.
+# Cue schedule. The floor is fixed and is not fit. Theta 0.32, tau 8, and
+# a_trig 1 are the direction-fit cell in reports/subconscious_cue_prereg.md:
+# the largest mean cued margin among the 24 cells that passed gates 1-5.
+# Not retuned on the held-out bank. The interface names the signal ``cue``;
+# cue_dim is the hidden width of whatever layer this wrapper injects at.
 CUE_INTERFACE_VERSION = 1
 CUE_FLOOR = 0.05
-CUE_THETA = 0.15
-CUE_TAU = 4.0
+CUE_THETA = 0.32
+CUE_TAU = 8.0
 CUE_A_TRIG = 1.0
 # gain = 1 + POLARITY_SPAN * tanh(w · normalize(k)). Span 2 is the smallest
 # integer that lets an avoid key negate the residual (1 + 2 * -1 = -1).

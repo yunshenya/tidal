@@ -85,6 +85,23 @@ Phone and birthday exact strings are not in this gate. The removed mixture score
 
 At the selected cell, or at the placeholder if none is selected, the inject cost is the median extra seconds of a cue-live forward over a hook no-op, divided by the token count. Store sizes 8, 16, and 32. Warmup 2, repeats 7. This is not a pass rule.
 
-## Result
+## Fit result
 
-No cell has been scored.
+One pass of the 24-cell grid. Git of the scorer before this result was written: `d25d74279c1b49969192bc1764af8501dc8f44a0`. Elapsed 83.7 seconds. All 24 cells passed gates 1–5. The selected cell is theta 0.32, tau 8, a_trig 1, mean cued margin 1.381. It is the unique maximum. The module constants now match that cell. Held has not been scored.
+
+Selected cell, direction fit bank, n=8:
+
+| gate | result |
+| --- | --- |
+| cued margin up, mean positive | 6/8 positive, mean 1.381 |
+| unrelated mean absolute margin ≤ 0.05 | 0.0 |
+| false triggers ≤ 0.10 | 0/8, Wilson [0.0, 0.324] |
+| decay after the last trigger | 6/8. Two facts failed the logit comparison |
+| store 16 and 32 within 0.05 of size 8, and positive | size 8: 0.164, size 16: 0.148, size 32: 0.136 |
+| quiet-token NLL increase ≤ 0.02 | 0.0 on 9 tokens |
+
+Inject cost at this cell, median extra seconds per token of the cue-live forward over the hook no-op, 10 tokens, warmup 2, repeats 7: store 8 is 0.000125, store 16 is 0.000084, store 32 is 0.000159. The full armed forward is about 0.0029 seconds per token.
+
+## Held result
+
+Held has not been scored.

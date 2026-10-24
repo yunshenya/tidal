@@ -339,13 +339,13 @@ def test_late_token_below_the_floor_adds_nothing(monkeypatch):
         mem.close()
 
 
-def test_placeholder_schedule_is_documented_as_unselected():
+def test_selected_schedule_matches_the_fit_cell():
     source = (ROOT / "tidal" / "llm_memory.py").read_text(encoding="utf-8")
-    assert "not a selected cell" in source
+    assert "Not retuned on the held-out bank" in source
     assert CUE_FLOOR == 0.05
-    assert 0.0 < CUE_THETA <= 1.0
-    assert CUE_TAU > 0.0
-    assert 0.0 < CUE_A_TRIG <= 1.0
+    assert CUE_THETA == 0.32
+    assert CUE_TAU == 8.0
+    assert CUE_A_TRIG == 1.0
     assert DEFAULT_GAP_TAU == 0.80
     assert VALENCE_SPAN == 1.0
 
@@ -365,7 +365,8 @@ def test_prereg_locks_the_schedule_and_the_citations():
     assert "0.32, 0.35, 0.40, 0.43" in text or "{0.32, 0.35, 0.40, 0.43}" in text
     assert "largest mean cued margin" in text
     assert "39/50" in text and "42/50" in text and "48/50" in text
-    assert "No cell has been scored." in text
+    assert "theta 0.32" in text
+    assert "Held has not been scored." in text
     script = (ROOT / "scripts" / "eval_subconscious_cue.py").read_text(encoding="utf-8")
     assert "(0.32, 0.35, 0.40, 0.43)" in script
     assert "(2.0, 4.0, 8.0)" in script
