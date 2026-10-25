@@ -197,7 +197,7 @@ def test_same_remember_write_differs_under_encode_vs_consolidate():
         _quiet_write(encode)
         _encode_key(encode, _axis(encode, 0))
         assert encode.encoding_mode() == "encode"
-        assert encode.remember("Ada phone", answer=PHONE, name="ada", rel="phone")
+        assert encode.remember(f"Ada phone is {PHONE}", answer=PHONE, name="ada", rel="phone")
         slot = encode.store.slots[0]
         assert slot.strength == 1.0
         assert slot.age == 0
@@ -212,12 +212,12 @@ def test_same_remember_write_differs_under_encode_vs_consolidate():
         _encode_key(consolidate, _axis(consolidate, 0))
         consolidate.wake_for(4.0)
         assert consolidate.encoding_mode() == "consolidate"
-        assert consolidate.remember("Ada phone", answer=PHONE, name="ada", rel="phone")
+        assert consolidate.remember(f"Ada phone is {PHONE}", answer=PHONE, name="ada", rel="phone")
         slot = consolidate.store.slots[0]
         assert slot.strength == pytest.approx(CONSOLIDATE_WRITE_KEEP)
         assert slot.age == 0
         assert _spelling(slot) == surfaces["phone_consolidate"]
-        assert slot.text == "Ada phone" and slot.answer == PHONE
+        assert slot.text == f"Ada phone is {PHONE}" and slot.answer == PHONE
         assert slot.consolidation_gain == 1.0
         assert neighbor_keep(0.5) == 1.0
     finally:

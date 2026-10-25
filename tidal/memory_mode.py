@@ -13,8 +13,8 @@ https://doi.org/10.1038/nrn2881
 
 tidal already owns process S, an LC-NE arousal scalar, and a
 store circadian phase. This module derives one internal mode from
-those existing numbers. It does not add a cue-export field. It does
-not reimplement ``sleep_for`` SWS/REM; those stay on
+those existing numbers. It does not add a cue-export field. It
+does not reimplement ``sleep_for`` SWS/REM; those stay on
 :func:`tidal.sleep_phases.sleep_phase`.
 
 Rule (HYPOTHESIS; no grid was run)
