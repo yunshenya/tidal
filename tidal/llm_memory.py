@@ -74,7 +74,9 @@ training broadcast inside ``teacher_force_loss``. Each stored slot's
 ``interface_version`` 4 adds ``sleep_pressure`` and ``source`` on every
 exported token. ``source`` is ``cue``, ``spontaneous``, or ``none``. The cue
 path emits ``cue`` or ``none``. ``spontaneous`` is an offline tick with no
-external cue. ``sleep_pressure`` is process S in ``[0, 1]``. It is not part
+strong external cue. A weak internal fragment (partial key, residual, or
+recent context) can choose the slot when cosine sits below theta.
+``sleep_pressure`` is process S in ``[0, 1]``. It is not part
 of the residual. ``interface_version`` 5 adds ``arousal`` in ``[0, 1]``.
 ``interface_version`` 6 keeps those fields. The default packet ``vec`` width
 is growbrain ``d_model``, pinned at 192 on stage0 ``e1_base_rebalance``.
@@ -200,6 +202,7 @@ from tidal.reconsolidation import apply_writeback, matched_indices, open_window,
 from tidal.memory_mode import memory_mode as gate_mode, spontaneous_pressure, write_keep
 from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
 from tidal.sleep_phases import apply_entry_phase, apply_exit_phase, rem_bind_pair, rem_refresh_valence, sleep_phase, sws_age
+from tidal.weak_cue import context_fragment, overlap_score, weak_winner
 
 DEFAULT_MODEL = "HuggingFaceTB/SmolLM2-135M"
 DEFAULT_CAPACITY = 256
@@ -1553,9 +1556,13 @@ class LLMMemory:
     the store circadian phase also set an internal encode vs consolidate
     mode. Encode keeps a new ``remember`` write at full clock strength and
     lowers spontaneous offline pressure. Consolidate scales that write and
-    leaves spontaneous pressure on the existing floor. ``sleep_for`` still
+    leaves spontaneous pressure on the existing floor. A weak internal
+    fragment (a partial key after ``remember``, or the last cue row)
+    can surface a stored slot on a due offline tick when cosine sits
+    below theta. A strong cue stays on the cue path. The mode is not a
+    cue field. ``sleep_for`` still
     schedules SWS/REM from process S and circadian phase; the mode does
-    not reimplement those operators. The mode is not a cue field.
+    not reimplement those operators.
     ``sleep_for`` may run an SWS-like gist pass and a REM-like emotion/bind
     pass from process S and the store circadian phase, then rewrites a
     slot only when prediction error clears a threshold. The audit of that
@@ -1696,6 +1703,10 @@ class LLMMemory:
         # Tokens processed by cue traces. store.clear() does not move it.
         # A cue hit stamps labile_until_token from this counter.
         self._token_count = 0
+        # Recent context fragment for weak-overlap spontaneous recall.
+        # remember plants a partial key. A cue trace plants the last row.
+        # store.clear() does not move it. Not a cue-export field.
+        self._recent_fragment = None
         # growbrain → tidal fusion control. fusion_weights is not a cue field.
         # fusion_confidence is the last-token cue scalar. 0 until
         # refresh_fusion_confidence or set_fusion_confidence writes a known
@@ -2152,6 +2163,7 @@ class LLMMemory:
         if self._accepted % int(REPLAY_EVERY) == 0:
             self._consolidate()
         self.refresh_fusion_confidence()
+        self._note_partial_key(key_vec)
         return True
 
     def surprise_window(self) -> tuple:
@@ -2328,6 +2340,7 @@ class LLMMemory:
         self._token_count += int(rows.shape[0])
         self._open_labile_windows(fields)
         residual = self._residual_from_fields(fields, values, keys)
+        self._note_recent_context(rows[-1])
         return fields, residual, final
 
     def _open_labile_windows(self, fields) -> None:
@@ -2428,6 +2441,7 @@ class LLMMemory:
             self.cue_state = CueState()
             self.last_cue_fields = fields
             self.last_added = torch.zeros(int(hidden.shape[1]), dtype=torch.float32)
+            self._note_recent_context(hidden[-1])
             return fields
         hidden = self.cue_hidden(text)
         numpy_fields, residual, state = self._trace_numpy(hidden, state=CueState())
@@ -2747,7 +2761,11 @@ class LLMMemory:
         }
 
     def offline_ticks(self, count: int) -> list:
-        """No-cue ticks. Does not change process S. May recall one slot."""
+        """No-strong-cue ticks. Does not change process S. May recall one slot.
+
+        A weak internal fragment can choose the slot. A missing fragment
+        keeps the shipped salience ranking.
+        """
         if isinstance(count, bool) or not isinstance(count, int):
             raise TypeError("offline tick count must be an int")
         if count < 0:
@@ -2826,13 +2844,37 @@ class LLMMemory:
         self._sleep_audit.append(row)
         return dict(row)
 
-    def _spontaneous_index(self) -> int:
+    def _note_recent_context(self, vec) -> None:
+        """Keep the last cue row as a recent context fragment."""
+        arr = np.asarray(vec, dtype=np.float64).reshape(-1)
+        if arr.size == 0 or not np.isfinite(arr).all():
+            return
+        self._recent_fragment = arr.copy()
+
+    def _note_partial_key(self, vec) -> None:
+        """Plant a below-theta residue of a just-written key."""
+        arr = np.asarray(vec, dtype=np.float64).reshape(-1)
+        if arr.size == 0 or not np.isfinite(arr).all():
+            return
+        self._recent_fragment = context_fragment(arr)
+
+    def _spontaneous_choice(self) -> tuple:
+        """Weak-overlap index when a fragment sits in the band, else salience."""
         slots = self.store._slots
-        return spontaneous_winner(
-            [float(slot.salience) for slot in slots],
-            [float(slot.strength) for slot in slots],
-            [float(slot.consolidation_gain) for slot in slots],
-        )
+        salience = [float(slot.salience) for slot in slots]
+        strength = [float(slot.strength) for slot in slots]
+        priority = [float(slot.consolidation_gain) for slot in slots]
+        fragment = self._recent_fragment
+        if fragment is not None:
+            overlaps = [overlap_score(fragment, slot.k) for slot in slots]
+            index = weak_winner(overlaps, salience, strength, priority)
+            if index is not None:
+                return int(index), float(overlaps[int(index)])
+        return spontaneous_winner(salience, strength, priority), None
+
+    def _spontaneous_index(self) -> int:
+        index, _overlap = self._spontaneous_choice()
+        return int(index)
 
     def _one_offline_tick(self) -> dict:
         tick = int(self._offline_tick)
@@ -2848,11 +2890,11 @@ class LLMMemory:
                 arousal=float(self.arousal),
                 fusion_confidence=float(self._fusion_confidence),
             )
-        index = self._spontaneous_index()
+        index, overlap = self._spontaneous_choice()
         self._reconsolidate_index(index)
-        return self._spontaneous_export(index, pressure)
+        return self._spontaneous_export(index, pressure, overlap=overlap)
 
-    def _spontaneous_export(self, index: int, pressure: float) -> dict:
+    def _spontaneous_export(self, index: int, pressure: float, overlap=None) -> dict:
         slot = self.store._slots[int(index)]
         label = check_modality(str(slot.modality))
         width = int(self.cue_dim)
@@ -2862,6 +2904,7 @@ class LLMMemory:
         offset = float(VALENCE_SPAN) * math.tanh(float(slot.valence))
         phase = float(self.clock_phase())
         level = float(pressure)
+        cosine = float("nan") if overlap is None else float(overlap)
         return {
             "interface_version": int(CUE_INTERFACE_VERSION),
             "cue_dim": width,
@@ -2874,7 +2917,7 @@ class LLMMemory:
             "circadian_phase": torch.tensor([[phase]], dtype=torch.float32),
             "triggered": torch.zeros((1, 1), dtype=torch.bool),
             "gap": torch.full((1, 1), float("nan"), dtype=torch.float32),
-            "winner_cosine": torch.full((1, 1), float("nan"), dtype=torch.float32),
+            "winner_cosine": torch.full((1, 1), cosine, dtype=torch.float32),
             "sleep_pressure": torch.full((1, 1), level, dtype=torch.float32),
             "arousal": torch.full((1, 1), float(self.arousal), dtype=torch.float32),
             "source": [["spontaneous"]],

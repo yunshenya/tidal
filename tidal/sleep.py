@@ -10,10 +10,12 @@ A reactivated slot is rewritten only when prediction error is above a
 threshold (Sevenster, Beckers, and Kindt 2013). The audit row is numbers
 and a bool. It has no fact text.
 
-A no-cue offline tick can recall one slot (Berntsen 2020). That paper
-says this is not mind-wandering. The period and the other rates below are
-a hypothesis: abstract duration units, not the papers' hours, and not a
-grid search.
+A no-strong-cue offline tick can recall one slot (Berntsen 2020). That
+paper says this is not mind-wandering, and that most involuntary
+memories still have a weak cue overlap. A partial key or recent
+context fragment can choose the slot; the period still rate-limits
+the fire. The period and the other rates below are a hypothesis:
+abstract duration units, not the papers' hours, and not a grid search.
 """
 from __future__ import annotations
 
