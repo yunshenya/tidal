@@ -197,6 +197,7 @@ from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
 from tidal.reconstruct import recall_surface
 from tidal.reconsolidation import apply_writeback, matched_indices, open_window, window_open
+from tidal.memory_mode import memory_mode as gate_mode, spontaneous_pressure, write_keep
 from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
 from tidal.sleep_phases import apply_entry_phase, apply_exit_phase, rem_bind_pair, rem_refresh_valence, sleep_phase, sws_age
 
@@ -1548,12 +1549,18 @@ class LLMMemory:
     ``llm_key_center_growbrain.npz`` and ``llm_inject_growbrain_192.pt``
     when those stage0 files are present. There is no process flag.
     ``sleep_pressure`` is process S. ``wake_for`` raises it and ``sleep_for``
-    lowers it. Neither call changes the residual. ``sleep_for`` may run an
-    SWS-like gist pass and a REM-like emotion/bind pass from process S and
-    the store circadian phase, then rewrites a slot only when prediction
-    error clears a threshold. The audit of that rewrite has no fact text
-    and no ``replay_phase``. ``cue_fields`` and ``generate`` do not read
-    it. ``replay_phase`` is not a cue field.
+    lowers it. Neither call changes the residual. Process S, arousal, and
+    the store circadian phase also set an internal encode vs consolidate
+    mode. Encode keeps a new ``remember`` write at full clock strength and
+    lowers spontaneous offline pressure. Consolidate scales that write and
+    leaves spontaneous pressure on the existing floor. ``sleep_for`` still
+    schedules SWS/REM from process S and circadian phase; the mode does
+    not reimplement those operators. The mode is not a cue field.
+    ``sleep_for`` may run an SWS-like gist pass and a REM-like emotion/bind
+    pass from process S and the store circadian phase, then rewrites a
+    slot only when prediction error clears a threshold. The audit of that
+    rewrite has no fact text and no ``replay_phase``. ``cue_fields`` and
+    ``generate`` do not read it. ``replay_phase`` is not a cue field.
     A cue hit stamps a short labile window on the matched slot. While that
     window is open, :meth:`write_back` may update or distort the residue.
     After the token or wall deadline the same write-back no-ops. The
@@ -2068,6 +2075,8 @@ class LLMMemory:
         A caller-supplied ``surprise`` does not replace the measured one.
         ``fingerprint`` and ``modality`` are optional growbrain store fields.
         Omitted writes store a zero fingerprint and modality ``text``.
+        Encode mode keeps the clock write strength. Consolidate mode
+        scales that strength. The mode is not a write argument.
         """
         # The measured answer NLL is the score. A caller value cannot bypass it.
         del surprise
@@ -2170,12 +2179,15 @@ class LLMMemory:
                 slot.salience = self._salience(key_vec)
                 slot.age = 0
                 # Phase 0 assigns 1. A nonzero phase scales the write.
+                # Encode keeps that clock gain. Consolidate scales it.
                 gain = float(clock_write_gain(self.store.clock_phase()))
-                if gain == 1.0:
+                keep = float(write_keep(self.encoding_mode()))
+                strength = float(gain * keep)
+                if gain == 1.0 and keep == 1.0:
                     slot.strength = 1.0
                     slot.clock_gain = 1.0
                 else:
-                    slot.strength = gain
+                    slot.strength = strength
                     slot.clock_gain = gain
                 slot.consolidation_gain = 1.0
                 return
@@ -2682,6 +2694,10 @@ class LLMMemory:
             self._arousal = float(series[-1])
         return series
 
+    def encoding_mode(self) -> str:
+        """Internal encode vs consolidate mode. Not a cue-export field."""
+        return gate_mode(self.sleep_pressure, self.arousal, self.clock_phase())
+
     @property
     def sleep_pressure(self) -> float:
         """Process S in ``[SLEEP_FLOOR, 1]``. Not part of the residual."""
@@ -2699,9 +2715,10 @@ class LLMMemory:
         duration may run an SWS-like gist pass when process S is high at
         onset, then one prediction-error sweep, then ``floor(duration)``
         offline ticks, then a REM-like emotion/bind pass when the post-sleep
-        phase is REM. Those ticks can be spontaneous. The sweep's audit
-        rows have no fact text and no ``replay_phase``. The cue export does
-        not grow a phase field.
+        phase is REM. Those ticks can be spontaneous. Encode mode lowers
+        the pressure those ticks see; it does not skip the SWS or REM
+        operator. The sweep's audit rows have no fact text and no
+        ``replay_phase``. The cue export does not grow a phase field.
         """
         before = float(self._sleep_pressure)
         after = float(sleep_after(before, duration))
@@ -2821,7 +2838,8 @@ class LLMMemory:
         tick = int(self._offline_tick)
         self._offline_tick = tick + 1
         pressure = float(self.sleep_pressure)
-        if not spontaneous_due(tick, pressure, len(self.store)):
+        effective = spontaneous_pressure(self.encoding_mode(), pressure)
+        if not spontaneous_due(tick, effective, len(self.store)):
             return _empty_cue_fields(
                 1,
                 int(self.cue_dim),
