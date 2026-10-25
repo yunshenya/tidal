@@ -301,7 +301,7 @@ class Slot:
     sentence: Optional[np.ndarray] = None
     # Residual scale for the LM inject. Continuum readout ignores it.
     # 1 until replay recomputes decay or a nonzero clock phase scales the
-    # write. A refresh sets it back to 1.
+    # write. A refresh sets it back to 1. McGaugh gain is consolidation_gain.
     strength: float = 1.0
     # High values are replayed first. Writers that do not stamp it leave 0.
     salience: float = 0.0
@@ -323,6 +323,9 @@ class Slot:
     history: list = field(default_factory=list)
     # Write gain at stamp time. 1 until a nonzero clock phase. Not a fact.
     clock_gain: float = 1.0
+    # McGaugh write / replay gain. 1 until above-baseline arousal meets a
+    # nonzero |valence|. Not a cue-export field.
+    consolidation_gain: float = 1.0
     # Record modality. Text-only live writes store "text".
     modality: str = MEMORY_MODALITY
     # growbrain encoder output. tidal stores and returns it. Width F=32.
@@ -733,10 +736,19 @@ class EpisodicStore:
             slot.strength = 1.0
 
     def ranked_by_salience(self) -> list:
-        """Slot indices, highest salience first. Newer ``t`` breaks ties."""
+        """Slot indices, highest salience first, then consolidation gain.
+
+        Newer ``t`` breaks a remaining tie. When every gain is 1 the order
+        matches the old ``(salience, t, -index)`` ranking.
+        """
         return sorted(
             range(len(self._slots)),
-            key=lambda i: (float(self._slots[i].salience), int(self._slots[i].t), -i),
+            key=lambda i: (
+                float(self._slots[i].salience),
+                float(self._slots[i].consolidation_gain),
+                int(self._slots[i].t),
+                -i,
+            ),
             reverse=True,
         )
 

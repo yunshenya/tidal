@@ -94,7 +94,9 @@ uses that slot's valence. Valence stays 0 until a stored experience adds
 on the write. The fact text is not scored, and the language model does not
 supply a group prior. ``s`` stays 1 until a replay cycle recomputes decay, a
 nonzero clock phase scales the write, or a same-relation retrieval scales a
-competitor. A refresh sets the replayed slot back to 1. The same cycle
+competitor. A refresh sets the replayed slot back to 1. Above-baseline
+arousal times a nonzero ``|valence|`` writes ``slot.consolidation_gain``
+and raises sleep replay priority. It does not change residual ``s``. The same cycle
 multiplies every nonzero valence by the replay decay and appends an audit row.
 A fact is written when it is salient and, once 32 accepted surprises are
 stored, its answer-token NLL is at least the quantile of that window of
@@ -172,6 +174,7 @@ from tidal.arousal import (
     apply_trace,
     quiet_step,
 )
+from tidal.consolidation import consolidation_gain
 from tidal.backend import (
     GROWBRAIN_CHECKPOINT,
     GrowbrainBackend,
@@ -1655,8 +1658,10 @@ class LLMMemory:
         self._offline_tick = 0
         self._sleep_audit: list = []
         # LC-NE arousal. Starts at the baseline. store.clear() does not move
-        # it. The residual and process S do not read it. The arousal window
-        # is not the write-gate surprise window.
+        # it. The residual composition and process S do not read it. Write
+        # consolidation_gain and sleep replay ranking read the McGaugh gain
+        # built from this scalar and slot valence. The arousal window is
+        # not the write-gate surprise window.
         self._arousal = float(AROUSAL_BASELINE)
         self._arousal_window: list[float] = []
         # Wall seconds and the drifted internal estimate. store.clear() does
@@ -2087,6 +2092,7 @@ class LLMMemory:
         if not wrote:
             return False
         episode_id = self.store.next_episode()
+        ambient = float(self.arousal)
         self._stamp_salience(name, rel, group, key_vec)
         slot = self.store._find(name, rel, group)
         if slot is None:
@@ -2102,6 +2108,8 @@ class LLMMemory:
                 group=group,
                 episode_id=episode_id,
             )
+        self._apply_consolidation_gain(slot, ambient)
+        if experience not in (None, 0.0):
             self.observe_valence(float(slot.valence))
         self._surprise_window.append(float(measured))
         overflow = len(self._surprise_window) - int(SURPRISE_WINDOW)
@@ -2147,8 +2155,13 @@ class LLMMemory:
                 else:
                     slot.strength = gain
                     slot.clock_gain = gain
+                slot.consolidation_gain = 1.0
                 return
         raise RuntimeError("accepted write did not leave a slot")
+
+    def _apply_consolidation_gain(self, slot, arousal: float) -> None:
+        """Store McGaugh write / replay gain. Residual ``s`` stays clock-only."""
+        slot.consolidation_gain = float(consolidation_gain(arousal, float(slot.valence)))
 
     def _consolidate(self) -> None:
         """Recompute decay, refresh the top-m salient slots, merge surface repeats.
@@ -2669,6 +2682,7 @@ class LLMMemory:
         return spontaneous_winner(
             [float(slot.salience) for slot in slots],
             [float(slot.strength) for slot in slots],
+            [float(slot.consolidation_gain) for slot in slots],
         )
 
     def _one_offline_tick(self) -> dict:

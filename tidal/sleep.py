@@ -194,18 +194,29 @@ def spontaneous_due(tick: int, pressure: float, n_slots: int) -> bool:
     return tick % int(SPONTANEOUS_PERIOD) == 0
 
 
-def spontaneous_winner(salience, strength) -> int:
-    """Index of the greatest ``(salience, strength, -index)``."""
+def spontaneous_winner(salience, strength, priority=None) -> int:
+    """Index of the greatest ``(salience, strength, priority, -index)``.
+
+    Missing priority is 1, so the order matches the old triple.
+    """
     weights = np.asarray(salience, dtype=np.float64).reshape(-1)
     levels = np.asarray(strength, dtype=np.float64).reshape(-1)
     if weights.shape != levels.shape or weights.size == 0:
         raise ValueError("salience and strength must be nonempty and aligned")
     if not np.isfinite(weights).all() or not np.isfinite(levels).all():
         raise ValueError("salience and strength must be finite")
+    if priority is None:
+        ranks = np.ones(weights.shape, dtype=np.float64)
+    else:
+        ranks = np.asarray(priority, dtype=np.float64).reshape(-1)
+        if ranks.shape != weights.shape:
+            raise ValueError("priority must align with salience and strength")
+        if not np.isfinite(ranks).all():
+            raise ValueError("priority must be finite")
     best_key = None
     best_index = 0
     for index in range(int(weights.size)):
-        key = (float(weights[index]), float(levels[index]), -index)
+        key = (float(weights[index]), float(levels[index]), float(ranks[index]), -index)
         if best_key is None or key > best_key:
             best_key = key
             best_index = index
