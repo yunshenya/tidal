@@ -1,8 +1,9 @@
 """Run the locked long-range recall held-out protocol.
 
-Writes ``reports/long_range_recall.json``, then
-``reports/long_range_recall.md`` from that JSON, so the criteria stay
-the ones in ``docs/long_range_recall_prereg.md``.
+Writes ``reports/long_range_recall.json``,
+``reports/long_range_recall_seeds.json`` (item-level per-seed raw),
+then ``reports/long_range_recall.md`` from that JSON, so the criteria
+stay the ones in ``docs/long_range_recall_prereg.md``.
 """
 from __future__ import annotations
 
@@ -23,10 +24,11 @@ from tidal.long_range_recall_data import (  # noqa: E402
     SEEDS,
     bank_sha256,
 )
-from tidal.long_range_recall_eval import render_markdown, run  # noqa: E402
+from tidal.long_range_recall_eval import render_markdown, run, seed_report  # noqa: E402
 
 REPORT_DIR = ROOT / "reports"
 JSON_PATH = REPORT_DIR / "long_range_recall.json"
+SEEDS_PATH = REPORT_DIR / "long_range_recall_seeds.json"
 MD_PATH = REPORT_DIR / "long_range_recall.md"
 
 
@@ -46,8 +48,13 @@ def main() -> int:
     summary["condition_names"] = list(CONDITIONS)
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     JSON_PATH.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    SEEDS_PATH.write_text(
+        json.dumps(seed_report(summary), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     MD_PATH.write_text(render_markdown(summary), encoding="utf-8")
     print(JSON_PATH)
+    print(SEEDS_PATH)
     print(MD_PATH)
     return 0
 

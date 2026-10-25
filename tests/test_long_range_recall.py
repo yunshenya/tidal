@@ -35,13 +35,18 @@ from tidal.long_range_recall_data import (
 )
 from tidal.long_range_recall_eval import (
     Geometry,
+    _seed_metric,
+    ablation_gaps,
+    flatten_seed_rows,
     frozen_interface,
     play_dialogue,
     render_markdown,
+    render_reading_note,
     run_trial,
     schedule_ok,
     score_strong,
     score_weak,
+    seed_report,
 )
 from tidal.subconscious_reconstruct_data import (
     bank_sha256 as reconstruct_sha,
@@ -350,10 +355,61 @@ def test_render_markdown_states_each_hypothesis():
     assert "not a mute command" in text
     assert "No speak-rate criterion was scored." in text
     assert FROZEN_RECONSTRUCT_SHA in text
+    assert "mean ± sample standard deviation" in text
+    assert "per_seed_raw" in text
+    assert "long_range_recall_seeds.json" in text
+    assert "does not verify" in text
+    assert "#77 / #83" in text
+    assert "#79 / #81" in text
     for name in ("H1", "H2", "H3", "H4", "H5"):
         assert name in text
     assert "**pass**" in text
     assert "Thresholds were not moved." in text
+
+
+def test_seed_metric_keeps_item_level_raw():
+    payload = _seed_metric({0: [True, True, False], 1: [False, False, False]})
+    assert payload["mean"] == pytest.approx((2.0 / 3.0) / 2.0)
+    assert payload["per_seed"] == [pytest.approx(2.0 / 3.0), 0.0]
+    assert payload["per_seed_raw"][0]["seed"] == 0
+    assert payload["per_seed_raw"][0]["items"] == [True, True, False]
+    assert payload["per_seed_raw"][1]["hits"] == 0
+    assert payload["n"] == 6
+    summary = {
+        "protocol": PROTOCOL,
+        "seeds": [0, 1],
+        "n_values": [10],
+        "conditions": {"full": {"10": {"recall_at_1_strong": payload}}},
+    }
+    rows = flatten_seed_rows(summary)
+    assert len(rows) == 2
+    assert rows[0]["items"] == [True, True, False]
+    dumped = seed_report(summary)
+    assert dumped["rows"] == rows
+
+
+def test_reading_note_does_not_verify_matching_79_and_81():
+    winning = _summary(0.9, 0.1, 0.8, 0.2, 0.5, 0.0, 0.9, 0.0)
+    winning["conditions"]["off_77"] = {
+        "10": winning["conditions"]["full"]["10"],
+        "30": winning["conditions"]["full"]["30"],
+        "100": {
+            **winning["conditions"]["full"]["100"],
+            "recall_at_1_strong": _empty_cell(0.0),
+        },
+    }
+    winning["conditions"]["off_79"] = winning["conditions"]["full"]
+    winning["conditions"]["off_81"] = winning["conditions"]["full"]
+    note = "\n".join(render_reading_note(winning))
+    assert "does not verify" in note
+    assert "cannot detect" in note
+    assert "#79 / `off_79` matches `full`" in note
+    assert "#81 / `off_81` matches `full`" in note
+    assert "recall_at_1_strong at N=100 is 0.000 vs full 0.800" in note
+    gaps = ablation_gaps(winning)
+    assert gaps["off_79"] == []
+    assert gaps["off_81"] == []
+    assert gaps["off_77"]
 
 
 def test_committed_reports_cover_every_cell():

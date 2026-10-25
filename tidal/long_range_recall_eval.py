@@ -646,8 +646,38 @@ def run_cell(
     }
 
 
+METRICS = (
+    "recall_at_1_strong",
+    "hit_rate_weak",
+    "conflict_newest_take",
+    "false_recall",
+)
+ABLATION_LABELS = {
+    "off_77": "#77 / `off_77`",
+    "off_79": "#79 / `off_79`",
+    "off_81": "#81 / `off_81`",
+    "off_83": "#83 / `off_83`",
+    "baseline": "`baseline`",
+}
+
+
 def _seed_metric(per_seed: dict[int, list[bool]]) -> dict[str, Any]:
-    rates = [_rate(per_seed[seed]) for seed in sorted(per_seed)]
+    ordered = [int(seed) for seed in sorted(per_seed)]
+    raw: list[dict[str, Any]] = []
+    rates: list[float] = []
+    for seed in ordered:
+        items = [bool(hit) for hit in per_seed[seed]]
+        rate = _rate(items)
+        rates.append(rate)
+        raw.append(
+            {
+                "seed": int(seed),
+                "rate": float(rate),
+                "hits": int(sum(items)),
+                "n": int(len(items)),
+                "items": items,
+            }
+        )
     mean, std = mean_std(rates)
     hits = sum(sum(per_seed[seed]) for seed in per_seed)
     n = sum(len(per_seed[seed]) for seed in per_seed)
@@ -656,9 +686,68 @@ def _seed_metric(per_seed: dict[int, list[bool]]) -> dict[str, Any]:
         "mean": float(mean),
         "std": float(std),
         "per_seed": [float(rate) for rate in rates],
+        "per_seed_raw": raw,
         "hits": int(hits),
         "n": int(n),
         "wilson": [float(low), float(high)],
+    }
+
+
+def flatten_seed_rows(summary: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Item-level raw hits, one row per condition × N × metric × seed."""
+    rows: list[dict[str, Any]] = []
+    conditions = summary.get("conditions", {})
+    for condition in CONDITIONS:
+        if condition not in conditions:
+            continue
+        for n in N_VALUES:
+            cell = conditions[condition].get(str(int(n)))
+            if cell is None:
+                continue
+            for metric in METRICS:
+                payload = cell.get(metric, {})
+                raw_rows = payload.get("per_seed_raw")
+                if raw_rows:
+                    for raw in raw_rows:
+                        rows.append(
+                            {
+                                "condition": condition,
+                                "n": int(n),
+                                "metric": metric,
+                                "seed": int(raw["seed"]),
+                                "rate": float(raw["rate"]),
+                                "hits": int(raw["hits"]),
+                                "n_items": int(raw["n"]),
+                                "items": [bool(hit) for hit in raw["items"]],
+                            }
+                        )
+                    continue
+                rates = payload.get("per_seed", [])
+                for seed, rate in zip(summary.get("seeds", list(SEEDS)), rates):
+                    rows.append(
+                        {
+                            "condition": condition,
+                            "n": int(n),
+                            "metric": metric,
+                            "seed": int(seed),
+                            "rate": float(rate),
+                            "hits": None,
+                            "n_items": None,
+                            "items": None,
+                        }
+                    )
+    return rows
+
+
+def seed_report(summary: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "protocol": summary.get("protocol", PROTOCOL),
+        "seeds": list(summary.get("seeds", SEEDS)),
+        "n_values": list(summary.get("n_values", N_VALUES)),
+        "condition_names": list(summary.get("condition_names", CONDITIONS)),
+        "git": summary.get("git"),
+        "bank_sha256": summary.get("bank_sha256"),
+        "rows": flatten_seed_rows(summary),
     }
 
 
@@ -711,8 +800,82 @@ def _fmt_cell(cell: dict[str, Any]) -> str:
     return f"{float(cell['mean']):.3f} ± {float(cell['std']):.3f} ({int(cell['hits'])}/{int(cell['n'])})"
 
 
+def _mean_or_none(cell: Mapping[str, Any] | None, metric: str) -> float | None:
+    if cell is None or metric not in cell:
+        return None
+    return float(cell[metric]["mean"])
+
+
+def ablation_gaps(summary: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    """Compare each ablation's seed-means to `full`. Does not retune gates."""
+    conditions = summary.get("conditions", {})
+    full = conditions.get("full", {})
+    out: dict[str, list[dict[str, Any]]] = {}
+    for condition in CONDITIONS:
+        if condition == "full" or condition not in conditions:
+            continue
+        gaps: list[dict[str, Any]] = []
+        other = conditions[condition]
+        for n in N_VALUES:
+            full_cell = full.get(str(int(n)))
+            other_cell = other.get(str(int(n)))
+            if full_cell is None or other_cell is None:
+                continue
+            for metric in METRICS:
+                left = _mean_or_none(full_cell, metric)
+                right = _mean_or_none(other_cell, metric)
+                if left is None or right is None:
+                    continue
+                if abs(left - right) > 1e-12:
+                    gaps.append(
+                        {
+                            "n": int(n),
+                            "metric": metric,
+                            "full": left,
+                            "other": right,
+                        }
+                    )
+        out[condition] = gaps
+    return out
+
+
+def render_reading_note(summary: Mapping[str, Any]) -> list[str]:
+    """#77/#83/baseline gaps inform; #79/#81 ≈ full is not a verification."""
+    lines = [
+        "## Reading the ablations",
+        "",
+        "#77 / #83 / `baseline` gaps versus `full` are informative. "
+        "#79 / #81 matching `full` means this harness cannot detect "
+        "those mechanisms or they do not contribute on this bank. It "
+        "does not verify them. Gaps are not a reason to retune.",
+        "",
+    ]
+    gaps = ablation_gaps(summary)
+    for condition in ("off_77", "off_79", "off_81", "off_83", "baseline"):
+        if condition not in gaps:
+            continue
+        label = ABLATION_LABELS[condition]
+        found = gaps[condition]
+        if not found:
+            lines.append(
+                f"- {label} matches `full` on every scored cell. This "
+                "harness cannot detect it here, or it does not contribute "
+                "on this bank. That is not a verification."
+            )
+            continue
+        bits = [
+            f"{row['metric']} at N={row['n']} is {row['other']:.3f} vs full {row['full']:.3f}"
+            for row in found
+        ]
+        lines.append(f"- {label} differs from `full`: {'; '.join(bits)}.")
+    if gaps:
+        lines.append("")
+    return lines
+
+
 def render_markdown(summary: Mapping[str, Any]) -> str:
     """Honest table plus per-hypothesis pass/fail. Does not retune gates."""
+    seeds = list(summary.get("seeds", SEEDS))
     lines = [
         "# Long-range recall held-out results",
         "",
@@ -720,6 +883,15 @@ def render_markdown(summary: Mapping[str, Any]) -> str:
         "Pre-registration: [`docs/long_range_recall_prereg.md`](../docs/long_range_recall_prereg.md).",
         "Item 10 (`别说话了`) is an ordinary dialogue fact, not a mute command.",
         "No speak-rate criterion was scored.",
+        "",
+        "## Methodology",
+        "",
+        f"Locked seeds `{set(seeds)}` ({len(seeds)} seeds). Each cell is "
+        "the mean ± sample standard deviation of the per-seed rates "
+        f"({ITEMS_N} items / seed). Pooled counts `(hits/{len(seeds) * ITEMS_N})` "
+        "are descriptive. Item-level raw hits are in "
+        "`reports/long_range_recall.json` (`per_seed_raw`) and "
+        "`reports/long_range_recall_seeds.json`.",
         "",
         "## Interface",
         "",
@@ -733,7 +905,7 @@ def render_markdown(summary: Mapping[str, Any]) -> str:
     lines.append("")
     lines.append(f"Band integrity: `{summary.get('band_ok')}`. Schedule integrity: `{summary.get('schedule_ok')}`.")
     lines.append("")
-    lines.append("## Cells (mean ± std over 5 seeds)")
+    lines.append(f"## Cells (mean ± std over {len(seeds)} seeds)")
     lines.append("")
     lines.append("| condition | N | recall@1 strong | hit rate weak | newest-take | false recall |")
     lines.append("|---|---|---|---|---|---|")
@@ -756,6 +928,7 @@ def render_markdown(summary: Mapping[str, Any]) -> str:
                 )
             )
     lines.append("")
+    lines.extend(render_reading_note(summary))
     lines.append("## Hypotheses")
     lines.append("")
     rows = summary.get("hypotheses", {})
