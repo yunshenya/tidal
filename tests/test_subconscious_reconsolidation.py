@@ -200,7 +200,7 @@ def test_window_closes_on_token_or_wall_and_miss_does_not_open():
         assert tokens.cue_fields(HIT)["triggered"][0, 0]
         assert tokens.write_back(0, LURE_PHONE)
         miss = tokens.cue_fields(MISS)
-        assert not bool(np.any(miss["triggered"]))
+        assert not any(bool(flag) for flag in np.asarray(miss["triggered"]).reshape(-1).tolist())
         assert tokens.labile(0) is False
         assert tokens.write_back(0, PHONE) is False
         assert tokens.store.slots[0].answer == LURE_PHONE
@@ -222,7 +222,7 @@ def test_window_closes_on_token_or_wall_and_miss_does_not_open():
     try:
         _plant_phone(miss)
         fields = miss.cue_fields("B")
-        assert not bool(np.any(fields["triggered"]))
+        assert not any(bool(flag) for flag in np.asarray(fields["triggered"]).reshape(-1).tolist())
         assert miss.labile(0) is False
         assert miss.write_back(0, LURE_PHONE) is False
         assert miss.store.slots[0].answer == PHONE
