@@ -11,7 +11,9 @@ from typing import Any, Literal, Mapping, Never, Sequence
 PROTOCOL = "long-range-recall-held-v0"
 SEEDS = (0, 1, 2, 3, 4)
 N_VALUES = (10, 30, 100)
-ITEMS_N = 10
+ITEMS_N = 11
+DIALOGUE_ITEM_ID = 10
+FORBIDDEN_RELS = ("command", "mute", "preference", "instruction", "gate")
 STUB_DIM = 64
 STRONG_COSINE = 1.0
 WEAK_COSINE = 0.25
@@ -209,6 +211,21 @@ ITEMS = (
         "gloss_plant": "",
         "gloss_weak": "",
     },
+    {
+        "id": 10,
+        "name": "lin",
+        "rel": "line",
+        "text": "别说话了",
+        "answer": "别说话了",
+        "strong_cue": "别说话了",
+        "weak_cue": "刚才她说了啥",
+        "conflict_text": "先等一下",
+        "conflict_answer": "先等一下",
+        "unrelated": "The kettle clicked off.",
+        "gloss_plant": "别说话了",
+        "gloss_weak": "刚才她说了啥",
+        "surface_class": "dialogue",
+    },
 )
 
 
@@ -225,6 +242,18 @@ def item_by_id(item_id: int) -> dict[str, Any]:
     if int(row["id"]) != int(item_id):
         raise RuntimeError("item id drifted")
     return dict(row)
+
+
+def is_ordinary_dialogue_fact(row: Mapping[str, Any]) -> bool:
+    """True when a social line is stored as a fact, not a mute command."""
+    rel = str(row.get("rel", ""))
+    if rel in FORBIDDEN_RELS:
+        return False
+    if str(row.get("kind", "fact")) != "fact":
+        return False
+    if "speak_rate" in row or "mute" in row:
+        return False
+    return True
 
 
 def distractor_text(seed: int, item_id: int, turn: int) -> str:

@@ -22,10 +22,15 @@ The stack on main now owns #77 McGaugh arousal consolidation gain
 (`604236c`), #79 sleep two-phase SWS/REM (`b5cb75e`), #81 retroactive
 interference (`8e7c37a`), and #83 weak-cue spontaneous recollection
 (`e0b0fb3`). Each mechanism has its own numeric fit/held gates. None of
-those gates ask whether a planted preference or event can still be
-retrieved after many later turns, after a sleep episode, under a strong
-cue versus a weak cue, after an update conflict, or under an unrelated
-probe.
+those gates ask whether a planted event, preference *content*, or
+ordinary dialogue line can still be retrieved after many later turns,
+after a sleep episode, under a strong cue versus a weak cue, after an
+update conflict, or under an unrelated probe. A line such as
+`别说话了` is that last class: a plot / social-dialogue fact, the same
+kind of write as `那天吃了抹茶蛋糕`. It is not a mute policy, not a
+system instruction, not a preference-channel write, and not a gate
+command. This protocol does not score subsequent speak rate and does
+not ask the stack to stop talking.
 
 This protocol is that long-range recall measurement. It is not a new
 memory operator. It is not a retune.
@@ -83,18 +88,20 @@ width is the eval stub, not a change to live `cue_dim`.
 ## Seeds, items, N
 
 - Seeds: `{0, 1, 2, 3, 4}` (5 seeds; cheap).
-- Items per seed: 10 locked facts below. Item `k` on seed `s` is the
-  same surface on every seed; only distractor ids and similar-neighbor
-  axes vary with `s`.
+- Items per seed: 11 locked facts below (ids 0–9 plus dialogue line
+  id 10). Item `k` on seed `s` is the same surface on every seed; only
+  distractor ids and similar-neighbor axes vary with `s`.
 - Distractor depths: `N ∈ {10, 30, 100}`.
-- Per cell: 5 seeds × 10 items = 50 dialogues. Report the per-seed rate
-  over the 10 items, then mean ± sample std over the 5 seeds.
+- Per cell: 5 seeds × 11 items = 55 dialogues. Report the per-seed rate
+  over the 11 items, then mean ± sample std over the 5 seeds.
 
 ### Locked target facts
 
 `answer` is a substring of `text`, as `remember` requires. Item 0 is the
-preference/event example from the request (`那天吃了抹茶蛋糕` /
-`我又吃到了`).
+event example from the request (`那天吃了抹茶蛋糕` / `我又吃到了`).
+Item 10 is the social-dialogue example (`别说话了` / `刚才她说了啥`).
+Both are ordinary `kind=fact` writes. Item 10's relation is `line`, not
+`command`, `mute`, `preference`, or `instruction`.
 
 | id | name | rel | plant text | answer | strong cue | weak cue |
 |---|---|---|---|---|---|---|
@@ -108,11 +115,28 @@ preference/event example from the request (`那天吃了抹茶蛋糕` /
 | 7 | mio | soup | My favorite soup is miso. | miso | My favorite soup is miso. | I had soup again. |
 | 8 | fern | plant | The plant on the desk is a fern. | fern | The plant on the desk is a fern. | The plant is still there. |
 | 9 | kit | key | I left the key under the mat. | under the mat | I left the key under the mat. | Where is the key? |
+| 10 | lin | line | 别说话了 | 别说话了 | 别说话了 | 刚才她说了啥 |
 
 Chinese gloss, item 0 only, not passed to `remember`: plant
 `那天吃了抹茶蛋糕`; weak cue `我又吃到了`. The English pair is the
 scored surface so `ByteTokenizer`-range tests and the utterance stub
-share one bank.
+share one bank. Item 10 plants and probes the Chinese surfaces
+directly. The weak cue asks what she said just then. That is a recall
+probe, not a mute confirmation.
+
+### Dialogue lines are not mute commands
+
+Item 10 is in the held-out set as an ordinary conversational fact.
+
+- Plant `别说话了` with `remember(..., kind="fact", rel="line")`.
+- After `N` distractors, probe with the strong surface and with
+  `刚才她说了啥` on the weak path.
+- Score hit / miss in the same `N ×` cue-strength buckets as ids 0–9.
+- Do not add a criterion that subsequent speak rate must drop.
+- Do not mark the write high-priority, and do not put it on a command
+  or preference channel.
+- Immediate mute / stop-talking as a live dialogue reaction is out of
+  scope for this pull request.
 
 ### Locked update-conflict restatements (B)
 
@@ -130,6 +154,7 @@ Same `(name, rel)` as the plant. `remember` of B must overwrite A.
 | 7 | My favorite soup is broth. | broth |
 | 8 | The plant on the desk is a fig. | fig |
 | 9 | I left the key under the pot. | under the pot |
+| 10 | 先等一下 | 先等一下 |
 
 ### Locked unrelated probes
 
@@ -148,6 +173,7 @@ key in that dialogue is 0 by construction.
 | 7 | Fog covers the south dock. |
 | 8 | Someone moved the chess clock. |
 | 9 | The oven beeped twice already. |
+| 10 | The kettle clicked off. |
 
 ### Locked distractors
 
@@ -267,10 +293,10 @@ overlap, no encode/consolidate write keep.
 
 For each condition, seed, and `N`:
 
-- `recall_at_1_strong` — strong-probe hits / 10 items
-- `hit_rate_weak` — weak-probe hits / 10 items
-- `conflict_newest_take` — conflict newest-take / 10 items
-- `false_recall` — unrelated false positives / 10 items
+- `recall_at_1_strong` — strong-probe hits / 11 items
+- `hit_rate_weak` — weak-probe hits / 11 items
+- `conflict_newest_take` — conflict newest-take / 11 items
+- `false_recall` — unrelated false positives / 11 items
 
 Then mean ± sample standard deviation across the 5 seeds. A cell with
 one seed (the pytest smoke) is not a held cell.

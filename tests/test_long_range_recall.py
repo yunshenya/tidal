@@ -11,6 +11,8 @@ import pytest
 from tidal.llm_memory import CUE_INTERFACE_VERSION, CUE_THETA
 from tidal.long_range_recall_data import (
     CONDITIONS,
+    DIALOGUE_ITEM_ID,
+    FORBIDDEN_RELS,
     FROZEN_CUE_INTERFACE,
     FROZEN_RECONSTRUCT_INTERFACE,
     FROZEN_RECONSTRUCT_SHA,
@@ -24,6 +26,7 @@ from tidal.long_range_recall_data import (
     SEEDS,
     WEAK_COSINE,
     bank_sha256,
+    is_ordinary_dialogue_fact,
     item_by_id,
     mean_std,
     score_hypotheses,
@@ -112,7 +115,7 @@ def test_protocol_matches_prereg_and_frozen_interface():
     assert PROTOCOL in prereg
     assert SEEDS == (0, 1, 2, 3, 4)
     assert N_VALUES == (10, 30, 100)
-    assert ITEMS_N == 10 == len(ITEMS)
+    assert ITEMS_N == 11 == len(ITEMS)
     assert CUE_INTERFACE_VERSION == FROZEN_CUE_INTERFACE == 7
     surfaces = canonical_surfaces()
     assert surfaces["interface_version"] == FROZEN_RECONSTRUCT_INTERFACE == 6
@@ -129,6 +132,9 @@ def test_protocol_matches_prereg_and_frozen_interface():
         assert row["unrelated"] in prereg
     assert ITEMS[0]["gloss_plant"] == "那天吃了抹茶蛋糕"
     assert ITEMS[0]["gloss_weak"] == "我又吃到了"
+    assert "speak rate" in prereg
+    assert "out of" in prereg and "scope" in prereg
+    assert "not a mute policy" in prereg
     assert similar_turns(30) == (1, 10)
     assert similar_turns(100) == (1, 33)
     assert len(bank_sha256()) == 64
@@ -257,3 +263,42 @@ def test_off_83_is_a_harness_patch_and_blocks_weak_hits():
     assert "_condition_patches" in source
     assert "weak_winner" in source
     assert "os.environ" not in source
+
+
+def test_stop_talking_line_is_an_ordinary_dialogue_fact():
+    row = item_by_id(DIALOGUE_ITEM_ID)
+    assert row["text"] == "别说话了"
+    assert row["strong_cue"] == "别说话了"
+    assert row["weak_cue"] == "刚才她说了啥"
+    assert row["rel"] == "line"
+    assert row["rel"] not in FORBIDDEN_RELS
+    assert row.get("surface_class") == "dialogue"
+    assert is_ordinary_dialogue_fact(row) is True
+    assert is_ordinary_dialogue_fact({**row, "rel": "mute"}) is False
+    gates = inspect.getsource(score_hypotheses)
+    assert "speak" not in gates
+    assert "mute" not in gates
+    for item in ITEMS:
+        assert item["rel"] not in FORBIDDEN_RELS
+        assert item.get("kind", "fact") == "fact"
+    strong = run_trial(
+        seed=0,
+        item_id=DIALOGUE_ITEM_ID,
+        n=10,
+        family="recall",
+        condition="full",
+        probe="strong",
+    )
+    weak = run_trial(
+        seed=0,
+        item_id=DIALOGUE_ITEM_ID,
+        n=10,
+        family="recall",
+        condition="full",
+        probe="weak",
+    )
+    assert strong["hit"] is True
+    assert strong["source"] == "cue"
+    assert weak["hit"] is True
+    assert "speak_rate" not in strong
+    assert "mute" not in strong

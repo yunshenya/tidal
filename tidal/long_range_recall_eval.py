@@ -89,7 +89,7 @@ def _unit(index: int, dim: int = STUB_DIM) -> np.ndarray:
     return row
 
 
-def _hash_vec(text: str, dim: int = STUB_DIM, reserved: int = 32) -> np.ndarray:
+def _hash_vec(text: str, dim: int = STUB_DIM, reserved: int = 36) -> np.ndarray:
     rng = np.random.default_rng(int(hashlib_u32(text)))
     row = rng.normal(size=int(dim)).astype(np.float64)
     row[: int(reserved)] = 0.0
@@ -130,13 +130,14 @@ class Geometry:
     def __init__(self, item: dict[str, Any]):
         self.item = item
         axis = int(item["id"])
+        n_items = int(ITEMS_N)
         self.target = _unit(axis)
-        self.conflict = _unit(10 + axis)
-        self.unrelated = _unit(20 + axis)
+        self.conflict = _unit(n_items + axis)
+        self.unrelated = _unit(2 * n_items + axis)
         # Different laterals so a 0.25 weak cue does not clear theta against
         # a 0.95 neighbor. Cosine with the target stays the locked value.
-        self.weak = _mix(self.target, float(WEAK_COSINE), _unit(30))
-        self.similar = _mix(self.target, float(SIMILAR_COSINE), _unit(31))
+        self.weak = _mix(self.target, float(WEAK_COSINE), _unit(3 * n_items))
+        self.similar = _mix(self.target, float(SIMILAR_COSINE), _unit(3 * n_items + 1))
 
     def vector(self, text: str) -> np.ndarray:
         item = self.item
