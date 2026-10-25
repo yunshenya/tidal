@@ -23,6 +23,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -39,6 +136,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -57,6 +251,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -73,6 +364,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -93,6 +481,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -109,6 +594,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -127,6 +709,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -143,6 +822,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -163,6 +939,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -179,6 +1052,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -197,6 +1167,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -213,6 +1280,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -235,6 +1399,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -251,6 +1512,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -269,6 +1627,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -285,6 +1740,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -305,6 +1857,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -321,6 +1970,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -339,6 +2085,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -355,6 +2198,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -375,6 +2315,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -391,6 +2428,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -409,6 +2543,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -425,6 +2656,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -447,6 +2775,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -463,6 +2888,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -481,6 +3003,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -497,6 +3116,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -517,6 +3233,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -533,6 +3346,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -551,6 +3461,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -567,6 +3574,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -587,6 +3691,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -603,6 +3804,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -621,6 +3919,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -637,6 +4032,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -659,6 +4151,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -675,6 +4264,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -693,6 +4379,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -709,6 +4492,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -729,6 +4609,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -745,6 +4722,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -763,6 +4837,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -779,6 +4950,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -799,6 +5067,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -815,6 +5180,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -833,6 +5295,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -849,6 +5408,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -871,6 +5527,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -887,6 +5640,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -905,6 +5755,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -921,6 +5868,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -941,6 +5985,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -957,6 +6098,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -975,6 +6213,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -991,6 +6326,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1011,6 +6443,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1027,6 +6556,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1045,6 +6671,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1061,6 +6784,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1083,6 +6903,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1099,6 +7016,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1117,6 +7131,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -1133,6 +7244,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1153,6 +7361,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1169,6 +7474,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1187,6 +7589,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -1203,6 +7702,103 @@
             1.0,
             1.0,
             1.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1223,6 +7819,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1239,6 +7932,103 @@
             0.0,
             0.0,
             0.0
+          ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
           ],
           "std": 0.0,
           "wilson": [
@@ -1257,6 +8047,103 @@
             0.0,
             0.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 0
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 1
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 2
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 3
+            },
+            {
+              "hits": 0,
+              "items": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ],
+              "n": 11,
+              "rate": 0.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.0,
@@ -1274,6 +8161,103 @@
             1.0,
             1.0
           ],
+          "per_seed_raw": [
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 0
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 1
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 2
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 3
+            },
+            {
+              "hits": 11,
+              "items": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "n": 11,
+              "rate": 1.0,
+              "seed": 4
+            }
+          ],
           "std": 0.0,
           "wilson": [
             0.9347150988829137,
@@ -1283,8 +8267,8 @@
       }
     }
   },
-  "elapsed_seconds": 387.753944049,
-  "git": "29ca30d3f640a43a70ff99255be90c131ba683bd",
+  "elapsed_seconds": 445.4436072220001,
+  "git": "481f6a40c08c785dc938f23d679f5082e9ee73d7",
   "hypotheses": {
     "H1": {
       "baseline": 0.0,

@@ -395,6 +395,23 @@ Live cue interface 7. Reconstruct interface 6. Reconstruct sha256
 Band integrity true. Schedule integrity true. Thresholds were not
 moved.
 
+### Multi-seed re-run
+
+The locked seeds stay `{0, 1, 2, 3, 4}`. This subsection is the same
+matrix re-scored so each cell is mean ± sample std of the five
+per-seed rates, with item-level raw in
+`reports/long_range_recall.json` (`per_seed_raw`) and
+`reports/long_range_recall_seeds.json`. H1–H5 were not moved after
+the numbers were seen.
+
+Git `481f6a40c08c785dc938f23d679f5082e9ee73d7`. Elapsed 445.444
+seconds. Band integrity true. Schedule integrity true. Every
+per-seed rate equalled the cell mean (sample std 0).
+
+#77 / #83 / `baseline` gaps versus `full` are informative. #79 / #81
+matching `full` means this harness cannot detect those mechanisms or
+they do not contribute on this bank. It does not verify them.
+
 Item 10 (`别说话了`) was scored as an ordinary `kind=fact` /
 `rel=line` write. Speak rate was not a criterion.
 

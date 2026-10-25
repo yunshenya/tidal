@@ -318,11 +318,16 @@ def test_docs_page_links_prereg_and_reports():
     assert "long_range_recall_prereg.md" in page
     assert "reports/long_range_recall.md" in page
     assert "reports/long_range_recall.json" in page
+    assert "reports/long_range_recall_seeds.json" in page
     assert "别说话了" in page
     assert "ordinary" in page
     assert "not a mute" in page
     assert "speak rate" in page
     assert "out of" in page and "scope" in page
+    assert "mean ± sample standard deviation" in page
+    assert "does not verify" in page
+    assert "#77 / #83" in page
+    assert "#79 / #81" in page
     assert FROZEN_RECONSTRUCT_SHA in page
     for name in ("H1", "H2", "H3", "H4", "H5"):
         assert name in page
@@ -332,6 +337,7 @@ def test_docs_page_links_prereg_and_reports():
     assert "The held bank was not scored." in prereg
     assert "The hypothesis gates were not scored." in prereg
     assert "One pass after the lock." in prereg
+    assert "Multi-seed re-run" in prereg
     assert "docs/long_range_recall.md" in prereg
 
 
@@ -414,8 +420,10 @@ def test_reading_note_does_not_verify_matching_79_and_81():
 
 def test_committed_reports_cover_every_cell():
     data = json.loads((ROOT / "reports" / "long_range_recall.json").read_text(encoding="utf-8"))
+    seeds = json.loads((ROOT / "reports" / "long_range_recall_seeds.json").read_text(encoding="utf-8"))
     report = (ROOT / "reports" / "long_range_recall.md").read_text(encoding="utf-8")
     assert data["protocol"] == PROTOCOL
+    assert data["seeds"] == list(SEEDS)
     assert data["interface"]["cue_interface_version"] == 7
     assert data["interface"]["reconstruct_interface_version"] == 6
     assert data["interface"]["reconstruct_sha256"] == FROZEN_RECONSTRUCT_SHA
@@ -434,9 +442,20 @@ def test_committed_reports_cover_every_cell():
                 assert "mean" in cell[metric]
                 assert "std" in cell[metric]
                 assert int(cell[metric]["n"]) == 55
+                assert len(cell[metric]["per_seed"]) == len(SEEDS)
+                raw = cell[metric]["per_seed_raw"]
+                assert len(raw) == len(SEEDS)
+                for row, seed in zip(raw, SEEDS):
+                    assert row["seed"] == seed
+                    assert row["n"] == ITEMS_N
+                    assert len(row["items"]) == ITEMS_N
             assert f"| {condition} | {n} |" in report
+    assert len(seeds["rows"]) == len(CONDITIONS) * len(N_VALUES) * 4 * len(SEEDS)
     for name in ("H1", "H2", "H3", "H4", "H5"):
         assert name in data["hypotheses"]
         assert "pass" in data["hypotheses"][name]
     assert "not a mute command" in report
     assert "No speak-rate criterion was scored." in report
+    assert "mean ± sample standard deviation" in report
+    assert "does not verify" in report
+    assert "long_range_recall_seeds.json" in report

@@ -323,7 +323,7 @@ Turn-taking, speaking decisions, and multimodal perception belong to the brain l
 
 ## Long-range recall measurement
 
-Protocol `long-range-recall-held-v0` is a measurement-only held-out of planted facts after `N` distractors. It does not change the live cue interface (stays 7) or the reconstruct bank (`interface_version` 6, frozen sha256 `bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589`). Ablation off-switches live only in the eval harness. Item 10 (`别说话了`) is an ordinary dialogue fact, not a mute command. Speak rate is not a criterion. Pre-registration and the scored-once table are in [docs/long_range_recall.md](docs/long_range_recall.md). One pass at git `29ca30d3f640a43a70ff99255be90c131ba683bd`: H1–H5 all pass. The pull request stays a draft.
+Protocol `long-range-recall-held-v0` is a measurement-only held-out of planted facts after `N` distractors. It does not change the live cue interface (stays 7) or the reconstruct bank (`interface_version` 6, frozen sha256 `bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589`). Ablation off-switches live only in the eval harness. Item 10 (`别说话了`) is an ordinary dialogue fact, not a mute command. Speak rate is not a criterion. Pre-registration and the multi-seed mean ± std table are in [docs/long_range_recall.md](docs/long_range_recall.md). Seeds `{0,1,2,3,4}` at git `481f6a40c08c785dc938f23d679f5082e9ee73d7`: H1–H5 all pass against the locked prereg. #77 / #83 / baseline gaps versus `full` are informative. #79 / #81 matching `full` is not a verification. The pull request stays a draft.
 
 ## Tests
 

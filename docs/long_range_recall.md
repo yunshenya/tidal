@@ -10,8 +10,10 @@ off-switches live only in the eval harness.
 Pre-registration, committed before any dialogue was scored:
 [long_range_recall_prereg.md](long_range_recall_prereg.md).
 
-Scored-once reports: [reports/long_range_recall.md](../reports/long_range_recall.md)
-and [reports/long_range_recall.json](../reports/long_range_recall.json).
+Multi-seed reports: [reports/long_range_recall.md](../reports/long_range_recall.md),
+[reports/long_range_recall.json](../reports/long_range_recall.json),
+and item-level raw
+[reports/long_range_recall_seeds.json](../reports/long_range_recall_seeds.json).
 
 The pull request stays a draft and is not merged.
 
@@ -30,6 +32,22 @@ restatement is `先等一下` on the same `(name, rel)`.
 This page does not score subsequent speak rate. Immediate mute /
 stop-talking as a live dialogue reaction is out of scope.
 
+## Methodology
+
+The locked protocol names seeds `{0, 1, 2, 3, 4}`. Five seeds were
+cheap, so the held matrix uses all of them. For each condition × `N`
+cell the harness scores 11 items per seed (55 dialogues), takes the
+per-seed rate, then reports mean ± sample standard deviation over the
+five rates. Pooled `(hits/55)` and Wilson 95% intervals are
+descriptive. They are not extra gates.
+
+Item-level raw hits live in `reports/long_range_recall.json`
+(`per_seed_raw`) and `reports/long_range_recall_seeds.json`. A first
+scored-once table existed at git
+`29ca30d3f640a43a70ff99255be90c131ba683bd`. This page is the
+multi-seed re-run of that same locked matrix. H1–H5 were not moved
+after the numbers were seen.
+
 ## Frozen interface
 
 | name | locked value |
@@ -41,10 +59,10 @@ stop-talking as a live dialogue reaction is out of scope.
 | seeds | `{0, 1, 2, 3, 4}` |
 | items | 11 (ids 0–10) |
 | `N` | `{10, 30, 100}` |
-| dialogues per cell | 55 |
+| dialogues per cell | 55 (5 seeds × 11 items) |
 
 Band integrity: true. Schedule integrity: true. Git of the scored
-revision: `29ca30d3f640a43a70ff99255be90c131ba683bd`. Elapsed 387.754
+revision: `481f6a40c08c785dc938f23d679f5082e9ee73d7`. Elapsed 445.444
 seconds.
 
 ## Cells (mean ± std over 5 seeds)
@@ -70,8 +88,9 @@ seconds.
 | baseline | 30 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
 | baseline | 100 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
 
-Wilson 95% intervals on the pooled 55-dialogue counts are in the JSON.
-They are descriptive. They are not extra gates.
+Every per-seed rate equalled the cell mean (sample std 0). Wilson 95%
+intervals on the pooled 55-dialogue counts are in the JSON. They are
+descriptive. They are not extra gates.
 
 ## Hypotheses (locked before the run)
 
@@ -88,23 +107,30 @@ A failed hypothesis is a valid result. Thresholds were not moved.
 Validity gates on this pass: frozen interface 7 / 6 / `bad8e653…`;
 no runtime flag in `tidal/llm_memory.py` or the four mechanism
 modules; band and schedule integrity true; every condition × `N` cell
-present; pytest of the existing suite stayed green.
+present as mean ± std over seeds `{0,1,2,3,4}`; pytest of the existing
+suite stayed green.
 
-## What the ablations show
+## Reading the ablations
 
-These are observations. They are not a reason to retune.
+#77 / #83 / `baseline` gaps versus `full` are informative. #79 / #81
+matching `full` means this harness cannot detect those mechanisms or
+they do not contribute on this bank. It does not verify them. These
+are observations. They are not a reason to retune.
 
-- `baseline` misses every strong and weak probe (0/55). Ranking is
-  log-strength first. Pure turn decay plus a cosine-0.95 neighbor
-  leaves a newer distractor above the planted slot, so orthogonal
-  cosine retrieve does not save the target.
-- `off_77` misses every strong probe at `N=100` (0/55) and hits at
-  `N=10` and `N=30`. Without McGaugh gain, the long stream's replay
-  refresh prefers a newer 0.95 neighbor.
-- `off_83` misses every weak probe (0/55). The weak path needs
-  `weak_winner`.
-- `off_79` and `off_81` match `full` on this bank. That does not
-  move a sleep or retroactive constant.
+- `baseline` misses every strong and weak probe (0/55, every seed).
+  Ranking is log-strength first. Pure turn decay plus a cosine-0.95
+  neighbor leaves a newer distractor above the planted slot, so
+  orthogonal cosine retrieve does not save the target.
+- `off_77` misses every strong probe at `N=100` (0/55, every seed) and
+  hits at `N=10` and `N=30`. Without McGaugh gain, the long stream's
+  replay refresh prefers a newer 0.95 neighbor.
+- `off_83` misses every weak probe (0/55, every seed). The weak path
+  needs `weak_winner`.
+- `off_79` and `off_81` match `full` on every scored cell. That does
+  not verify sleep two-phase SWS/REM or retroactive interference. It
+  means this harness cannot detect them here, or they do not
+  contribute on this bank. It does not move a sleep or retroactive
+  constant.
 - Newest-take is 55/55 on every condition, including `baseline`.
   Same-`(name, rel)` overwrite is enough for H4.
 - False recall is 0/55 on every condition.
