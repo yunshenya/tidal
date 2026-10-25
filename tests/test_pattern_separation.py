@@ -225,6 +225,8 @@ def test_remember_keeps_raw_keys_and_cue_widens_a_similar_gap():
         mem.store.clear()
         _plant(mem, "ada", left)
         _plant(mem, "bea", right)
+        for slot in mem.store._slots:
+            slot.strength = 1.0
         assert np.allclose(mem.store.slots[0].k, left)
         assert np.allclose(mem.store.slots[1].k, right)
         query = left.copy()

@@ -96,7 +96,8 @@ uses that slot's valence. Valence stays 0 until a stored experience adds
 ``sign * step`` on that slot, so ``u = 1``. The sign is the experience field
 on the write. The fact text is not scored, and the language model does not
 supply a group prior. ``s`` stays 1 until a replay cycle recomputes decay, a
-nonzero clock phase scales the write, or a same-relation retrieval scales a
+nonzero clock phase scales the write, a later similar write scales an
+older neighbor, or a same-relation retrieval scales a
 competitor. A refresh sets the replayed slot back to 1. Above-baseline
 arousal times a nonzero ``|valence|`` writes ``slot.consolidation_gain``
 and raises sleep replay priority. It does not change residual ``s``. The same cycle
@@ -2055,6 +2056,8 @@ class LLMMemory:
         modality: Optional[str] = None,
     ) -> bool:
         """Write one fact into the episodic store. Same ``(name, rel)`` overwrites.
+
+        A successful new slot then weakens older near-neighbor strengths.
 
         Chat and noise return before any forward. A fact's surprise is the
         total NLL of its answer tokens under the logits of the value forward.

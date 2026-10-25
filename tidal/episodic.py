@@ -300,8 +300,9 @@ class Slot:
     # recall keeps using ``k``. None on a sparse name/relation key.
     sentence: Optional[np.ndarray] = None
     # Residual scale for the LM inject. Continuum readout ignores it.
-    # 1 until replay recomputes decay or a nonzero clock phase scales the
-    # write. A refresh sets it back to 1. McGaugh gain is consolidation_gain.
+    # 1 until replay recomputes decay, a nonzero clock phase scales the
+    # write, or a later similar write scales an older neighbor. A refresh
+    # sets it back to 1. McGaugh gain is consolidation_gain.
     strength: float = 1.0
     # High values are replayed first. Writers that do not stamp it leave 0.
     salience: float = 0.0
@@ -542,7 +543,9 @@ class EpisodicStore:
         A write that omits ``answer`` stores none. ``fingerprint`` is a
         growbrain encoder vector of width 32; omitted writes store zeros.
         ``modality`` is ``text``, ``audio``, ``image``, ``fused``, or
-        ``none``; omitted writes store ``text``.
+        ``none``; omitted writes store ``text``. A successful append then
+        multiplies older near-neighbor strengths (Wixted 2004). Overwrite
+        and a surface-repeat merge do not.
         """
         if not self.gate_write(kind, surprise):
             return False
@@ -600,6 +603,11 @@ class EpisodicStore:
             oldest = min(range(len(self._slots)), key=lambda i: (self._slots[i].t, i))
             self._slots.pop(oldest)
         self._slots.append(entry)
+        # pattern_separation imports cosine_scores from this module, so the
+        # write-time hit is imported here to break that cycle.
+        from tidal.retroactive import apply_retroactive
+
+        apply_retroactive(self._slots, kk, len(self._slots) - 1)
         return True
 
     def recompute_decay(self, decay: float) -> None:
