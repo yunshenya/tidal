@@ -321,6 +321,10 @@ Turn-taking, speaking decisions, and multimodal perception belong to the brain l
 
 #71 and #72 already removed duplex, vap, continuum, and the six-head demos. This pull request deletes the leftover six-head train/eval/export/audit path that still imported `TurnModel` / `HEAD_DIMS`: `tidal/model.py`, `tidal/train.py`, `tidal/evaluate.py`, `tidal/export.py`, `tidal/audit.py`, plus the unused cone (`tidal/seqdata.py`, `tidal/dataset.py`, `tidal/baselines.py`, `tidal/features_g.py`, `tidal/backbones.py`, `tidal/adapters.py`) and the padding/ONNX tests that only exercised that stack. Cue/sleep/arousal/clock/reconstruct, `llm_memory*`, backends, and `GrowbrainBackend` did not import those symbols. The live `interface_version` is 7. The memory inject is the cue trace above.
 
+## Long-range recall measurement
+
+Protocol `long-range-recall-held-v0` is a measurement-only held-out of planted facts after `N` distractors. It does not change the live cue interface (stays 7) or the reconstruct bank (`interface_version` 6, frozen sha256 `bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589`). Ablation off-switches live only in the eval harness. Item 10 (`别说话了`) is an ordinary dialogue fact, not a mute command. Speak rate is not a criterion. Pre-registration and the scored-once table are in [docs/long_range_recall.md](docs/long_range_recall.md). One pass at git `29ca30d3f640a43a70ff99255be90c131ba683bd`: H1–H5 all pass. The pull request stays a draft.
+
 ## Tests
 
 ```bash

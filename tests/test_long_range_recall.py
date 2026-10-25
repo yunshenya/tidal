@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import json
 from pathlib import Path
 
 import numpy as np
@@ -36,6 +37,7 @@ from tidal.long_range_recall_eval import (
     Geometry,
     frozen_interface,
     play_dialogue,
+    render_markdown,
     run_trial,
     schedule_ok,
     score_strong,
@@ -302,3 +304,83 @@ def test_stop_talking_line_is_an_ordinary_dialogue_fact():
     assert weak["hit"] is True
     assert "speak_rate" not in strong
     assert "mute" not in strong
+
+
+def test_docs_page_links_prereg_and_reports():
+    page = (ROOT / "docs" / "long_range_recall.md").read_text(encoding="utf-8")
+    prereg = (ROOT / "docs" / "long_range_recall_prereg.md").read_text(encoding="utf-8")
+    report = (ROOT / "reports" / "long_range_recall.md").read_text(encoding="utf-8")
+    assert "long_range_recall_prereg.md" in page
+    assert "reports/long_range_recall.md" in page
+    assert "reports/long_range_recall.json" in page
+    assert "别说话了" in page
+    assert "ordinary" in page
+    assert "not a mute" in page
+    assert "speak rate" in page
+    assert "out of" in page and "scope" in page
+    assert FROZEN_RECONSTRUCT_SHA in page
+    for name in ("H1", "H2", "H3", "H4", "H5"):
+        assert name in page
+        assert name in report
+    assert "**pass**" in page
+    assert "Thresholds were not moved." in page
+    assert "The held bank was not scored." in prereg
+    assert "The hypothesis gates were not scored." in prereg
+    assert "One pass after the lock." in prereg
+    assert "docs/long_range_recall.md" in prereg
+
+
+def test_render_markdown_states_each_hypothesis():
+    winning = _summary(0.9, 0.1, 0.8, 0.2, 0.5, 0.0, 0.9, 0.0)
+    text = render_markdown(
+        {
+            "protocol": PROTOCOL,
+            "interface": {
+                "cue_interface_version": 7,
+                "reconstruct_interface_version": 6,
+                "reconstruct_sha256": FROZEN_RECONSTRUCT_SHA,
+            },
+            "band_ok": True,
+            "schedule_ok": True,
+            "conditions": winning["conditions"],
+            "hypotheses": score_hypotheses(winning),
+        }
+    )
+    assert PROTOCOL in text
+    assert "not a mute command" in text
+    assert "No speak-rate criterion was scored." in text
+    assert FROZEN_RECONSTRUCT_SHA in text
+    for name in ("H1", "H2", "H3", "H4", "H5"):
+        assert name in text
+    assert "**pass**" in text
+    assert "Thresholds were not moved." in text
+
+
+def test_committed_reports_cover_every_cell():
+    data = json.loads((ROOT / "reports" / "long_range_recall.json").read_text(encoding="utf-8"))
+    report = (ROOT / "reports" / "long_range_recall.md").read_text(encoding="utf-8")
+    assert data["protocol"] == PROTOCOL
+    assert data["interface"]["cue_interface_version"] == 7
+    assert data["interface"]["reconstruct_interface_version"] == 6
+    assert data["interface"]["reconstruct_sha256"] == FROZEN_RECONSTRUCT_SHA
+    assert data["band_ok"] is True
+    assert data["schedule_ok"] is True
+    for condition in CONDITIONS:
+        assert condition in data["conditions"]
+        for n in N_VALUES:
+            cell = data["conditions"][condition][str(int(n))]
+            for metric in (
+                "recall_at_1_strong",
+                "hit_rate_weak",
+                "conflict_newest_take",
+                "false_recall",
+            ):
+                assert "mean" in cell[metric]
+                assert "std" in cell[metric]
+                assert int(cell[metric]["n"]) == 55
+            assert f"| {condition} | {n} |" in report
+    for name in ("H1", "H2", "H3", "H4", "H5"):
+        assert name in data["hypotheses"]
+        assert "pass" in data["hypotheses"][name]
+    assert "not a mute command" in report
+    assert "No speak-rate criterion was scored." in report

@@ -301,7 +301,7 @@ For each condition, seed, and `N`:
 Then mean ± sample standard deviation across the 5 seeds. A cell with
 one seed (the pytest smoke) is not a held cell.
 
-Wilson 95% intervals on the pooled 50-dialogue counts are reported as
+Wilson 95% intervals on the pooled 55-dialogue counts are reported as
 descriptive columns. They are not extra gates.
 
 ## Pass / fail criteria (locked before any run)
@@ -376,8 +376,53 @@ decay.
   SWS/REM keeps, retroactive tau, or the weak band.
 - It does not merge.
 
+## Pre-run lock
+
+This document was committed before any dialogue was scored.
+The held bank was not scored.
+The hypothesis gates were not scored.
+
 ## Held result
 
-The held bank was not scored.
+One pass after the lock. Git
+`29ca30d3f640a43a70ff99255be90c131ba683bd`. Elapsed 387.754 seconds.
+Item-bank sha256
+`b41fd9409f37b4af1f2f4c18b309f054fb110558474e26ef69c8d9302a4102ba`.
+Reports `reports/long_range_recall.json` and
+`reports/long_range_recall.md`. Docs page `docs/long_range_recall.md`.
+Live cue interface 7. Reconstruct interface 6. Reconstruct sha256
+`bad8e653287b996114e32b68920c53c35dfa142d16c6bfb85fd5b4a811f78589`.
+Band integrity true. Schedule integrity true. Thresholds were not
+moved.
 
-The hypothesis gates were not scored.
+Item 10 (`别说话了`) was scored as an ordinary `kind=fact` /
+`rel=line` write. Speak rate was not a criterion.
+
+| condition | N | recall@1 strong | hit rate weak | newest-take | false recall |
+|---|---|---|---|---|---|
+| full | 10 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| full | 30 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| full | 100 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_77 | 10 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_77 | 30 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_77 | 100 | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_79 | 10 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_79 | 30 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_79 | 100 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_81 | 10 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_81 | 30 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_81 | 100 | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_83 | 10 | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_83 | 30 | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| off_83 | 100 | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| baseline | 10 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| baseline | 30 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+| baseline | 100 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
+
+| id | claim | result | numbers |
+|---|---|---|---|
+| H1 | full strong `N=10` > baseline | **pass** | 1.0 > 0.0 |
+| H2 | full strong `N=100` > baseline | **pass** | 1.0 > 0.0 |
+| H3 | full weak `N=100` > `off_83` | **pass** | 1.0 > 0.0 |
+| H4 | full newest-take ≥ 0.80 | **pass** | 1.0 ≥ 0.80 |
+| H5 | full false-recall ≤ 0.05 | **pass** | 0.0 ≤ 0.05 |

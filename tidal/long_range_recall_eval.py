@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, Literal
+from typing import Any, Callable, Iterator, Literal, Mapping
 
 import numpy as np
 from torch import nn
@@ -705,3 +705,81 @@ def run(
     if set(conditions) >= {"full", "baseline", "off_83"} and set(ns) >= {10, 100}:
         summary["hypotheses"] = score_hypotheses(summary)
     return summary
+
+
+def _fmt_cell(cell: dict[str, Any]) -> str:
+    return f"{float(cell['mean']):.3f} ± {float(cell['std']):.3f} ({int(cell['hits'])}/{int(cell['n'])})"
+
+
+def render_markdown(summary: Mapping[str, Any]) -> str:
+    """Honest table plus per-hypothesis pass/fail. Does not retune gates."""
+    lines = [
+        "# Long-range recall held-out results",
+        "",
+        f"Protocol `{summary.get('protocol', PROTOCOL)}`.",
+        "Pre-registration: [`docs/long_range_recall_prereg.md`](../docs/long_range_recall_prereg.md).",
+        "Item 10 (`别说话了`) is an ordinary dialogue fact, not a mute command.",
+        "No speak-rate criterion was scored.",
+        "",
+        "## Interface",
+        "",
+    ]
+    iface = summary.get("interface", {})
+    lines.append(
+        f"Live cue interface {iface.get('cue_interface_version')}. "
+        f"Reconstruct interface {iface.get('reconstruct_interface_version')}. "
+        f"Reconstruct sha256 `{iface.get('reconstruct_sha256')}`."
+    )
+    lines.append("")
+    lines.append(f"Band integrity: `{summary.get('band_ok')}`. Schedule integrity: `{summary.get('schedule_ok')}`.")
+    lines.append("")
+    lines.append("## Cells (mean ± std over 5 seeds)")
+    lines.append("")
+    lines.append("| condition | N | recall@1 strong | hit rate weak | newest-take | false recall |")
+    lines.append("|---|---|---|---|---|---|")
+    conditions = summary.get("conditions", {})
+    for condition in CONDITIONS:
+        if condition not in conditions:
+            continue
+        for n in N_VALUES:
+            cell = conditions[condition].get(str(int(n)))
+            if cell is None:
+                continue
+            lines.append(
+                "| {cond} | {n} | {strong} | {weak} | {conflict} | {false_r} |".format(
+                    cond=condition,
+                    n=n,
+                    strong=_fmt_cell(cell["recall_at_1_strong"]),
+                    weak=_fmt_cell(cell["hit_rate_weak"]),
+                    conflict=_fmt_cell(cell["conflict_newest_take"]),
+                    false_r=_fmt_cell(cell["false_recall"]),
+                )
+            )
+    lines.append("")
+    lines.append("## Hypotheses")
+    lines.append("")
+    rows = summary.get("hypotheses", {})
+    labels = {
+        "H1": "full strong N=10 > baseline",
+        "H2": "full strong N=100 > baseline",
+        "H3": "full weak N=100 > off_83",
+        "H4": "full newest-take ≥ 0.80",
+        "H5": "full false-recall ≤ 0.05",
+    }
+    lines.append("| id | claim | pass | numbers |")
+    lines.append("|---|---|---|---|")
+    for name in ("H1", "H2", "H3", "H4", "H5"):
+        row = rows.get(name, {})
+        mark = "pass" if row.get("pass") else "fail"
+        extra = {k: v for k, v in row.items() if k != "pass"}
+        lines.append(f"| {name} | {labels[name]} | **{mark}** | `{extra}` |")
+    lines.append("")
+    lines.append("A failed hypothesis is a valid result. Thresholds were not moved.")
+    lines.append("")
+    if "elapsed_seconds" in summary:
+        lines.append(f"Elapsed {float(summary['elapsed_seconds']):.3f} seconds.")
+        lines.append("")
+    if "git" in summary:
+        lines.append(f"Git `{summary['git']}`.")
+        lines.append("")
+    return "\n".join(lines) + "\n"
