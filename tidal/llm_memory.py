@@ -81,8 +81,10 @@ is growbrain ``d_model``, pinned at 192 on stage0 ``e1_base_rebalance``.
 it is not an input to process S.
 ``interface_version`` 7 adds a memory-level ``fingerprint`` of width 32 on
 the cue winner and a sample-level ``fusion_confidence`` in ``[0, 1]``.
-No fusion stores 0. :meth:`LLMMemory.set_fusion_confidence` writes a known
-value in ``(0, 1]``. ``fusion_weights`` is not a cue field. ``s`` is the winner's strength frozen at the
+No fusion stores 0. :meth:`LLMMemory.refresh_fusion_confidence` scores
+store co-occurrence and writes a known value in ``(0, 1]`` through
+:meth:`LLMMemory.set_fusion_confidence`. ``fusion_weights`` is not a cue
+field. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -152,6 +154,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tidal.fusion import observations_from_slots, score_fusion
 from tidal.interface_v7 import (
     check_fingerprint,
     check_fusion_confidence,
@@ -244,7 +247,8 @@ MIX_TEMP = 0.05
 # is not part of the residual and is not an input to process S. The drifted
 # clock is not an input to decay. interface_version 7 adds fingerprint
 # (F,) on the cue winner and fusion_confidence as a last-token scalar.
-# No fusion stores 0. set_fusion_confidence writes a known value.
+# No fusion stores 0. refresh_fusion_confidence scores store
+# co-occurrence and writes a known value through set_fusion_confidence.
 # fusion_weights is a separate write, not a cue field. Live is 7.
 CUE_INTERFACE_VERSION = 7
 CUE_FLOOR = 0.05
@@ -1662,7 +1666,8 @@ class LLMMemory:
         self._internal_seconds = 0.0
         # growbrain → tidal fusion control. fusion_weights is not a cue field.
         # fusion_confidence is the last-token cue scalar. 0 until
-        # set_fusion_confidence writes a known value.
+        # refresh_fusion_confidence or set_fusion_confidence writes a known
+        # value. The scorer does not write fusion_weights.
         self._fusion_weights = empty_fusion_weights()
         self._fusion_pair = None
         self._fusion_confidence = 0.0
@@ -1705,8 +1710,9 @@ class LLMMemory:
 
         ``weights`` is float32 ``(3,)`` in order text, audio, image.
         Sleep replay and low-level fusion may read :attr:`fusion_weights`.
-        This method does not run fusion or pairing, and it does not write
-        :attr:`fusion_confidence`.
+        The v0 scorer may use these weights only to compute
+        :attr:`fusion_confidence`. This method does not run fusion or
+        pairing, and it does not write :attr:`fusion_confidence`.
         """
         self._fusion_weights = check_fusion_weights(weights)
         self._fusion_pair = pair
@@ -1724,8 +1730,27 @@ class LLMMemory:
         This does not run fusion or pairing, and it does not write
         :attr:`fusion_weights`. Cue export reads this scalar on the last
         token, the same rule as the v6 gate scalars.
+        :meth:`refresh_fusion_confidence` is the automatic writer.
         """
         self._fusion_confidence = check_fusion_confidence(confidence)
+
+    def refresh_fusion_confidence(self) -> float:
+        """Score current store co-occurrence and write fusion_confidence.
+
+        Reads existing slots (write step, modality, fingerprint, strength,
+        salience). growbrain :attr:`fusion_weights` stay authoritative and
+        are not overwritten. When those weights have positive mass on a
+        present source they modulate reliability inside the score.
+        Returns the finite last-token value in ``[0, 1]``.
+        """
+        now = int(getattr(self.store, "_step", 0))
+        level = score_fusion(
+            observations_from_slots(self.store.slots),
+            now=now,
+            weights=self.fusion_weights,
+        )
+        self.set_fusion_confidence(level)
+        return float(self._fusion_confidence)
 
     @contextmanager
     def _clean_forward(self):
@@ -2087,6 +2112,7 @@ class LLMMemory:
         self._accepted += 1
         if self._accepted % int(REPLAY_EVERY) == 0:
             self._consolidate()
+        self.refresh_fusion_confidence()
         return True
 
     def surprise_window(self) -> tuple:
@@ -2311,7 +2337,8 @@ class LLMMemory:
         float32 ``(32,)`` on the cue winner, zeros when none is active.
         ``fusion_confidence`` is one float in ``[0, 1]`` (last-token /
         sample-level). No fusion stores 0. A known fusion is the last
-        :meth:`set_fusion_confidence` write. ``fusion_weights`` is not
+        :meth:`set_fusion_confidence` write, including the automatic
+        :meth:`refresh_fusion_confidence` path. ``fusion_weights`` is not
         exported. ``interface_version`` is
         :data:`CUE_INTERFACE_VERSION`, which is 7. The trace starts empty
         and a new winner stamps the current wall time, so seconds since boot
