@@ -195,6 +195,7 @@ from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
 from tidal.reconstruct import recall_surface
 from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
+from tidal.sleep_phases import apply_entry_phase, apply_exit_phase, rem_bind_pair, rem_refresh_valence, sleep_phase, sws_age
 
 DEFAULT_MODEL = "HuggingFaceTB/SmolLM2-135M"
 DEFAULT_CAPACITY = 256
@@ -1544,9 +1545,12 @@ class LLMMemory:
     ``llm_key_center_growbrain.npz`` and ``llm_inject_growbrain_192.pt``
     when those stage0 files are present. There is no process flag.
     ``sleep_pressure`` is process S. ``wake_for`` raises it and ``sleep_for``
-    lowers it. Neither call changes the residual. ``sleep_for`` rewrites a
-    slot only when prediction error clears a threshold, and the audit of that
-    rewrite has no fact text. ``cue_fields`` and ``generate`` do not read it.
+    lowers it. Neither call changes the residual. ``sleep_for`` may run an
+    SWS-like gist pass and a REM-like emotion/bind pass from process S and
+    the store circadian phase, then rewrites a slot only when prediction
+    error clears a threshold. The audit of that rewrite has no fact text
+    and no ``replay_phase``. ``cue_fields`` and ``generate`` do not read
+    it. ``replay_phase`` is not a cue field.
     ``advance_wall`` moves wall seconds and a faster internal clock, then
     decays a carried trace by wall seconds since its trigger. ``calibrate``
     moves only the internal clock. Neither call is the store's circadian
@@ -2620,12 +2624,15 @@ class LLMMemory:
         return self.sleep_pressure
 
     def sleep_for(self, duration: float) -> dict:
-        """Lower process S, then reconsolidate. Does not assign 0.
+        """Lower process S, then the two sleep passes and reconsolidate.
 
         Duration 0 leaves the pressure and the store alone. A positive
-        duration runs one prediction-error sweep and then ``floor(duration)``
-        offline ticks. Those ticks can be spontaneous. The sweep's audit
-        rows have no fact text.
+        duration may run an SWS-like gist pass when process S is high at
+        onset, then one prediction-error sweep, then ``floor(duration)``
+        offline ticks, then a REM-like emotion/bind pass when the post-sleep
+        phase is REM. Those ticks can be spontaneous. The sweep's audit
+        rows have no fact text and no ``replay_phase``. The cue export does
+        not grow a phase field.
         """
         before = float(self._sleep_pressure)
         after = float(sleep_after(before, duration))
@@ -2638,8 +2645,13 @@ class LLMMemory:
                 "replay": [],
                 "ticks": [],
             }
+        clock = float(self.store.clock_phase())
+        if apply_entry_phase(sleep_phase(before, clock)):
+            self._sws_pass()
         replay = self._reconsolidate_store()
         ticks = [self._one_offline_tick() for _ in range(int(math.floor(float(duration))))]
+        if apply_exit_phase(sleep_phase(after, clock)):
+            self._rem_pass()
         return {
             "pressure_before": before,
             "pressure_after": float(self._sleep_pressure),
@@ -2659,6 +2671,50 @@ class LLMMemory:
     def sleep_audit(self) -> tuple:
         """Copies of reconsolidation rows. Retrieval does not call this."""
         return tuple(dict(row) for row in self._sleep_audit)
+
+    def _sws_pass(self) -> None:
+        """Age every slot one systems-consolidation cycle. Gist spelling reads age."""
+        for slot in self.store._slots:
+            text = slot.text
+            answer = slot.answer
+            residue = slot.residue
+            slot.age = sws_age(int(slot.age))
+            if slot.text != text or slot.answer != answer or slot.residue != residue:
+                raise RuntimeError("sws changed raw text")
+
+    def _rem_pass(self) -> None:
+        """Refresh emotion tags and weakly bind same-group values. Keys stay."""
+        slots = self.store._slots
+        arousal = float(self.arousal)
+        for slot in slots:
+            text = slot.text
+            answer = slot.answer
+            before = float(slot.valence)
+            updated = rem_refresh_valence(before)
+            if updated != before:
+                self.store._append_valence(
+                    slot,
+                    updated - before,
+                    updated,
+                    kind="rem",
+                    source="sleep",
+                )
+            self._apply_consolidation_gain(slot, arousal)
+            if slot.text != text or slot.answer != answer:
+                raise RuntimeError("rem changed raw text")
+        for left_index in range(len(slots)):
+            for right_index in range(left_index + 1, len(slots)):
+                left = slots[left_index]
+                right = slots[right_index]
+                if left.group != right.group:
+                    continue
+                key_left = np.asarray(left.k, dtype=np.float64).copy()
+                key_right = np.asarray(right.k, dtype=np.float64).copy()
+                bound_left, bound_right = rem_bind_pair(left.v, right.v)
+                left.v = np.asarray(bound_left, dtype=np.float64).copy()
+                right.v = np.asarray(bound_right, dtype=np.float64).copy()
+                if not np.array_equal(left.k, key_left) or not np.array_equal(right.k, key_right):
+                    raise RuntimeError("rem changed keys")
 
     def _reconsolidate_store(self) -> list:
         return [self._reconsolidate_index(index) for index in range(len(self.store._slots))]
