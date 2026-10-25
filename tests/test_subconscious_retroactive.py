@@ -36,6 +36,7 @@ from tidal.subconscious_retroactive_data import (
     GATES,
     HELD_IDS,
     PROTOCOL,
+    REPLAY_DECAY,
     bank_sha256,
     canonical_scores,
     formula_gates,
@@ -158,8 +159,9 @@ def test_formula_gates_lock_similar_vs_orthogonal():
     assert scores["similar_raw"] == pytest.approx(0.9950371902099893)
     assert scores["similar_keep"] == pytest.approx(0.7624070244750268)
     assert scores["exact_keep"] == 0.75
-    assert scores["composed_strength"] == pytest.approx(0.3812035122375134)
-    assert scores["distinct_keep"] == 1.0
+    assert scores["similar_age"] == 1
+    assert scores["decay_treated"] == 0.25
+    assert scores["decay_control"] == 0.5
     row = formula_gates()
     assert row["identity"] and row["similar"] and row["control"]
     assert row["orthogonal"] and row["write"] and row["compose"]
@@ -173,7 +175,7 @@ def test_formula_gates_lock_similar_vs_orthogonal():
         apply_retroactive([], left, True)
 
 
-def test_store_write_weakens_similar_not_orthogonal():
+def test_store_write_ages_similar_not_orthogonal():
     mem = _memory()
     try:
         left = _axis(mem, 0)
@@ -183,22 +185,31 @@ def test_store_write_weakens_similar_not_orthogonal():
         control = _memory()
         try:
             assert control.store.write(left, value, name="ada", rel="note", answer="A")
+            assert control.store.slots[0].age == 0
             assert control.store.slots[0].strength == 1.0
             assert control.store.write(ortho.copy(), value.copy(), name="cy", rel="note", answer="C")
+            assert control.store.slots[0].age == 0
             assert control.store.slots[0].strength == 1.0
-            assert control.store.slots[1].strength == 1.0
+            control.store.recompute_decay(REPLAY_DECAY)
+            assert control.store.slots[0].strength == 0.5
         finally:
             control.close()
         assert mem.store.write(left, value, name="ada", rel="note", answer="A")
-        assert mem.store.slots[0].strength == 1.0
+        assert mem.store.slots[0].age == 0
         assert mem.store.write(right, value.copy(), name="bea", rel="note", answer="B")
-        assert mem.store.slots[0].strength == pytest.approx(0.7624070244750268)
+        assert mem.store.slots[0].age == 1
+        assert mem.store.slots[0].strength == 1.0
+        assert mem.store.slots[1].age == 0
         assert mem.store.slots[1].strength == 1.0
         assert mem.store.slots[0].consolidation_gain == 1.0
         assert mem.store.slots[0].salience == 0.0
+        mem.store.recompute_decay(REPLAY_DECAY)
+        assert mem.store.slots[0].strength == 0.25
+        assert mem.store.slots[0].strength < 0.5
         assert mem.store.write(left, value.copy(), name="ada", rel="note", answer="A2")
         assert len(mem.store) == 2
-        assert mem.store.slots[1].strength == 1.0
+        assert mem.store.slots[1].age == 1
+        assert mem.store.slots[1].strength == 0.5
     finally:
         mem.close()
 
@@ -214,23 +225,33 @@ def test_remember_similar_is_weaker_than_time_matched_control():
         right = _near(treated)
         ortho = _axis(treated, 2)
         _encode_queue(control, [left])
-        assert control.remember("fact a", name="ada", rel="note")
+        assert control.remember("code is ada", name="ada", rel="note")
+        assert control.store.slots[0].age == 0
         assert control.store.slots[0].strength == 1.0
         _encode_queue(orthogonal, [left, ortho])
-        assert orthogonal.remember("fact a", name="ada", rel="note")
-        assert orthogonal.remember("fact c", name="cy", rel="note")
+        assert orthogonal.remember("code is ada", name="ada", rel="note")
+        assert orthogonal.remember("code is cy", name="cy", rel="note")
+        assert orthogonal.store.slots[0].age == 0
         assert orthogonal.store.slots[0].strength == 1.0
-        assert orthogonal.store.slots[1].strength == 1.0
+        assert orthogonal.store.slots[1].age == 0
         _encode_queue(treated, [left, right])
-        assert treated.remember("fact a", name="ada", rel="note")
-        assert treated.remember("fact b", name="bea", rel="note")
-        assert treated.store.slots[0].strength == pytest.approx(0.7624070244750268)
-        assert treated.store.slots[0].strength < control.store.slots[0].strength
-        assert treated.store.slots[0].strength < orthogonal.store.slots[0].strength
-        assert treated.store.slots[1].strength == 1.0
+        assert treated.remember("code is ada", name="ada", rel="note")
+        assert treated.remember("code is bea", name="bea", rel="note")
+        assert treated.store.slots[0].age == 1
+        assert treated.store.slots[0].age > control.store.slots[0].age
+        assert treated.store.slots[0].age > orthogonal.store.slots[0].age
+        assert treated.store.slots[0].strength == 1.0
+        assert treated.store.slots[1].age == 0
         assert treated.store.slots[0].consolidation_gain == 1.0
         assert float(treated.fusion_confidence) == 0.0
         assert np.array_equal(treated.store.slots[0].k, left)
+        treated.store.recompute_decay(REPLAY_DECAY)
+        control.store.recompute_decay(REPLAY_DECAY)
+        orthogonal.store.recompute_decay(REPLAY_DECAY)
+        assert treated.store.slots[0].strength == 0.25
+        assert control.store.slots[0].strength == 0.5
+        assert orthogonal.store.slots[0].strength == 0.5
+        assert treated.store.slots[0].strength < control.store.slots[0].strength
     finally:
         treated.close()
         control.close()
@@ -280,7 +301,7 @@ def test_fit_ids_pass_and_held_is_disjoint():
     assert len(HELD_IDS) == 50
     assert set(FIT_IDS).isdisjoint(HELD_IDS)
     assert len(bank_sha256()) == 64
-    assert bank_sha256() == "358de715744fe841a204dbda73ee515657413bd9e6bb1a04ebe90cfa1d4b6447"
+    assert bank_sha256() == "6ae2a76c48853badac5ba62e21434291242c7111744387884970e2d812a251a1"
     assert set(GATES) == {
         "identity",
         "similar",
@@ -333,7 +354,7 @@ def test_retroactive_module_has_no_switch_and_docs_name_the_paper():
     assert bank_sha256() in prereg
     assert bank_sha256() in readme
     assert bank_sha256() in architecture
-    assert "does not blanket" in source.lower() or "do not blanket" in source.lower()
+    assert "do not blanket" in source.lower()
     assert INTERFERENCE_TAU == 0.90
     assert INTERFERENCE_SPAN == 0.25
     assert "`interface_version` is 4" in readme
