@@ -92,6 +92,14 @@ Every per-seed rate equalled the cell mean (sample std 0). Wilson 95%
 intervals on the pooled 55-dialogue counts are in the JSON. They are
 descriptive. They are not extra gates.
 
+## Reading the scores
+
+`1.000 ± 0.000` / sample std 0 on these synthetic public-API dialogues
+is a ceilinged harness result. The scripts call `remember` /
+`cue_fields` / `offline_ticks` / `wake_for` / `sleep_for` with locked
+utterances. Perfect scores and zero sample std do not mean live
+multi-turn conversation recall is verified.
+
 ## Hypotheses (locked before the run)
 
 A failed hypothesis is a valid result. Thresholds were not moved.
@@ -137,6 +145,7 @@ are observations. They are not a reason to retune.
 
 ## What this run does not do
 
+- It does not verify live multi-turn conversation recall.
 - It does not score the reconstruct held bank.
 - It does not rescore cue-triggered floors, sleep gates, or arousal
   gates.

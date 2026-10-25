@@ -38,6 +38,8 @@ Band integrity: `True`. Schedule integrity: `True`.
 | baseline | 30 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
 | baseline | 100 | 0.000 ± 0.000 (0/55) | 0.000 ± 0.000 (0/55) | 1.000 ± 0.000 (55/55) | 0.000 ± 0.000 (0/55) |
 
+`1.000 ± 0.000` / sample std 0 on these synthetic public-API dialogues is a ceilinged harness result. It is not evidence that live multi-turn conversation recall is verified.
+
 ## Reading the ablations
 
 #77 / #83 / `baseline` gaps versus `full` are informative. #79 / #81 matching `full` means this harness cannot detect those mechanisms or they do not contribute on this bank. It does not verify them. Gaps are not a reason to retune.
