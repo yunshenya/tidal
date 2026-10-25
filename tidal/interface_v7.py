@@ -3,9 +3,11 @@
 Named constants and shape helpers. Live cue export is
 :data:`tidal.llm_memory.CUE_INTERFACE_VERSION` 7. ``cue_fields`` emits
 ``fingerprint`` and ``fusion_confidence``. No fusion stores 0. A known
-fusion is written with :meth:`tidal.llm_memory.LLMMemory.set_fusion_confidence`.
-``fusion_weights`` is not a cue field; write it with
-:meth:`tidal.llm_memory.LLMMemory.set_fusion_weights`.
+fusion is written with :meth:`tidal.llm_memory.LLMMemory.set_fusion_confidence`,
+including the automatic :meth:`tidal.llm_memory.LLMMemory.refresh_fusion_confidence`
+path. ``fusion_weights`` is not a cue field; write it with
+:meth:`tidal.llm_memory.LLMMemory.set_fusion_weights`. The v0 scorer may
+read those weights to compute ``c`` and does not overwrite them.
 
 Agreed with growbrain / 两仪式 on 2026-10-25. growbrain mirrors the same
 shape in ``TIDAL_INTERFACE`` v7.
