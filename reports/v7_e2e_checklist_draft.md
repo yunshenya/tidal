@@ -27,6 +27,10 @@ Protocol `v7-fusion-scorer-v0`. Pure function in `tidal/fusion.py`. Live hook: `
 
 Gates: `v7-fusion-scorer-multi`, `v7-fusion-scorer-single`, `v7-fusion-scorer-empty`, `v7-fusion-scorer-causal`, `v7-fusion-scorer-time`, `v7-fusion-scorer-window`, `v7-fusion-scorer-range`, `v7-fusion-scorer-weights`.
 
+## Reconsolidation window (internal; not a cue field)
+
+Protocol `reconsolidation-window-v0`. Slot `labile_until_token` / `labile_until_wall` and `LLMMemory.write_back` stay off the v7 packet. Reconstruct bank stays 6. Live export stays 7. Draft PR only.
+
 ## Out of scope
 
-Sleep pairing, growbrain semantic new pairings, inject/key_center retrain, backend dim changes, tidal `sleep_pressure` floor, feature flags, Origin/growbrain package imports.
+Sleep pairing, growbrain semantic new pairings, inject/key_center retrain, backend dim changes, tidal `sleep_pressure` floor, feature flags, Origin/growbrain package imports. A reconsolidation-window cue key.

@@ -194,6 +194,7 @@ from tidal.episodic import EpisodicStore, clock_write_gain, cosine_scores
 from tidal.llm_memory_data import _MONTHS as DATE_MONTHS
 from tidal.llm_memory_data import parse_date
 from tidal.reconstruct import recall_surface
+from tidal.reconsolidation import apply_writeback, matched_indices, open_window, window_open
 from tidal.sleep import SLEEP_FLOOR, audit_row, reconsolidate, sleep_after, spontaneous_due, spontaneous_winner, wake_after
 from tidal.sleep_phases import apply_entry_phase, apply_exit_phase, rem_bind_pair, rem_refresh_valence, sleep_phase, sws_age
 
@@ -1551,6 +1552,11 @@ class LLMMemory:
     error clears a threshold. The audit of that rewrite has no fact text
     and no ``replay_phase``. ``cue_fields`` and ``generate`` do not read
     it. ``replay_phase`` is not a cue field.
+    A cue hit stamps a short labile window on the matched slot. While that
+    window is open, :meth:`write_back` may update or distort the residue.
+    After the token or wall deadline the same write-back no-ops. The
+    deadlines are not cue-export fields.
+
     ``advance_wall`` moves wall seconds and a faster internal clock, then
     decays a carried trace by wall seconds since its trigger. ``calibrate``
     moves only the internal clock. Neither call is the store's circadian
@@ -1674,9 +1680,13 @@ class LLMMemory:
         self._arousal_window: list[float] = []
         # Wall seconds and the drifted internal estimate. store.clear() does
         # not move them. Decay reads wall seconds, not the internal estimate,
-        # and not the store's circadian angle.
+        # and not the store's circadian angle. The labile window reads this
+        # wall reading and the token count below.
         self._wall_seconds = 0.0
         self._internal_seconds = 0.0
+        # Tokens processed by cue traces. store.clear() does not move it.
+        # A cue hit stamps labile_until_token from this counter.
+        self._token_count = 0
         # growbrain → tidal fusion control. fusion_weights is not a cue field.
         # fusion_confidence is the last-token cue scalar. 0 until
         # refresh_fusion_confidence or set_fusion_confidence writes a known
@@ -2299,8 +2309,24 @@ class LLMMemory:
             wall_tau=float(WALL_TAU),
             rank_keys=separate_keys(keys),
         )
+        self._token_count += int(rows.shape[0])
+        self._open_labile_windows(fields)
         residual = self._residual_from_fields(fields, values, keys)
         return fields, residual, final
+
+    def _open_labile_windows(self, fields) -> None:
+        """Stamp the post-retrieval window on slots that cleared theta."""
+        matched = matched_indices(fields["triggered"], fields["memory_id"], fields["candidates"])
+        if not matched:
+            return
+        until_token, until_wall = open_window(int(self._token_count), float(self._wall_seconds))
+        slots = self.store._slots
+        for index in matched:
+            if index < 0 or index >= len(slots):
+                continue
+            slot = slots[index]
+            slot.labile_until_token = int(until_token)
+            slot.labile_until_wall = float(until_wall)
 
     def _residual_from_fields(self, fields, values, keys) -> np.ndarray:
         memory_id = fields["memory_id"]
@@ -2350,7 +2376,8 @@ class LLMMemory:
     def cue_fields(self, text: str) -> dict:
         """Deterministic per-token fields for ``text`` and the current store.
 
-        Slot strength is not changed. Process S is not changed. Arousal steps
+        Slot strength is not changed. Process S is not changed. A triggered
+        token stamps the post-retrieval window on the matched slot. Arousal steps
         once per token after the residual is computed: a triggered token takes
         one trigger bump and any other token takes one quiet step. The tensors
         are ``[1, T]`` or ``[1, T, cue_dim]``. ``memory_id`` is -1 and ``vec``
@@ -2371,6 +2398,7 @@ class LLMMemory:
         """
         if len(self.store) == 0:
             hidden = self.cue_hidden(text)
+            self._token_count += int(hidden.shape[0])
             series = self._commit_arousal_trace([False] * int(hidden.shape[0]))
             fields = _empty_cue_fields(
                 hidden.shape[0],
@@ -2495,6 +2523,43 @@ class LLMMemory:
 
     def clock_log(self) -> tuple:
         return self.store.clock_log()
+
+    @property
+    def token_count(self) -> int:
+        """Tokens processed by cue traces. Not a cue-export field."""
+        return int(self._token_count)
+
+    def labile(self, index: int) -> bool:
+        """True while the slot's post-retrieval window is still open."""
+        if isinstance(index, bool) or not isinstance(index, int):
+            raise TypeError("index must be an int")
+        if index < 0 or index >= len(self.store._slots):
+            return False
+        slot = self.store._slots[index]
+        return window_open(
+            int(slot.labile_until_token),
+            float(slot.labile_until_wall),
+            int(self._token_count),
+            float(self._wall_seconds),
+        )
+
+    def write_back(self, index: int, surface: Optional[str] = None) -> bool:
+        """Reconstructive residue write-back. Succeeds only while labile.
+
+        This is not a growbrain overwrite API. Keys, values, ``text``, and
+        strength stay. ``answer`` and ``residue`` take the reconstructed or
+        supplied phone/birthday surface. A closed window is a no-op.
+        """
+        if isinstance(index, bool) or not isinstance(index, int):
+            raise TypeError("index must be an int")
+        if index < 0 or index >= len(self.store._slots):
+            return False
+        return apply_writeback(
+            self.store._slots[index],
+            int(self._token_count),
+            float(self._wall_seconds),
+            surface,
+        )
 
     @property
     def wall_seconds(self) -> float:

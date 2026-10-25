@@ -333,6 +333,9 @@ class Slot:
     # Phone or birthday parts. Not the raw string. None for every other answer.
     # Spelling reads this with strength, age, and valence.
     residue: Optional[tuple] = None
+    # Post-retrieval labile deadline. 0 / 0.0 is closed. Not a cue-export field.
+    labile_until_token: int = 0
+    labile_until_wall: float = 0.0
 
     def __post_init__(self) -> None:
         self.modality = check_modality(str(self.modality))
@@ -589,6 +592,8 @@ class EpisodicStore:
                 entry.valence = float(old.valence)
                 entry.episode_id = int(old.episode_id)
                 entry.history = list(old.history)
+                entry.labile_until_token = int(old.labile_until_token)
+                entry.labile_until_wall = float(old.labile_until_wall)
             self._slots[hit_id] = entry
             return True
         if len(self._slots) >= self.capacity:
