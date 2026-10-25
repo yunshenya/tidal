@@ -5,8 +5,10 @@ this module names a decoder index. The match vector is the cue minus the
 query center, which is the space stored keys already live in.
 
 A candidate must clear ``theta`` on cosine alone. Among those candidates the
-winner is the greatest ``(log(strength), cosine, -index)``. Cosine is only
-the tie break. One winner is injected. There is no average across neighbors.
+winner is the greatest ``(log(strength), ranking cosine, -index)``. Cosine
+is only the tie break. ``rank_keys`` may supply that ranking view.
+Omitted ranking uses the stored keys. One winner is injected. There is no
+average across neighbors.
 
 On the trigger token, ``dt`` is 0 and the exported activation is
 ``a = a_trig * fan_factor``. ``n`` is the number of candidates that clear
@@ -96,18 +98,27 @@ def _confidence(n_positive: int, gap: Optional[float], gap_tau: float) -> float:
     return float(min(1.0, max(0.0, float(gap) / float(gap_tau))))
 
 
-def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
+def select_cue_winner(cosines, strengths, theta: float, rank_cosines=None) -> Optional[dict]:
     """One slot with cosine at least ``theta``, ranked by log strength.
 
     ``theta`` does not read strength. Nonpositive strength is not a candidate.
     Equal log strength yields to the higher cosine, then to the lower index.
-    The gap is the winner's cosine minus the next positive-strength cosine,
-    including slots that missed ``theta``. ``None`` when nobody clears it.
+    The gap is the winner's ranking cosine minus the next positive-strength
+    ranking cosine, including slots that missed ``theta``. ``None`` when
+    nobody clears it. ``rank_cosines`` is an optional same-length ranking
+    view. Theta and the candidate set still read ``cosines``. Omitted
+    ranking uses ``cosines``.
     """
     cosine = np.asarray(cosines, dtype=np.float64).reshape(-1)
     strength = np.asarray(strengths, dtype=np.float64).reshape(-1)
     if cosine.shape != strength.shape:
         raise ValueError("cosines and strengths must have the same shape")
+    if rank_cosines is None:
+        rank = cosine
+    else:
+        rank = np.asarray(rank_cosines, dtype=np.float64).reshape(-1)
+        if rank.shape != cosine.shape:
+            raise ValueError("rank_cosines and cosines must have the same shape")
     if not math.isfinite(float(theta)):
         raise ValueError("theta must be finite")
     best = None
@@ -121,7 +132,12 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
         if not math.isfinite(float(cos)) or float(cos) < float(theta):
             continue
         n_candidates += 1
-        key = (math.log(float(level)), float(cos), -int(index))
+        ranked = float(rank[index])
+        if not math.isfinite(ranked):
+            ranked = float(cos)
+        if not math.isfinite(ranked):
+            continue
+        key = (math.log(float(level)), ranked, -int(index))
         if best is None or key > best:
             best = key
             best_index = int(index)
@@ -130,10 +146,11 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
     if len(positive) < 2:
         gap = None
     else:
-        others = [float(cosine[index]) for index in positive if index != best_index]
-        gap = float(cosine[best_index]) - max(others)
-    # Same log strength and the same cosine is a tie. The lower index is the
-    # recorded winner and the confidence is 0, so the tie adds nothing.
+        others = [float(rank[index]) for index in positive if index != best_index]
+        gap = float(rank[best_index]) - max(others)
+    # Same log strength and the same ranking cosine is a tie. The lower
+    # index is the recorded winner and the confidence is 0, so the tie
+    # adds nothing.
     tied = False
     best_log, best_cos, _neg = best
     for index in positive:
@@ -141,7 +158,7 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
             continue
         if float(cosine[index]) < float(theta):
             continue
-        other = (math.log(float(strength[index])), float(cosine[index]))
+        other = (math.log(float(strength[index])), float(rank[index]))
         if other == (best_log, best_cos):
             tied = True
             break
@@ -152,7 +169,7 @@ def select_cue_winner(cosines, strengths, theta: float) -> Optional[dict]:
         candidates.append(int(index))
     return {
         "index": int(best_index),
-        "cosine": float(cosine[best_index]),
+        "cosine": float(rank[best_index]),
         "gap": gap,
         "strength": float(strength[best_index]),
         "tied": bool(tied),
@@ -325,6 +342,7 @@ def step_cue(
     fingerprints=None,
     now=None,
     wall_tau: float = WALL_TAU,
+    rank_cosines=None,
 ) -> tuple:
     """Advance one token. Returns ``(new_state, row)`` and does not mutate ``state``.
 
@@ -338,7 +356,7 @@ def step_cue(
     cue_dim = int(values.shape[1])
     if cue_dim < 1:
         raise ValueError("cue_dim must be positive")
-    choice = select_cue_winner(cosines, strengths, theta)
+    choice = select_cue_winner(cosines, strengths, theta, rank_cosines=rank_cosines)
     if choice is not None:
         factor = fan_factor(int(choice["n"]), fan_s)
         activation = float(a_trig) * factor
@@ -422,12 +440,14 @@ def trace_sequence(
     fingerprints=None,
     now=None,
     wall_tau: float = WALL_TAU,
+    rank_keys=None,
 ) -> tuple:
     """Left-to-right trace. ``cues`` is ``[T, cue_dim]`` before the query center.
 
     ``state`` is the decay before the first row. A full forward starts from
     an empty :class:`CueState`. Stepping that same function one row at a time
-    matches this trace.
+    matches this trace. ``rank_keys`` is an optional same-shape ranking
+    view. Theta still reads ``keys``. Omitted ranking uses ``keys``.
     """
     rows = np.asarray(cues, dtype=np.float64)
     if rows.ndim != 2:
@@ -446,6 +466,12 @@ def trace_sequence(
     center = np.asarray(query_mean, dtype=np.float64).reshape(-1)
     if center.shape != (cue_dim,):
         raise ValueError("query center dim must equal cue_dim")
+    if rank_keys is None:
+        rank_key = key
+    else:
+        rank_key = np.asarray(rank_keys, dtype=np.float64)
+        if rank_key.shape != key.shape:
+            raise ValueError("rank_keys must match keys")
     current = CueState() if state is None else state
     memory_id = np.full(steps, -1, dtype=np.int64)
     vec = np.zeros((steps, cue_dim), dtype=np.float32)
@@ -460,8 +486,11 @@ def trace_sequence(
     for index in range(steps):
         if key.shape[0] == 0:
             scores = np.zeros(0, dtype=np.float64)
+            rank_scores = scores
         else:
-            scores = cosine_scores(key, rows[index] - center)
+            query = rows[index] - center
+            scores = cosine_scores(key, query)
+            rank_scores = scores if rank_keys is None else cosine_scores(rank_key, query)
         current, row = step_cue(
             current,
             scores,
@@ -479,6 +508,7 @@ def trace_sequence(
             fingerprints=fingerprints,
             now=now,
             wall_tau=wall_tau,
+            rank_cosines=None if rank_keys is None else rank_scores,
         )
         memory_id[index] = int(row["memory_id"])
         vec[index] = row["vec"]

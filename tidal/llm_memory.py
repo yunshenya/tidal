@@ -5,9 +5,10 @@ identity overwrites). At generation the cue is the per-token hidden state at
 the inject layer. The public name is ``cue`` and the width is ``cue_dim``.
 The decoder index is not part of that interface. A memory is a candidate only
 when ``cos(cue - query_center, key)`` is at least ``theta``. Theta does not
-read strength. The winner is the one candidate with the greatest
-``(log(strength), cosine, -index)``. One winner is added. There is no
-mixture. Before that add, every other candidate that cleared theta and
+read strength. Among those candidates the winner is the greatest
+``(log(strength), separated cosine, -index)``. Near-neighbor keys are
+orthogonalized as a ranking view only. The stored key is unchanged. One
+winner is added. There is no mixture. Before that add, every other candidate that cleared theta and
 shares the winner's relation takes the existing retrieval-induced-forgetting
 keep, once per cue retrieval event and not once per token. A retrieval
 event is a trigger onset: the first token where a winner fires after no
@@ -84,7 +85,9 @@ the cue winner and a sample-level ``fusion_confidence`` in ``[0, 1]``.
 No fusion stores 0. :meth:`LLMMemory.refresh_fusion_confidence` scores
 store co-occurrence and writes a known value in ``(0, 1]`` through
 :meth:`LLMMemory.set_fusion_confidence`. ``fusion_weights`` is not a cue
-field. ``s`` is the winner's strength frozen at the
+field. Near-neighbor keys are orthogonalized only as the cue ranking
+view. The stored key, fingerprint, fusion path, and consolidation gain
+are unchanged. ``s`` is the winner's strength frozen at the
 trigger. ``c`` is the cosine-gap confidence, also frozen at the trigger: one
 positive-strength slot is 1, and a cosine tie is 0 so the tie adds nothing.
 ``scale`` is fixed at 1. ``gain = 1 + 2 tanh(w · normalize(k))`` uses that
@@ -157,6 +160,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from tidal.fusion import observations_from_slots, score_fusion
+from tidal.pattern_separation import separate_keys
 from tidal.interface_v7 import (
     check_fingerprint,
     check_fusion_confidence,
@@ -2262,7 +2266,9 @@ class LLMMemory:
         """Per-token fields, residual ``[T, cue_dim]``, and the state after the last token.
 
         Wall time is the current reading and stays fixed for every row. The
-        drifted internal clock is not passed in.
+        drifted internal clock is not passed in. Ranking cosine uses
+        :func:`tidal.pattern_separation.separate_keys`. Theta still reads
+        the stored keys. Residual inject still uses the stored keys.
         """
         rows = np.asarray(cues, dtype=np.float64)
         if rows.ndim != 2:
@@ -2287,6 +2293,7 @@ class LLMMemory:
             fingerprints=fingerprints,
             now=float(self._wall_seconds),
             wall_tau=float(WALL_TAU),
+            rank_keys=separate_keys(keys),
         )
         residual = self._residual_from_fields(fields, values, keys)
         return fields, residual, final
