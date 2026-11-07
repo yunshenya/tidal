@@ -19,6 +19,23 @@ External archives, on the bot box, not in git:
 
 `curriculum.pt` checkpoints stay in those archives.
 
+## How to compare arms
+
+Cross-arm comparison uses the held-out stage probes: `probe0_acc` through `probe3_acc` on a row whose `probe_pseudo_stages` is false. Handwritten scores stay the banks the runs already log (`hw0_acc`, `hw2_acc`, `hw3_acc` on the multi-seed summary; `extra_handwritten0_acc`, `extra_handwritten2_acc`, `extra_handwritten3_acc` on scratch_final). No stage-1 handwritten column was logged.
+
+`tidal/growbrain_e2_probes.py` applies that split to a summary row. `python scripts/growbrain_e2_compare.py` prints it for these two files. A null probe cell is unscored. It is not a zero.
+
+In this archive:
+
+- `coupled`, `decoupled`, and `graduation_only` log probe0–3 as the stage ladder (the flag is absent; the reader treats them as stage probes).
+- `scratch_final` sets `probe_pseudo_stages` false. Those probe0–3 are the original held-out stage probes.
+- `growth_only` logs probe0 and probe1. `probe2_acc` and `probe3_acc` are null because `final_stage` stayed 0. Stages 2 and 3 are unscored.
+- `random_order` probe0–3 are shuffled pseudo-stages. The flag is absent on these rows; the reader still treats that arm as pseudo-stages. They are in the pseudo-stage table below, and they are not comparable to the other arms' probe0–3. This archive has no second, true stage-probe columns for `random_order`.
+
+Dual reporting, when a run logs both: the comparable columns are the object with `probe_pseudo_stages` false (`probe0_acc`–`probe3_acc`, plus the handwritten fields already on that object). The shuffled pseudo-stage scores are a separate object with `probe_pseudo_stages` true. That pseudo-stage object is not the stage ladder, including when it is the only probe0–3 set on the arm. A later `random_order` row that sets `probe_pseudo_stages` false is the true stage ladder for that arm. The same end-of-run stage probes (and the handwritten banks already wired) are what `growth_only` and `scratch_final` need on stages that this archive left null.
+
+The trainer that writes the rows is growbrain `scripts/e2_run.py` (`configs/e2.toml`). These files are the record of the runs above. They do not rescore checkpoints.
+
 ## Multi-seed, seeds 1 and 2
 
 Arms `coupled`, `decoupled`, `random_order`, `growth_only`, `graduation_only`, each at seeds 1 and 2. The matrix ran serially after a parallel launch ran out of memory.
@@ -27,9 +44,9 @@ Growth moves 2819058 parameters to 18406322. `graduation_only` never grows, so b
 
 `graduation_only` seed 1 and seed 2 are verified reconstructions. The combined `e2_multiseed_12.json` was never written, so those two rows were rebuilt from `graduation_only/seed1/evals.jsonl` and `graduation_only/seed2/evals.jsonl`. The summary JSON says so in `source`. `elapsed_s` is null on both rows.
 
-`random_order` probe0–probe3 are shuffled pseudo-stages. The run note already says they must not be read as a true stage ladder.
+`random_order` probe0–probe3 are shuffled pseudo-stages. They are not in the stage-probe table. The run note already says they must not be read as a true stage ladder.
 
-`growth_only` leaves `probe2_acc` and `probe3_acc` null.
+`growth_only` leaves `probe2_acc` and `probe3_acc` null (unscored).
 
 ### Run counts
 
@@ -48,7 +65,9 @@ Growth moves 2819058 parameters to 18406322. `graduation_only` never grows, so b
 
 `coupled` applied every grow attempt (3 attempted, 3 applied, 0 skipped) and took 23118.1 s and 22958.0 s. `decoupled` applied 3 grows as well, skipped 7 and 9 attempts, and took 7043.2 s and 6760.1 s. Same final width on both arms.
 
-### Probe and handwritten accuracy
+### Stage probes and handwritten accuracy
+
+Stage ladder for the arms whose probe0–3 are held-out stage probes. `growth_only` probe2 and probe3 are unscored (null). `random_order` is not in this table.
 
 | arm | seed | probe0_acc | probe1_acc | probe2_acc | probe3_acc | hw0_acc | hw2_acc | hw3_acc | source |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -60,6 +79,13 @@ Growth moves 2819058 parameters to 18406322. `graduation_only` never grows, so b
 | graduation_only | 2 | 0.5623594018790525 | 0.46552411319250697 | 0.5521181049430623 | 0.42314771359193587 | 0.43575418994413406 | 0.26346911957950064 | 0.26375282592313487 | graduation_only/seed2/evals.jsonl (reconstructed) |
 | growth_only | 1 | 0.6803791727140783 | 0.4830609804703069 | null | null | 0.46089385474860334 | 0.30749014454664914 | 0.2893811533052039 | e2_ms_growth_only_s1.json |
 | growth_only | 2 | 0.6754354136429608 | 0.4906337186129932 | null | null | 0.49162011173184356 | 0.2943495400788436 | 0.2883263009845288 | e2_ms_growth_only_s2.json |
+
+### Pseudo-stage probes
+
+`random_order` only. These four columns are shuffled pseudo-stages, not a stage ladder, and not the comparison with the table above. Handwritten `hw0_acc` / `hw2_acc` / `hw3_acc` on these rows are the same extra banks as the other arms.
+
+| arm | seed | probe0_acc | probe1_acc | probe2_acc | probe3_acc | hw0_acc | hw2_acc | hw3_acc | source |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
 | random_order | 1 | 0.5460860315567231 | 0.5521018940143866 | 0.5404972941026684 | 0.5446413076314927 | 0.4553072625698324 | 0.3068331143232589 | 0.30520393811533053 | e2_ms_random_order_s1.json |
 | random_order | 2 | 0.536184091973907 | 0.5411234889784309 | 0.5408373774798961 | 0.5420818889963135 | 0.4748603351955307 | 0.3114323258869908 | 0.30133614627285515 | e2_ms_random_order_s2.json |
 
@@ -67,7 +93,7 @@ Growth moves 2819058 parameters to 18406322. `graduation_only` never grows, so b
 
 Full width from scratch, 18406322 parameters, about 18.4M. The seed-2 report config and every result `cfg_after` are `d_model` 384, `n_layers` 10, `n_heads` 6, `d_ff` 1024, `max_seq_len` 512. Training is pooled shuffled stages 0–3, with no growth and no graduation. `params_before` and `params_after` are both 18406322. `final_stage` stays 0. `n_graduation` is 0 and `n_grow_applied` is 0. Each seed has 100 evals and the last eval step is 100000.
 
-Probe columns here are the original held-out stage probes (`probe_pseudo_stages` false). The result text says scratch_final trains on the pooled shuffled mix and scores those original probes. The same text repeats the random_order warning: those probes are shuffled pseudo-stages and must not be read as true stage ladders.
+Probe columns here are the original held-out stage probes (`probe_pseudo_stages` false). The result text says scratch_final trains on the pooled shuffled mix and scores those original probes. The same text repeats the random_order warning: those probes are shuffled pseudo-stages and are the separate table above, not this one.
 
 Seed 0 and seed 1 ran uninterrupted. Their rows are the verbatim summary lines in `logs/e2_scratch_final_012.log`.
 
