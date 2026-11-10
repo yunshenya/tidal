@@ -119,13 +119,25 @@ def test_report_keeps_pseudo_stages_out_of_the_stage_ladder():
         "unscored",
         "48ad257",
         "e2_eval_heldout.py",
-        "does not beat",
+        "no evidence either way",
+        "not a capability measure",
         "not evidence that growth helps",
         "equal steps, not equal compute",
-        "growth trigger",
+        "Evaluation limits",
+        "87.8%",
+        "41.7%",
+        "in progress",
         "growbrain_e2_true_stage_reeval.json",
     ):
         assert needle in report
+    for banned in (
+        "does not beat",
+        "Graduation shows no benefit",
+        "ordered by that mean",
+        "highest mean",
+        "ties direct",
+    ):
+        assert banned not in report
     assert "0.5460860315567231" in report
     assert "0.6183554063860668" in report
     assert "0.5497171153218631" in report
@@ -182,6 +194,11 @@ def test_compare_script_prints_the_reeval_after_the_training_split():
     assert "scratch_final_matches_training_probes\ttrue" in out
     assert "shuffled pseudo-stages and are not the true-stage re-evaluation columns" in out
     assert out.index("multi-seed pseudo-stage probes") < out.index("true-stage re-evaluation")
+    label = "equal_weight_mean_of_probe0_3\tnot a capability measure"
+    assert label in out
+    per_probe = out.split(label, 1)[1]
+    assert per_probe.index("\ncoupled\t") < per_probe.index("\ngrowth_only\t")
+    assert per_probe.index("\ngrowth_only\t") < per_probe.index("\nscratch_final\t")
 
 
 def test_scratch_final_reeval_matches_training_time_scores():

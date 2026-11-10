@@ -92,11 +92,11 @@ def _print_reeval(rows: list[dict]) -> None:
         )
     print(f"comparable_rows\t{comparable}")
     print()
-    print("true-stage re-evaluation arm means")
-    print("arm\tn_seeds\tprobe0\tprobe1\tprobe2\tprobe3\tmean")
-    means = arm_stage_probe_means(rows)
-    ordered = sorted(means.items(), key=lambda item: float(item[1]["mean"]), reverse=True)
-    for arm, stats in ordered:
+    print("true-stage re-evaluation per probe")
+    print("equal_weight_mean_of_probe0_3\tnot a capability measure")
+    print("arm\tn_seeds\tprobe0\tprobe1\tprobe2\tprobe3\tequal_weight_mean")
+    # Row order is first appearance. It is not a ranking by the equal-weight mean.
+    for arm, stats in arm_stage_probe_means(rows).items():
         print(
             f"{arm}\t{stats['n_seeds']}\t"
             f"{_cell(float(stats['probe0']))}\t{_cell(float(stats['probe1']))}\t"

@@ -26,7 +26,7 @@ External archives, on the bot box, not in git:
 
 ## How to compare arms
 
-Cross-arm comparison uses the held-out stage probes: `probe0_acc` through `probe3_acc` on a row whose `probe_pseudo_stages` is false. Handwritten scores stay the banks the runs already log (`hw0_acc`, `hw2_acc`, `hw3_acc` on the multi-seed summary; `extra_handwritten0_acc`, `extra_handwritten2_acc`, `extra_handwritten3_acc` on scratch_final). No stage-1 handwritten column was logged.
+Cross-arm comparison uses the held-out stage probes one column at a time: `probe0_acc` through `probe3_acc` on a row whose `probe_pseudo_stages` is false. The equal-weight mean of those four columns is not a capability measure. Handwritten scores stay the banks the runs already log (`hw0_acc`, `hw2_acc`, `hw3_acc` on the multi-seed summary; `extra_handwritten0_acc`, `extra_handwritten2_acc`, `extra_handwritten3_acc` on scratch_final). No stage-1 handwritten column was logged.
 
 `tidal/growbrain_e2_probes.py` applies that split to a summary row. `python scripts/growbrain_e2_compare.py` prints it for the training files and then prints the true-stage re-evaluation. A null probe cell is unscored. It is not a zero.
 
@@ -144,33 +144,45 @@ The training archive above is unchanged. `random_order` probe0–3 there stay sh
 | scratch_final | 1 | 0.626406023222061 | 0.4348345954563571 | 0.5811941480683184 | 0.43487113874575306 | 1 | cpu |
 | scratch_final | 2 | 0.611121190130624 | 0.42088481466719807 | 0.5825352238144067 | 0.43437964432967574 | 2 | cpu |
 
-### Arm means
+### Per probe
 
-Mean of each probe across seeds, then the unweighted mean of probe0–3. `n` is the seed count. Rows are ordered by that mean.
+Seed means of each probe. Rows follow the per-seed arm order. They are not a ranking. `equal_weight_mean` is the unweighted mean of probe0–3. It is not a capability measure.
 
-| arm | n | probe0 | probe1 | probe2 | probe3 | mean |
+| arm | n | probe0 | probe1 | probe2 | probe3 | equal_weight_mean |
 |---|---:|---:|---:|---:|---:|---:|
-| growth_only | 2 | 0.6779072931785195 | 0.48684734954165004 | 0.5504597904823322 | 0.41752840720702444 | 0.5331857101023816 |
 | coupled | 2 | 0.6365203193033382 | 0.47489039457951376 | 0.5211836712166413 | 0.43436989245634083 | 0.5167410693889585 |
-| scratch_final | 3 | 0.618090832123851 | 0.43138036402285107 | 0.5815979232207508 | 0.43501676672088707 | 0.5165214715220849 |
 | decoupled | 2 | 0.6276419629898404 | 0.4740932642487047 | 0.5248142585884524 | 0.4332250225268274 | 0.5149436270884562 |
-| random_order | 2 | 0.6173462445573294 | 0.42287764049422083 | 0.5673922031695865 | 0.42806823190734944 | 0.5089210800321216 |
 | graduation_only | 2 | 0.5730614000264656 | 0.46153846153846156 | 0.5528523659360602 | 0.4229681474075132 | 0.5026050937271251 |
+| growth_only | 2 | 0.6779072931785195 | 0.48684734954165004 | 0.5504597904823322 | 0.41752840720702444 | 0.5331857101023816 |
+| random_order | 2 | 0.6173462445573294 | 0.42287764049422083 | 0.5673922031695865 | 0.42806823190734944 | 0.5089210800321216 |
+| scratch_final | 3 | 0.618090832123851 | 0.43138036402285107 | 0.5815979232207508 | 0.43501676672088707 | 0.5165214715220849 |
 
-Rounded to three decimals, probe0/1/2/3 and the mean: `growth_only` .678/.487/.550/.418 .533 (n=2); `coupled` .637/.475/.521/.434 .517 (n=2); `scratch_final` .618/.431/.582/.435 .517 (n=3); `decoupled` .628/.474/.525/.433 .515 (n=2); `random_order` .617/.423/.567/.428 .509 (n=2); `graduation_only` .573/.462/.553/.423 .503 (n=2).
+Rounded to three decimals, probe0/1/2/3: `coupled` .637/.475/.521/.434 (n=2); `decoupled` .628/.474/.525/.433 (n=2); `graduation_only` .573/.462/.553/.423 (n=2); `growth_only` .678/.487/.550/.418 (n=2); `random_order` .617/.423/.567/.428 (n=2); `scratch_final` .618/.431/.582/.435 (n=3). `graduation_only` is context 128. The other arms are context 512. Its probe2 cell is not comparable to theirs.
 
 `scratch_final` probe0–3 in this pass match `reports/growbrain_e2_scratch_final_012.json` on seeds 0, 1, and 2. On the multi-seed training summary, the logged stage-probe cells match this pass except `decoupled` seed 1 `probe2_acc`: the training row is 0.521811120374378 and this pass is 0.5218101520886408. `growth_only` probe2 and probe3 were null there. `random_order` there is the pseudo-stage table, not this one.
 
 ### Reading
 
-Curriculum plus growth (`coupled`, mean 0.5167410693889585) ties direct large-model training (`scratch_final`, mean 0.5165214715220849). It does not beat it. `coupled` and `decoupled` (0.5149436270884562) are about the same.
+There is no evidence either way, with the current probes, on curriculum plus growth against direct large-model training, and no evidence either way on whether graduation helps. The 1–2 point gaps are larger than the seed spread. They still are not a capability result: the probes track which stage text an arm saw, and `graduation_only` is scored at a shorter context. The equal-weight mean is not that comparison.
 
-Graduation shows no benefit. `graduation_only` is last (0.5026050937271251). The arms that graduate — `coupled`, `decoupled`, `random_order`, `graduation_only` — do not beat `scratch_final`. `growth_only` and `scratch_final` have `n_graduation` 0.
-
-`growth_only` has the highest mean (0.5331857101023816). That is not a fair win, and it is not evidence that growth helps. On both seeds the training summary records `n_grow_applied` 3, `n_graduation` 0, `params_before` 2819058, `params_after` 18406322 (about 18.4M), and `final_stage` 0. It grew 3 times, to about 18.4M, and never graduated, so those 100000 steps stayed on stage 0 data. The gain against `scratch_final` is on probe0 (.678 against .618) and probe1 (.487 against .431). probe2 (.550 against .582) and probe3 (.418 against .435) are below `scratch_final`.
+`growth_only` never graduated. On both seeds the training summary records `n_grow_applied` 3, `n_graduation` 0, `params_before` 2819058, `params_after` 18406322 (about 18.4M), and `final_stage` 0. It grew 3 times, to about 18.4M, and those 100000 steps stayed on stage 0 data. Against `scratch_final`, probe0 is .678 against .618 and probe1 is .487 against .431. probe2 is .550 against .582 and probe3 is .418 against .435. That split is what staying on stage 0 looks like. It is not evidence that growth helps.
 
 `scratch_final` true-stage scores are identical to its training-time scores, so the earlier scratch comparison stands. `random_order`'s earlier shuffled pseudo-stage scores must not be compared to these columns.
 
-Only 2 or 3 seeds. The arm gaps are about 1–2 points. The runs share a step budget, not a compute budget: equal steps, not equal compute.
+Only 2 or 3 seeds. The runs share a step budget, not a compute budget: equal steps, not equal compute.
 
-Stop stacking similar curriculum and growth experiments. First check whether the data and the probes can distinguish capability. Then decide between changing the growth trigger or the architecture.
+### Evaluation limits
+
+Probe audit, 2026-11-10, eval-only, growbrain `main` at `48ad257`. The equal-weight mean of probe0–3 cannot distinguish capability at the 1–2 point gaps in this table.
+
+Probe accuracy is character-level next-token top-1, including markup. probe0 is 42% markup tokens (41.7% special markup in the audit's token-class mix).
+
+A same-stage character trigram gets close to the model scores. probe0 trigram .557 against 18M-model probe0 about .62–.68. probe3 trigram .382 against model probe3 about .42–.44.
+
+`graduation_only` is scored at context 128 (2819058 parameters). The other arms are scored at context 512 (18406322 parameters). Short prefixes are easier: a trigram on probe2 is .493 at L=128 and .420 at L=512. `graduation_only` probe2 is not comparable to the 512-context arms.
+
+probe0 has 87.8% character 8-gram overlap with stage-0 train.
+
+handwritten2 and handwritten3, 24 items each, do separate the 2.8M model from the 18.4M models. Those banks are tiny, and they are not the headline.
+
+A shared-span (L=128) CJK-only rescore and an expanded handwritten exact-match probe set are in progress.

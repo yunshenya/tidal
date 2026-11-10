@@ -64,10 +64,11 @@ def unscored_stage_probes(row: Mapping[str, Any]) -> tuple[int, ...]:
 def arm_stage_probe_means(
     rows: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...],
 ) -> dict[str, dict[str, float | int]]:
-    """Mean of fully scored true stage probes, grouped by arm.
+    """Per-probe seed means for fully scored true stage probes, grouped by arm.
 
     A pseudo-stage row is omitted. A stage-probe row with any null probe
-    is omitted. The mean is the unweighted mean of probe0–3.
+    is omitted. ``mean`` is the equal-weight mean of probe0–3. It is not
+    a capability measure and it is not a ranking.
     """
     grouped: dict[str, list[dict[str, float | None]]] = {}
     for row in rows:
