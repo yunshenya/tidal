@@ -1,0 +1,207 @@
+{
+  "growbrain_ref": "main",
+  "growbrain_commit": "48ad257",
+  "script": "scripts/e2_eval_heldout.py",
+  "eval_only": true,
+  "training": false,
+  "optimizer_steps": 0,
+  "probe_pseudo_stages": false,
+  "device": "cpu",
+  "data_seed": "checkpoint seed",
+  "note": "Eval-only rescore of the 13 E2 checkpoints. No training and no optimizer steps. probe_pseudo_stages is false on every row, including random_order. The data seed is the checkpoint seed. Device is cpu.",
+  "rows": [
+    {
+      "arm": "coupled",
+      "seed": 1,
+      "probe0_acc": 0.633141328011611,
+      "probe1_acc": 0.4703068951773615,
+      "probe2_acc": 0.5216368289416734,
+      "probe3_acc": 0.4355225638845222,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "coupled",
+      "seed": 2,
+      "probe0_acc": 0.6398993105950653,
+      "probe1_acc": 0.479473893981666,
+      "probe2_acc": 0.5207305134916094,
+      "probe3_acc": 0.4332172210281595,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "decoupled",
+      "seed": 1,
+      "probe0_acc": 0.6309869375907112,
+      "probe1_acc": 0.47668393782383417,
+      "probe2_acc": 0.5218101520886408,
+      "probe3_acc": 0.4336541049535616,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "decoupled",
+      "seed": 2,
+      "probe0_acc": 0.6242969883889695,
+      "probe1_acc": 0.47150259067357514,
+      "probe2_acc": 0.5278183650882641,
+      "probe3_acc": 0.4327959401000932,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "graduation_only",
+      "seed": 1,
+      "probe0_acc": 0.5837633981738786,
+      "probe1_acc": 0.4575528098844161,
+      "probe2_acc": 0.553586626929058,
+      "probe3_acc": 0.4227885812230906,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "graduation_only",
+      "seed": 2,
+      "probe0_acc": 0.5623594018790525,
+      "probe1_acc": 0.46552411319250697,
+      "probe2_acc": 0.5521181049430623,
+      "probe3_acc": 0.42314771359193587,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "growth_only",
+      "seed": 1,
+      "probe0_acc": 0.6803791727140783,
+      "probe1_acc": 0.4830609804703069,
+      "probe2_acc": 0.5497171153218631,
+      "probe3_acc": 0.41637378540417613,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "growth_only",
+      "seed": 2,
+      "probe0_acc": 0.6754354136429608,
+      "probe1_acc": 0.4906337186129932,
+      "probe2_acc": 0.5512024656428013,
+      "probe3_acc": 0.4186830290098728,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "random_order",
+      "seed": 1,
+      "probe0_acc": 0.6183554063860668,
+      "probe1_acc": 0.41689916301315266,
+      "probe2_acc": 0.568346932906513,
+      "probe3_acc": 0.42822036113137335,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "random_order",
+      "seed": 2,
+      "probe0_acc": 0.6163370827285921,
+      "probe1_acc": 0.42885611797528894,
+      "probe2_acc": 0.56643747343266,
+      "probe3_acc": 0.42791610268332547,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "scratch_final",
+      "seed": 0,
+      "probe0_acc": 0.6167452830188679,
+      "probe1_acc": 0.43842168194499803,
+      "probe2_acc": 0.5810643977795271,
+      "probe3_acc": 0.43579951708723247,
+      "data_seed": 0,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "scratch_final",
+      "seed": 1,
+      "probe0_acc": 0.626406023222061,
+      "probe1_acc": 0.4348345954563571,
+      "probe2_acc": 0.5811941480683184,
+      "probe3_acc": 0.43487113874575306,
+      "data_seed": 1,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    },
+    {
+      "arm": "scratch_final",
+      "seed": 2,
+      "probe0_acc": 0.611121190130624,
+      "probe1_acc": 0.42088481466719807,
+      "probe2_acc": 0.5825352238144067,
+      "probe3_acc": 0.43437964432967574,
+      "data_seed": 2,
+      "device": "cpu",
+      "probe_pseudo_stages": false
+    }
+  ],
+  "arm_means": {
+    "coupled": {
+      "probe0": 0.6365203193033382,
+      "probe1": 0.47489039457951376,
+      "probe2": 0.5211836712166413,
+      "probe3": 0.43436989245634083,
+      "mean": 0.5167410693889585,
+      "n_seeds": 2
+    },
+    "decoupled": {
+      "probe0": 0.6276419629898404,
+      "probe1": 0.4740932642487047,
+      "probe2": 0.5248142585884524,
+      "probe3": 0.4332250225268274,
+      "mean": 0.5149436270884562,
+      "n_seeds": 2
+    },
+    "graduation_only": {
+      "probe0": 0.5730614000264656,
+      "probe1": 0.46153846153846156,
+      "probe2": 0.5528523659360602,
+      "probe3": 0.4229681474075132,
+      "mean": 0.5026050937271251,
+      "n_seeds": 2
+    },
+    "growth_only": {
+      "probe0": 0.6779072931785195,
+      "probe1": 0.48684734954165004,
+      "probe2": 0.5504597904823322,
+      "probe3": 0.41752840720702444,
+      "mean": 0.5331857101023816,
+      "n_seeds": 2
+    },
+    "random_order": {
+      "probe0": 0.6173462445573294,
+      "probe1": 0.42287764049422083,
+      "probe2": 0.5673922031695865,
+      "probe3": 0.42806823190734944,
+      "mean": 0.5089210800321216,
+      "n_seeds": 2
+    },
+    "scratch_final": {
+      "probe0": 0.618090832123851,
+      "probe1": 0.43138036402285107,
+      "probe2": 0.5815979232207508,
+      "probe3": 0.43501676672088707,
+      "mean": 0.5165214715220849,
+      "n_seeds": 3
+    }
+  }
+}

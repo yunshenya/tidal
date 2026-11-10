@@ -1,16 +1,21 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page is that training record. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation at the end re-scores the same checkpoints eval-only. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
-Committed summaries, copied from the run artifacts:
+Committed training summaries, copied from the run artifacts:
 
 - `reports/growbrain_e2_multiseed_12.csv`
 - `reports/growbrain_e2_multiseed_12.json`
 - `reports/growbrain_e2_scratch_final_012.csv`
 - `reports/growbrain_e2_scratch_final_012.json` (`"reconstructed": true`)
 - `reports/growbrain_e2_scratch_final_012.sha256` (box-archive checksums)
+
+True-stage re-evaluation, eval-only:
+
+- `reports/growbrain_e2_true_stage_reeval.csv`
+- `reports/growbrain_e2_true_stage_reeval.json` (`probe_pseudo_stages` false on every row)
 
 External archives, on the bot box, not in git:
 
@@ -23,18 +28,18 @@ External archives, on the bot box, not in git:
 
 Cross-arm comparison uses the held-out stage probes: `probe0_acc` through `probe3_acc` on a row whose `probe_pseudo_stages` is false. Handwritten scores stay the banks the runs already log (`hw0_acc`, `hw2_acc`, `hw3_acc` on the multi-seed summary; `extra_handwritten0_acc`, `extra_handwritten2_acc`, `extra_handwritten3_acc` on scratch_final). No stage-1 handwritten column was logged.
 
-`tidal/growbrain_e2_probes.py` applies that split to a summary row. `python scripts/growbrain_e2_compare.py` prints it for these two files. A null probe cell is unscored. It is not a zero.
+`tidal/growbrain_e2_probes.py` applies that split to a summary row. `python scripts/growbrain_e2_compare.py` prints it for the training files and then prints the true-stage re-evaluation. A null probe cell is unscored. It is not a zero.
 
-In this archive:
+In this training archive:
 
 - `coupled`, `decoupled`, and `graduation_only` log probe0–3 as the stage ladder (the flag is absent; the reader treats them as stage probes).
 - `scratch_final` sets `probe_pseudo_stages` false. Those probe0–3 are the original held-out stage probes.
-- `growth_only` logs probe0 and probe1. `probe2_acc` and `probe3_acc` are null because `final_stage` stayed 0. Stages 2 and 3 are unscored.
-- `random_order` probe0–3 are shuffled pseudo-stages. The flag is absent on these rows; the reader still treats that arm as pseudo-stages. They are in the pseudo-stage table below, and they are not comparable to the other arms' probe0–3. This archive has no second, true stage-probe columns for `random_order`.
+- `growth_only` logs probe0 and probe1. `probe2_acc` and `probe3_acc` are null because `final_stage` stayed 0. Stages 2 and 3 are unscored in this archive.
+- `random_order` probe0–3 are shuffled pseudo-stages. The flag is absent on these rows; the reader still treats that arm as pseudo-stages. They are in the pseudo-stage table below, and they are not comparable to the other arms' probe0–3. This training archive has no second, true stage-probe columns for `random_order`. Those columns are the true-stage re-evaluation below.
 
-Dual reporting, when a run logs both: the comparable columns are the object with `probe_pseudo_stages` false (`probe0_acc`–`probe3_acc`, plus the handwritten fields already on that object). The shuffled pseudo-stage scores are a separate object with `probe_pseudo_stages` true. That pseudo-stage object is not the stage ladder, including when it is the only probe0–3 set on the arm. A later `random_order` row that sets `probe_pseudo_stages` false is the true stage ladder for that arm. The same end-of-run stage probes (and the handwritten banks already wired) are what `growth_only` and `scratch_final` need on stages that this archive left null.
+Dual reporting, when a run logs both: the comparable columns are the object with `probe_pseudo_stages` false (`probe0_acc`–`probe3_acc`, plus the handwritten fields already on that object). The shuffled pseudo-stage scores are a separate object with `probe_pseudo_stages` true. That pseudo-stage object is not the stage ladder, including when it is the only probe0–3 set on the arm. The true-stage re-evaluation is that later pass. Every row there sets `probe_pseudo_stages` false, including `random_order`, and that is the stage ladder. `growth_only` probe2 and probe3, null in this archive, are scored there. `scratch_final` probe0–3 in that pass match the training-time scores in the scratch_final table.
 
-The trainer that writes the rows is growbrain `scripts/e2_run.py` (`configs/e2.toml`). These files are the record of the runs above. They do not rescore checkpoints.
+The trainer that writes the training rows is growbrain `scripts/e2_run.py` (`configs/e2.toml`). Those files are the record of the runs above. They do not rescore checkpoints. The re-evaluation file is a separate eval-only pass, described below.
 
 ## Multi-seed, seeds 1 and 2
 
@@ -44,9 +49,9 @@ Growth moves 2819058 parameters to 18406322. `graduation_only` never grows, so b
 
 `graduation_only` seed 1 and seed 2 are verified reconstructions. The combined `e2_multiseed_12.json` was never written, so those two rows were rebuilt from `graduation_only/seed1/evals.jsonl` and `graduation_only/seed2/evals.jsonl`. The summary JSON says so in `source`. `elapsed_s` is null on both rows.
 
-`random_order` probe0–probe3 are shuffled pseudo-stages. They are not in the stage-probe table. The run note already says they must not be read as a true stage ladder.
+`random_order` probe0–probe3 are shuffled pseudo-stages. They are not in the stage-probe table. The run note already says they must not be read as a true stage ladder. The true-stage re-evaluation scores the same checkpoints on the stage ladder. Those shuffled numbers must not be compared with that table.
 
-`growth_only` leaves `probe2_acc` and `probe3_acc` null (unscored).
+`growth_only` leaves `probe2_acc` and `probe3_acc` null (unscored). The re-evaluation scores probe2 and probe3 for that arm.
 
 ### Run counts
 
@@ -112,3 +117,60 @@ Graduation and growth event logs for seeds 0, 1, and 2 hash to the empty-file sh
 | 2 | 100000 | 100 | 0 | 18406322 | 0 | 0 | 10251.205 | 0.611121190130624 | 0.42088481466719807 | 0.5825352238144067 | 0.43437964432967574 | 0.4692737430167598 | 0.32588699080157685 | 0.31680731364275666 |
 
 Sources, copied from the summary table: seed 0 and seed 1 are `logs/e2_scratch_final_012.log (verbatim summary line)`. Seed 2 is `reports/e2_scratch_final_s2.json results[0] (resumed from step 34000)`. Probe losses and the rest of each result object are in `reports/growbrain_e2_scratch_final_012.json`.
+
+## True-stage re-evaluation
+
+All 13 checkpoints were re-scored eval-only. growbrain `main` at `48ad257`, `scripts/e2_eval_heldout.py`. No training and no optimizer steps. `probe_pseudo_stages` false. CPU. The data seed is the checkpoint seed. Arms `coupled`, `decoupled`, `random_order`, `growth_only`, and `graduation_only` are seeds 1 and 2. `scratch_final` is seeds 0, 1, and 2.
+
+The training archive above is unchanged. `random_order` probe0–3 there stay shuffled pseudo-stages. `growth_only` probe2 and probe3 there stay null. This pass is the stage ladder for every arm, including those two. The shuffled `random_order` columns must not be compared with the columns in this section.
+
+`reports/growbrain_e2_true_stage_reeval.json` sets `probe_pseudo_stages` false on every row so the reader does not apply the training-archive `random_order` default. `python scripts/growbrain_e2_compare.py` prints this table after the training archive.
+
+### Per seed
+
+| arm | seed | probe0_acc | probe1_acc | probe2_acc | probe3_acc | data_seed | device |
+|---|---:|---:|---:|---:|---:|---:|---|
+| coupled | 1 | 0.633141328011611 | 0.4703068951773615 | 0.5216368289416734 | 0.4355225638845222 | 1 | cpu |
+| coupled | 2 | 0.6398993105950653 | 0.479473893981666 | 0.5207305134916094 | 0.4332172210281595 | 2 | cpu |
+| decoupled | 1 | 0.6309869375907112 | 0.47668393782383417 | 0.5218101520886408 | 0.4336541049535616 | 1 | cpu |
+| decoupled | 2 | 0.6242969883889695 | 0.47150259067357514 | 0.5278183650882641 | 0.4327959401000932 | 2 | cpu |
+| graduation_only | 1 | 0.5837633981738786 | 0.4575528098844161 | 0.553586626929058 | 0.4227885812230906 | 1 | cpu |
+| graduation_only | 2 | 0.5623594018790525 | 0.46552411319250697 | 0.5521181049430623 | 0.42314771359193587 | 2 | cpu |
+| growth_only | 1 | 0.6803791727140783 | 0.4830609804703069 | 0.5497171153218631 | 0.41637378540417613 | 1 | cpu |
+| growth_only | 2 | 0.6754354136429608 | 0.4906337186129932 | 0.5512024656428013 | 0.4186830290098728 | 2 | cpu |
+| random_order | 1 | 0.6183554063860668 | 0.41689916301315266 | 0.568346932906513 | 0.42822036113137335 | 1 | cpu |
+| random_order | 2 | 0.6163370827285921 | 0.42885611797528894 | 0.56643747343266 | 0.42791610268332547 | 2 | cpu |
+| scratch_final | 0 | 0.6167452830188679 | 0.43842168194499803 | 0.5810643977795271 | 0.43579951708723247 | 0 | cpu |
+| scratch_final | 1 | 0.626406023222061 | 0.4348345954563571 | 0.5811941480683184 | 0.43487113874575306 | 1 | cpu |
+| scratch_final | 2 | 0.611121190130624 | 0.42088481466719807 | 0.5825352238144067 | 0.43437964432967574 | 2 | cpu |
+
+### Arm means
+
+Mean of each probe across seeds, then the unweighted mean of probe0–3. `n` is the seed count. Rows are ordered by that mean.
+
+| arm | n | probe0 | probe1 | probe2 | probe3 | mean |
+|---|---:|---:|---:|---:|---:|---:|
+| growth_only | 2 | 0.6779072931785195 | 0.48684734954165004 | 0.5504597904823322 | 0.41752840720702444 | 0.5331857101023816 |
+| coupled | 2 | 0.6365203193033382 | 0.47489039457951376 | 0.5211836712166413 | 0.43436989245634083 | 0.5167410693889585 |
+| scratch_final | 3 | 0.618090832123851 | 0.43138036402285107 | 0.5815979232207508 | 0.43501676672088707 | 0.5165214715220849 |
+| decoupled | 2 | 0.6276419629898404 | 0.4740932642487047 | 0.5248142585884524 | 0.4332250225268274 | 0.5149436270884562 |
+| random_order | 2 | 0.6173462445573294 | 0.42287764049422083 | 0.5673922031695865 | 0.42806823190734944 | 0.5089210800321216 |
+| graduation_only | 2 | 0.5730614000264656 | 0.46153846153846156 | 0.5528523659360602 | 0.4229681474075132 | 0.5026050937271251 |
+
+Rounded to three decimals, probe0/1/2/3 and the mean: `growth_only` .678/.487/.550/.418 .533 (n=2); `coupled` .637/.475/.521/.434 .517 (n=2); `scratch_final` .618/.431/.582/.435 .517 (n=3); `decoupled` .628/.474/.525/.433 .515 (n=2); `random_order` .617/.423/.567/.428 .509 (n=2); `graduation_only` .573/.462/.553/.423 .503 (n=2).
+
+`scratch_final` probe0–3 in this pass match `reports/growbrain_e2_scratch_final_012.json` on seeds 0, 1, and 2. On the multi-seed training summary, the logged stage-probe cells match this pass except `decoupled` seed 1 `probe2_acc`: the training row is 0.521811120374378 and this pass is 0.5218101520886408. `growth_only` probe2 and probe3 were null there. `random_order` there is the pseudo-stage table, not this one.
+
+### Reading
+
+Curriculum plus growth (`coupled`, mean 0.5167410693889585) ties direct large-model training (`scratch_final`, mean 0.5165214715220849). It does not beat it. `coupled` and `decoupled` (0.5149436270884562) are about the same.
+
+Graduation shows no benefit. `graduation_only` is last (0.5026050937271251). The arms that graduate — `coupled`, `decoupled`, `random_order`, `graduation_only` — do not beat `scratch_final`. `growth_only` and `scratch_final` have `n_graduation` 0.
+
+`growth_only` has the highest mean (0.5331857101023816). That is not a fair win, and it is not evidence that growth helps. On both seeds the training summary records `n_grow_applied` 3, `n_graduation` 0, `params_before` 2819058, `params_after` 18406322 (about 18.4M), and `final_stage` 0. It grew 3 times, to about 18.4M, and never graduated, so those 100000 steps stayed on stage 0 data. The gain against `scratch_final` is on probe0 (.678 against .618) and probe1 (.487 against .431). probe2 (.550 against .582) and probe3 (.418 against .435) are below `scratch_final`.
+
+`scratch_final` true-stage scores are identical to its training-time scores, so the earlier scratch comparison stands. `random_order`'s earlier shuffled pseudo-stage scores must not be compared to these columns.
+
+Only 2 or 3 seeds. The arm gaps are about 1–2 points. The runs share a step budget, not a compute budget: equal steps, not equal compute.
+
+Stop stacking similar curriculum and growth experiments. First check whether the data and the probes can distinguish capability. Then decide between changing the growth trigger or the architecture.
