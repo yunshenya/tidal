@@ -119,7 +119,6 @@ def test_report_keeps_pseudo_stages_out_of_the_stage_ladder():
         "unscored",
         "48ad257",
         "e2_eval_heldout.py",
-        "no evidence either way",
         "not a capability measure",
         "not evidence that growth helps",
         "equal steps, not equal compute",
@@ -128,6 +127,13 @@ def test_report_keeps_pseudo_stages_out_of_the_stage_ladder():
         "41.7%",
         "in progress",
         "growbrain_e2_true_stage_reeval.json",
+        "growbrain_e2_cjk_l128.json",
+        "0.34717033415639487",
+        "0.350",
+        "not a tie",
+        "flips sign",
+        "too tight or too small",
+        "129–512",
     ):
         assert needle in report
     for banned in (
@@ -136,6 +142,7 @@ def test_report_keeps_pseudo_stages_out_of_the_stage_ladder():
         "ordered by that mean",
         "highest mean",
         "ties direct",
+        "no evidence either way",
     ):
         assert banned not in report
     assert "0.5460860315567231" in report
@@ -199,6 +206,31 @@ def test_compare_script_prints_the_reeval_after_the_training_split():
     per_probe = out.split(label, 1)[1]
     assert per_probe.index("\ncoupled\t") < per_probe.index("\ngrowth_only\t")
     assert per_probe.index("\ngrowth_only\t") < per_probe.index("\nscratch_final\t")
+    assert "shared-span CJK acc at L=128" in out
+    assert "tokens_129_to_512\tnot scored separately" in out
+    cjk_section = out.split("shared-span CJK acc at L=128", 1)[1]
+    assert "graduation_only\t2\t" in cjk_section
+    assert cjk_section.index("\ncoupled\t") < cjk_section.index("\ngrowth_only\t")
+
+
+def test_cjk_l128_probe2_means_match_the_report():
+    payload = _load("growbrain_e2_cjk_l128.json")
+    assert payload["shared_max_seq_len"] == 128
+    assert payload["n_complete"] == 13
+    assert payload["probe2_subset"] is False
+    by_arm = {row["arm"]: row for row in payload["aggregates"]}
+    report = open(os.path.join(ROOT, "reports", "growbrain_e2.md"), encoding="utf-8").read()
+    for arm in ("coupled", "decoupled", "graduation_only", "growth_only", "random_order", "scratch_final"):
+        mean = by_arm[arm]["probe2_cjk_acc_mean"]
+        se = by_arm[arm]["probe2_cjk_acc_typical_item_se"]
+        assert json.dumps(mean) in report
+        assert json.dumps(se) in report
+    scratch = by_arm["scratch_final"]["probe2_cjk_acc_mean"]
+    coupled = by_arm["coupled"]["probe2_cjk_acc_mean"]
+    graduation = by_arm["graduation_only"]["probe2_cjk_acc_mean"]
+    assert scratch - coupled > 0.06
+    assert abs(graduation - 0.34717033415639487) == 0.0
+    assert graduation < 0.350
 
 
 def test_scratch_final_reeval_matches_training_time_scores():

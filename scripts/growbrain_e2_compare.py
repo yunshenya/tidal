@@ -26,6 +26,8 @@ from tidal.growbrain_e2_probes import (
 MULTISEED = ROOT / "reports" / "growbrain_e2_multiseed_12.json"
 SCRATCH = ROOT / "reports" / "growbrain_e2_scratch_final_012.json"
 REEVAL = ROOT / "reports" / "growbrain_e2_true_stage_reeval.json"
+CJK = ROOT / "reports" / "growbrain_e2_cjk_l128.json"
+CJK_SETS = ("probe0", "probe1", "probe2", "probe3", "handwritten0", "handwritten2", "handwritten3")
 
 
 def _cell(value: float | None) -> str:
@@ -106,6 +108,25 @@ def _print_reeval(rows: list[dict]) -> None:
     print()
 
 
+def _print_cjk(payload: dict) -> None:
+    print("shared-span CJK acc at L=128")
+    print(
+        "arm\tn_seeds\tprobe0_cjk\tprobe1_cjk\tprobe2_cjk\tprobe3_cjk\t"
+        "hw0_cjk\thw2_cjk\thw3_cjk\tprobe2_cjk_item_se"
+    )
+    for row in payload["aggregates"]:
+        cells = [
+            _cell(row[f"{name}_cjk_acc_mean"]) for name in CJK_SETS
+        ]
+        print(
+            f"{row['arm']}\t{row['n_seeds']}\t" + "\t".join(cells) + "\t"
+            f"{_cell(row['probe2_cjk_acc_typical_item_se'])}"
+        )
+    print("equal_weight_mean_of_probe0_3\tnot a capability measure")
+    print("tokens_129_to_512\tnot scored separately")
+    print()
+
+
 def _scratch_matches_training(reeval_rows: list[dict], scratch_rows: list[dict]) -> bool:
     by_seed = {row.get("seed"): row for row in reeval_rows if row.get("arm") == "scratch_final"}
     if set(by_seed) != {row.get("seed") for row in scratch_rows}:
@@ -123,11 +144,13 @@ def main() -> int:
     multiseed = json.loads(MULTISEED.read_text(encoding="utf-8"))
     scratch = json.loads(SCRATCH.read_text(encoding="utf-8"))["results"]
     reeval = json.loads(REEVAL.read_text(encoding="utf-8"))
+    cjk = json.loads(CJK.read_text(encoding="utf-8"))
     _print_stage_table("multi-seed true stage probes", multiseed)
     _print_pseudo_table("multi-seed pseudo-stage probes", multiseed)
     _print_stage_table("scratch_final true stage probes", scratch)
     _print_pseudo_table("scratch_final pseudo-stage probes", scratch)
     _print_reeval(reeval["rows"])
+    _print_cjk(cjk)
     matched = _scratch_matches_training(reeval["rows"], scratch)
     print(f"scratch_final_matches_training_probes\t{str(matched).lower()}")
     print(

@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation at the end re-scores the same checkpoints eval-only. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -16,6 +16,11 @@ True-stage re-evaluation, eval-only:
 
 - `reports/growbrain_e2_true_stage_reeval.csv`
 - `reports/growbrain_e2_true_stage_reeval.json` (`probe_pseudo_stages` false on every row)
+
+Shared-span CJK rescore at L=128, eval-only:
+
+- `reports/growbrain_e2_cjk_l128.csv`
+- `reports/growbrain_e2_cjk_l128.json`
 
 External archives, on the bot box, not in git:
 
@@ -161,15 +166,48 @@ Rounded to three decimals, probe0/1/2/3: `coupled` .637/.475/.521/.434 (n=2); `d
 
 `scratch_final` probe0–3 in this pass match `reports/growbrain_e2_scratch_final_012.json` on seeds 0, 1, and 2. On the multi-seed training summary, the logged stage-probe cells match this pass except `decoupled` seed 1 `probe2_acc`: the training row is 0.521811120374378 and this pass is 0.5218101520886408. `growth_only` probe2 and probe3 were null there. `random_order` there is the pseudo-stage table, not this one.
 
+### Shared-span CJK at L=128
+
+Eval-only rescore of the same 13 checkpoints. Every sample is truncated to 129 ids (`max_seq_len` 128), including models whose native context is 512. CJK-only accuracy counts a gold token in U+4E00–U+9FFF or U+3400–U+4DBF. Markup, punctuation, whitespace, and ASCII letters and digits are excluded. The item-bootstrap SE is 2000 resamples of items, token-weighted. Full probe2 is 4096 items. The same-stage trigram row is the audit's L=128 trigram. It was not recomputed in this pass. Tokens 129–512 were not scored separately.
+
+Rows follow the per-seed arm order. They are not a ranking.
+
+| arm | n | probe0 | probe1 | probe2 | probe3 | hw0 | hw2 | hw3 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| coupled | 2 | 0.3834266007287871 | 0.36933614330874603 | 0.39773418905344626 | 0.27343459138149717 | 0.37884615384615383 | 0.23541009463722395 | 0.22616357885223679 |
+| decoupled | 2 | 0.37529281624154087 | 0.3717070600632244 | 0.40214061981978416 | 0.2684905315100995 | 0.3942307692307692 | 0.2338328075709779 | 0.22706732941708088 |
+| graduation_only | 2 | 0.33995965642894327 | 0.3601159114857745 | 0.34717033415639487 | 0.2571100439822557 | 0.3730769230769231 | 0.19834384858044163 | 0.2080885675553547 |
+| growth_only | 2 | 0.45506897449245187 | 0.3838250790305585 | 0.426001157894216 | 0.2507714247852947 | 0.4115384615384615 | 0.2385646687697161 | 0.22300045187528242 |
+| random_order | 2 | 0.35378709005726183 | 0.3240252897787145 | 0.44501239540602994 | 0.2637136925533056 | 0.39615384615384613 | 0.2602523659305994 | 0.2471757794848622 |
+| scratch_final | 3 | 0.37539042165538783 | 0.3364945556726379 | 0.458347971953229 | 0.27313590748371436 | 0.42948717948717946 | 0.2807570977917981 | 0.2571170356981473 |
+| same-stage trigram |  | 0.336 | 0.322 | 0.350 | 0.244 | 0.227 | 0.176 | 0.139 |
+
+Item-bootstrap SE of that CJK accuracy. probe2 and probe3 are about 0.002. probe0 and probe1 are about 0.008–0.013. handwritten0, 24 items, is about 0.03–0.04.
+
+| arm | probe0 | probe1 | probe2 | probe3 | hw0 | hw2 | hw3 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| coupled | 0.008048350730401131 | 0.012110630419864427 | 0.0020874909411957047 | 0.0012785331764531603 | 0.0389148077626322 | 0.012898194625154145 | 0.011518567576897336 |
+| decoupled | 0.008397330716418485 | 0.012052767673558592 | 0.0020894790468516753 | 0.0012568270921467341 | 0.035005879931695114 | 0.01223498783095854 | 0.011277893348947857 |
+| graduation_only | 0.007188066408231791 | 0.012579416179003121 | 0.0019723599444345795 | 0.0012542366383985117 | 0.036965210992174966 | 0.012937742045649746 | 0.011795265803321311 |
+| growth_only | 0.010138681401330233 | 0.012393255634229041 | 0.0023775143933881474 | 0.0012485590673253074 | 0.03452536525332455 | 0.015309664674087214 | 0.010199660931753986 |
+| random_order | 0.008008892917588155 | 0.00920468165387842 | 0.002399636111797082 | 0.0012744655776448371 | 0.039415047435721745 | 0.012897189909820993 | 0.011621921862024709 |
+| scratch_final | 0.007619584313645635 | 0.009088681758996096 | 0.0024003965033931114 | 0.0012680492274362214 | 0.042692016771938124 | 0.014486248714431304 | 0.011646000722695516 |
+
 ### Reading
 
-There is no evidence either way, with the current probes, on curriculum plus growth against direct large-model training, and no evidence either way on whether graduation helps. The 1–2 point gaps are larger than the seed spread. They still are not a capability result: the probes track which stage text an arm saw, and `graduation_only` is scored at a shorter context. The equal-weight mean is not that comparison.
+`graduation_only`'s official probe2 advantage reverses on the shared tokens. CJK probe2 is 0.34717033415639487, at the same-stage trigram floor 0.350. `coupled` is 0.39773418905344626 and `scratch_final` is 0.458347971953229. The item-bootstrap intervals do not overlap: graduation about [0.343, 0.351], coupled about [0.392, 0.403], scratch about [0.452, 0.465].
 
-`growth_only` never graduated. On both seeds the training summary records `n_grow_applied` 3, `n_graduation` 0, `params_before` 2819058, `params_after` 18406322 (about 18.4M), and `final_stage` 0. It grew 3 times, to about 18.4M, and those 100000 steps stayed on stage 0 data. Against `scratch_final`, probe0 is .678 against .618 and probe1 is .487 against .431. probe2 is .550 against .582 and probe3 is .418 against .435. That split is what staying on stage 0 looks like. It is not evidence that growth helps.
+`scratch_final` beats `coupled` by 0.06061378289978275 CJK accuracy on probe2, about 6 points. Curriculum plus growth is worse than direct training on stage-2 text. It is not a tie.
 
-`scratch_final` true-stage scores are identical to its training-time scores, so the earlier scratch comparison stands. `random_order`'s earlier shuffled pseudo-stage scores must not be compared to these columns.
+`coupled` and `decoupled` are about the same. probe2 CJK is 0.39773418905344626 and 0.40214061981978416.
 
-Only 2 or 3 seeds. The runs share a step budget, not a compute budget: equal steps, not equal compute.
+`growth_only` against `scratch_final` flips sign by stage. probe0 CJK is 0.45506897449245187 against 0.37539042165538783, about 8 points higher for `growth_only`. probe2 CJK is 0.426001157894216 against 0.458347971953229, about 3.2 points higher for `scratch_final`. That matches staying on stage 0. On both seeds the training summary records `n_grow_applied` 3, `n_graduation` 0, `params_before` 2819058, `params_after` 18406322 (about 18.4M), and `final_stage` 0. It grew 3 times, to about 18.4M, and those 100000 steps stayed on stage 0 data. It is not evidence that growth helps.
+
+probe3 CJK and handwritten0 are too tight or too small to call. The 18.4M probe3 CJK scores sit between 0.2507714247852947 and 0.27343459138149717. handwritten0 is 24 items, and its item-bootstrap SE is about 0.03–0.04.
+
+`scratch_final` true-stage scores are identical to its training-time scores, so the earlier scratch comparison stands on those official columns. `random_order`'s earlier shuffled pseudo-stage scores must not be compared to these columns.
+
+Only 2 or 3 seeds. The runs share a step budget, not a compute budget: equal steps, not equal compute. Tokens 129–512 were not scored separately. The equal-weight mean of probe0–3 is still not a capability measure.
 
 ### Evaluation limits
 
@@ -185,4 +223,4 @@ probe0 has 87.8% character 8-gram overlap with stage-0 train.
 
 handwritten2 and handwritten3, 24 items each, do separate the 2.8M model from the 18.4M models. Those banks are tiny, and they are not the headline.
 
-A shared-span (L=128) CJK-only rescore and an expanded handwritten exact-match probe set are in progress.
+The shared-span L=128 CJK rescore is the table above. An expanded handwritten exact-match probe set is still in progress. Tokens 129–512 were not scored separately.
