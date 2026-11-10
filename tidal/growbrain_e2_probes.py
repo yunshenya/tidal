@@ -9,7 +9,8 @@ when ``probe_pseudo_stages`` is false. They are shuffled pseudo-stages
 when ``probe_pseudo_stages`` is true. The multi-seed archive omitted the
 flag on ``random_order``; those rows are pseudo-stages. A later
 ``random_order`` row that sets ``probe_pseudo_stages`` false is the true
-stage ladder for that arm.
+stage ladder for that arm. ``reports/growbrain_e2_true_stage_reeval.json``
+is that pass: every row sets the flag false, including ``random_order``.
 
 A pseudo-stage row has no comparable stage-probe columns. Logging only
 those four numbers does not stand in for the held-out stage probes.
@@ -58,6 +59,35 @@ def unscored_stage_probes(row: Mapping[str, Any]) -> tuple[int, ...]:
     if probes is None:
         return ()
     return tuple(stage for stage in STAGES if probes[f"probe{stage}_acc"] is None)
+
+
+def arm_stage_probe_means(
+    rows: list[Mapping[str, Any]] | tuple[Mapping[str, Any], ...],
+) -> dict[str, dict[str, float | int]]:
+    """Per-probe seed means for fully scored true stage probes, grouped by arm.
+
+    A pseudo-stage row is omitted. A stage-probe row with any null probe
+    is omitted. ``mean`` is the equal-weight mean of probe0–3. It is not
+    a capability measure and it is not a ranking.
+    """
+    grouped: dict[str, list[dict[str, float | None]]] = {}
+    for row in rows:
+        probes = stage_probe_accs(row)
+        if probes is None:
+            continue
+        if any(probes[f"probe{stage}_acc"] is None for stage in STAGES):
+            continue
+        grouped.setdefault(str(row.get("arm")), []).append(probes)
+    means: dict[str, dict[str, float | int]] = {}
+    for arm, probes_list in grouped.items():
+        n_seeds = len(probes_list)
+        stats: dict[str, float | int] = {"n_seeds": n_seeds}
+        for stage in STAGES:
+            key = f"probe{stage}_acc"
+            stats[f"probe{stage}"] = sum(item[key] for item in probes_list) / n_seeds
+        stats["mean"] = sum(stats[f"probe{stage}"] for stage in STAGES) / len(STAGES)
+        means[arm] = stats
+    return means
 
 
 def handwritten_accs(row: Mapping[str, Any]) -> dict[str, float | None]:
