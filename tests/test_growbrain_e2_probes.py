@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import subprocess
@@ -148,6 +149,34 @@ def test_report_keeps_pseudo_stages_out_of_the_stage_ladder():
     assert "0.5460860315567231" in report
     assert "0.6183554063860668" in report
     assert "0.5497171153218631" in report
+
+
+def test_task_probe_section_matches_the_arm_csv():
+    report = open(os.path.join(ROOT, "reports", "growbrain_e2.md"), encoding="utf-8").read()
+    section = report.split("## 任务题正式对照（task probes）", 1)[1]
+    assert "/workspace" not in section
+    assert "e112519" in section
+    assert "不进入臂间比较" in section
+    assert "0.2218458933" in section
+    assert "train_filter.checked=false" in section
+    arms_path = os.path.join(ROOT, "reports", "growbrain_e2_taskprobe_arms.csv")
+    runs_path = os.path.join(ROOT, "reports", "growbrain_e2_taskprobe_runs.csv")
+    with open(arms_path, encoding="utf-8") as handle:
+        arms = list(csv.DictReader(handle))
+    with open(runs_path, encoding="utf-8") as handle:
+        runs = list(csv.DictReader(handle))
+    assert len(arms) == 18
+    assert len(runs) == 39
+    assert all(row["n_truncated"] == "0" for row in runs)
+    assert "/workspace" not in open(arms_path, encoding="utf-8").read()
+    assert "/workspace" not in open(runs_path, encoding="utf-8").read()
+    for row in arms:
+        if row["arm"] == "scratch_final" and row["stage"] == "0":
+            assert row["exact_match_mean"] in section
+        if row["arm"] == "coupled" and row["stage"] == "0":
+            assert row["exact_match_mean"] in section
+        if row["arm"] == "graduation_only" and row["stage"] == "2":
+            assert row["cjk_token_acc_mean"] in section
 
 
 def test_true_stage_reeval_scores_every_checkpoint():
