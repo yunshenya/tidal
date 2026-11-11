@@ -165,8 +165,9 @@ def test_task_probe_section_matches_the_arm_csv():
         arms = list(csv.DictReader(handle))
     with open(runs_path, encoding="utf-8") as handle:
         runs = list(csv.DictReader(handle))
-    assert len(arms) == 18
+    assert len(arms) == 21
     assert len(runs) == 39
+    assert all(row["arm"] != "staged_final" for row in runs)
     assert all(row["n_truncated"] == "0" for row in runs)
     assert "/workspace" not in open(arms_path, encoding="utf-8").read()
     assert "/workspace" not in open(runs_path, encoding="utf-8").read()
@@ -177,6 +178,69 @@ def test_task_probe_section_matches_the_arm_csv():
             assert row["exact_match_mean"] in section
         if row["arm"] == "graduation_only" and row["stage"] == "2":
             assert row["cjk_token_acc_mean"] in section
+        if row["arm"] == "staged_final" and row["stage"] == "0":
+            assert row["n_seeds"] == "2"
+            assert row["n_scored"] == "360"
+            assert row["exact_match_mean"] in section
+            assert row["cjk_token_acc_mean"] in section
+
+
+def test_staged_final_trajectory_matches_the_arm_means():
+    report = open(os.path.join(ROOT, "reports", "growbrain_e2.md"), encoding="utf-8").read()
+    section = report.split("## staged_final 对照臂", 1)[1]
+    for needle in (
+        "0d8d8f1",
+        "18406322",
+        "8000",
+        "15000",
+        "39000",
+        "9000",
+        "16000",
+        "37000",
+        "0.12777777777777777",
+        "0.6430990685859441",
+        "0.6257408975444538",
+        "0.5855484837139648",
+        "0.5015599650567827",
+        "0.44847165704551906",
+        "0.4244345604239614",
+        "0.5566037734",
+        "0.7248677248",
+        "0.0596951736140559",
+        "0.0440304826555462",
+        "210000",
+        "200000",
+    ):
+        assert needle in section
+    path = os.path.join(ROOT, "reports", "growbrain_e2_staged_final_trajectory.csv")
+    with open(path, encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 200
+    assert "/workspace" not in open(path, encoding="utf-8").read()
+    by_seed: dict[str, list] = {}
+    for row in rows:
+        assert row["when"] == "eval"
+        assert row["stage"] == "0"
+        assert row["n_scored"] == "360"
+        assert row["n_truncated"] == "0"
+        by_seed.setdefault(row["seed"], []).append(row)
+    assert set(by_seed) == {"1", "2"}
+    for seed_rows in by_seed.values():
+        steps = [int(row["step"]) for row in seed_rows]
+        assert steps == list(range(1000, 100001, 1000))
+    end = {seed: rows_for_seed[-1] for seed, rows_for_seed in by_seed.items()}
+    assert end["1"]["exact_match"] == "0.12777777777777777"
+    assert end["1"]["cjk_token_acc"] == "0.6430990685859441"
+    assert end["2"]["exact_match"] == "0.125"
+    assert end["2"]["cjk_token_acc"] == "0.6257408975444538"
+    exact = [float(end[seed]["exact_match"]) for seed in ("1", "2")]
+    cjk = [float(end[seed]["cjk_token_acc"]) for seed in ("1", "2")]
+    arms_path = os.path.join(ROOT, "reports", "growbrain_e2_taskprobe_arms.csv")
+    with open(arms_path, encoding="utf-8") as handle:
+        arms = list(csv.DictReader(handle))
+    stage0 = next(row for row in arms if row["arm"] == "staged_final" and row["stage"] == "0")
+    assert float(stage0["exact_match_mean"]) == sum(exact) / 2
+    assert float(stage0["cjk_token_acc_mean"]) == sum(cjk) / 2
 
 
 def test_true_stage_reeval_scores_every_checkpoint():
