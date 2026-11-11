@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -22,10 +22,14 @@ Shared-span CJK rescore at L=128, eval-only:
 - `reports/growbrain_e2_cjk_l128.csv`
 - `reports/growbrain_e2_cjk_l128.json`
 
-Task probes, eval-only:
+Task probes, eval-only, for the 13 checkpoints rescored on 2026-11-10:
 
-- `reports/growbrain_e2_taskprobe_arms.csv`
-- `reports/growbrain_e2_taskprobe_runs.csv`
+- `reports/growbrain_e2_taskprobe_arms.csv` (the same file also holds the later `staged_final` seed means)
+- `reports/growbrain_e2_taskprobe_runs.csv` (those 13 checkpoints only)
+
+`staged_final` training-log stage-0 task probes, one row per eval:
+
+- `reports/growbrain_e2_staged_final_trajectory.csv`
 
 External archives, on the bot box, not in git:
 
@@ -236,7 +240,7 @@ The shared-span L=128 CJK rescore is the table above. An expanded handwritten ex
 
 上文的 probe0–3 与 L=128 共享窗 CJK 是 stage probe。这一节是另一套题，对同一批 13 个 checkpoint 做只评测重打分。不训练，不写 `curriculum.pt`。题库随 growbrain PR [#30](https://github.com/yunshenya/growbrain/pull/30) 合并为 `e112519`，路径 `data/probes/taskmatch/stage0.jsonl`、`stage2.jsonl`、`stage3.jsonl`，360 / 584 / 660 题。没有 stage1 题库。打分日是 2026-11-10，CPU。13 个 checkpoint 都是第 100000 步。`growth_only` 的训练日志里 probe2 / probe3 为空，这里仍对 stage2 和 stage3 打了分。`random_order` 的训练日志 probe0–3 是打乱的 pseudo-stage，这里六条臂用同一题库。
 
-臂均值在 `reports/growbrain_e2_taskprobe_arms.csv`。逐个 checkpoint 在 `reports/growbrain_e2_taskprobe_runs.csv`。
+臂均值在 `reports/growbrain_e2_taskprobe_arms.csv`。逐个 checkpoint 在 `reports/growbrain_e2_taskprobe_runs.csv`。`staged_final` 的三行种子均值在同一份 arms CSV 的末尾。runs CSV 仍是这 13 个 checkpoint。
 
 ### 题型与计分
 
@@ -276,7 +280,7 @@ stage0 exact-match 高于 train-trigram 的 exact 地板 0。三阶段 CJK token
 
 ### 臂表
 
-百分数。种子均值 ± 样本标准差（除以 n−1）。n=2 的臂是 seed 1 和 seed 2。`scratch_final` 是 seed 0、1、2，n=3。行序与上文 per-probe 表一致。未舍入的比例在 `reports/growbrain_e2_taskprobe_arms.csv`。表内百分数由该文件的比例乘 100，保留两位。s2 exact 与 s3 exact 不是主指标。train-trigram 那一行不是模型臂，不在 arms CSV 里。它的 CJK 百分数保留一位，未舍入值是过滤表里的 0.2218458933、0.1114439037、0.114602063。
+百分数。种子均值 ± 样本标准差（除以 n−1）。n=2 的臂是 seed 1 和 seed 2。`scratch_final` 是 seed 0、1、2，n=3。行序与上文 per-probe 表一致。下表是 2026-11-10 的六条臂。`staged_final` 的三行在同一份 arms CSV 的末尾，种子是 1 和 2，读法在「staged_final 对照臂」。未舍入的比例在 `reports/growbrain_e2_taskprobe_arms.csv`。表内百分数由该文件的比例乘 100，保留两位。s2 exact 与 s3 exact 不是主指标。train-trigram 那一行不是模型臂，不在 arms CSV 里。它的 CJK 百分数保留一位，未舍入值是过滤表里的 0.2218458933、0.1114439037、0.114602063。
 
 | 臂 | n | s0 exact | s0 CJK | s2 exact | s2 CJK | s3 exact | s3 CJK |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -310,7 +314,7 @@ stage0 exact-match 高于 train-trigram 的 exact 地板 0。三阶段 CJK token
 
 `coupled` 与 `decoupled` 在四项主指标上的均值都低于 `scratch_final`。课程加扩容没有超过从全宽直接训练的 `scratch_final`。`coupled` 的 stage3 CJK 均值 0.4547175167975773 ± 0.04215740249337799，与 `scratch_final` 的 0.4760417652439986 ± 0.02637857612828585 之差小于两边的样本标准差。
 
-种子方差大。`scratch_final` 的 stage0 exact-match 三粒是 0.1277777778、0.1583333333、0.3333333333，约 13–33%。n 是 2 或 3。六条臂的步数都是 100000。参数量见 Run counts 的 `params_after`，墙钟见该表 `elapsed_s`。步数对齐，计算量没有对齐。
+种子方差大。`scratch_final` 的 stage0 exact-match 三粒是 0.1277777778、0.1583333333、0.3333333333，约 13–33%。n 是 2 或 3。六条臂的步数都是 100000。参数量见 Run counts 的 `params_after`，墙钟见该表 `elapsed_s`。步数对齐，计算量没有对齐。等宽的 `staged_final` 不在这六条臂里。见「staged_final 对照臂」。
 
 ### 后续
 
@@ -321,3 +325,92 @@ stage0 exact-match 高于 train-trigram 的 exact 地板 0。三阶段 CJK token
 3. `bootstrap_ci` 的上界下标是 `int(0.975 * n_boot) - 1`。1000 次重采样时取下标 974，常用取法是下标 975。上界偏紧一格。点估计不走这个下标。
 4. `is_cjk_char` 只含 U+4E00–U+9FFF，不含 CJK Ext-A（U+3400–U+4DBF）。上文 L=128 共享窗把 Ext-A 算进 CJK。这三份题库没有 Ext-A。1604 条被接受的答案都在 U+4E00–U+9FFF。本题库的比率不受影响。
 5. 已合并的 `manifest.json` 仍是 `train_filter.checked=false`。jsonl 不用改。待更新的是 filter 块。写入时不要带绝对训练路径。
+
+## staged_final 对照臂
+
+`staged_final` 来自 growbrain PR [#31](https://github.com/yunshenya/growbrain/pull/31)（`0d8d8f1`）。它走分阶段课程，毕业开着，阈值与 `graduation_only` 相同，从最终宽度起步：`d_model` 384，`n_layers` 10，`n_heads` 6，`d_ff` 1024，`max_seq_len` 512。`cfg_before` 与 `cfg_after` 相同。`params_before` 与 `params_after` 都是 18406322（约 18.4M）。`n_growth`、`n_grow_attempted`、`n_grow_applied`、`n_grow_skipped` 都是 0。`growth_sizes_remaining` 是 3。`growth_events.jsonl` 是空文件。结果对象的 `growth_note` 写明：从 `growth.sizes[-1]` 起步，按分阶段课程训练，毕业开着。
+
+和 `scratch_final` 比，宽度相同，步数都是 100000，`eval_every` 是 1000，`max_seq_len` 都是 512。数据顺序不同。`scratch_final` 把 stage 0–3 混在一起打乱，没有毕业。`staged_final` 按阶段走，毕业三次，`final_stage` 是 3。本页没有另记 FLOPs。墙钟也不能当计算量：这次是 `NVIDIA RTX 6000D`，上文 `scratch_final` 是 RTX 4090。对齐的是配置里的宽度和 100000 步。
+
+训练日是 2026-11-11。两条种子在 `2026-11-11T03:41:42Z` 同时启动，命令是 `scripts/e2_run.py --device cuda --arms staged_final`，配置 `configs/e2.toml`。torch `2.14.1+cu132`，CUDA `13.2`。种子是 1 和 2。`max_train` 200000，`max_probe` 4096，`full_scan` false。`n_evals` 100，最后一步 100000。结果对象的 `elapsed_s` 是 seed1 17989.782、seed2 17977.665。报告顶层的 `elapsed_s` 是 18046.884 与 18034.843。墙钟用结果对象里的数。
+
+毕业记在 `graduation_events.jsonl`。每个种子 3 条，`reason` 都是 `plateau`。训练日志在这三步把 `n_graduation` 记成 1、2、3。`n_growth` 全程是 0。
+
+| seed | step | from_stage | to_stage |
+|---:|---:|---:|---:|
+| 1 | 8000 | 0 | 1 |
+| 1 | 15000 | 1 | 2 |
+| 1 | 39000 | 2 | 3 |
+| 2 | 9000 | 0 | 1 |
+| 2 | 16000 | 1 | 2 |
+| 2 | 37000 | 2 | 3 |
+
+训练日志的 probe0–3 是 held-out stage probe（`probe_pseudo_stages` false）。这一节的排序用任务题。probe 准确率留作这次运行的记录。seed1 是 0.6307828374455733、0.4854523714627342、0.527763172801241、0.434800925257742。seed2 是 0.6327331277213353、0.4802710243124751、0.5367779130150191、0.4372154890954552。
+
+任务题是训练时写入 `task_probes.jsonl` 的分数，与 2026-11-10 那次只评测重打分分开。每行有 `step`、`arm`、`seed`、`stage`、`when`、`n_scored`、`n_truncated`、`exact_match`、`cjk_token_acc`。文件里没有逐题命中，也没有 `exact_lo`、`exact_hi`、`cjk_lo`、`cjk_hi`、`cjk_tokens`。条目 bootstrap 95% 区间从这批文件算不出来。`scratch_final`、`graduation_only`、`coupled` 的区间用 `reports/growbrain_e2_taskprobe_runs.csv` 里已有的数。
+
+训练中的 stage0 快照，字段是 `when`=`eval`：每个种子 100 行，stage 都是 0，步数 1000 到 100000，步长 1000。`when`=`end` 是跑完时的 stage 0、2、3，步数 100000。两粒种子上，step 100000 的 `eval` 行与 `end` 的 stage0 行，exact-match 和 CJK token acc 相同。`n_truncated` 全是 0。`n_scored` 是 stage0 360、stage2 584、stage3 660。
+
+arms CSV 追加了 `staged_final` 的三行。均值和样本标准差（除以 n−1）与上一节同一算法。runs CSV 仍是 39 行：新日志填不上那份表头里的区间和 `cjk_tokens`。
+
+### 种子对齐
+
+对照用 seed 1 和 seed 2。`scratch_final` 的 seed 0 不进下表。上一节臂表里 `scratch_final` 的 n=3 含 seed 0，那个均值不是这里的种子对齐。
+
+终局点估计：stage0 exact-match 是 seed1 46/360 = 0.12777777777777777（12.78%），seed2 45/360 = 0.125（12.50%）。CJK token acc，stage0 是 0.6430990685859441 / 0.6257408975444538（64.3% / 62.6%），stage2 是 0.5855484837139648 / 0.5015599650567827（58.6% / 50.2%），stage3 是 0.44847165704551906 / 0.4244345604239614（44.8% / 42.4%）。
+
+下表的对照臂取 runs CSV 的 10 位小数。方括号是该文件里的条目 bootstrap 95% 区间。`staged_final` 一格只有点估计。s2 exact 与 s3 exact 仍不进排序，所以表里没有这两列。
+
+| 臂 | seed | s0 exact | s0 CJK | s2 CJK | s3 CJK |
+|---|---:|---|---|---|---|
+| scratch_final | 1 | 0.3333333333 [0.2833333333, 0.3833333333] | 0.7027942422 [0.6738511590, 0.7350794332] | 0.5823037564 [0.5681451112, 0.5953669898] | 0.4456326299 [0.4328743546, 0.4577949637] |
+| scratch_final | 2 | 0.1277777778 [0.0944444444, 0.1611111111] | 0.6697713802 [0.6468431772, 0.6939045936] | 0.5628353925 [0.5499752598, 0.5741815936] | 0.4927604807 [0.4826095131, 0.5023041475] |
+| staged_final | 1 | 0.12777777777777777 | 0.6430990685859441 | 0.5855484837139648 | 0.44847165704551906 |
+| staged_final | 2 | 0.125 | 0.6257408975444538 | 0.5015599650567827 | 0.4244345604239614 |
+| graduation_only | 1 | 0.0583333333 [0.0333333333, 0.0833333333] | 0.5681625741 [0.5446985447, 0.5944420321] | 0.3645326345 [0.3558938231, 0.3729128015] | 0.3185388474 [0.3109704243, 0.3255375330] |
+| graduation_only | 2 | 0.0416666667 [0.0222222222, 0.0638888889] | 0.5097375106 [0.4857261067, 0.5322019147] | 0.3294646200 [0.3201411646, 0.3383200490] | 0.3133339642 [0.3060434372, 0.3206635071] |
+| coupled | 1 | 0.0111111111 [0.0027777778, 0.0222222222] | 0.5114309907 [0.4937395659, 0.5294612795] | 0.5054286784 [0.4933937335, 0.5162526264] | 0.4845273020 [0.4741908087, 0.4948453608] |
+| coupled | 2 | 0.0083333333 [0.0000000000, 0.0194444444] | 0.4521591871 [0.4364459070, 0.4680207433] | 0.4847123424 [0.4706174680, 0.4975542456] | 0.4249077316 [0.4130129943, 0.4348941020] |
+
+`staged_final` 的种子均值 ± 样本标准差（n=2，除以 n−1）在 arms CSV。未舍入：stage0 exact-match 0.12638888888888888 ± 0.0019641855032959585，CJK 0.634419983065199 ± 0.01227408045243374；stage2 CJK 0.5435542243853737 ± 0.05938885108430637；stage3 CJK 0.4364531087347402 ± 0.016996794021139683。百分数由比例乘 100，保留两位：12.64 ± 0.20，63.44 ± 1.23，54.36 ± 5.94，43.65 ± 1.70。
+
+stage2 / stage3 exact-match 是地板。seed1 stage2 是 1/584 = 0.0017123287671232876，seed2 stage3 是 1/660 = 0.0015151515151515152，另外两格是 0。上一节「13 个 run 的 stage2 exact-match 都是 0」只覆盖那 13 个 checkpoint。
+
+### stage0 训练中轨迹
+
+100 个 `when=eval` 的 stage0 点在 `reports/growbrain_e2_staged_final_trajectory.csv`。列是 `seed,step,when,stage,n_scored,n_truncated,exact_match,cjk_token_acc`。step 100000 那一行就是终局 stage0。
+
+exact-match 在第一次毕业之前是 0。seed1 到 step 8000，seed2 到 step 9000。CJK 在第一次毕业时高于 step 1000。seed1 从 step 1000 的 0.1968670618120237 到 step 8000 的 0.34462320067739205。seed2 从 step 1000 的 0.28662150719729046 到 step 6000 的 0.3835732430143946；step 9000 是 0.32726502963590176。
+
+毕业当步与下一步：
+
+| seed | step | exact 当步 | exact 下一步 | CJK 当步 | CJK 下一步 |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 8000 | 0.0 | 0.005555555555555556 | 0.34462320067739205 | 0.4123624047417443 |
+| 1 | 15000 | 0.002777777777777778 | 0.027777777777777776 | 0.4500423370025402 | 0.5474174428450466 |
+| 1 | 39000 | 0.08055555555555556 | 0.06111111111111111 | 0.6147332768839966 | 0.5770533446232007 |
+| 2 | 9000 | 0.0 | 0.002777777777777778 | 0.32726502963590176 | 0.47332768839966133 |
+| 2 | 16000 | 0.008333333333333333 | 0.05 | 0.4928027095681626 | 0.6011854360711262 |
+| 2 | 37000 | 0.1 | 0.1 | 0.5702794242167655 | 0.6350550381033023 |
+
+100 个点对步数的相关系数：seed1 exact-match 0.4987772179，CJK 0.6802397576；seed2 exact-match 0.4249060486，CJK 0.4772223007。相邻步里，exact-match 的上升 / 下降 / 持平是 seed1 45 / 42 / 12，seed2 46 / 42 / 11。CJK 是 seed1 54 / 44 / 1，seed2 51 / 47 / 1。exact-match 和 CJK 的连续下降都是 seed1 最长 4 个 eval、seed2 最长 3 个 eval。
+
+峰在终局之前，峰和终局之间来回跳。seed1 exact-match 的峰是 step 74000 的 0.1638888888888889，下一步 75000 是 0.05，终局是 0.12777777777777777。同一种子的 CJK 峰也在 step 74000，0.6875529212531752；75000 是 0.5563082133784928；77000 回到 0.6841659610499576；终局是 0.6430990685859441。seed2 exact-match 的峰是 step 87000 的 0.2111111111111111，上一步 86000 是 0.03333333333333333，终局是 0.125。CJK 的峰是 step 28000 的 0.6900931414055885；step 96000 是 0.5152413209144793，97000 是 0.6062658763759525，终局是 0.6257408975444538。终局低于峰。路径是波动，离开 stage0 之后没有一条单调下滑。
+
+### 读法
+
+四条臂里，终局 stage0 CJK 的位置是 `scratch_final`，然后 `staged_final`，然后 `graduation_only`，然后 `coupled`。两粒种子都是这个次序。`staged_final` 更靠近 `scratch_final`。
+
+stage0 CJK 上，`scratch_final` 减 `graduation_only` 是 seed1 0.1346316681、seed2 0.1600338696。`staged_final` 减 `graduation_only` 是 0.0749364944859441、0.1160033869444538。这两段相除是 0.0749364944859441 / 0.1346316681 = 0.5566037734，以及 0.1160033869444538 / 0.1600338696 = 0.7248677248。两粒平均 0.6407357491。这一段换的是宽度和训练上下文：`graduation_only` 是 2819058 参数、上下文 128，`staged_final` 是 18406322 参数、`max_seq_len` 512，课程顺序相同，步数都是 100000。它占 stage0 CJK 缺口的大约三分之二。两粒并不一样：seed1 是 0.5566037734，接近一半；seed2 是 0.7248677248，接近四分之三。
+
+剩下的是数据顺序。`scratch_final` 减 `staged_final` 的 stage0 CJK 是 0.0596951736140559 与 0.0440304826555462，约 6.0 与 4.4 个点，两粒都在 4–6 个点。`staged_final` 的点估计落在 `scratch_final` 该种子区间的下沿之下。`staged_final` 自己的区间没有记下来，这里只报告点的位置。
+
+stage2 / stage3 的 CJK，seed1 上 `staged_final` 减 `scratch_final` 是 +0.0032447273139648 与 +0.00283902714551906。两个点都落在 `scratch_final` seed1 的区间内：stage2 [0.5681451112, 0.5953669898]，stage3 [0.4328743546, 0.4577949637]。seed2 是 -0.0612754274432173 与 -0.0683259202760386，约 6.1 与 6.8 个点，落在 `scratch_final` seed2 区间下沿之下。
+
+stage0 exact-match 的种子噪声盖过臂间差距。`scratch_final` 自己是 seed1 0.3333333333 [0.2833333333, 0.3833333333]，seed2 0.1277777778 [0.0944444444, 0.1611111111]，两格区间不相交。`staged_final` 两粒是 0.12777777777777777 与 0.125，贴着 `scratch_final` seed2 的点，离 seed1 的区间下沿 0.2833333333 很远。主证据用 stage0 CJK，以及 stage2 / stage3 的 CJK。
+
+`coupled` 的 stage0 exact-match 是 0.0111111111 与 0.0083333333。`staged_final` 在同样的最终宽度上是 0.12777777777777777 与 0.125。只把数据改成分阶段顺序，到不了 `coupled` 的约 1%。`coupled` 还扩了三次容。这一臂的 `n_growth` 是 0，扩容不在这次对照里。
+
+在相同宽度、相同 100000 步下，分阶段顺序的终局低于直接在最终宽度上训练的 `scratch_final`。stage0 CJK 两粒都低 4–6 个点。stage2 / stage3 在 seed1 上相差约 0.3 个点，在 seed2 上低 6–7 个点。
+
+限制：只有 2 个种子。stage2 / stage3 的 exact-match 是地板，不用于排序。`n_growth` 是 0，这臂不检验扩容。部署上 stage2 / stage3 的训练文件被截到前 210000 行。结果 JSON 里的 `max_train` 与 provenance `used_train` 都是 200000，`capped_prefix` 为 true，loader 读的是前 200000 行。210000 大于 200000，读到的行与未截断文件的前 200000 行相同。
