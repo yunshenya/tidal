@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. A later CPU eval-only rescore of the same 15 end checkpoints on a local stage-0 train-format diagnostic bank (not committed to growbrain, not a replacement of the official 「问：/答：」 transfer bank) is in 「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」. It is not a new training run. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -44,6 +44,13 @@ CPU eval-only rescore of the 15 end checkpoints on 2026-11-13 (Asia/Shanghai), a
 - `reports/growbrain_e2_rescore_stage_summary.csv`
 - `reports/growbrain_e2_rescore_stage0_by_skill.csv`
 - `reports/growbrain_e2_rescore_by_skill.csv` (adds `staged_final` stage 2 / 3 skill rows to the stage-0 table)
+
+Local stage-0 train-format diagnostic bank, CPU eval-only, same 15 end checkpoints, 2026-11-13 (Asia/Shanghai). Not a new training run. The bank itself is not in git. Score tables only:
+
+- `reports/growbrain_e2_diag_bank_v1_stage_summary.csv`
+- `reports/growbrain_e2_diag_bank_v1_by_skill.csv`
+- `reports/growbrain_e2_diag_bank_v2_stage_summary.csv`
+- `reports/growbrain_e2_diag_bank_v2_by_skill.csv`
 
 External archives, on the bot box, not in git:
 
@@ -854,6 +861,8 @@ stage 0 的整句 exact-match，即使去掉 `handoff` 和 `count`，仍不是�
 
 评测和数据对齐之前，不为另一条同类的 growbrain 训练臂租 GPU。这一节没有改题库，也没有改训练集，也没有改毕业门。
 
+同一批终局检查点上，另有一份本地的 stage-0 训练格式诊断库重打分，见「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」。那一份没有写入 growbrain，也不替换这一节的官方「问：/答：」题库。
+
 ### 限制
 
 没有重打 token 129–512，也没有重跑共享窗或 n-gram 的 corpus-probe 审计。corpus `probe0–3` 这次没有重打（`--task-probes-only`）。
@@ -869,3 +878,82 @@ stage 0 的整句 exact-match，即使去掉 `handoff` 和 `count`，仍不是�
 ### 来源
 
 官方 JSON：`/workspace/scratch/e2_staged_final_rescore/staged_final_seed{1,2}.json`，以及 `/workspace/scratch/e2_old_arms_first_cjk_rescore/out/<arm>_seed<seed>.json`（13 份）。备忘是这两个目录里的 `MEMO.md`。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。对照用的旧整库分数：`staged_final` 来自训练日志，13 个旧臂来自 `/workspace/scratch/e2_task_probes/out/`。未舍入表在 `reports/growbrain_e2_rescore_stage_summary.csv`、`reports/growbrain_e2_rescore_stage0_by_skill.csv` 和 `reports/growbrain_e2_rescore_by_skill.csv`。
+
+## 本地 stage-0 训练格式诊断题库的 CPU 只评测重打分
+
+2026-11-13（Asia/Shanghai，UTC+8）。对同一批 15 个终局 `curriculum.pt`，用与上一节相同的 PR [#33](https://github.com/yunshenya/growbrain/pull/33) 打分器（teacher-forced 答案段 argmax，exact / CJK / first-CJK，只计 CJK 字，共享预测窗 128；区间是条目重采样，Hyndman–Fan type 7，1000 次，种子 0），在 CPU 上做只评测重打分。不是新的训练，没有 `--resume`，没有租卡，没有改 growbrain 仓库或原检查点。growbrain 仍是 `main` `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。
+
+这一节用的是本地诊断题库，没有写入 growbrain，也不是官方「问：/答：」转移题库的替代品。官方 `data/probes/taskmatch/` 和毕业门都没有改。题库本身仍留在分析机器上，不进 git；这里只提交分数表。格式贴近 stage 0 训练里的 46 篇 `template_qa_dialogue`：`<user>` / `<bot>` / `<eot>`，可选前文。没有强制「问：/答：」，没有 handoff 改写金答案，也没有「在谁手里」。槽位是新的，不是那 46 条原句对，也不是官方 360 题的原句。
+
+未舍入比例在：
+
+- `reports/growbrain_e2_diag_bank_v1_stage_summary.csv`
+- `reports/growbrain_e2_diag_bank_v1_by_skill.csv`
+- `reports/growbrain_e2_diag_bank_v2_stage_summary.csv`
+- `reports/growbrain_e2_diag_bank_v2_by_skill.csv`
+
+### v1
+
+32 题：颜色、计数各 8 题闭卷问答；处所、人物各 8 题开卷对话阅读。头条不排除任何技能。墙钟 2026-11-13 03:11:45–03:12:09 CST，约 24 秒，15/15 成功，无截断。
+
+整库 exact 是 0–2/32。15 个检查点上一共 9 次命中，全部在开卷处所或人物；闭卷颜色+计数 exact 是 0/240。CJK 约 54.17%–66.15%，臂间重叠大。`random_order` 是 0/32 与 1/32，并不领先；它在上一节官方 stage 0 headline 上是 30.80% / 33.04%。官方题库上的优势没有转到这份训练格式库。
+
+前缀仍会塌。计数金答案是训练形态「有N个X。」，部分臂的 first-CJK 是 7–8/8，`scratch_final` 与 `random_order` 是 0/8。颜色常是全 0 或全 8：有的臂以「这」起头，greedy 却是默认色或复述问句（`这是红色的。`、`这是什么颜色？`）；有的丢掉「这是」（`红色的。`、`绿色的。`）；有的是对话敷衍（`你猜。`、`我也不知道。`）。处所金答案以实体起头，不少输出以「在」起头，其中一部分是套话 `在这里。`。人物金答案以人名起头，模型常从「你／我」起头（`你猜。`、`我在河边。`）。v1 人物问句是「谁在…？」，那 46 条训练问答里没有这个框；训练里有的是「X在做什么？」。
+
+闭卷颜色和计数用的是新槽，上下文里没有事实。stage 0 预训练不可能知道这些具体颜色或个数。闭卷 exact 贴在地板上是预期，不是金答案少了句号。不把 canonical 金答案放宽成各臂实际发出的第一个字：那样会抬一部分臂的 first-CJK，同时把走训练框「这是…／有…」的臂判错。first-CJK 只看 canonical。处所也不把金答案改成「在Y。」，因为第一字在实体照抄和「在」之间是分裂的，而且不少「在」并不是对的处所。
+
+### v2
+
+最小修订，仍是同一套新槽。头条的颜色和计数改为开卷：前文的 `<bot>` 里先出现训练形态的事实（「这是C的N。」、「有N个X。」），再问同一技能，金答案就是那句，包括句末「。」。人物问句改为训练框「X在做什么？」；金答案和前文事实不变。处所与 v1 相同。另留 4+4 道与 v1 前四题同题同金的闭卷对照，技能名是 `color_closed` 和 `count_closed`，排除在头条之外。合计 40 题，头条 32 题。没有把金答案改成「红色的。」或「一个X。」来刷分，也没有把题做成那 46 条训练原句。
+
+墙钟 2026-11-13 03:20:50–03:21:00 CST，约 10 秒（单进程一次跑完），15/15 成功，无截断。处所 8 题与 v1 逐条一致。闭卷对照与 v1 对应的 0001–0004 逐条一致。
+
+闭卷对照 exact 是 0/120，与「没有上下文就不可答」一致。开卷 exact 合计 34/480。头条 exact 是 0–8/32，高于 v1 的 0–2/32，仍然低。最高是 `decoupled` seed2 的 8/32（颜色 5、计数 2、处所 1）。`staged_final` seed1 与 `scratch_final` seed0 是 5/32。五个检查点仍是 0/32，包括 `random_order` 的两个种子。全体 40 题 CJK 约 55.74%–72.34%（`random_order` seed1 至 `staged_final` seed1），头条 32 题 CJK 约 58.85%–79.17%，臂间仍重叠。
+
+下表的 headline 是 32 道开卷题。全体 40 题的 CJK / first-CJK，以及闭卷对照，在 `reports/growbrain_e2_diag_bank_v2_stage_summary.csv`。按技能未舍入在 `reports/growbrain_e2_diag_bank_v2_by_skill.csv`。
+
+| 臂 | seed | headline exact | headline first-CJK | headline CJK |
+|---|---:|---:|---:|---|
+| graduation_only | 1 | 0/32 | 5/32 | 58.85% |
+| graduation_only | 2 | 3/32 | 16/32 | 65.62% |
+| growth_only | 1 | 3/32 | 22/32 | 72.40% |
+| growth_only | 2 | 0/32 | 11/32 | 69.79% |
+| coupled | 1 | 1/32 | 14/32 | 70.31% |
+| coupled | 2 | 3/32 | 16/32 | 68.23% |
+| decoupled | 1 | 0/32 | 7/32 | 59.90% |
+| decoupled | 2 | 8/32 | 21/32 | 76.56% |
+| random_order | 1 | 0/32 | 19/32 | 59.90% |
+| random_order | 2 | 0/32 | 3/32 | 69.27% |
+| scratch_final | 0 | 5/32 | 29/32 | 79.17% |
+| scratch_final | 1 | 3/32 | 12/32 | 73.44% |
+| scratch_final | 2 | 2/32 | 11/32 | 71.35% |
+| staged_final | 1 | 5/32 | 18/32 | 74.48% |
+| staged_final | 2 | 1/32 | 5/32 | 64.58% |
+
+前缀坍缩有所缓解，但没有消失，也不是单向变好。计数的 first-CJK，v1 里 `scratch_final` 与 `random_order` 是 0/8；开卷后 `scratch_final` seed0 / seed2 到 8/8，`random_order` 到 5/8 与 2/8。人物改用「X在做什么？」之后，`staged_final` seed1 与 `random_order` seed1 的 first-CJK 从 0/8 到 7/8，不再一律从「你／我」起头。颜色也有升有降：`scratch_final` seed0 的 first-CJK 从 0/8 到 7/8，`decoupled` seed2 从 0/8 到 8/8，但 `decoupled` seed1 从 8/8 降到 3/8，`growth_only` seed2 的计数从 4/8 降到 0/8。first-CJK 变高常常只是开头对齐了训练框，后面的数字、颜色或名词仍错。处所的「在」与实体分裂还在，与 v1 相同。
+
+`random_order` 仍然不占优：两个种子的头条 exact 都是 0/32。臂之间比 v1 更容易分开：可以把 `decoupled` seed2 的 8/32、`staged_final` seed1 / `scratch_final` seed0 的 5/32，与五个 0/32 分开。多数臂仍挤在 0–3/32。种子差很大：`decoupled` 是 0/32 与 8/32，`staged_final` 是 5/32 与 1/32。这些终局分不能当成臂的稳定排序，也还不够用来解释课程。
+
+### 限制
+
+题量小。闭卷对照只有 8 题，每个开卷技能 8 题。报的是原始命中数，不要把 8/32 读成稳定的能力分。
+
+终局检查点都见过后续阶段。盘上没有纯 stage 0 窗口的权重。这份库上的终局分不能证明「只练 stage 0 就会了」。
+
+计分仍是 teacher-forced，不是自由生成的整句匹配。first-CJK 只看 canonical 金答案。
+
+没有继续改前缀或金答案去贴各臂的习惯说法。再改下去容易变成给终局检查点的癖好拟合，而不是诊断题库。
+
+仍然没有 stage-1 任务题库。官方转移题库和毕业门未改。
+
+### 读法
+
+与「现有数据与评测能否区分能力（离线核对）」里的对齐判断相容。官方「问：/答：」题库仍应读成后期格式和迁移测验，不是 stage-0 能力的干净头条。`random_order` 在官方 stage 0 headline 上领先、在这份训练格式库上并不领先，是那一读法的直接证据。
+
+把颜色和计数改成开卷阅读之后，训练格式库上出现了一些非地板的 exact，说明「前文里已经有训练形态的事实，再问同一技能」是测得动的。这仍是诊断信号，不是结业考，也还不够解释课程。
+
+不要在此基础上租 GPU，也不要另开一条同类的训练臂。
+
+### 来源
+
+题库、备忘和原始 JSON 在分析机器上，不在 git 里：`/workspace/scratch/e2_stage0_diag_bank_draft/v1/`，`/workspace/scratch/e2_stage0_diag_bank_draft/v2/`。根目录的 `stage0.jsonl` 和 `out/` 是冻结的 v1 副本。包装器是同目录的 `run_diag_eval.py`，只打这份 stage 0 库。检查点 sha256 与上一节官方题库重打分一致。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。未舍入表在 `reports/growbrain_e2_diag_bank_v1_stage_summary.csv`、`reports/growbrain_e2_diag_bank_v1_by_skill.csv`、`reports/growbrain_e2_diag_bank_v2_stage_summary.csv` 和 `reports/growbrain_e2_diag_bank_v2_by_skill.csv`。
