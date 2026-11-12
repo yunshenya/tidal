@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -34,6 +34,10 @@ Task probes, eval-only, for the 13 checkpoints rescored on 2026-11-10:
 Offline crossing table for stage-0 graduation bars, read off existing logs on 2026-11-11 (CST). Not a new training run:
 
 - `reports/growbrain_e2_mastery_graduation_crossings.csv`
+
+Offline check of whether existing data and evaluation can distinguish capability, read off existing logs and task banks on 2026-11-12 (Asia/Shanghai). Not a new training run. Stage-0 per-skill exact counts for the 13 end-run rescores:
+
+- `reports/growbrain_e2_taskprobe_stage0_by_skill.csv`
 
 External archives, on the bot box, not in git:
 
@@ -529,3 +533,188 @@ CSV 每一行是一条臂、一粒种子、一个指标、一条线。列是 `ar
 限制：每臂用来估计的种子是两粒。`scratch_final` 另有 seed 0，其中 seed1 的 exact-match 33% 是离群点。阶梯臂的 pilot seed 0 写在 CSV 里，也写在第一次毕业的 8000 上，不另作一条终局结论。旧臂的任务题是只评测重打分，共享窗口 128，截断数是 0。`staged_final` 的任务题写在训练过程里，截断数也是 0。题目这一层可以对。两条流水线各写各的，逐位相同不成立。`graduation_only` / `coupled` / `decoupled` / `growth_only` 的中途 eval 没有任务题。
 
 原始日志在分析机器上，不在 git 里：`/workspace/scratch/e2_staged_final/s{1,2}/events/staged_final/seed{1,2}/{evals,task_probes,graduation_events}.jsonl`；`/workspace/scratch/e2_multiseed_12/ckpts/{arm}/seed{1,2}/{evals,graduation_events,growth_events}.jsonl`；`/workspace/scratch/e2_pilot_full/events/{arm}/seed0/`；`/workspace/scratch/e2_scratch_final_012/events/scratch_final/seed{0,1,2}/`；`/workspace/scratch/e2_task_probes/per_run_table.csv`。代码和配置在同一台机器的 growbrain `0d8d8f1`。
+
+现有数据与评测能否把能力分开的离线核对（只用已有日志和题库）见「现有数据与评测能否区分能力（离线核对）」。
+
+## 现有数据与评测能否区分能力（离线核对）
+
+2026-11-12（Asia/Shanghai，UTC+8）。用已有日志和已有题库核对：这套数据和评测能不能把更强的模型和更弱的模型分开。没有新的训练，没有 GPU，没有 `--resume`。这一节不改上文已发表的臂分，也不改 `reports/growbrain_e2_mastery_graduation_crossings.csv`。离线备忘于当天从已有日志算出，在分析机器上，不在 git 里：`/workspace/scratch/e2_eval_distinguish.md`。关键表在本节。13 个终局重打分的 stage-0 逐技能命中在 `reports/growbrain_e2_taskprobe_stage0_by_skill.csv`，列是 `arm,seed,stage,skill,n,n_exact,exact,cjk`。`exact` 与 `cjk` 是 item 文件里的原值。13 个 run，6 个技能。这一节沿用 2026-11-11 的 mastery 反事实，不重做那一节。
+
+### 直接回答
+
+只能分开一部分。官方把 probe0–3 等权平均，分不开能力。被当成 stage 0 头条的 exact-match，也分不开。评测和数据对齐之前，不要为另一条同类的 growbrain 训练臂再租 GPU。
+
+能分开的，有这四项。
+
+stage2 / stage3 的任务 CJK 能把 2.8M 和 18.4M 分开。`graduation_only` 的种子均值是 0.347 / 0.316。每条 18.4M 臂都明显高于它，种子区间与小模型不相交。未舍入均值和区间上、下沿已经写在「任务题正式对照」：stage2 均值 0.34699862723075003，区间上沿最高 0.3729128015（18.4M 的区间下沿最低 0.4569725568，decoupled seed2）；stage3 均值 0.3159364057916154，区间上沿最高 0.3255375330（18.4M 的区间下沿最低 0.3619994373，growth_only seed2）。
+
+共享窗 L=128 的 corpus probe2 是另一格，不是上面的任务 CJK。去掉 128 对 512 的混淆之后，它讲的是同一件大小模型的事。`graduation_only` 停在同阶段 trigram 地板上（0.347 对 0.350），比 `scratch_final` 低 11 个点。未舍入值在「Shared-span CJK at L=128」。这一节没有重算。
+
+`coupled` 的 stage0 exact-match 能和同宽、不扩容的 `staged_final` 分开。seed1 / seed2：`coupled` 是 4/360 与 3/360（1.11% / 0.83%），`staged_final` 是 12.78% / 12.50%。这个差距不是格式地板，也不是种子噪声。上文「种子对齐」里的未舍入格子是 0.0111111111 与 0.0083333333，以及 46/360 = 0.12777777777777777 与 45/360 = 0.125。
+
+stage0 CJK 能做粗排序。`scratch_final` 是 67.0–70.3%，`random_order` 是 66.3–67.3%，`staged_final` 是 64.3% / 62.6%（seed1 / seed2），然后是分阶段的 2.8M 和混合臂，`coupled` 在最后（51.1% / 45.2%，seed1 / seed2）。单次 run 的条目 bootstrap 区间大约 ±2–3 个点。scratch 与 `staged_final` 的差距是 4–6 个点，现有种子上方向一致。中间臂的未舍入 CJK 在「任务题正式对照」和「种子对齐」。
+
+`where` 这一片的 stage0 exact-match 比全技能平均稳。`scratch_final` 三粒是 43.8–46.9%。CSV 里 seed 0 与 seed 2 是 30/64，seed 1 是 28/64。`random_order` 更高，64.1–68.8%（seed1 / seed2 是 41/64 与 44/64）。`coupled` 是 0–4.7%（seed1 / seed2 是 3/64 与 0/64）。
+
+分不开的，有这四项。
+
+stage2 / stage3 的 exact-match 是难度地板。13 个旧臂的 stage2 全是 0。stage3 是 0–0.76%。`staged_final` 终局同样是地板，备忘的读法是 end EM 0 / 0.15%。上一节已发表的格子是 seed1 stage2 为 1/584、seed2 stage3 为 1/660，另外两格是 0。答案偏长：stage2 中位 13 字，stage3 中位 16 字，在 10–27 个 CJK 字上全有或全无。不用这两列排臂。
+
+官方 probe0–3 的等权平均不是能力。2026-11-10 的 probe 审计和共享窗重打分已经写过：这些 probe 主要跟着该臂见过多少该阶段的数据走。`graduation_only` 官方 probe2 的「赢」是 128 对 512 的产物。同阶段字符 trigram 在好几条 probe 上离 18.4M 模型只有几个点。数字在「Shared-span CJK at L=128」。这一节没有重算。
+
+stage0 exact-match 不能当头条，尤其不能用来宣称 `scratch_final` 在这项上赢了 `staged_final` 或 `random_order`。`scratch_final` seed1 是 33.3% [28.3, 38.3]，seed2 是 12.8% [9.4, 16.1]。两个区间不相交。未舍入区间在「种子对齐」：[0.2833333333, 0.3833333333] 与 [0.0944444444, 0.1611111111]。缺口的绝大部分是 `who`。seed 1 / 0 / 2 是 90.6% / 17.2% / 9.4%，即 58 / 11 / 6 道，分母 64。去掉 `who`，剩下 296 道上三粒是 20.9% / 15.5% / 13.5%，种子顺序仍是 1 / 0 / 2。`staged_final` 的 12.8% / 12.5% 贴着 scratch 的 seed2，不贴着 33% 那一粒离群点。两粒或三粒种子撑不起「scratch 在 stage 0 的 exact-match 上赢了」。
+
+`probe0_acc` 不能当能力，也不能当掌握。它和任务分反向。见下。
+
+所以：这套题能在后期 CJK 上把小模型和大模型分开，也能把塌掉的 `coupled` 和还在工作的同宽臂分开。它分不清后期课程上几个点的变动是不是真的。它也分不清 stage-0 的任务技能是不是 stage-0 的数据教出来的。后一件事挡住新的训练臂。
+
+### 死技能和种子分歧
+
+13 个终局 item 文件，stage 0，360 题。没有任何一道题在 13 次里都 exact。161/360 一次都没有。
+
+| 技能 | n | 13 次里从未 exact | 命中 run 的平均比例 |
+|---|---:|---:|---:|
+| handoff | 72 | 72 | 0 |
+| count | 64 | 56 | 0.96% |
+| attribute | 48 | 25 | 5.4% |
+| who | 64 | 3 | 11.7% |
+| color | 48 | 3 | 17.8% |
+| where | 64 | 2 | 29.3% |
+
+`handoff` 是死题类。72/360 = 20% 的题库，对档案里每一次 exact-match 的贡献都是 0。把它平均进去，只是把每条臂往 0 压。`count` 接近死题：8 道只在恰好一次 run 里命中，56 道从未命中。`who` 的平均命中比例是 11.7%。scratch seed1 的离群点几乎全落在这个技能上。逐 run 的 `n` 与 `n_exact` 在 CSV。上表的平均比例是备忘的读法。
+
+种子分歧不是抽题噪声。n=360 上，二项 95% 半宽在 p=0.20 是 4.1 个点，在 p=0.33 是 4.9 个点。scratch seed1 对 seed2 差 20.6 个点，是这个半宽的好几倍，条目 bootstrap 区间也不相交。同一臂里，exact 命中的集合几乎对不上：
+
+| 臂 | exact 题数 | 交 / 并（Jaccard） | 两粒不一致的题数 |
+|---|---|---:|---:|
+| coupled | 4 vs 3 | 0 / 7（0） | 7 |
+| graduation_only | 21 vs 15 | 3 / 33（0.09） | 30 |
+| decoupled | 19 vs 20 | 6 / 33（0.18） | 27 |
+| growth_only | 35 vs 11 | 7 / 39（0.18） | 32 |
+| random_order | 69 vs 74 | 33 / 110（0.30） | 77 |
+| scratch 0 vs 1 | 57 vs 120 | 35 / 142（0.25） | 107 |
+| scratch 1 vs 2 | 120 vs 46 | 25 / 141（0.18） | 116 |
+
+模型并没有稳定地解同一小组题。5–20% 的 exact-match 均值、n=2，排不了名。Jaccard 常见落在 0.09–0.30。`coupled` 是 0。
+
+没命中的题上，CJK 仍有粗的大对小、scratch 对 coupled 信号：scratch 的未中题 CJK 是 0.57–0.63，random 是 0.60，coupled 是 0.45–0.51。它紧不到能支持 1–2 个点的课程结论。scratch seed1 的未中题 CJK 更低，是 0.568，因为那一粒已经把容易的题挑走了。
+
+### 中途 exact-match 不宜当门
+
+`staged_final` 是唯一有中途任务题的臂：每 1000 步，只评 stage 0，截断数 0，n=360。第一次毕业之后，exact-match 相邻步绝对变化的均值是 0.031 / 0.032（seed1 / seed2），最大是 0.114 和 0.178。终局率大约 0.13 时，二项标准误是 0.018。轨迹每次 eval 在动好几个标准误。seed2 的峰是 step 87000 的 21.1%，终局是 12.5%。未舍入的峰在「stage0 训练中轨迹」：0.2111111111111111，终局 0.125。没有平滑，不能把掌握线画在原始的中途 exact-match 上。平滑之后，这个数仍然跳。
+
+CJK 稍稳一些。相邻步绝对变化的均值大约 0.03，抬起来之后相对带宽更窄。`hw0` 跳一次，然后停住。
+
+### `probe0_acc` 与任务分反向
+
+在 `staged_final` 的轨迹上，`probe0_acc` 对 stage0 任务 CJK 的 Pearson 相关是 −0.56 / −0.68（seed1 / seed2），对 exact-match 是 −0.32 / −0.47。`hw0` 的方向是对的：对任务 CJK 是 +0.91 / +0.89，对 exact-match 是 +0.51 / +0.59。机器可读摘要里，对 CJK 的未舍入相关是 `probe0` 的 −0.5592604893047963 / −0.6799796048096802，`hw0` 的 0.9131369339531065 / 0.8867982987415428。对 exact-match 的相关，备忘只给了上面的两位小数。
+
+机制在第一次毕业时就能看见。权重在毕业当步仍是 [1, 0, 0, 0]，下一步 stage 1 已经混入。本表用备忘的读法。上一节同一批日志用三位小数，格子没有改。seed2 在 9000 的手写库，跨越 CSV 的 `value_at_first_grad` 是 0.2235，上一节写成 0.224，备忘写成 0.223。seed1 在 9000 的任务 EM，轨迹是 0.005555555555555556，上一节写成 0.006，备忘写成 0.0056。seed2 在 10000 的任务 EM，轨迹是 0.002777777777777778，上一节写成 0.003，备忘写成 0.0028。
+
+| seed | 位置 | probe0 | hw0 | 任务 EM | 任务 CJK |
+|---|---|---:|---:|---:|---:|
+| 1 | 8k，仍是 [1, 0, 0, 0] | 0.708 | 0.196 | 0 | 0.345 |
+| 1 | 9k，[0.25, 0.75, 0, 0] | 0.640 | 0.422 | 0.0056 | 0.412 |
+| 2 | 9k，仍是 [1, 0, 0, 0] | 0.717 | 0.223 | 0 | 0.327 |
+| 2 | 10k，stage 1 已混入 | 0.654 | 0.427 | 0.0028 | 0.473 |
+| 1 / 2 | 100k 终局 | 0.631 / 0.633 | 0.469 / 0.464 | 0.128 / 0.125 | 0.643 / 0.626 |
+
+`probe0` 的最高点在纯 stage 0 的末尾，然后后续数据一进来就掉，任务分同时往上走。`scratch_final` 终局的 probe0 更低：0.617 / 0.626 / 0.611，全程最高 0.630，低于 `staged_final` 第一次毕业时的 0.708 / 0.717，而 stage0 任务分是各臂里最好的。配置的 `probe0 >= 0.85` 不会触发，上一节已经写了。把线降到 0.70，会在任何任务技能出现之前毕业。负相关是这一节新的，把那条结论收紧了。
+
+`hw0` 是更好的中途代理。它是 24 段 next-token 段落，条目 bootstrap 标准误大约 0.03–0.04。它撑不起 1–2 个点的结论。
+
+teacher-forced 的 CJK 不是 exact-match。CJK 明显高于 stage0 的 train-trigram 地板 0.222，模型落在 0.45–0.70，因为金标前缀之后，答案内部的搭配也能得分。exact-match 更严，也更吵、更会按技能塌掉、中途更跳。已有的 greedy / teacher-forced 输出里，first-CJK 落在两者中间，而且只有 7 个旧臂 run，路径是 `/workspace/scratch/e2_coupled_s0_diag/preds/`。`coupled` seed1 的 first-CJK 是 37.8%，exact-match 是 1.1%。scratch seed1 是 59.7% 对 33.3%。它不能直接拿来排臂：`decoupled` seed1 的 first-CJK 是 29.2%，低于 `coupled` seed1，exact-match 反而更高（5.3% 对 1.1%）。`coupled` 在 72 道 `handoff` 里有 50 道 first-CJK 命中，exact 是 0。首字是一个便宜的先验。first-CJK 值得加，要带技能分解，不能换成新的单一头条。`handoff` 上不要用 first-CJK 替换 exact-match。
+
+官方 JSON 仍没有 CJK 区间，也没有 `first_cjk_acc`。`bootstrap_ci` 的上界下标是 `int(0.975 * n_boot) - 1`，上界偏紧一格。`is_cjk_char` 只含 U+4E00–U+9FFF。这三份题库没有 Ext-A，比率不受影响。已提交的 `manifest.json` 仍是 `train_filter.checked=false`。2026-11-10 的同阶段检查是 0 条 8-gram 丢弃、0 条 train-trigram 整句命中，填的只是 manifest。`staged_final` 的中途题和 13 个 checkpoint 的重打分，在题目这一层可以对，两条流水线不是逐位相同。这些限制上文已经写过，这里仍然有效。
+
+### stage-0 技能来自后续数据：格式对不上
+
+现象比「stage 1 之后分数跳了」更清楚。这是数据与评测的格式错位，不是题目泄漏，也不是故事理解的神秘迁移。官方过滤器没有丢掉题，整句也不在训练集里。
+
+纯 stage 0（step 1k 到第一次毕业，权重 [1, 0, 0, 0]）：每次 eval 的任务 exact-match 都是 0。seed1 是 8 次 eval，seed2 是 9 次。任务 CJK 停在 0.197–0.345（seed1）和 0.287–0.384（seed2）。`hw0` 平在 0.18–0.24。`probe0` 已经升到 0.71 并走平。
+
+stage 1 混入后的第一次 eval（75% stage 1，25% 回放）：两粒的 `hw0` 大约都是 +0.22。任务 CJK 是 +0.068 / +0.146。上一节按三位小数把同一次跳跃写成 +0.067 / +0.146（0.345 到 0.412，0.327 到 0.473），那一格没有改。任务 exact-match 变成 0.56% / 0.28%，即 2 道和 1 道。它没有变成可用的 exact-match 信号。
+
+stage 1 窗口的其余部分（seed1：9k–15k；seed2：10k–16k）：exact-match 停在 0–1.67%，最多 6/360。CJK 和 `hw0` 停在新的、更高的水平上。
+
+stage 2 混入后的第一次 eval：exact-match 从 0.28% 到 2.78%（seed1，16k），从 0.83% 到 5.00%（seed2，17k）。CJK 再跳 +0.097 / +0.108。stage0 的 exact-match 是从这里才出现的。未舍入的当步与下一步在「stage0 训练中轨迹」。
+
+所以 stage 1 主要教的是格式，以及 `hw0` 量到的那部分。stage0 题库上可用的 exact-match 随着 stage 2 出现。`scratch_final` 只有大约 5.3% 的步在 stage 0，stage0 CJK 仍然最好。阶梯臂用了 17–19%，在后续阶段混入之前 exact-match 是 0。更多的 stage-0 数据并不是 stage-0 任务分的来源。
+
+官方过滤器对全部 12 对都做了，不只是同阶段：3 份题库（stage 0、2、3）对 4 份训练切分（0、1、2、3）。规则是 OverlapIndex 的精确命中，加上 8-gram 出现比例 ≥ 0.5，以及 train-trigram 整句 exact。12 对的丢弃都是 0。train-trigram exact 在 12 对里都是 0。stage0 题对 stage1 训练的最差 8-gram 出现比例是 0.429，低于 0.5。≥ 0.25 的有 12 道，≥ 0.10 的有 15 道。对 stage2 的最差是 0.056。同阶段的 train-trigram CJK 与 2026-11-10 的过滤一致，备忘读成 0.222 / 0.111 / 0.115。未舍入值在「训练切分过滤」：0.2218458933、0.1114439037、0.114602063。
+
+没有任何一道 stage0 题的完整 `prompt+answer` 是任一训练文档的子串，任一 stage 都没有。完整 prompt 也不是子串。
+
+更弱的重叠是模板复用，测试题并不在训练集里：
+
+14/360 道 stage0 题的问句一行，原样出现在 stage1 训练里。这 14 道只有 5 个不同的问句：`问：书包在哪里？` 占 8 道，另外四句 `谁在…` 占 6 道。stage1 里确有 `问：书包在哪里？\n答：书包在学校。它就在那里。`。问句相同，上下文和答案都不同。题库的上下文是一行事实，例如「书包在河里。」，答案是「书包在河里」。
+
+有一道颜色题的上下文或答案片段「帽子是白色」出现在 stage1 的 `qa_what` 答案里（「阿姨面前放着帽子。那个帽子是白色的。」）。
+
+少量短的泛答案（「有一个苹果」「小鱼在河里」「皮球是黄色」等）是无关的 stage0 或 stage2 文档的子串。stage2 有 17 道这样的答案子串，匹配的问句行是 0，匹配的 prompt 是 0。这是大语料里的短语碰撞。
+
+stage2 和 stage3 题库对任何训练切分，prompt、答案、问句行、整段子串的命中都是 0。
+
+已提交的 manifest 只对过 `stage1_train_mix.txt`（38 篇手写）加上同阶段过滤，仓库里 `checked=false`。缺的那次检查是 stage0 题对完整的 stage1 训练（556 篇）。它不改题库。它也解释不了中途的跳跃：14 道问句相同、答案不同，不能在 360 道上造出 7–15 个点的 CJK 跳跃，而 exact-match 在整个 stage1 窗口里都贴近 0。2026-11-10 的任务题报告已经查过手写的 `stage1_train_mix.txt`：exact 命中是 0。这一节没有再查验证切分、corpus probe，或用手写库对任务题另做一遍。
+
+错位在题库测的格式上。stage0 任务题是固定框的短阅读：一句事实，然后 `问：…？\n答：`，答案通常几乎是事实的复写。例子是「小猫在床上。」/ `问：小猫在哪里？` / 「小猫在床上」。360 道题，不同的问句行只有 99 句。
+
+stage0 训练是 22409 篇，故事和对话。probe 标点下同时含「问」和「答」的文档是 1/22409（0.0045%）。以「问：」开头的行是 0。「答：」出现在 18 篇里。「问：」或「问:」出现在 13 篇里，几乎都是叙述（「莉莉问她妈妈」），不是题库的框。技能词在故事里有：631 篇提到「在哪里」，476 篇提到「什么颜色」，但都不是「问：」问句。上文「题型与计分」里 stage0 的 18/22409 是含 `答：` 或 `答:` 的行数。备忘的 18 是文档数。上文的行数留在原处。
+
+stage1 训练是 556 篇（38 篇手写 + 518 篇模板）。其中 39.0% 是「问：」/「答：」框，217 篇，另有 32 个对话轮。含「在哪里」的问句 24 句，「去了哪里」13 句，「谁在」66 句。「什么颜色」「几个」「怎么样」「在谁手里」都是 0。交接只出现在叙述从句里（「阿姨把笔递给妈妈」，22 篇），不是问答。模板（`qa_where`、`qa_where_thing`、`qa_who` 等）和题库是同一族，但常常是闭卷：事实在答案里，不在上下文那一句里。所以 stage 1 抬得动 `hw0` 和 CJK，而「从 prompt 里抄答案」的 exact-match 要等到 stage 2 更杂的问答进来才离开 0。stage2 里同时有「问：」和「答：」的文档是 1961 篇，「问：」行 401 行，其中有少量「什么颜色」和「几个」。
+
+stage3 和 stage0 一样，问答框极少：200000 篇里同时有「问：」和「答：」的是 1 篇，问句行是 0。
+
+所以 stage0 题库测的是一种问答抽取格式：在 stage 0 里几乎没有，在 stage 1 里密，在 stage 2 里以低比例存在。它测的不是「stage0 数据教了什么」。中途的跳跃是先接触格式，再接触更宽的问答。`growth_only` 已经给出较弱的同一现象：它见到的问答文档比 `scratch_final` 多（混合里大约 10% 对大约 0.5%），exact-match 仍然只有 9.7% / 3.1%，因为均匀的 25% 混合不等于「stage 0 教会了这套题」。未舍入的两粒是 0.0972222222 与 0.0305555556，在「逐个 checkpoint」。
+
+这也改写「分阶段课程在 stage 0 上输给了 scratch」。它输在一套只练 stage 0 过不了、后续阶段的数据开始过得了的测试上。这是评测和数据是否对齐的证据。对阶梯更干净的不利证据，仍然是 stage2 / stage3 的 CJK，以及共享窗的 corpus CJK。那里 `scratch_final` 领先或打平，而 `coupled` 在这些后期阶段上并没有像 stage0 exact-match 那样单独塌掉。
+
+### 下一步
+
+在改模型设计之前，先改评测和数据。另一条同类训练臂会继承同一套评测。不要为它租 GPU。
+
+可以离线做、不用新训练的：
+
+1. stage0 exact-match 按技能报。排序里拿掉 `handoff`，也拿掉 `count` 的大部分。真正会动的是 `{where, color}`。头条不再把死技能平均进去。13 个终局重打分的逐技能命中数已经在 `reports/growbrain_e2_taskprobe_stage0_by_skill.csv`。`staged_final` 没有终局的逐题输出，只有合计的 exact-match 和 CJK。把它的两份 `curriculum.pt` 做一次只评测的 CPU 重打分，可以补上这个洞。checkpoint 在 `/workspace/scratch/e2_staged_final/s{1,2}/events/staged_final/seed{1,2}/curriculum.pt`。这一节没有打。
+2. 官方任务题报告加上 `first_cjk_acc` 和 CJK 区间，并按技能拆开。打分器里已经有零件，官方 JSON 没写出来。不要在 `handoff` 上用 first-CJK 替换 exact-match。stage2 / stage3 要用 first-CJK 或前缀匹配，才能从这些题库得到有梯度的数，而不必改写答案。那也是一次 checkpoint 评测，不是新训练。
+3. 把已提交 manifest 里的 `train_filter.checked` 填上。同阶段的 0 丢弃是 2026-11-10 量的。跨阶段的 0 丢弃是这一节：12 对都是 0。写进仓库时用相对路径。
+4. `probe0_acc` 退出毕业、退出排臂、退出「掌握」。以后若还要中途的门，跟任务走的是 `hw0` 或平滑后的 stage0 任务 CJK。`probe0` 不跟。在本节的格式错位修好之前，门仍然不要打开：任务 exact-match 和 CJK 的任何一条线都会把 run 留在 stage 0，而纯 stage 0 上这些线不动。这已经是 mastery 离线估计的结果。
+5. 臂间比较若取决于 `who`，或取决于两粒种子的均值，就不要把 stage0 exact-match 当头条。现有题库上若只留一个 stage0 数，用 CJK，或用 `where` 的 exact-match，并把种子区间留在表里。
+
+仍要新的评测或新的数据，但仍然不是一条新的训练臂：
+
+1. 把 stage0 的数据和 stage0 的测试对齐，两条路取一条。或者在 stage0 训练里放入足够密的「问：」/「答：」、从 prompt 抄答案的框，让只练 stage 0 的 run 至少有可能被这套题打分。或者停止用这套题给只练 stage 0 的 checkpoint 打分，另做一套测 stage0 故事里真正有的东西的题。在其中一件发生之前，「课程有没有教会 stage 0」不是一个提得清楚的实验。
+2. stage2 / stage3 的 exact-match 要换的是目标：更短的可接受答案，或官方的前缀、first-CJK、span 分数。这些题作为难度是成立的。作为整句 exact-match 的臂间比较，它们没有用。
+3. exact-match 若仍要当头条，就增加种子，或事先登记一个技能切片。n=2 吸收不了 `who` 上 90.6% 对 9.4% 的摆动（seed1 对 seed2）。
+
+这些都不需要新的 coupled、staged 或 mastery 训练臂。日志上还剩的、可证伪的训练实验，是最终宽度、只练 stage 0、100000 步，并且打分用的题必须是 stage-0 数据真正教得会的。这是数据与评测的实验。等这套题存在再做。上一节写下的 `stage0_only` 对照，按数据分配会在 stage2 / stage3 的 CJK 上输掉。那一条仍然不建议当成课程实验去跑。没有对齐过的题，那次训练回答不了它想回答的问题。
+
+### 读法
+
+现有数据和评测只能部分区分能力。能站住的是：stage2 / stage3 任务 CJK 上 2.8M 对 18.4M，区间不相交；同宽下 `coupled` 的 stage0 exact-match 1.11% / 0.83% 对 `staged_final` 的 12.78% / 12.50%；stage0 CJK 的粗排序；`where` 的 exact-match 比全技能平均稳。
+
+站不住的是：stage2 / stage3 的 exact-match；probe0–3 的等权平均；stage0 exact-match 头条；`probe0_acc` 的毕业、排序和掌握。0.70 的 `probe0` 线会在任务技能出现之前毕业。
+
+「分阶段在 stage 0 上输给 scratch」记的是评测和数据没有对齐。纯 stage 0 上任务 exact-match 每次都是 0。可用的 exact-match 出现在 stage 2 混入之后。对阶梯不利、而且题和数据还对得上的证据，仍是 stage2 / stage3 的 CJK。
+
+在格式对齐之前，不为另一条同类 growbrain 训练臂租 GPU。
+
+### 限制
+
+`staged_final` 的中途和终局任务题只有合计：exact-match、CJK、n=360、截断数 0。没有逐题或逐技能的输出，所以看不出 stage 1 和 stage 2 分别跳的是哪个技能。两份终局 `curriculum.pt` 在分析机器上。这一节没有打分。
+
+first-CJK 和 greedy 输出只覆盖 13 个旧臂 run 里的 7 个，没有 `staged_final`，也没有 stage 2 / 3。
+
+没有重打 token 129–512，也没有重跑共享窗或 n-gram 的 corpus-probe 审计。
+
+训练重叠用的是官方 200000 篇前缀、官方的 0.5 与 trigram 整句规则，加上子串搜索。没有查验证切分，没有把 corpus probe 或手写库再对一遍任务题，也没有在官方字符 trigram 之外另训一个语言模型。
+
+种子仍是每臂 2 粒，`scratch_final` 是 3 粒。步数对齐，计算量没有对齐，上文已经写过。
+
+`growth_only` 的 `final_stage` 仍是 0，权重是 [0.25, 0.25, 0.25, 0.25]。它不是只练 stage 0 的对照。没有任何一条 run 在 8k–9k 之后仍只练 stage 0。
+
+teacher-forced 的 CJK 抬高，以及偏紧一格的 bootstrap 上界下标，都没有重推。
+
+### 来源
+
+备忘于 2026-11-12 从已有日志离线算出。路径是 `/workspace/scratch/e2_eval_distinguish.md`。工作目录是 `/workspace/scratch/e2_eval_distinguish_work/`。代码和配置是同一台机器上的 growbrain `0d8d8f1`。训练切分、题库和 item 分数不在 git 里。关键表在本节，逐技能计数在 `reports/growbrain_e2_taskprobe_stage0_by_skill.csv`。
