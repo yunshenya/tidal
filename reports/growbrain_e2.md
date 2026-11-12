@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -30,6 +30,10 @@ Task probes, eval-only, for the 13 checkpoints rescored on 2026-11-10:
 `staged_final` training-log stage-0 task probes, one row per eval:
 
 - `reports/growbrain_e2_staged_final_trajectory.csv`
+
+Offline crossing table for stage-0 graduation bars, read off existing logs on 2026-11-11 (CST). Not a new training run:
+
+- `reports/growbrain_e2_mastery_graduation_crossings.csv`
 
 External archives, on the bot box, not in git:
 
@@ -414,3 +418,114 @@ stage0 exact-match 的种子噪声盖过臂间差距。`scratch_final` 自己是
 在相同宽度、相同 100000 步下，分阶段顺序的终局低于直接在最终宽度上训练的 `scratch_final`。stage0 CJK 两粒都低 4–6 个点。stage2 / stage3 在 seed1 上相差约 0.3 个点，在 seed2 上低 6–7 个点。
 
 限制：只有 2 个种子。stage2 / stage3 的 exact-match 是地板，不用于排序。`n_growth` 是 0，这臂不检验扩容。部署上 stage2 / stage3 的训练文件被截到前 210000 行。结果 JSON 里的 `max_train` 与 provenance `used_train` 都是 200000，`capped_prefix` 为 true，loader 读的是前 200000 行。210000 大于 200000，读到的行与未截断文件的前 200000 行相同。
+
+stage-0 mastery 毕业的离线估计（只用已有日志）见「若改用 stage-0 mastery 毕业（离线估计）」。
+
+## 若改用 stage-0 mastery 毕业（离线估计）
+
+2026-11-11（CST），用已有训练日志估计 E2 的毕业若改走 stage-0 mastery，日程和 stage 0 任务分会落在哪里。没有新的训练，也没有新的 GPU 步。代码是 growbrain `main` `0d8d8f1` 的 `growbrain/curriculum.py`，配置是 `configs/e2.toml`，与「staged_final 对照臂」同一份。跨越表是 `reports/growbrain_e2_mastery_graduation_crossings.csv`。`random_order` 和 `scratch_final` 故意不在这张表里。
+
+### 毕业规则
+
+E2 的毕业在代码里有两条路径。eval 每 1000 步一次。
+
+掌握路径：`probe{k}_acc >= mastery`，连续 `sustain` 次 eval。`probe0_acc` 是 held-out stage-0 文档上的 next-token top-1。配置是 `mastery = 0.85`，`sustain = 2`。
+
+plateau 路径：连续 `window=3` 次 eval 的 ALP < `plateau_eps=0.01`，并且下一阶段的 ALP 更大。这些 run 上实际触发的是这一条。掌握路径没有触发过。
+
+`handwritten_gate` 在全部 E2 run 里关着。若打开，离开 stage 0 还要 `extra_handwritten0_acc >= 0.39`，离开 stage 1 用的是 probe1，并且旧阶段下降不超过 5 个百分点。0.39 来自 `scripts/calibrate_e2_thresholds.py`，是 seed-0 阶梯臂上 extra-bank 决策簇（最高 0.2957）与 stage-1 probe 簇（最低 0.4771）的中点。它把两簇切开，不是掌握程度。配置注释已经写明：这扇门开着时，每条阶梯臂的第一次 plateau 都会被拒绝。
+
+现有规则不用任务题 exact-match，也不用任务题 CJK。下面这两项只是在日志上试过的候选线。
+
+### staged_final 的毕业前后
+
+`staged_final` 的六次毕业全是 plateau。seed1 是 8000 / 15000 / 39000，seed2 是 9000 / 16000 / 37000，与上一节同一份 `graduation_events.jsonl`。第一次毕业之前，step 1000 到 8000（seed1）或 9000（seed2），`stage_weights` 是 [1, 0, 0, 0]。这段是纯 stage 0。
+
+下表是第一次毕业前、毕业当步、以及毕业后第一次 eval，三位小数。任务题的未舍入值在上一节「stage0 训练中轨迹」。`probe0_acc` 与手写库的未舍入跨越在 CSV。
+
+| seed | step | 位置 | probe0_acc | extra_handwritten0_acc | task EM s0 | task CJK s0 |
+|---:|---:|---|---:|---:|---:|---:|
+| 1 | 1000 | 纯 stage 0 | 0.611 | 0.179 | 0.000 | 0.197 |
+| 1 | 4000 | 纯 stage 0 | 0.683 | 0.210 | 0.000 | 0.290 |
+| 1 | 8000 | 毕业，plateau | 0.708 | 0.196 | 0.000 | 0.345 |
+| 1 | 9000 | 毕业后 1 次 eval，stage 1 权重 75% | 0.640 | 0.422 | 0.006 | 0.412 |
+| 2 | 1000 | 纯 stage 0 | 0.612 | 0.193 | 0.000 | 0.287 |
+| 2 | 6000 | 纯 stage 0 | 0.705 | 0.215 | 0.000 | 0.384 |
+| 2 | 9000 | 毕业，plateau | 0.717 | 0.224 | 0.000 | 0.327 |
+| 2 | 10000 | 毕业后 1 次 eval | 0.654 | 0.427 | 0.003 | 0.473 |
+
+终局 step 100000，seed1 / seed2：`probe0_acc` 0.631 / 0.633，手写 0.469 / 0.464，任务 exact-match 0.128 / 0.125，任务 CJK 0.643 / 0.626。probe 的未舍入终局是上一节的 0.6307828374455733 / 0.6327331277213353。CSV 的 `end_value` 是 0.6308 / 0.6327，是同一格。
+
+纯 stage 0 上，`probe0_acc` 在 0.71 附近走平。最后 3000 步，每 1000 步增加 0.002 到 0.004。100000 步上的最高就是毕业当步：seed1 0.708，seed2 0.717（CSV `max_any` 0.7075 / 0.7171）。配置的 `probe0_acc >= 0.85`、连续 2 次 eval，两粒都没有跨过。0.80 和 0.75 也没有。
+
+### 首次跨越
+
+下表只列 `staged_final` 的 sustain 2。步数是已经跑完的日志里，该指标第一次连续两次 eval 达到这条线的步。晚于 8000 / 9000 的跨越已经含有后续阶段的数据，不能当成「若一直停在 stage 0，会在这一步毕业」。最后一列只回答：纯 stage 0、第一次毕业之前，这条线有没有跨过。sustain 1、只碰到一次、以及其余臂，以 CSV 为准。正文的 0.618、0.670、0.682、0.128、0.207 是三位读法，CSV 的线是 0.6181、0.6698、0.6818、0.1278、0.2065。
+
+| 阈值 | seed1 sustain 2 | seed2 sustain 2 | 第一次毕业前的纯 stage 0 |
+|---|---|---|---|
+| probe0 ≥ 0.85（配置 mastery） | 从未 | 从未 | 否。100000 步最高 0.708 / 0.717 |
+| probe0 ≥ 0.80 | 从未 | 从未 | 否 |
+| probe0 ≥ 0.75 | 从未 | 从未 | 否 |
+| probe0 ≥ 0.70 | 7000 | 7000 | 是。比 plateau 的 8000 / 9000 早 1000 到 2000 步 |
+| probe0 ≥ 0.618（scratch_final 终局均值） | 3000 | 3000 | 是。早于 plateau |
+| hw0 ≥ 0.39（校准门） | 10000 | 11000 | 否。毕业前最高 0.232 / 0.240。日志上的首次跨越在 stage 1 的数据已经混入之后 |
+| hw0 ≥ 0.45 | 19000 | 21000 | 否 |
+| hw0 ≥ 0.50 | 从未（77000 碰到一次） | 从未（32000 碰到一次） | 否 |
+| 任务 CJK s0 ≥ 0.60 | 37000 | 18000 | 否 |
+| 任务 CJK s0 ≥ 0.670（scratch_final 终局最小，seed2） | 从未（74000 碰到一次） | 29000 | 否 |
+| 任务 CJK s0 ≥ 0.682（scratch_final 终局均值） | 从未（74000 碰到一次） | 从未（28000 碰到一次） | 否 |
+| 任务 EM s0 ≥ 0.10 | 60000 | 24000 | 否。毕业前每次 eval 的 exact-match 都是 0 |
+| 任务 EM s0 ≥ 0.128（scratch_final seed2 终局 12.78%） | 从未（59000 碰到一次） | 28000 | 否 |
+| 任务 EM s0 ≥ 0.207（scratch_final 终局均值） | 从未 | 从未（87000 碰到一次） | 否 |
+| 任务 EM s0 ≥ 0.333（scratch_final seed1） | 从未 | 从未 | 否 |
+
+CSV 每一行是一条臂、一粒种子、一个指标、一条线。列是 `arm,seed,metric,bar,bar_source,first_grad_step,value_at_first_grad,max_pre_grad,max_any,end_value,first_cross_sustain1,first_cross_sustain2,cross_before_first_grad_sustain2`。步数是训练步。`first_cross_sustain1` 是第一次达到，`first_cross_sustain2` 是第一次连续两次 eval 达到。空单元格表示没有这次跨越。`cross_before_first_grad_sustain2` 在 sustain 2 的跨越不晚于第一次毕业时填写。`growth_only` 没有毕业，`first_grad_step` 为空；它若以 sustain 2 跨过某条线，最后一列记下的就是这一步。`tp_em` 与 `tp_cjk` 只出现在 `staged_final`。其余臂的中途 eval 没有任务题。
+
+### 其余臂
+
+多种子的 seed 1、2，加上 pilot 的 seed 0。中途 eval 只有 `probe0_acc` 和手写库。
+
+`graduation_only` / `coupled` / `decoupled` 的第一次毕业是 seed0 的 8000，或 seed 1、2 的 9000。全是 plateau。当时参数量 2819058（约 2.8M），上下文 128。毕业当步的 `probe0_acc` 是 0.627 / 0.636 / 0.632（CSV 0.6269 / 0.636 / 0.6324），三臂相同。手写库在 0.221–0.246（CSV 从 0.2207 到 0.2458）。100000 步上 `probe0_acc` 的 `max_any`，seed 1 和 seed 2 在 0.636–0.645，最高是 `decoupled` seed1 的 0.6447。`graduation_only` seed0 的峰值是 0.6269；`coupled` / `decoupled` 的 seed0 是 0.6385 / 0.6374。0.85、0.80、0.75、0.70 在这三条臂的每一粒上都没有跨过。手写 ≥ 0.39 的 sustain 2 首次在 10000–12000，都在 stage 1 已经混入之后。
+
+`growth_only` 的 `stage` 字段停在 0，`stage_weights` 是 [0.25, 0.25, 0.25, 0.25]，练的是四段均匀混合。它不是「一直停在纯 stage 0」的代理。扩容到 18.4M 之后，`probe0_acc` 最高仍是 seed1 的 0.6804，seed0 / seed2 是 0.6751 / 0.6754，停在 0.680 这一档，低于 0.70。这臂没有毕业。
+
+`scratch_final`（seed 0 / 1 / 2）终局 `probe0_acc` 是 0.617 / 0.626 / 0.611，全程最高 0.630。这低于 `staged_final` 第一次毕业时的 0.708 / 0.717。stage 0 的任务分是各臂里最高的。`probe0_acc` 对不齐主任务指标。这臂没有毕业，也不在跨越 CSV 里。`random_order` 也不在表里。训练档案里它的 probe0–3 是打乱的伪阶段。步数占比见「stage 0 所占步数」。
+
+### stage 0 所占步数
+
+按日志里的 `stage_weights` 做步数加权，分母是 100000 步。
+
+`staged_final` 大约有 17.5k 与 18.5k 步在 stage 0，占 17.5–18.5%。`graduation_only` / `coupled` / `decoupled` / `random_order` 是 17–19%。`scratch_final` 是 5.3%，大约 5.3k 步。stage0 exact-match 15.8 / 33.3 / 12.8%，CJK 67.3 / 70.3 / 67.0%（seed 0 / 1 / 2）。这是 stage 0 任务分最好的一臂。
+
+### 读法
+
+不值得为 mastery 毕业再开一次 GPU。相对 `scratch_final`，这些日志指向的是更差。日志里没有打平它的路径。早先「最多与 scratch 打平」这个读法过宽。
+
+配置的掌握线 `probe0_acc >= 0.85`、连续 2 次 eval，不会触发。`staged_final` 在 100000 步上的最高是 0.708 / 0.717。每一次实际毕业都是 plateau：3 次 eval 的 ALP < 0.01，且下一阶段的 ALP 更大。0.85 在 100000 步内都达不到，run 会留在 stage 0 直到结束，stage 2 / 3 几乎得不到训练。相对 `scratch_final`，这是更差的结果。
+
+把线降到 `probe0_acc >= 0.70`，两粒的 sustain 2 都在 7000，比 plateau 早 1000 到 2000 步。日程几乎不变。上一节的 `staged_final` 已经低于 `scratch_final`。日志里没有另一套分数，能让这一两千步的提前变成打平。
+
+手写库、任务题 CJK、任务题 exact-match 上试过的线，在第一次毕业前的纯 stage 0 上都没有达到。毕业前：任务 exact-match 每次 eval 都是 0；CJK 停在 0.29–0.38；手写库大约 0.20–0.24，最高 0.232 / 0.240。这些规则会把 run 留在 stage 0，留很久，或者留满 100000 步。stage 2 和 stage 3 就几乎得不到训练。
+
+日志里更晚的跨越，包括手写 ≥ 0.39 的 10000 / 11000，已经混入了后续阶段。那些步是实际 run 的记录，不是停在 stage 0 时的毕业步。stage 0 的任务能力是在后续阶段混进来之后才上去的。stage 1 混入后的第一次 eval，手写库大约 +0.2：seed1 从 0.196 到 0.422（+0.226），seed2 从 0.224 到 0.427（+0.203）。CJK 从 0.345 到 0.412（+0.067），以及从 0.327 到 0.473（+0.146），大约 +0.07 到 +0.15。同一次 eval 上 `probe0_acc` 从 0.708 掉到 0.640，从 0.717 掉到 0.654。
+
+`scratch_final` 只有大约 5.3% 的步在 stage 0，stage 0 的 exact-match 和 CJK 最好。分阶段的臂用了 17–19%。
+
+能对上纯 stage 0 的，只有前 8000 步（seed1）和前 9000 步（seed2）。之后的分数含有后续阶段的数据，不是「一直停在 stage 0」的反事实。没有任何一条 run 在 9000 步之后仍只练 stage 0。这里不写 mastery 规则下的终局分数。
+
+试过的每条线落在两组里的一组。
+
+（a）在 plateau 当时或之前，纯 stage 0 上就已经触发，run 不会被留在 stage 0。`probe0_acc` 不超过 0.70 的线，以及 `scratch_final` 的 probe 锚 0.6181，属于这里。0.70 只把第一次毕业从 8000 / 9000 提前到 7000，日程几乎不变。0.6181 在 3000 就跨过，离开 stage 0 更早；那一次提前毕业的任务终局，日志里没有对应的 run，这里不补。
+
+（b）在 8000–9000 的纯 stage 0 上没有达到。run 被留在 stage 0，stage 2 / 3 的训练被拿掉。手写库、任务 CJK、任务 exact-match 属于这里。probe0 的 0.75、0.80 和配置的 0.85 也属于这里：纯 stage 0 上没有达到，100000 步内也没有达到。
+
+两组都给不出能超过 `scratch_final` 的机制。
+
+9000 步纯 stage 0 之后，stage 0 技能仍可能再跳一次。日志里没有支持这次晚跳的点。
+
+日志上还剩的、可证伪的 GPU 对照，是最终宽度的 `stage0_only`，100000 步，seed 1 和 seed 2。它检验的是纯 stage 0 数据。它不检验 mastery 毕业。stage 2 / 3 的 CJK 按数据分配，几乎可以确定会明显低于 `scratch_final` seed1 / seed2 的 58.2 / 56.3 与 44.6 / 49.3。这是从数据分配推的。日志里没有这条对照的测量。不建议跑这一对照。
+
+限制：每臂用来估计的种子是两粒。`scratch_final` 另有 seed 0，其中 seed1 的 exact-match 33% 是离群点。阶梯臂的 pilot seed 0 写在 CSV 里，也写在第一次毕业的 8000 上，不另作一条终局结论。旧臂的任务题是只评测重打分，共享窗口 128，截断数是 0。`staged_final` 的任务题写在训练过程里，截断数也是 0。题目这一层可以对。两条流水线各写各的，逐位相同不成立。`graduation_only` / `coupled` / `decoupled` / `growth_only` 的中途 eval 没有任务题。
+
+原始日志在分析机器上，不在 git 里：`/workspace/scratch/e2_staged_final/s{1,2}/events/staged_final/seed{1,2}/{evals,task_probes,graduation_events}.jsonl`；`/workspace/scratch/e2_multiseed_12/ckpts/{arm}/seed{1,2}/{evals,graduation_events,growth_events}.jsonl`；`/workspace/scratch/e2_pilot_full/events/{arm}/seed0/`；`/workspace/scratch/e2_scratch_final_012/events/scratch_final/seed{0,1,2}/`；`/workspace/scratch/e2_task_probes/per_run_table.csv`。代码和配置在同一台机器的 growbrain `0d8d8f1`。
