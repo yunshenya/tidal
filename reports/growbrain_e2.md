@@ -963,3 +963,150 @@ stage 0 的整句 exact-match，即使去掉 `handoff` 和 `count`，仍不是�
 ### 来源
 
 题库、备忘和原始 JSON 在分析机器上，不在 git 里：`/workspace/scratch/e2_stage0_diag_bank_draft/v1/`，`/workspace/scratch/e2_stage0_diag_bank_draft/v2/`。根目录的 `stage0.jsonl` 和 `out/` 是冻结的 v1 副本。包装器是同目录的 `run_diag_eval.py`，只打这份 stage 0 库。检查点 sha256 与上一节官方题库重打分一致。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。未舍入表在 `reports/growbrain_e2_diag_bank_v1_stage_summary.csv`、`reports/growbrain_e2_diag_bank_v1_by_skill.csv`、`reports/growbrain_e2_diag_bank_v2_stage_summary.csv` 和 `reports/growbrain_e2_diag_bank_v2_by_skill.csv`。
+
+## stage 1 训练格式任务题库的 CPU 只评测重打分
+
+2026-11-13（Asia/Shanghai，UTC+8）。官方 `data/probes/taskmatch/` 只有 stage 0 / 2 / 3，没有 stage 1。这一节用一份贴近 stage 1 训练格式的本地诊断题库 v1，对同一批 15 个终局 `curriculum.pt` 做 CPU 只评测。打分器与上两节相同（PR [#33](https://github.com/yunshenya/growbrain/pull/33)：teacher-forced 答案段 argmax，exact / CJK / first-CJK，只计 CJK 字，共享预测窗 128；区间是条目重采样，Hyndman–Fan type 7，1000 次，种子 0）。不是新的训练，没有 `--resume`，没有租卡，没有改 growbrain 仓库或原检查点。growbrain 仍是 `main` `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。墙钟 2026-11-13 14:50:47–14:51:06 CST，单进程，15/15 成功，无截断；`trained` / `resumed_training` / `wrote_training_checkpoint` 均为 false，`optimizer_steps` 为 0。检查点 sha256 与上一节一致。
+
+题库本身留在分析机器上，没有写入 growbrain，也不进本仓库；这里只提交分数表。它不是阅读 / 绑定题库，也不替换官方题库。官方题库和毕业门都没有改。
+
+未舍入比例在：
+
+- `reports/growbrain_e2_stage1_bank_v1_stage_summary.csv`
+- `reports/growbrain_e2_stage1_bank_v1_by_skill.csv`
+- `reports/growbrain_e2_stage1_bank_v1_group_contrasts.csv`
+- `reports/growbrain_e2_stage1_bank_v1_stage_exposure.csv`
+
+### stage 1 训练集的格式
+
+`data/corpus/stage1/train.jsonl` 是 556 篇（518 篇模板 + 38 篇手写），14174 字，503 个不同字，31 个模板族，每族上限 32 篇。
+
+- 「问：…\n答：…」217 篇（39.0%）。全部从文档第一行开始，全部是闭卷：问句之前没有事实。主要是 `qa_who` 32、`qa_whose` 32、`qa_what` 26、`qa_where_thing` 22、`qa_how_put` 20、`qa_what_doing` 17、`qa_when` 15、`qa_why` 14、`qa_where` 13。
+- `<user>` / `<bot>` 对话 32 篇（6%）：`dial_when` 12、`dial_whose` 6、`dial_why` 6、`dial_animal_cry` 6，手写 2。
+- 叙述、从句、情绪句约 307 篇（55%）：`narr_return`、`clause_sequence`、`mood_pace`、`mood_plan` 各 32，`clause_choice`、`clause_handoff` 各 22，`clause_because` 11 等。这些都不带问句。
+- 「先给事实再问」是 0 篇。
+
+答句形态是固定的：`qa_who` 是「X在那里V。」，`qa_whose` 是「X的N在L。那个是X的。」，`qa_where_thing` 是「N在L。它就在那里。」，`qa_when` 是「X{时间}V。」，`qa_why` 是「因为R。」。
+
+与相邻阶段比较（stage 2 / 3 是 E2 用的前 200000 篇）：
+
+| | stage 0 | stage 1 | stage 2 | stage 3 |
+|---|---:|---:|---:|---:|
+| 篇数 | 22409 | 556 | 200000 | 200000 |
+| 含 `<user>` | 15352（69%） | 32（6%） | 100453（50%） | 200000（100%） |
+| 同时含「问」「答」框（全角或半角冒号） | 1 | 217 | 1961 | 1 |
+| 以「问：」开头 | 0 | 217 | 185 | 0 |
+| 「问：」前已有文字、其后有「答：」 | 1 | 0 | 1535 | 1 |
+
+最后一行是「先给事实再问」的上界，没有逐篇核对是不是题库那种短阅读。stage 0 是 CHILDES 口语和 tinystories_zh，stage 1 是小词表的模板短句，第一次大量出现「问：/答：」和谁、谁的、哪里、什么时候、为什么的固定答句。stage 2 是 LCCC 闲聊和 tinystories_adv。官方 stage 0 题库那种「事实 + 问： + 答：」框，在 stage 1 里只有后半截。
+
+### 各臂实际练了多少 stage 1
+
+按各臂 `evals.jsonl` 每次评测记下的 `stage_weights`，套用到之前 1000 步，积分得到近似份额（`reports/growbrain_e2_stage1_bank_v1_stage_exposure.csv`）：
+
+- 阶梯臂（`staged_final`、`graduation_only`、`coupled`、`decoupled`）：真 stage 1 份额 12.5%–18.6%，约 12500–18600 步。
+- `growth_only` 是 mixed 课程，四段权重一直是 [0.25, 0.25, 0.25, 0.25]，stage 1 约 25000 步，是 15 个检查点里最多的。
+- `scratch_final` 把四段混成一池，stage 1 只占 556/422965 ≈ 0.13%，约 130 步。
+- `random_order` 也是先混池再切伪阶段，日志里的 stage 份额是伪阶段。真 stage 1 份额按池比例推算，同样约 0.13%，没有逐批核对。
+
+### 题库 v1
+
+框是 `{前文}\n问：{Q}\n答：`。前文用 stage 1 的词表和句式。金答案是该模板训练答句的第一句，带句末「。」；训练尾句「那个是X的。」「它就在那里。」不要求。每条前文有两个实体，目标一个，干扰一个，目标在前、在后各一半，所以只抄第一个名字拿不到分。
+
+| 技能 | 题数 | 来源模板 | 例子 | 金答案第一字 |
+|---|---:|---|---|---|
+| who | 10 | `qa_who` | 哥哥在商店休息，爸爸在树下跳。问：谁在商店休息？ → 哥哥在那里休息。 | 要绑定的人 |
+| whose | 10 | `qa_whose` / `narr_return` | 叔叔在山上找到了纸。原来这个纸是哥哥的，所以叔叔放回到家里。问：谁的纸在家里？ → 哥哥的纸在家里。 | 主人，不是发现者 |
+| where | 10 | `qa_where_thing` | 老师把鞋放在商店，把书放在树下。问：鞋在哪里？ → 鞋在商店。 | 从问句抄 |
+| when | 10 | `qa_when` | 晚上弟弟喝水，早上哥哥扫地。问：弟弟什么时候喝水？ → 弟弟晚上喝水。 | 从问句抄 |
+| why | 10 | `qa_why` / `clause_because` | 姐姐换一双干鞋，因为鞋子湿了。妹妹去吃点心，因为肚子饿了。问：姐姐为什么换一双干鞋？ → 因为鞋子湿了。 | 「因」 |
+
+合计 58 题：头条是上表 50 道开卷题；另有 8 道闭卷对照（who / whose / when / why 各 2 道，去掉前文，同题同金），排除在头条之外。
+
+冻结前已写明的弱点，看分之后没有改题：
+
+- why 的「原因—动作」对取自训练，闭卷也可能凭记忆答出。who / whose / where / when 的槽位是任意的，下文称「无先验 4 技能」（40 题）。
+- where 和 when 的第一字是从问句抄的，first-CJK 对它们不测绑定。只有 who 和 whose 的第一字是绑定槽。
+- `qa_when` 里有「画画→下午」，when 有轻微先验。
+- 金答案第一字都与对应训练答句一致，避开了 stage 0 诊断库里「这 / 有」那种前缀坍缩。没有 handoff，也没有「在谁手里」。
+
+### 过滤
+
+用 growbrain 自带的过滤器：OverlapIndex 精确命中、8-gram 出现比例 ≥ 0.5、train-trigram 整句 exact。70 道开卷候选（每技能 14 道）对 stage 0 / 1 / 2 / 3 训练（stage 2 / 3 取前 200000 篇）、stage 1 的 val 和 probe、手写 `stage1_probe.txt` + `stage1_train_mix.txt`、官方 stage 0 / 2 / 3 题库，丢弃都是 0。最差 8-gram 出现比例是对 stage 1 训练的 0.400。train-trigram 整句 exact 都是 0；对 stage 1 训练的 trigram CJK 是 49.5%，说明答句骨架本身在训练里很常见。每技能取前 5 道「目标在前」和前 5 道「目标在后」。闭卷对照原定 10 道，`where_closed` 的 2 道被 stage 1 训练的 8-gram 过滤丢掉（与 `qa_where_thing` 原框太近），剩 8 道。
+
+### 结果
+
+下表的 headline 是 50 道开卷题。「无先验」是 who / whose / where / when 的 40 道。闭卷是 8 道对照。最后一列是全库 58 题的 CJK 和 95% 区间；官方 JSON 没有 headline 区间。
+
+| 臂 | seed | headline exact | headline first-CJK | headline CJK | 无先验 exact | 闭卷 exact | 全库 CJK [95%] |
+|---|---:|---:|---:|---:|---:|---:|---|
+| graduation_only | 1 | 4/50 | 16/50 | 79.67% | 4/40 | 1/8 | 79.49% [76.50, 82.35] |
+| graduation_only | 2 | 8/50 | 18/50 | 79.67% | 7/40 | 3/8 | 80.62% [77.03, 84.66] |
+| growth_only | 1 | 10/50 | 24/50 | 83.28% | 4/40 | 3/8 | 83.99% [80.79, 86.81] |
+| growth_only | 2 | 9/50 | 22/50 | 79.34% | 9/40 | 1/8 | 79.78% [75.92, 83.20] |
+| coupled | 1 | 1/50 | 15/50 | 71.80% | 0/40 | 2/8 | 73.31% [70.29, 76.44] |
+| coupled | 2 | 4/50 | 28/50 | 79.34% | 1/40 | 1/8 | 79.49% [76.80, 82.15] |
+| decoupled | 1 | 6/50 | 22/50 | 79.34% | 5/40 | 1/8 | 79.21% [75.43, 82.52] |
+| decoupled | 2 | 3/50 | 20/50 | 80.33% | 3/40 | 1/8 | 80.90% [77.97, 83.80] |
+| random_order | 1 | 1/50 | 21/50 | 69.18% | 1/40 | 0/8 | 67.98% [63.91, 71.51] |
+| random_order | 2 | 1/50 | 8/50 | 63.61% | 1/40 | 0/8 | 63.48% [59.08, 67.67] |
+| scratch_final | 0 | 5/50 | 21/50 | 70.16% | 3/40 | 0/8 | 69.10% [64.38, 73.39] |
+| scratch_final | 1 | 3/50 | 32/50 | 72.79% | 3/40 | 0/8 | 71.35% [67.21, 75.20] |
+| scratch_final | 2 | 2/50 | 31/50 | 71.48% | 2/40 | 0/8 | 70.79% [67.44, 73.90] |
+| staged_final | 1 | 7/50 | 22/50 | 82.30% | 6/40 | 1/8 | 82.58% [79.54, 85.52] |
+| staged_final | 2 | 9/50 | 22/50 | 81.31% | 6/40 | 2/8 | 81.46% [77.87, 84.85] |
+
+不在地板上。headline CJK 约 63.61%–83.28%，exact 1–10/50。两个混池臂（`scratch_final`、`random_order`）的 headline CJK 都不超过 72.79%。阶梯臂是 71.80%–82.30%。`growth_only` 是 83.28% / 79.34%，exact 10/50 与 9/50，最高。
+
+### 分组对比
+
+把检查点按真 stage 1 暴露分组：阶梯 8 点（`staged_final`、`graduation_only`、`coupled`、`decoupled` 各两粒），`growth_only` 2 点，混池 5 点（`scratch_final` 三粒、`random_order` 两粒）。差值是组内合并后的比例差，区间是条目重采样（1000 次，type 7，种子 0），两组用同一组重采样条目。同一批检查点在 stage 0 诊断库 v2 的 32 道开卷头条上做同样的对比，作反证。单位是百分点。
+
+| 对比 | stage 1 库 CJK | stage 0 v2 CJK | stage 1 库 exact | stage 1 库 first-CJK |
+|---|---|---|---|---|
+| 阶梯 − 混池 | +9.78 [7.27, 12.21] | −3.31 [−7.08, 0.56] | +5.70 [0.50, 11.15] | −4.45 [−11.35, 2.55] |
+| `growth_only` − 混池 | +11.87 [9.14, 14.43] | +0.47 [−4.26, 5.31] | +14.20 [6.40, 22.40] | +0.80 [−8.61, 10.40] |
+| `growth_only` − 阶梯 | +2.09 [0.17, 3.90] | +3.78 [0.87, 6.54] | +8.50 [1.99, 15.00] | +5.25 [−1.50, 13.00] |
+| 18.4M 阶梯 − 2.8M `graduation_only` | −0.60 [−2.86, 1.72] | +6.77 [1.27, 11.89] | −2.00 [−10.33, 6.00] | +9.00 [−2.33, 19.33] |
+| `staged_final` − `scratch_final` | +10.33 [6.63, 14.03] | −5.12 [−9.67, −0.79] | +9.33 [0.32, 19.67] | −12.00 [−25.34, 1.34] |
+| `staged_final` − `coupled` | +6.23 [2.75, 9.26] | +0.26 [−4.71, 5.47] | +11.00 [2.98, 21.00] | +1.00 [−13.00, 14.00] |
+
+CJK 跟着 stage 1 剂量走：混池 < 阶梯 ≤ `growth_only`。同一批检查点在 stage 0 诊断库上没有这个差，混池甚至略高。所以这不是「短句子能力」的整体差，而是 stage 1 特有的东西。
+
+宽度不分开。2.8M 的 `graduation_only` 与 18.4M 阶梯臂的 CJK 差是 −0.60 个百分点，区间跨 0。这与 stage 2 / 3 官方题库上宽度拉开的结论不同：stage 1 的答句骨架，小模型也学得会。
+
+`staged_final` 在这份库上领先 `scratch_final` 10.33 个百分点，stage 0 v2 上反而是 `scratch_final` 略高。原因是剂量：`scratch_final` 几乎没练过 stage 1。`staged_final` 对 `coupled` 的 +6.23 个百分点主要来自 `coupled` seed1（headline CJK 71.80%，阶梯组最低）；每臂两粒，不能读成臂效应。
+
+种子差：同臂两粒的 headline CJK，`coupled` 差 7.54 个百分点，`random_order` 差 5.57，`growth_only` 差 3.94，`scratch_final` 三粒极差 2.63，`staged_final`、`decoupled`、`graduation_only` 不超过 1.0。first-CJK 的种子差可到 13/50（`random_order` 21/50 与 8/50，`coupled` 15/50 与 28/50）。单粒比较不要用 first-CJK。
+
+### 没有臂在读前文
+
+who 和 whose 的第一字就是要绑定的名字。15 个检查点 × 20 道里，teacher-forced 第一字落在目标上 52 次，落在干扰实体上 55 次，落在别的名字或「我」上 193 次。目标与干扰几乎一样多，都远低于二选一的 50%。每个臂都是这样。
+
+闭卷对照与开卷一样高，甚至更高。阶梯组 who 闭卷 CJK 84.6%，开卷 83.5%；when 闭卷 exact 9/16，开卷 8/80。前文没有帮上忙，在 when 上还拖了后腿。
+
+CJK 的增益来自答句骨架：「X在那里V。」「X的N在L。那个是X的。」「N在L。它就在那里。」。greedy 续写里看得到：阶梯臂和 `growth_only` 会写出 stage 1 的尾句（`奶奶的杯子在教室。那个是奶奶的。`、`鞋在山上。它就在那里。`），名字或处所常是错的；混池臂常写成 `哥哥在商店。答：哥哥在商店。…` 或 `鞋在这里。` 的循环。
+
+first-CJK 不分组（阶梯 − 混池 −4.45 个百分点，区间跨 0）：在 who / whose 上它测的是绑定，大家都不会；在 where / when 上它测的是从问句抄，大家都会。
+
+### 读法
+
+这份库测到的是「终局模型保留了多少 stage 1 的问答答句形态」，并且对 stage 1 暴露有剂量反应；stage 0 诊断库的反证排除了「泛化短句能力」的解释。它不跟宽度走，也不跟 staged 与 coupled 的差别走。
+
+它不能回答「stage 1 有没有教会在前文里找答案」。所有臂在 who / whose 的绑定上都在机会线以下，闭卷 ≈ 开卷。这与 stage 1 训练集本身一致：「先给事实再问」是 0 篇，问答全是闭卷模板，本来就没有教阅读。
+
+要回答 stage 1 是否教会阅读，需要 stage 1 窗口内或刚毕业时的中途权重，或者往训练数据里加入「先给事实再问」的文档。两条都要重新训练，本轮没有做，也不在此基础上租卡或另开训练臂。
+
+### 限制
+
+只有终局检查点。它们都已走完 stage 2 / 3 和回放，分数是「练过并保留下来」，不是「在 stage 1 学会」。盘上没有 stage 1 窗口的权重。
+
+每臂只有 2–3 粒。头条 50 题，exact 区间宽。计分是 teacher-forced，不是自由生成的整句匹配；first-CJK 只看 canonical 金答案。
+
+why 有训练先验；where 和 when 的 first-CJK 不测绑定；when 有轻微先验。
+
+各臂 stage 1 份额是按日志 `stage_weights` 积分的近似值。`random_order` 的真 stage 1 份额是按混池比例推算的，没有逐批核对。
+
+### 来源
+
+题库、备忘和原始 JSON 在分析机器上，不在 git 里：`/workspace/scratch/e2_stage1_bank_draft/`。冻结的 v1 在其中的 `v1/`（`stage1.jsonl`、`manifest.json`、`DESIGN.md`、`MEMO.md`、`candidates.jsonl`、`overlap_report.json`、`build_bank.py`，带 `stage1.sha256`）。评测输出在 `out/`，greedy 续写和 teacher-forced 第一字在 `preds/greedy_tf_first.json`（15×58 条）。包装器是同目录的 `run_diag_eval.py`，由 stage 0 诊断库的包装器改成 stage 键 1，计分逻辑没有动。检查点 sha256 与上一节一致。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。
