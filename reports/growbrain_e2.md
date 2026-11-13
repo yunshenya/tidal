@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. A later CPU eval-only rescore of the same 15 end checkpoints on a local stage-0 train-format diagnostic bank (not committed to growbrain, not a replacement of the official 「问：/答：」 transfer bank) is in 「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」. It is not a new training run. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. A later CPU eval-only rescore of the same 15 end checkpoints on a local stage-0 train-format diagnostic bank (not committed to growbrain, not a replacement of the official 「问：/答：」 transfer bank) is in 「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」. It is not a new training run. The already-made stage-0 data and evaluation alignment decision, which uses those rescored results and is not a new eval, is in 「Stage-0 数据与评测对齐决定」. It is not a new training run. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -51,6 +51,8 @@ Local stage-0 train-format diagnostic bank, CPU eval-only, same 15 end checkpoin
 - `reports/growbrain_e2_diag_bank_v1_by_skill.csv`
 - `reports/growbrain_e2_diag_bank_v2_stage_summary.csv`
 - `reports/growbrain_e2_diag_bank_v2_by_skill.csv`
+
+Stage-0 data and evaluation alignment decision, recorded 2026-11-13 (Asia/Shanghai). Not a new training run or a new eval. No new tables; it cites the rescore and diagnostic-bank CSVs above. See 「Stage-0 数据与评测对齐决定」.
 
 External archives, on the bot box, not in git:
 
@@ -555,7 +557,7 @@ CSV 每一行是一条臂、一粒种子、一个指标、一条线。列是 `ar
 
 ### 直接回答
 
-只能分开一部分。官方把 probe0–3 等权平均，分不开能力。被当成 stage 0 头条的 exact-match，也分不开。评测和数据对齐之前，不要为另一条同类的 growbrain 训练臂再租 GPU。
+只能分开一部分。官方把 probe0–3 等权平均，分不开能力。被当成 stage 0 头条的 exact-match，也分不开。不要为另一条同类的 growbrain 训练臂再租 GPU。对齐决定见「Stage-0 数据与评测对齐决定」。
 
 能分开的，有这四项。
 
@@ -694,13 +696,13 @@ stage3 和 stage0 一样，问答框极少：200000 篇里同时有「问：」�
 4. `probe0_acc` 退出毕业、退出排臂、退出「掌握」。以后若还要中途的门，跟任务走的是 `hw0` 或平滑后的 stage0 任务 CJK。`probe0` 不跟。在本节的格式错位修好之前，门仍然不要打开：任务 exact-match 和 CJK 的任何一条线都会把 run 留在 stage 0，而纯 stage 0 上这些线不动。这已经是 mastery 离线估计的结果。
 5. 臂间比较若取决于 `who`，或取决于两粒种子的均值，就不要把 stage0 exact-match 当头条。现有题库上若只留一个 stage0 数，用 CJK，或用 `where` 的 exact-match，并把种子区间留在表里。
 
-仍要新的评测或新的数据，但仍然不是一条新的训练臂：
+stage 0 的对齐已经决定。其余仍要新的评测或新的数据，但仍然不是一条新的训练臂：
 
-1. 把 stage0 的数据和 stage0 的测试对齐，两条路取一条。或者在 stage0 训练里放入足够密的「问：」/「答：」、从 prompt 抄答案的框，让只练 stage 0 的 run 至少有可能被这套题打分。或者停止用这套题给只练 stage 0 的 checkpoint 打分，另做一套测 stage0 故事里真正有的东西的题。在其中一件发生之前，「课程有没有教会 stage 0」不是一个提得清楚的实验。
+1. 把 stage0 的数据和 stage0 的测试对齐。2026-11-13 已经选定修订后的（B），见「Stage-0 数据与评测对齐决定」。不把「问：/答：」或近复制金答案注入现有 stage 0 训练集。官方「问：/答：」题只作后期格式 / 迁移测验。本地训练格式诊断库已打过分，不升级成正式题，也不构成再开训练的理由。
 2. stage2 / stage3 的 exact-match 要换的是目标：更短的可接受答案，或官方的前缀、first-CJK、span 分数。这些题作为难度是成立的。作为整句 exact-match 的臂间比较，它们没有用。
 3. exact-match 若仍要当头条，就增加种子，或事先登记一个技能切片。n=2 吸收不了 `who` 上 90.6% 对 9.4% 的摆动（seed1 对 seed2）。
 
-这些都不需要新的 coupled、staged 或 mastery 训练臂。日志上还剩的、可证伪的训练实验，是最终宽度、只练 stage 0、100000 步，并且打分用的题必须是 stage-0 数据真正教得会的。这是数据与评测的实验。等这套题存在再做。上一节写下的 `stage0_only` 对照，按数据分配会在 stage2 / stage3 的 CJK 上输掉。那一条仍然不建议当成课程实验去跑。没有对齐过的题，那次训练回答不了它想回答的问题。
+这些都不需要新的 coupled、staged 或 mastery 训练臂。本地训练格式诊断库后来已经打过分，见「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」。对齐决定见「Stage-0 数据与评测对齐决定」。上一节写下的 `stage0_only` 对照，按数据分配会在 stage2 / stage3 的 CJK 上输掉。那一条仍然不建议当成课程实验去跑。诊断库上的终局分还不能比课程，也不能证明只练 stage 0 就会了，不构成开那条臂的理由。
 
 ### 读法
 
@@ -710,7 +712,7 @@ stage3 和 stage0 一样，问答框极少：200000 篇里同时有「问：」�
 
 「分阶段在 stage 0 上输给 scratch」记的是评测和数据没有对齐。纯 stage 0 上任务 exact-match 每次都是 0。可用的 exact-match 出现在 stage 2 混入之后。对阶梯不利、而且题和数据还对得上的证据，仍是 stage2 / stage3 的 CJK。
 
-在格式对齐之前，不为另一条同类 growbrain 训练臂租 GPU。
+不为另一条同类 growbrain 训练臂租 GPU。对齐决定见「Stage-0 数据与评测对齐决定」。
 
 ### 限制
 
@@ -859,7 +861,7 @@ stage 0 的整句 exact-match，即使去掉 `handoff` 和 `count`，仍不是�
 
 `coupled` 在 stage 0 任务题上仍然弱。headline exact 1.34% / 1.34%，headline CJK 56.51% / 47.28%，仍低于同宽、不扩容的 `staged_final`。同宽下把 `coupled` 和还在工作的臂分开，这一条仍然成立。
 
-评测和数据对齐之前，不为另一条同类的 growbrain 训练臂租 GPU。这一节没有改题库，也没有改训练集，也没有改毕业门。
+不为另一条同类的 growbrain 训练臂租 GPU。对齐决定见「Stage-0 数据与评测对齐决定」。这一节没有改题库，也没有改训练集，也没有改毕业门。
 
 同一批终局检查点上，另有一份本地的 stage-0 训练格式诊断库重打分，见「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」。那一份没有写入 growbrain，也不替换这一节的官方「问：/答：」题库。
 
@@ -952,8 +954,30 @@ stage 0 的整句 exact-match，即使去掉 `handoff` 和 `count`，仍不是�
 
 把颜色和计数改成开卷阅读之后，训练格式库上出现了一些非地板的 exact，说明「前文里已经有训练形态的事实，再问同一技能」是测得动的。这仍是诊断信号，不是结业考，也还不够解释课程。
 
-不要在此基础上租 GPU，也不要另开一条同类的训练臂。
+不要在此基础上租 GPU，也不要另开一条同类的训练臂。对齐决定见「Stage-0 数据与评测对齐决定」。
 
 ### 来源
 
 题库、备忘和原始 JSON 在分析机器上，不在 git 里：`/workspace/scratch/e2_stage0_diag_bank_draft/v1/`，`/workspace/scratch/e2_stage0_diag_bank_draft/v2/`。根目录的 `stage0.jsonl` 和 `out/` 是冻结的 v1 副本。包装器是同目录的 `run_diag_eval.py`，只打这份 stage 0 库。检查点 sha256 与上一节官方题库重打分一致。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。未舍入表在 `reports/growbrain_e2_diag_bank_v1_stage_summary.csv`、`reports/growbrain_e2_diag_bank_v1_by_skill.csv`、`reports/growbrain_e2_diag_bank_v2_stage_summary.csv` 和 `reports/growbrain_e2_diag_bank_v2_by_skill.csv`。
+
+## Stage-0 数据与评测对齐决定
+
+2026-11-13（Asia/Shanghai，UTC+8）。这是已经做出的对齐决定，不是新的评测，也不是新的训练。决定稿写于本地诊断题库打分之前；本节用已经合进 main 的官方题库 CPU 重打分，以及本地诊断库 v1 / v2 的分数，把那份稿改写成决定。没有改 growbrain，没有改现有训练集，没有把本地诊断库写入仓库，没有租卡，也没有新的训练或 `--resume`。
+
+偏好是修订后的（B），不是（A）。
+
+冻结现有 E2 stage-0 训练集（`train.jsonl` 22409 篇，sha256 `963837f96a5053db1f2f3f1381b89c2b9e4e9406e8c33d6557580df6e3fae2cb`）。不把「问：/答：」或近复制金答案注入 stage 0。现有终局检查点验证不了（A）有没有用：盘上只有终局 `curriculum.pt`，纯 stage 0 窗口的权重没有留下来。注入之后，这套题会变成近复制测验，而不是把 stage 0 故事和对话里已有的能力量出来。
+
+公开发表的 stage 0 比较，用 headline CJK、first-CJK 和按技能表。headline 仍去掉 `count` 和 `handoff`。这一报道层已经做完，见「按技能、headline 与 first-CJK 的 CPU 只评测重打分」。
+
+官方 360 题「问：/答：」库是后期格式 / 迁移测验，不是「只练 stage 0」的结业考。纯 stage 0 窗口上 exact 为 0，是格式错位，不能读成 stage 0 数据没教会 stage 0 技能。`random_order` 较高的官方 stage 0 headline，是更早见到后期问答格式，不是更强的课程。它在 3 次已应用的 `capacity_saturation` 扩容之后，终局参数是 18406322（约 18.4M）。只有 `graduation_only` 停在 2819058（约 2.8M）。详见「按技能、headline 与 first-CJK 的 CPU 只评测重打分」。
+
+随后起草了一份训练格式诊断库，并在同一批 15 个终局检查点上做了 CPU 只评测，先 v1，再 v2。分数已经写在「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」。那些结果支持如下决定。开卷阅读上出现了一些非地板 exact：v2 头条 exact 是 0–8/32；闭卷颜色和计数仍是 0，这是预期。官方题库上 `random_order` 的优势没有转过来：v2 两个种子的头条 exact 都是 0/32。前缀坍缩有所缓解，但没有消失，也不是所有臂都变好。CJK 仍然重叠，种子差很大（`decoupled` 是 0/32 对 8/32），这份库还不能用来比课程。终局分也不能证明「只练 stage 0 就会了」：盘上没有中途的纯 stage 0 权重。不再继续改前缀或金答案。不把这份本地库写入 growbrain，也不把它当成正式替代题库。这不是租卡、另开同类训练臂、或开一条 `stage0_only` 臂的理由。
+
+毕业门不变。`mastery_metric` 仍是 `stage_probe`，阈值 0.85，`sustain` 2。不把任务 exact、CJK 或 first-CJK 悄悄接到门上。`handwritten_gate` 仍关着。`probe0` 仍只作诊断。
+
+残差限制只记录，本节不处理：仍然没有 stage-1 任务题库；没有中途权重，终局按技能表不能回答第一次和第二次毕业各自抬起了哪个技能；`who` 的种子摆动还在官方 headline 里；官方库上 `count` 仍是前缀失败；`handoff` 是改写，不是抽取；步数对齐，计算量没有对齐。
+
+### 来源
+
+决定稿在分析机器上，不在 git 里：`/workspace/scratch/e2_rescore_docs_draft/stage0_alignment_proposal.md`。稿子写于诊断库打分之前；本节按已合入的分数做了更新，没有照抄原稿。官方重打分和诊断库分数见前面两节，以及已经在 main 上的 CSV。题库本身仍留在 `/workspace/scratch/e2_stage0_diag_bank_draft/`，不进 git。
