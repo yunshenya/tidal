@@ -107,6 +107,6 @@ stage 0 官方题库 360 题，6 个技能：`where` 64、`color` 48、`who` 64�
 - 没有中途权重，终局按技能表不能回答「第一次和第二次毕业各自抬起了哪个技能」。
 - 诊断库题量小。闭卷对照 8 题，每个开卷技能 8 题。8/32 不是稳定的能力分。计分仍是 teacher-forced，不是自由生成的整句匹配。
 
-## 还没做、本仓库也不做的
+## growbrain 任务题 manifest 的 filter 块
 
-growbrain 里已提交的任务题 `manifest.json` 仍是 `train_filter.checked=false`。同阶段 0 丢弃是 2026-11-10 量的，跨阶段 12 对 0 丢弃已经写在「现有数据与评测能否区分能力（离线核对）」。要填的是 filter 块，用相对路径，不要带绝对训练路径。那份 manifest 不在 tidal 里。本 PR 不改它，也不改 jsonl。
+[#96](https://github.com/yunshenya/tidal/pull/96) 初稿把这项写成还没做。growbrain `main` `c66007cff1d16f2875406b4de898fa4fb14a1733`（PR [#33](https://github.com/yunshenya/growbrain/pull/33)，2026-11-12）里，`data/probes/taskmatch/manifest.json` 已经填好。`train_filter` 的 stage 0 / 2 / 3、`cross_stage_overlap` 的 12 对，以及 `committed_train_mix_overlap`，都是 `checked: true`。路径是相对路径，没有绝对训练路径。官方过滤器在这 12 对上丢弃 0，题库文件没有改写。同阶段 0 丢弃和跨阶段记录见 `reports/growbrain_e2.md` 的「现有数据与评测能否区分能力（离线核对）」。本文件只更正上述过时表述，不改 growbrain。
