@@ -63,6 +63,11 @@ Stage-1 50% fact-QA token replacement, four formal runs, 2026-11-16 (Asia/Shangh
 - `reports/growbrain_e2_stage1_factqa_formal_strata.csv`
 - `reports/growbrain_e2_stage1_factqa_formal_checks.csv`
 
+CPU offline trajectory of those four runs, 2026-11-16 15:00–15:08 (Asia/Shanghai). Descriptive only. The frozen primary remains step 18000. Per-item files stay on the box:
+
+- `reports/growbrain_e2_stage1_factqa_formal_trajectory.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_trajectory.png`
+
 External archives, on the bot box, not in git:
 
 - `/workspace/scratch/e2_multiseed_12/`
@@ -1131,6 +1136,8 @@ why 有训练先验；where 和 when 的 first-CJK 不测绑定；when 有轻微
 - `reports/growbrain_e2_stage1_factqa_formal_strata.csv`
 - `reports/growbrain_e2_stage1_factqa_formal_checks.csv`
 
+中途轨迹的 76 行指标和曲线图在 `reports/growbrain_e2_stage1_factqa_formal_trajectory.csv`、`reports/growbrain_e2_stage1_factqa_formal_trajectory.png`。读法在「中途轨迹（CPU 离线，描述性）」。
+
 权重和逐题文件不进 git。下表的四位小数与当时的结果笔记一致，来自 `eval_compact.json` 的未舍入值。笔记正文把 0.6133 / 0.5117 收成 0.613 / 0.512，把 0.3672 收成 0.367，把 location 的配对全对收成约 0.31–0.33。本页表保留四位小数。
 
 ### 设置
@@ -1248,21 +1255,71 @@ PR [#34](https://github.com/yunshenya/growbrain/pull/34) 记录的测试，解�
 
 结论：相对原文对照，50% 的第 1 档事实问答替换是一次有效的数据干预。证据支持模型在「谁的 / 属于谁」这类绑定上学会了随上下文对调答案。位置问句、种子 2 的总配对全对，以及种子 2 的 paraphrase，说明还不能声称已经稳定地、全面地在读事实。
 
-### 中途轨迹（待分析）
+### 中途轨迹（CPU 离线，描述性）
 
-step 1000 到 step 17000 的 CPU 轨迹还没有跑。这里没有中途分数，也不能把学习曲线写成已经看到。中途点若以后评，标签是 `primary=false`，只作轨迹，不能反过来挑 step 18000 这个已经冻结的主结果。
+2026-11-16 15:00–15:08（Asia/Shanghai）在 CPU 上补了 4 臂 × 19 个步（0、1000、…、18000），共 76 个逻辑点。主结果仍只是上文 step 18000、`primary=true` 的冻结测试。这一节只描述轨迹。网格上的高点不替换 18000，也不用来挑检查点或早停。曲线不解释机制，也不能据此说把训练延长就一定会补上弱项。
 
-本地已经齐：代码 `/workspace/scratch/growbrain-pr34-verify`，提交仍是训练头 `8c1b50277a7f3dc455ebf3882bccc2a880b389cc`。解释器 `/workspace/scratch/gbvenv/bin/python`（Python 3.13.5，torch 2.14.1+cpu，`cuda` false）。题库 `/workspace/scratch/growbrain-pr34-verify/data/factqa/bank_v1`，其 `SHA256SUMS` 通过，`train.jsonl` 的 sha256 与 run_meta 的 factqa 训练文件一致。旧题库在 `/workspace/scratch/e2_stage1_factqa_formal/remote/legacy_bank/stage1.jsonl`，父目录有 `manifest.json`。检查点在 `/workspace/scratch/e2_stage1_factqa_formal/checkpoints/<arm>/stepXXXXXX.pt`。`--out` 必须是新目录。下面这条是拉取笔记里的例子，没有执行：
+数值以 `reports/growbrain_e2_stage1_factqa_formal_trajectory.csv` 为准，与箱上 `trajectory/metrics.csv` 逐字节相同。同内容的 `metrics.json` 留在箱上。分析草稿 `TRAJECTORY.md` 里「其余三个终局点直接复用既有正式评测是安全的」说重了，本页改成下面的复用说明。草稿把若干数收成三位小数（0.924 / 0.852、0.846 / 0.699、0.512）；正文用四位，与冻结终局一致。
+
+![第 1 档事实问答的 CPU 离线轨迹。描述性；主结论仍只以 step 18000 为准](growbrain_e2_stage1_factqa_formal_trajectory.png)
+
+图文件是 `reports/growbrain_e2_stage1_factqa_formal_trajectory.png`。图上标了：配对全对 0.25 不是阅读门槛；0.50 是「永远答第一句事实」。
+
+#### 复用与复核
+
+76 个逻辑点里，新的 CPU CLI 是 53 次：`source=cli` 51 次，加上 factqa seed1、step 10000 的测时点（`cli_pilot`）和 factqa seed1、step 18000 的复核（`cli_final_reproduction`）。另外 20 个点是第 0 档复用，3 个点是终局复用。72 个中途点 `primary=false`，4 个终局点 `primary=true`。`smoke` 全是 false。无上下文在 76 个点上都是 0.50 / 0 / 0。
+
+同一种子、step 0–9000：`weight_equivalence.json` 里这 20 行 cfg 相同，117/117 个 state 张量 `torch.equal`，不同张量为 0，权重摘要一致。整文件 sha256 不同，因为 `extra.config.condition` 不同。核对通过后只评了对照臂，分数复制到处理臂，`source=stage0_weight_equiv_reuse`。这 20 行的 `condition` 列因此仍是 `control`，`arm` 列是 `factqa_seed1` 或 `factqa_seed2`。读表时以 `arm` 和 `source` 为准。同一份等价文件还比了第 1 档的 18 个同一步：cfg 仍相同，但 50/117 个张量不同，所以第 1 档的分数没有跨臂复制。等价 20 行，不等 18 行。
+
+step 18000：对照 seed1、对照 seed2、factqa seed2 三行是 `official_final_reuse`，分数来自已经写进冻结表的正式评测，这次没有在 CPU 上重跑。factqa seed1 的 step 18000 是新的 CPU CLI。`final_reproduction.json` 记下它与正式评测逐项一致：`exact_match=true`，256 项指标差 0，2048 条逐题的选择、贪心解码和分数差 0，两边 `primary=true`，权重摘要一致。该行摘要 `4d121c45b81d71e1b7057a1afca5067cbeb3a8f7fa2272118b7fea27b49cddc6` 与 `reports/growbrain_e2_stage1_factqa_formal_runs.csv` 的终局摘要相同。这一个点只说明 factqa seed1、step 18000 在这台 CPU 上与原先正式评测逐项相同。它不能推出另外三个终局点在这台 CPU 上也会逐项相同，也不能推出所有平台数值等价。
+
+映射在箱上 `reuse_map.json`：`logical_points=76`，`unique_cli_runs=53`。
+
+#### 轨迹上能看见的范围
+
+第 0 档目标准确率在 0.4873–0.5127，配对全对在 0.0059–0.0684。owner 在 step 9000 仍靠近 0.50：factqa seed1 是 0.4941 / 0.0391，seed2 是 0.5195 / 0.0547。
+
+处理臂的 owner 在 step 9000 与 step 10000 之间升上去。第一个第 1 档检查点（step 10000）seed1 目标 / 配对全对是 0.9238 / 0.8516，seed2 是 0.8457 / 0.6992。之后第 1 档网格上 seed1 的 owner 目标停在 0.9238–0.9609、配对全对 0.8516–0.9297；seed2 目标 0.8008–0.9004、配对全对 0.6211–0.8047。seed2 在 step 17000 是 0.8262 / 0.6680，仍落在这个区间里。对照臂第 1 档没有这种 owner 上升，总配对全对最高 0.1699。网格是 1000 步，只能把上升放在 9000 与 10000 之间，不能指出更细的步。
+
+处理臂第 1 档 location 的配对全对是 0.2188–0.3984，18 个点都低于「永远答第一句事实」的 0.50。草稿把这个区间收成约 0.22–0.40。step 10000 的 location 目标 / 配对全对，seed1 是 0.5527 / 0.3164，seed2 是 0.5312 / 0.2930。这是整段第 1 档都在的弱项。第 0 档评过的对照点更低，location 配对全对是 0.0039–0.0352。这里看不出机制。
+
+seed2 终局总配对全对 0.5117 等于 owner 配对全对 0.7109 与 location 配对全对 0.3125 的平均：(0.7109375 + 0.3125) / 2 = 0.51171875。同一点的切换是 0.6426。这条总平均是两项技能的平均，不能读成整模型都在答第一句事实。
+
+总目标在 step 10000 已经是 seed1 0.7383、seed2 0.6885。网格上 seed1 的目标和配对全对都在 step 12000 最高，0.7998 / 0.6484；seed2 都在 step 15000 最高，0.7275 / 0.5938。终局仍是冻结表里的 0.7773 / 0.6133 和 0.6904 / 0.5117。这两个高点只说明轨迹有起伏。
+
+处理臂第 1 档旧标题 `headline_exact` 在 0.02–0.10，终局仍是冻结表的 0.04。这次替换没有把那 50 条旧模板题抬起来。
+
+「永远答第一句事实」是目标 0.50、配对全对 0.50、切换 1.00。0.25 的配对全对是两次独立抛硬币。表里的 position（`pos_first_*` / `pos_second_*`）是所问实体落在哪一句事实。`location_binding` 是另一项技能。
+
+紧凑 CSV 有格式、position、技能各自的列，没有「问法 × 所问事实句」的交叉列，也没有逐题政策吻合列。草稿里的格式 × 位置弱项，以及与「永远答第一句」的逐题吻合约 0.39–0.46，只描述错误怎么散开。本页不重算逐题，也不把这个区间当成新分数或机制。
+
+#### 命令与证据哈希
+
+本页没有重跑。代码 `/workspace/scratch/growbrain-pr34-verify`，提交 `8c1b50277a7f3dc455ebf3882bccc2a880b389cc`。解释器 `/workspace/scratch/gbvenv/bin/python`（Python 3.13.5，torch 2.14.1+cpu，`cuda` false）。题库和指标没有改。无训练、无 GPU、无远程。
 
 ```bash
 cd /workspace/scratch/growbrain-pr34-verify
 /workspace/scratch/gbvenv/bin/python -m growbrain.factqa_eval \
-  --checkpoint /workspace/scratch/e2_stage1_factqa_formal/checkpoints/factqa_seed1/step010000.pt \
+  --checkpoint /workspace/scratch/e2_stage1_factqa_formal/checkpoints/<arm>/stepXXXXXX.pt \
   --bank-dir data/factqa/bank_v1 \
-  --out /workspace/scratch/e2_stage1_factqa_formal/trajectory/factqa_seed1_step010000 \
+  --out /workspace/scratch/e2_stage1_factqa_formal/trajectory/runs/<arm>_stepXXXXXX \
   --threads 2 \
   --legacy-bank /workspace/scratch/e2_stage1_factqa_formal/remote/legacy_bank/stage1.jsonl
 ```
+
+逐题输出在 `trajectory/runs/`，不进本仓库。原有 `SHA256SUMS` 和 `CHECKPOINT_SHA256SUMS` 没有被这次轨迹改动。下表前七行是上传文件重新算出的 sha256，与箱上 `trajectory/TRAJECTORY_SHA256SUMS` 的对应行相同。入仓的 CSV、PNG 与表中 `metrics.csv`、`trajectory_curves.png` 两行相同。最后两行只抄自那份清单，对应文件没有随材料上传，本页没有对它们重新做 sha256。
+
+| 文件 | sha256 |
+|---|---|
+| metrics.csv | `fd74cdbfb0c433c7fc5828a882d48a152247bb34ef4f18c2b9a687addacb0970` |
+| metrics.json | `a31ee5b127a97ab8243551cd561893388e7a85fa046612692452a2a0352ba7e7` |
+| reuse_map.json | `18a944bdb1bb615a322d9d9f6bba37cc35c7feae8e1667e6acf72fcf9e663f72` |
+| weight_equivalence.json | `5c9fdf77e9befd756b720f99bafa868ea5f33d36856b2bc06bc710c8ada75362` |
+| final_reproduction.json | `fa5012ea4750f923bfbc563b311656ad2cb981e94c20e007ee449520587e123a` |
+| trajectory_curves.png | `0468802ea6ef8000c6d202ded4f5128bef3ec6ccda1c592946dc0e76fefabf51` |
+| TRAJECTORY.md（草稿） | `908e7b12753142bb762f7a7e9a3a710bd59041c4ea901c4cb6c9f626ea222842` |
+| eval_run_log.json | `7246c09c1d2e51467a97a472fd44ef54d46d0859649fe34fd6aa9a9d3d649746` |
+| run_trajectory_evals.py | `5bcae5304640f97d19e9aff1b0cbea00f9b60b415aee600307d2747273da4f20` |
 
 ### 限制
 
@@ -1315,3 +1372,4 @@ python -m growbrain.factqa_eval \
 - 权重：`/workspace/scratch/e2_stage1_factqa_formal/checkpoints/`。88 项哈希在同目录上一级的 `CHECKPOINT_SHA256SUMS`。
 - 打包：`/workspace/scratch/e2_stage1_factqa_formal/factqa_formal_reports.tgz`。
 - 远程原件仍在 `/root/e2_stage1_factqa_pr34_runs/{control,factqa}_seed{1,2}/`。
+- 中途轨迹：`/workspace/scratch/e2_stage1_factqa_formal/trajectory/`。入仓的是 `reports/growbrain_e2_stage1_factqa_formal_trajectory.csv` 和 `reports/growbrain_e2_stage1_factqa_formal_trajectory.png`。逐题 `runs/` 不进本仓库。
