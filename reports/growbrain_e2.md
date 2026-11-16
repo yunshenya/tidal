@@ -1,6 +1,6 @@
 # Growbrain E2 results
 
-Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. A later CPU eval-only rescore of the same 15 end checkpoints on a local stage-0 train-format diagnostic bank (not committed to growbrain, not a replacement of the official 「问：/答：」 transfer bank) is in 「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」. It is not a new training run. The stage-0 data and eval alignment proposal, and what that diagnostic-bank acceptance did and did not show, is in `reports/growbrain_e2_stage0_alignment.md`. It does not change the scores on this page. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
+Two finished curriculum runs. Budget 100000 steps, eval every 1000 steps, CUDA on a CompShare RTX 4090. The scratch_final report records `gpu_name` `NVIDIA GeForce RTX 4090`, torch `2.11.0+cu128`, CUDA `12.8`. This page keeps that training record. The true-stage re-evaluation re-scores the same checkpoints eval-only. The shared-span section scores every arm on the same 128-token prefix, CJK tokens only. Task probes are a separate bank, in 「任务题正式对照（task probes）」. The later `staged_final` control is in 「staged_final 对照臂」. It is not part of the two curriculum archives or the 13-checkpoint rescore. An offline estimate of stage-0 mastery graduation, from existing logs only, is in 「若改用 stage-0 mastery 毕业（离线估计）」. Logged graduations used the loss plateau. An offline check of whether the existing data and evaluation can distinguish capability, from those logs and the task banks, is in 「现有数据与评测能否区分能力（离线核对）」. A CPU eval-only rescore of the existing end `curriculum.pt` files, with the by-skill, headline, and first-CJK scorer from growbrain PR [#33](https://github.com/yunshenya/growbrain/pull/33), is in 「按技能、headline 与 first-CJK 的 CPU 只评测重打分」. It is not a new training run. A later CPU eval-only rescore of the same 15 end checkpoints on a local stage-0 train-format diagnostic bank (not committed to growbrain, not a replacement of the official 「问：/答：」 transfer bank) is in 「本地 stage-0 训练格式诊断题库的 CPU 只评测重打分」. It is not a new training run. The stage-0 data and eval alignment proposal, and what that diagnostic-bank acceptance did and did not show, is in `reports/growbrain_e2_stage0_alignment.md`. It does not change the scores on this page. A separate fixed-2.8M run that replaces 50% of stage-1 target tokens with fact QA is in 「第 1 档 50% 事实问答替换（正式四次）」. That section is a data intervention on seeds 1 and 2. It is not an E2 curriculum or growth comparison, and the control arm does not see the same stage-1 original text. Stage0 memory scores stay in `reports/growbrain_stage0_fit.json` and `reports/growbrain_stage0_held.json`.
 
 ## Files
 
@@ -55,6 +55,13 @@ Local stage-0 train-format diagnostic bank, CPU eval-only, same 15 end checkpoin
 Stage-0 data and eval alignment proposal. Recommendation and acceptance only. No new scores:
 
 - `reports/growbrain_e2_stage0_alignment.md`
+
+Stage-1 50% fact-QA token replacement, four formal runs, 2026-11-16 (Asia/Shanghai). Fixed 2,819,058 parameters, seeds 1 and 2, stage 0 for 9000 updates then stage 1 for 9000 updates. Not an E2 curriculum or growth comparison. Score tables only; weights and per-item files stay on the box:
+
+- `reports/growbrain_e2_stage1_factqa_formal_runs.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_end.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_strata.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_checks.csv`
 
 External archives, on the bot box, not in git:
 
@@ -1095,7 +1102,7 @@ first-CJK 不分组（阶梯 − 混池 −4.45 个百分点，区间跨 0）：
 
 它不能回答「stage 1 有没有教会在前文里找答案」。所有臂在 who / whose 的绑定上都在机会线以下，闭卷 ≈ 开卷。这与 stage 1 训练集本身一致：「先给事实再问」是 0 篇，问答全是闭卷模板，本来就没有教阅读。
 
-要回答 stage 1 是否教会阅读，需要 stage 1 窗口内或刚毕业时的中途权重，或者往训练数据里加入「先给事实再问」的文档。两条都要重新训练，本轮没有做，也不在此基础上租卡或另开训练臂。
+要回答 stage 1 是否教会阅读，需要 stage 1 窗口内或刚毕业时的中途权重，或者往训练数据里加入「先给事实再问」的文档。两条都要重新训练，本轮没有做，也不在此基础上租卡或另开训练臂。后来另一次固定 2.8M 的数据替换见「第 1 档 50% 事实问答替换（正式四次）」。那一节不是这 15 个终局检查点的重打分，也不是 E2 课程或生长比较。
 
 ### 限制
 
@@ -1110,3 +1117,201 @@ why 有训练先验；where 和 when 的 first-CJK 不测绑定；when 有轻微
 ### 来源
 
 题库、备忘和原始 JSON 在分析机器上，不在 git 里：`/workspace/scratch/e2_stage1_bank_draft/`。冻结的 v1 在其中的 `v1/`（`stage1.jsonl`、`manifest.json`、`DESIGN.md`、`MEMO.md`、`candidates.jsonl`、`overlap_report.json`、`build_bank.py`，带 `stage1.sha256`）。评测输出在 `out/`，greedy 续写和 teacher-forced 第一字在 `preds/greedy_tf_first.json`（15×58 条）。包装器是同目录的 `run_diag_eval.py`，由 stage 0 诊断库的包装器改成 stage 键 1，计分逻辑没有动。检查点 sha256 与上一节一致。代码是箱上的 growbrain `c66007cff1d16f2875406b4de898fa4fb14a1733`，工作树未改。
+
+## 第 1 档 50% 事实问答替换（正式四次）
+
+2026-11-16（Asia/Shanghai，UTC+8）。这一节记四次已经跑完的正式训练和 step 18000 的冻结测试。它是固定 2.8M 上的数据干预：第 1 档里 50% 的目标 token 换成真实 token 的事实问答，对照臂保留第 1 档原文。growbrain 上的配方在 PR [#34](https://github.com/yunshenya/growbrain/pull/34)。上文「stage 1 训练格式任务题库的 CPU 只评测重打分」是 tidal PR [#98](https://github.com/yunshenya/tidal/pull/98) 已经合入的终局重打分，测的是另一批 E2 课程检查点上的答句形态。这一节不重打那 15 个 `curriculum.pt`，也不进入 E2 的毕业、生长或课程比较。
+
+两臂第 1 档的原文目标比例不同。控制臂是 1.0，处理臂是 0.5。这不是相同原文曝光，也不是把事实问答接在原文后面。
+
+未舍入的运行、终局、分层和配对检查在：
+
+- `reports/growbrain_e2_stage1_factqa_formal_runs.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_end.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_strata.csv`
+- `reports/growbrain_e2_stage1_factqa_formal_checks.csv`
+
+权重和逐题文件不进 git。下表的四位小数与当时的结果笔记一致，来自 `eval_compact.json` 的未舍入值。笔记正文把 0.6133 / 0.5117 收成 0.613 / 0.512，把 0.3672 收成 0.367，把 location 的配对全对收成约 0.31–0.33。本页表保留四位小数。
+
+### 设置
+
+配方名 `stage1_factqa_matched_v1`。训练检出是 `/root/e2_stage1_factqa_pr34_8c1b502`，提交 `8c1b50277a7f3dc455ebf3882bccc2a880b389cc`。正式输出在 `/root/e2_stage1_factqa_pr34_runs/`。没有写入 `/root/e2_stage1_factqa_pr34_smoke`，也没有写入当时的 `/root/growbrain`（记录里仍是 `0d8d8f1`）。没有 `--smoke`，没有 `--resume`。
+
+检查点里写下的配置是：第 0 档 9000 更新，第 1 档 9000 更新，批 32，序列 128，学习率 0.002，每 1000 步存档，`smoke` false。四臂参数都是 2,819,058。协议里的优化器是 AdamW（betas 0.9 / 0.95，二维及以上参数 weight decay 0.1，其余 0，梯度裁剪 1，学习率恒定）。本次文档没有打开 `.pt` 再读优化器状态，优化器这一句以该提交的 `docs/STAGE1_FACTQA_PROTOCOL.md` 为准。
+
+第 0 档两臂共用同一条 stage0 流，目标 token 36,864,000。第 1 档每一批 16 条是两臂共用的原 stage1 流（18,432,000），另外 16 条在控制臂仍是原 stage1（再 18,432,000，`s1_control`），在处理臂是事实问答（18,432,000，`s1_factqa`）。控制臂第 1 档原文比例 1.0。处理臂 0.5。没有第 2 档，没有生长，没有回放第 0 档。标记是 step0 `(None, 0)`，step9000 `(0, 1)`，step18000 `(1, None)`。每臂 19 个快照：0, 1000, …, 18000。
+
+打包 PAD 四臂都是 0。stage0 的 UNK 是 2764，两臂相同；stage1 和 factqa 的 UNK 是 0。stage0 训练文件 22409 篇，sha256 `963837f96a5053db1f2f3f1381b89c2b9e4e9406e8c33d6557580df6e3fae2cb`。stage1 训练文件 556 篇，sha256 `faea3b20b9f523ba9f547e073fa3e530395269c9d0f86abf3e76174d381e2e74`。事实问答 train 4096 篇，sha256 `b8fd91637446e560582cd9f053a5674e40aecaa602596abf8b6cddf526035b94`，与协议里的冻结 train 一致。协议还列出 val、test、test_no_context 和 manifest 的哈希；`formal_verification.json` 的 `data_files` 没有另记那四份。
+
+种子 1 和 2。同一种子的初始化和第 0 档权重相同。两种子的初始化不同。`CUBLAS_WORKSPACE_CONFIG=:4096:8`，`deterministic_algorithms` true。
+
+### 代码状态
+
+结果笔记写于合并之前，标题是「PR34，未合并」。这句已经过时。本仓库不改那份笔记。
+
+growbrain PR [#34](https://github.com/yunshenya/growbrain/pull/34) 在 2026-11-16 14:25:03 Asia/Shanghai 合并（GitHub `merged_at` 2026-11-16T06:25:03Z），在 14:24 之后。合并方式是 squash，合并提交 `def6c70610d987d45e1b2bf9ff268cee93a8d553`。四次训练用的头仍是 `8c1b50277a7f3dc455ebf3882bccc2a880b389cc`。squash 提交不是训练检出。
+
+### 审计
+
+PR [#34](https://github.com/yunshenya/growbrain/pull/34) 记录的测试，解释器是当时那台机器的 Python 3.12.3 和 torch 2.14.1+cpu：
+
+- `python -m pytest tests/test_factqa_experiment.py -q`：20 passed
+- `python -m pytest tests -q`：376 passed，5 skipped（4 个需要 CUDA，1 个缺种子 0 的事件日志）
+
+这是该提交在正式四次之前记下的测试，不是这四次 GPU 作业的一部分。本页没有重跑 pytest。协议里的 34 源语义扫描也没有在正式作业里重跑。正式验证的 `anomalies` 是空的，`all_ok` 是 true。
+
+### 运行与配对
+
+四次独立进程并行，分目录、分日志：control / factqa × 种子 1 / 2。启动 2026-11-16 13:25:17，summary 约 13:34 写完。墙钟是 control seed1 521.07 秒、factqa seed1 521.12 秒、control seed2 520.91 秒、factqa seed2 521.21 秒。四次并行的墙钟合计约 9 分钟。每更新计算约 28.84–28.85 ms。检查点耗时笔记写成 1.51–1.82 秒；未舍入的 `checkpoint_s` 在 runs CSV（1.655、1.819、1.51、1.688）。每进程峰值显存 727.92724609375 MiB，笔记写成 727.93 MiB。并行期间整卡约 5801–5833 MiB、利用率 100%，结束后显存回到 0。这三项整卡数字来自结果笔记，不在 `formal_verification.json` 里。
+
+最近 50 步平均损失在 runs CSV 的 `mean_loss_last50`。它没有用来选检查点。
+
+配对检查见 `reports/growbrain_e2_stage1_factqa_formal_checks.csv`，九项都是 true：同一种子的 init、step0、第 0 档边界权重相同，终局权重不同，两种子的 init 不同。异常项没有。
+
+配对看的是权重摘要，不是整份 `.pt` 的 sha256。检查点文件里写了条件，所以同一种子的 step0 和 step9000 文件哈希不同，权重摘要相同。种子 1 的 init 与 step0 权重摘要是 `6ec1512addcd13a046610f138491c22d70c300457270c28aed52ff1af87515bb`。结果笔记写明它与此前冒烟的种子 1 相同；本页没有另取那份冒烟权重重算。种子 2 的 init 是 `b65738489f0cf622c174c96f896b3e2b164582eee25dbae450345e69c031ef52`。种子 1 的 step9000 权重摘要是 `3227d87cd9b9afba50870fd404d629fc4cd6e634ff2b58b1aae20bc2eb359e03`。种子 2 的 step9000 权重摘要是 `dda896394894e3246d88335f2a8a81fe6d109911f95fb440e2b76e6b56bddc6d`。四份终局权重摘要不同，列在 runs CSV 的 `final_weights_digest`。
+
+### 权重备份
+
+结果笔记写「完整权重仍在远程，未全部拉回」。这句已经过时。本仓库不改那份笔记，也不提交权重。
+
+2026-11-16 14:32–14:48 Asia/Shanghai 把权重复制到箱上，14:48 核对完。本地目录是 `/workspace/scratch/e2_stage1_factqa_formal/checkpoints/{control,factqa}_seed{1,2}/`。4 臂 × 19 个快照（`step000000.pt` … `step018000.pt`）= 76 个 `.pt`，加上 4×（`run_meta.json`、`snapshots.jsonl`、`summary.json`）= 12 个元数据，清单共 88 项。缺 0，臂目录里多出的文件 0。远程没有另存 init / final 之类的额外权重。
+
+`step000000.pt` 是 11,319,381 字节。`step001000.pt`–`step009000.pt` 每个 33,437,609 字节。`step010000.pt`–`step018000.pt` 每个 33,437,673 字节。76 个权重文件合计 2,452,787,676 字节（2.284 GiB）。笔记里的目录大小是每臂约 585M、整棵 checkpoints 约 2.3G。
+
+88 项的远程 sha256 与箱上 `CHECKPOINT_SHA256SUMS` 排序后相同。两份清单 `sha256sum -c` 都是 88 项通过。原先已在的小文件清单仍是 57 项通过。`checkpoints/` 里的每臂元数据与已经在 `remote/` 的副本逐字节相同。远程原件留在 `/root/e2_stage1_factqa_pr34_runs/{control,factqa}_seed{1,2}/`，主机 `cpod-1xke7yv1fkp6-s3.podtcp.compshare.cn`，端口 24609。远程没有被改，也没有被删。GPU 没有关机。之后的 CPU 评测不再依赖这张卡。
+
+### 冻结终局
+
+主结果只认 step 18000、`primary=true`、`smoke=false` 的冻结测试。四臂都是这个点。评测 2026-11-16 13:37:11–13:37:51，官方 CLI，题库和指标没有改。中途快照不能用来挑对外报告的检查点。验证损失和 8-gram 也不选模型、不早停。
+
+主指标是逐条 `target_accuracy`。`pair_both_correct` 和 `switch_consistency` 一起报，都不是通过线。无上下文必须是 0.50 / 0 / 0，四臂都是。永远答第一句事实的启发式是目标 0.50、配对全对 0.50、切换 1.00。0.25 的配对全对是两次独立抛硬币，不是阅读门槛。切换单独也不能说明读懂了上下文。贪心两个汉字精确匹配是次要指标。
+
+| 臂 | 目标准确率 | 配对全对 | 切换 | 贪心精确 | 无上下文 |
+|---|---:|---:|---:|---:|---|
+| control seed1 | 0.4961 | 0.0781 | 0.1641 | 0.0078 | 0.50 / 0 / 0 |
+| factqa seed1 | 0.7773 | 0.6133 | 0.6719 | 0.4082 | 0.50 / 0 / 0 |
+| control seed2 | 0.4990 | 0.0410 | 0.0840 | 0.0166 | 0.50 / 0 / 0 |
+| factqa seed2 | 0.6904 | 0.5117 | 0.6426 | 0.4902 | 0.50 / 0 / 0 |
+
+位置（各 512 条 / 256 对）。单元格是目标 / 配对全对。切换在 `reports/growbrain_e2_stage1_factqa_formal_strata.csv`。
+
+| 臂 | 第一句 目标/配对 | 第二句 目标/配对 |
+|---|---:|---:|
+| control seed1 | 0.4434 / 0.0352 | 0.5488 / 0.1211 |
+| factqa seed1 | 0.7129 / 0.5234 | 0.8418 / 0.7031 |
+| control seed2 | 0.4727 / 0.0156 | 0.5254 / 0.0664 |
+| factqa seed2 | 0.6484 / 0.4492 | 0.7324 / 0.5742 |
+
+格式。standard 是训练表面，paraphrase 是测试未见问法。
+
+| 臂 | standard 目标/配对 | paraphrase 目标/配对 |
+|---|---:|---:|
+| control seed1 | 0.5020 / 0.1094 | 0.4902 / 0.0469 |
+| factqa seed1 | 0.8164 / 0.6836 | 0.7383 / 0.5430 |
+| control seed2 | 0.4980 / 0.0586 | 0.5000 / 0.0234 |
+| factqa seed2 | 0.7500 / 0.6562 | 0.6309 / 0.3672 |
+
+技能。
+
+| 臂 | location 目标/配对 | owner 目标/配对 |
+|---|---:|---:|
+| control seed1 | 0.5137 / 0.0742 | 0.4785 / 0.0820 |
+| factqa seed1 | 0.6094 / 0.3320 | 0.9453 / 0.8945 |
+| control seed2 | 0.4902 / 0.0312 | 0.5078 / 0.0508 |
+| factqa seed2 | 0.5293 / 0.3125 | 0.8516 / 0.7109 |
+
+技能 × 格式，同样是目标 / 配对全对。owner × standard 的配对全对接近上限：factqa seed1 0.9844，factqa seed2 0.9375。location × paraphrase 仍然弱：factqa seed1 0.5781 / 0.2812，factqa seed2 0.5273 / 0.2500。
+
+| 臂 | owner×standard | owner×paraphrase | location×standard | location×paraphrase |
+|---|---:|---:|---:|---:|
+| control seed1 | 0.4766 / 0.1250 | 0.4805 / 0.0391 | 0.5273 / 0.0938 | 0.5000 / 0.0547 |
+| factqa seed1 | 0.9922 / 0.9844 | 0.8984 / 0.8047 | 0.6406 / 0.3828 | 0.5781 / 0.2812 |
+| control seed2 | 0.5195 / 0.1016 | 0.4961 / 0.0000 | 0.4766 / 0.0156 | 0.5039 / 0.0469 |
+| factqa seed2 | 0.9688 / 0.9375 | 0.7344 / 0.4844 | 0.5312 / 0.3750 | 0.5273 / 0.2500 |
+
+旧第 1 档 58 条是次要指标。标题排除 `who_closed`、`whose_closed`、`when_closed`、`why_closed` 之后正好 50 条。`headline_exact` 是这 50 条。`exact_match` 是整库 58 条，不是排除之后的标题分。
+
+| 臂 | headline_exact | exact_match（整库，非标题） | headline_cjk |
+|---|---:|---:|---:|
+| control seed1 | 0.06 | 0.0517 | 0.7639 |
+| factqa seed1 | 0.04 | 0.0345 | 0.7311 |
+| control seed2 | 0.08 | 0.0862 | 0.7279 |
+| factqa seed2 | 0.04 | 0.0517 | 0.7377 |
+
+### 读法
+
+控制臂目标准确率是 0.4961 和 0.4990，停在约 0.50。配对全对 0.0781 和 0.0410，远低于「永远答第一句事实」的 0.50。原来的第 1 档语料没有学会这道对调事实题。
+
+处理臂目标准确率是 0.7773 和 0.6904。四臂无上下文都是 0.50 / 0 / 0，所以提升不是看见问题就猜一个固定先验。
+
+这还不能写成已经全面、稳定地在读事实。配对全对要超过 0.50 才强于「永远答第一句事实」。种子 1 的 0.6133 超过了。种子 2 的 0.5117 只是略高。owner_binding 强，standard 上尤其接近上限，paraphrase 上也转过去一部分。location_binding 的配对全对是 0.3320 和 0.3125，没有超过 0.50。问法有迁移，弱于训练表面：种子 2 的 paraphrase 配对全对 0.3672，低于 0.50。旧 50 条头条的 exact 四臂都在 0.04–0.08（0.06、0.04、0.08、0.04），这次替换没有改善那套旧模板题。
+
+结论：相对原文对照，50% 的第 1 档事实问答替换是一次有效的数据干预。证据支持模型在「谁的 / 属于谁」这类绑定上学会了随上下文对调答案。位置问句、种子 2 的总配对全对，以及种子 2 的 paraphrase，说明还不能声称已经稳定地、全面地在读事实。
+
+### 中途轨迹（待分析）
+
+step 1000 到 step 17000 的 CPU 轨迹还没有跑。这里没有中途分数，也不能把学习曲线写成已经看到。中途点若以后评，标签是 `primary=false`，只作轨迹，不能反过来挑 step 18000 这个已经冻结的主结果。
+
+本地已经齐：代码 `/workspace/scratch/growbrain-pr34-verify`，提交仍是训练头 `8c1b50277a7f3dc455ebf3882bccc2a880b389cc`。解释器 `/workspace/scratch/gbvenv/bin/python`（Python 3.13.5，torch 2.14.1+cpu，`cuda` false）。题库 `/workspace/scratch/growbrain-pr34-verify/data/factqa/bank_v1`，其 `SHA256SUMS` 通过，`train.jsonl` 的 sha256 与 run_meta 的 factqa 训练文件一致。旧题库在 `/workspace/scratch/e2_stage1_factqa_formal/remote/legacy_bank/stage1.jsonl`，父目录有 `manifest.json`。检查点在 `/workspace/scratch/e2_stage1_factqa_formal/checkpoints/<arm>/stepXXXXXX.pt`。`--out` 必须是新目录。下面这条是拉取笔记里的例子，没有执行：
+
+```bash
+cd /workspace/scratch/growbrain-pr34-verify
+/workspace/scratch/gbvenv/bin/python -m growbrain.factqa_eval \
+  --checkpoint /workspace/scratch/e2_stage1_factqa_formal/checkpoints/factqa_seed1/step010000.pt \
+  --bank-dir data/factqa/bank_v1 \
+  --out /workspace/scratch/e2_stage1_factqa_formal/trajectory/factqa_seed1_step010000 \
+  --threads 2 \
+  --legacy-bank /workspace/scratch/e2_stage1_factqa_formal/remote/legacy_bank/stage1.jsonl
+```
+
+### 限制
+
+只有种子 1 和 2。
+
+standard 是训练表面。协议把验证集相对合成训练集的 8-gram 标成模板插值（256/256 的发生率 ≥ 0.5，均值 0.9812，精确匹配 0），只做诊断，不选模型。测试集对合成训练集的 8-gram 命中是 0（最大发生率 0.2632，均值 0.0805）。这些是该提交协议里的题库性质，不是这四次终局分。paraphrase 是未见问法。种子 2 的 paraphrase 配对全对 0.3672 低于 0.50，问法迁移停在这条边界上。不能把 standard 上的提升写成已经离开表面。
+
+宽度固定在 2,819,058。没有更大的模型，也没有和 18.4M 的 E2 臂比。这次没有证明扩容效果。
+
+它也不回答上文那 15 个终局检查点在 stage 1 窗口里学到了什么。那些检查点的中途权重不在这次的 76 个文件里。
+
+### 记录在案的命令
+
+正式训练和 step 18000 的评测已经做完。下面是该提交协议里的命令形状，本页没有重跑。`$CORPUS` 需要 `stage0/train.jsonl` 和 `stage1/train.jsonl`。不要加 `--smoke`。没有 `--resume`。四次把 `--condition`、`--seed` 和 `--out` 换成 `control_seed1`、`control_seed2`、`factqa_seed1`、`factqa_seed2`。
+
+```bash
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+python -m growbrain.factqa_run \
+  --corpus-dir "$CORPUS" \
+  --bank-dir data/factqa/bank_v1 \
+  --out "$RUN/control_seed1" \
+  --condition control \
+  --seed 1 \
+  --device cuda
+```
+
+终局评测的命令形状。主结果读 `summary.json` 里 `primary=true` 的 `bank.test.target_accuracy`，并同时看配对全对、切换和分层。无上下文不是 0.5 / 0 / 0 时评测直接失败。
+
+```bash
+python -m growbrain.factqa_eval \
+  --checkpoint "$RUN/control_seed1/step018000.pt" \
+  --bank-dir data/factqa/bank_v1 \
+  --out "$EVAL/control_seed1" \
+  --threads 2 \
+  --legacy-bank "$LEGACY_STAGE1"
+```
+
+`$LEGACY_STAGE1` 的父目录要有 `manifest.json`，其中 `headline_exclude["1"].exclude_skills` 列出 `who_closed`、`whose_closed`、`when_closed`、`why_closed`。
+
+### 证据位置
+
+都在分析机器上，不在 git 里。
+
+- 结果笔记：`/workspace/scratch/e2_stage1_factqa_formal/RESULTS.md`。这是合并前、权重拉回前的快照。过时的两句是「PR34 未合并」和「权重未全部拉回」。当前状态以上文两节为准。
+- 终局摘要：`/workspace/scratch/e2_stage1_factqa_formal/eval_compact.json`，以及 `eval/*.json`。
+- 正式验证：`/workspace/scratch/e2_stage1_factqa_formal/remote/formal_verification.json`。
+- 日志、run_meta、snapshots：`/workspace/scratch/e2_stage1_factqa_formal/remote/`。
+- 逐题输出：`/workspace/scratch/e2_stage1_factqa_formal/remote/eval/`（`items.jsonl`、`pairs.jsonl`、`summary.json`、`summary.csv`）。逐题文件不进本仓库。
+- 旧题库：`/workspace/scratch/e2_stage1_factqa_formal/remote/legacy_bank/`。它的哈希在该目录的 `SHA256SUMS`，不在原先那份 57 项清单里，因为拉取之前本地还没有这个目录。
+- 权重：`/workspace/scratch/e2_stage1_factqa_formal/checkpoints/`。88 项哈希在同目录上一级的 `CHECKPOINT_SHA256SUMS`。
+- 打包：`/workspace/scratch/e2_stage1_factqa_formal/factqa_formal_reports.tgz`。
+- 远程原件仍在 `/root/e2_stage1_factqa_pr34_runs/{control,factqa}_seed{1,2}/`。
