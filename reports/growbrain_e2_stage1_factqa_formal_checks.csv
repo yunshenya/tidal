@@ -1,0 +1,12 @@
+check,value
+seed1_init_match,true
+seed1_step0_match,true
+seed1_stage0_boundary_match,true
+seed1_final_differ,true
+seed2_init_match,true
+seed2_step0_match,true
+seed2_stage0_boundary_match,true
+seed2_final_differ,true
+seed_inits_differ,true
+anomalies_n,0
+all_ok,true
